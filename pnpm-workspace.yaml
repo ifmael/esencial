@@ -1,0 +1,11 @@
+packages:
+  - web
+  - api
+allowBuilds:
+  esbuild: true
+  workerd: true
+onlyBuiltDependencies:
+  - esbuild
+  - workerd
+  - better-sqlite3
+minimumReleaseAge: 0
