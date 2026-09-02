@@ -23,6 +23,8 @@ E0 delivered the runnable skeleton. Esencial's features (E2 recetario, E3 plan s
 - Schema churn before E2..E6 land — mitigated: schema ships with its own migration note (`lib/schema.sql` versioned, additive ALTERs only after first release; single-user so reset-and-reseed is acceptable pre-MVP).
 - Medium risk on data loss if routes write without validation — mitigated: Zod validation mandatory per route (fail closed).
 
-## Decision
 
-Approve to proceed with `sdd-spec` for E1 (this change).
+## Validation
+
+Spec approved by the user (2026-09-02, "Vale" on spec-lectura-es.md). Proceeding to delegated implementation with specialized agents (TDD).
+
