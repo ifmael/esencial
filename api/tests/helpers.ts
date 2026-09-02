@@ -2,15 +2,18 @@
 // fetch-style request builders against the Hono app. Parity with E1 helpers.
 import { env } from "cloudflare:test";
 import app from "../src/index";
+import migrations0002 from "../migrations/0002_e2_recipes_photo_tags.sql?raw";
 import schemaSql from "../schema.sql?raw";
 
 let bootstrapped = false;
 
-/** Apply api/schema.sql once per worker instance (idempotent IF NOT EXISTS). */
+/** Apply api/schema.sql + each 0002+ migration once per worker instance,
+ *  reproducing the wrangler-runner end state inside the vitest pool.
+ *  (0002's ALTER is not re-runnable; the bootstrap flag is our once-only.) */
 async function bootstrap(): Promise<void> {
   if (bootstrapped) return;
   // batch() runs a multi-statement query when unbound: schema applies atomically.
-  await env.DB.batch([env.DB.prepare(schemaSql)]);
+  await env.DB.batch([env.DB.prepare(schemaSql), env.DB.prepare(migrations0002)]);
   bootstrapped = true;
 }
 
@@ -28,6 +31,7 @@ const TABLES = [
   "recipe_ingredients",
   "recipe_steps",
   "recipe_materials",
+  "recipe_tags",
   "recipes",
   "day_notes",
 ];

@@ -14,6 +14,7 @@ function childStatements(name: string, input: {
   ingredients: { food: string; quantity?: number | null; unit?: string | null }[];
   steps: string[];
   materials: string[];
+  tags: string[];
 }, db: D1Database): D1PreparedStatement[] {
   return [
     ...input.ingredients.map((i, pos) =>
@@ -26,6 +27,9 @@ function childStatements(name: string, input: {
     ),
     ...input.materials.map((mat) =>
       db.prepare(`INSERT INTO recipe_materials (recipe_id, name) VALUES (${RECIPE_ID}, ?)`).bind(name, mat),
+    ),
+    ...input.tags.map((tag) =>
+      db.prepare(`INSERT INTO recipe_tags (recipe_id, tag) VALUES (${RECIPE_ID}, ?)`).bind(name, tag),
     ),
   ];
 }
@@ -46,7 +50,7 @@ export const recipes = new Hono<{ Bindings: Env }>()
       const db = getDb(c.env);
       const name = input.name.trim();
       const results = await db.batch([
-        db.prepare("INSERT INTO recipes (name, description, servings) VALUES (?, ?, ?)").bind(name, input.description ?? null, input.servings ?? null),
+        db.prepare("INSERT INTO recipes (name, description, servings, photo_path) VALUES (?, ?, ?, ?)").bind(name, input.description ?? null, input.servings ?? null, input.photo_path ?? null),
         ...childStatements(name, input, db),
       ]);
       const id = Number(results[0].meta.last_row_id);
@@ -72,10 +76,11 @@ export const recipes = new Hono<{ Bindings: Env }>()
         return fail("Not found", undefined, 404);
       const name = input.name.trim();
       await db.batch([
-        db.prepare("UPDATE recipes SET name=?, description=?, servings=? WHERE id=?").bind(name, input.description ?? null, input.servings ?? null, id),
+        db.prepare("UPDATE recipes SET name=?, description=?, servings=?, photo_path=? WHERE id=?").bind(name, input.description ?? null, input.servings ?? null, input.photo_path ?? null, id),
         db.prepare("DELETE FROM recipe_ingredients WHERE recipe_id=?").bind(id),
         db.prepare("DELETE FROM recipe_steps WHERE recipe_id=?").bind(id),
         db.prepare("DELETE FROM recipe_materials WHERE recipe_id=?").bind(id),
+        db.prepare("DELETE FROM recipe_tags WHERE recipe_id=?").bind(id),
         ...[
           ...input.ingredients.map((i, pos) =>
             db.prepare("INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit) VALUES (?, ?, ?, ?, ?)").bind(id, pos, i.food, i.quantity ?? null, i.unit ?? null),
@@ -85,6 +90,9 @@ export const recipes = new Hono<{ Bindings: Env }>()
           ),
           ...input.materials.map((mat) =>
             db.prepare("INSERT INTO recipe_materials (recipe_id, name) VALUES (?, ?)").bind(id, mat),
+          ),
+          ...input.tags.map((tag) =>
+            db.prepare("INSERT INTO recipe_tags (recipe_id, tag) VALUES (?, ?)").bind(id, tag),
           ),
         ],
       ]);

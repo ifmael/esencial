@@ -16,7 +16,7 @@ export async function row(db: D1Database, sql: string, ...args: unknown[]): Prom
 export async function loadRecipe(db: D1Database, id: number): Promise<Row | null> {
   const head = await row(
     db,
-    "SELECT id, name, description, servings FROM recipes WHERE id = ?",
+    "SELECT id, name, description, servings, photo_path FROM recipes WHERE id = ?",
     id,
   );
   if (!head) return null;
@@ -35,6 +35,9 @@ export async function loadRecipe(db: D1Database, id: number): Promise<Row | null
   head.materials = (
     await rows(db, "SELECT name FROM recipe_materials WHERE recipe_id = ? ORDER BY id", id)
   ).map((m) => String(m.name));
+  head.tags = (
+    await rows(db, "SELECT tag FROM recipe_tags WHERE recipe_id = ? ORDER BY tag", id)
+  ).map((t) => String(t.tag));
   return head;
 }
 

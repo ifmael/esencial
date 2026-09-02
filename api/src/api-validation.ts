@@ -13,9 +13,11 @@ export const recipeSchema = z.object({
   name: z.string().min(1, "Recipe name is required"),
   description: z.string().optional().nullable(),
   servings: z.number().int().positive().optional().nullable(),
+  photo_path: z.string().optional().nullable(),
   ingredients: z.array(ingredientSchema).optional().default([]),
   steps: z.array(z.string().min(1)).optional().default([]),
   materials: z.array(z.string().min(1)).optional().default([]),
+  tags: z.array(z.string().min(1)).optional().default([]),
 });
 export type RecipeInput = z.infer<typeof recipeSchema>;
 
