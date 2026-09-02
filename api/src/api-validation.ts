@@ -71,8 +71,8 @@ export const planSessionSchema = z.object({
 
 export const setLogSchema = z.object({
   templateExerciseId: z.number().int().positive(),
-  set_index: z.number().int().min(0),
-  weight_kg: z.number().min(0).optional().nullable(),
+  setIndex: z.number().int().min(0),
+  weightKg: z.number().min(0).optional().nullable(),
   reps: z.number().int().min(0).optional().nullable(),
   done: z.boolean().optional().default(false),
 });

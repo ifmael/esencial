@@ -92,7 +92,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
          FROM set_logs sl
          JOIN template_exercises te ON te.id = sl.template_exercise_id
          JOIN workout_logs wl ON wl.id = sl.workout_log_id
-         WHERE te.exercise_id = ?
+         WHERE te.exercise_id = ? AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL)
          ORDER BY wl.date DESC, sl.id DESC
          LIMIT 1`,
         id,

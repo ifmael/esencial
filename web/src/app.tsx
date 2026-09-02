@@ -4,6 +4,7 @@ import { Shell } from "./components/shell";
 import { DiaPage } from "./routes/dia";
 import { PlanRecetasPage } from "./routes/plan-recetas";
 import { PlanFuerzaPage } from "./routes/plan-fuerza";
+import { SesionPage } from "./routes/sesion";
 
 export function App() {
   return (
@@ -13,6 +14,7 @@ export function App() {
           <Route path="/" element={<DiaPage />} />
           <Route path="/plan-recetas" element={<PlanRecetasPage />} />
           <Route path="/plan-fuerza" element={<PlanFuerzaPage />} />
+          <Route path="/sesion/:date" element={<SesionPage />} />
         </Routes>
       </Shell>
     </BrowserRouter>
