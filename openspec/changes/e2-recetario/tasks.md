@@ -1,29 +1,35 @@
-# Tasks — E2 recetario
+# Tasks — E2 recetario (Cloudflare stack)
 
-> SUPERSEDED by cm1-migracion-cloudflare (2026-09-02): stack pivot to React+Vite + Hono Workers + D1 before any feature work. These tasks were written for the Next.js stack; the spec (behavior) carries over to the new stack and will be re-based after CM1 lands. Kept for record until then.
+> Re-based 2026-09-02 to the ESSENTIAL stack (Worker + D1 + React/Vite SPA) after cm1-migracion-cloudflare. Strict RED→GREEN per `strict_tdd`.
 
 ## 1. Foundation (TDD)
-- [ ] 1.1 RED+GREEN: `photo_path` additive migration (guarded ALTER, idempotent, data preserved)
-- [ ] 1.2 RED+GREEN: `useRecipes` hook — list/create/update/delete with pending + error flags (mocked fetch)
-- [ ] 1.3 RED+GREEN: search filter helper (name substring case-insensitive + tag match)
+
+- [ ] 1.1 RED+GREEN: D1 photo/tags delta — failing round-trip assertions in `api/tests/recipes.test.ts` (POST/GET with `photo_path` + `tags`, PUT replaces tags, cascade on DELETE); then GREEN via versioned migration `api/migrations/0002_e2_recipes_photo_tags.sql` (`schema.sql` stays v1 baseline; `api/tests/helpers.ts` chains `schema.sql` + `0002+` in order) + `recipeSchema` + `loadRecipe`/route inserts; apply locally with `wrangler d1 migrations apply esencial --local`
+- [ ] 1.2 RED+GREEN: `useRecipes` hook (`web/tests/` with mocked `fetch`) — list on mount, create/update/remove mutate + refresh, `saving` flag, error captured from `{error, field}` envelope
+- [ ] 1.3 RED+GREEN: search filter helper — name substring case-insensitive + tag match; empty query returns all
 
 ## 2. Recipe book screen (TDD)
-- [ ] 2.1 RED+GREEN: book renders cards (name, tags, placeholder thumbnail) from hook data
-- [ ] 2.2 RED+GREEN: empty state and API-error-with-retry state
-- [ ] 2.3 RED+GREEN: search filters cards client-side; clearing restores all
-- [ ] 2.4 Responsive layout per DESIGN.md (grid desktop / single column mobile) — visual check at evaluation
+
+- [ ] 2.1 RED+GREEN: `/recetario` renders cards (name, tag chips, placeholder thumbnail) from hook data; loading state while in flight
+- [ ] 2.2 RED+GREEN: empty state (invite to create first recipe) and API-error state with retry button
+- [ ] 2.3 RED+GREEN: search field filters cards client-side (no `fetch` call); clearing restores all
+- [ ] 2.4 Responsive layout per wireframe `pantalla-5` (grid desktop / horizontal cards mobile) — visual check at evaluation
 
 ## 3. Recipe detail (TDD)
-- [ ] 3.1 RED+GREEN: detail route `/plan-recetas/[id]` renders ordered ingredients/steps, materials, servings
-- [ ] 3.2 RED+GREEN: delete with confirmation — removes card; cancel keeps everything
+
+- [ ] 3.1 RED+GREEN: `/recetario/:id` renders photo/placeholder, description, servings, ordered ingredients checklist (quantity + unit), steps numbered 1..N, material chips, tags — from hydrated list or GET by id on deep link
+- [ ] 3.2 RED+GREEN: delete with confirmation — confirm calls DELETE, card disappears from book, brief success state; cancel changes nothing
+- [ ] 3.3 RED+GREEN: pencil action opens the editor pre-filled in edit mode
 
 ## 4. Recipe editor (TDD)
-- [ ] 4.1 RED+GREEN: create flow — valid POST, card appears, modal closes
-- [ ] 4.2 RED+GREEN: validation — empty name shows field error, zero API calls
-- [ ] 4.3 RED+GREEN: edit flow — pre-filled, PUT on save, cancel leaves data intact
-- [ ] 4.4 RED+GREEN: dynamic rows — add/remove ingredient rows, add/remove/reorder steps, material chips, tags
+
+- [ ] 4.1 RED+GREEN: create flow — valid payload POSTs to `/api/recipes`, new card appears, modal closes
+- [ ] 4.2 RED+GREEN: validation — empty name shows field error, zero API calls; server 400 `{error, field}` surfaces next to the named field with data preserved
+- [ ] 4.3 RED+GREEN: edit flow — PUT on save replaces children wholesale; cancel discards without any API call
+- [ ] 4.4 RED+GREEN: dynamic rows — add/remove ingredient rows, add/remove/reorder steps, material chips add/remove, free tag input; submit disabled while saving (no duplicates)
 
 ## 5. Verify & close
-- [ ] 5.1 Full `npm test` + `npm run build` green
-- [ ] 5.2 Browser E2E smoke (prod build): create → search → open → edit → delete journey
-- [ ] 5.3 Update project-site tree (E2 done), archive change, joint evaluation
+
+- [ ] 5.1 `pnpm test` (api + web) green
+- [ ] 5.2 Browser E2E smoke against `pnpm dev` (Worker + SPA): create → search → open detail → edit → delete journey
+- [ ] 5.3 Update project-site tree (E2 done), archive change, joint evaluation (photo-upload decision from D4 open options)
