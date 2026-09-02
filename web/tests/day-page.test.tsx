@@ -45,9 +45,12 @@ let fetchMock: Mock;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  fetchMock = vi.fn(async (url: string) =>
-    Response.json(payload({ date: url.slice("/api/day/".length) })),
-  );
+  fetchMock = vi.fn(async (url: string) => {
+    // E7 guard probe must authenticate so the page mounts; /api/day is for the page.
+    if (String(url).includes("/api/auth/status"))
+      return Response.json({ authenticated: true }, { status: 200, headers: { "content-type": "application/json" } });
+    return Response.json(payload({ date: String(url).slice("/api/day/".length) }));
+  });
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -249,7 +252,11 @@ describe("sección NOTAS con autosave", () => {
 describe("loading y error", () => {
   it("muestra esqueletos mientras carga", async () => {
     const gate = Promise.withResolvers<Response>();
-    fetchMock.mockImplementation(() => gate.promise);
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("/api/auth/status"))
+        return Response.json({ authenticated: true }, { status: 200, headers: { "content-type": "application/json" } });
+      return gate.promise;
+    });
     renderAt("/");
     await settle();
     expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
@@ -261,6 +268,8 @@ describe("loading y error", () => {
   it("fallo de red → tarjeta de error con Reintentar que recarga la fecha", async () => {
     let broken = true;
     fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("/api/auth/status"))
+        return Response.json({ authenticated: true }, { status: 200, headers: { "content-type": "application/json" } });
       if (broken) throw new TypeError("network down");
       return Response.json(payload({ date: String(url).slice("/api/day/".length) }));
     });

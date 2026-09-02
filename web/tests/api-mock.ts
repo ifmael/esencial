@@ -35,6 +35,8 @@ export function mockApi(seed: Seed = {}): MockApi {
     const method = init?.method ?? "GET";
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
     api.calls.push({ url, method, body });
+    // E7 guard: every page test renders App → GuardedShell probes this once.
+    if (url.startsWith("/api/auth/status")) return json({ authenticated: true });
     if (api.hang) return new Promise<Response>(() => {}); // pending forever
 
     const tMatch = /^\/api\/templates(?:\/(\d+))?$/.exec(url);

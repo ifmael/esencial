@@ -54,7 +54,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {nav}
         <button
           type="button"
-          aria-label="Cerrar sesión"
           className="rounded-lg px-3 py-2 font-medium text-text-secondary"
           onClick={async () => {
             await fetch("/api/auth/logout", { method: "POST" });

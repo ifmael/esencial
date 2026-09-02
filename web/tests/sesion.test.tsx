@@ -79,6 +79,8 @@ function mockApi(opts: {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+      // E7 guard probe: answer without counting it as app traffic.
+      if (String(url).includes("/api/auth/status")) return reply(200, { authenticated: true });
       count += 1;
       if (init?.method === "POST") {
         posts.push(JSON.parse(init.body ?? "null"));
@@ -105,6 +107,16 @@ function mockApi(opts: {
   return { posts, fetchCount: () => count };
 }
 
+function primaryClose(): Promise<HTMLButtonElement> {
+  return waitFor(() => {
+    const candidate = [...document.querySelectorAll("button")].find((x) => {
+      const el = x as HTMLButtonElement;
+      return el.className?.includes("btn-primary") && /cerrar sesión/i.test(el.textContent ?? "");
+    });
+    if (!candidate) throw new Error("primary close button not found");
+    return candidate as HTMLButtonElement;
+  });
+}
 function renderAt(path: string) {
   window.history.pushState({}, "", path);
   return render(<App />);
@@ -183,7 +195,7 @@ describe("state A: editable", () => {
   it("Cerrar sesión disabled until effort; picking dot 4 posts effort 4 with camelCase sets", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
-    const close = (await screen.findByRole("button", { name: /cerrar sesión/i })) as HTMLButtonElement;
+    const close = (await primaryClose()) as HTMLButtonElement;
     expect(close.disabled).toBe(true);
     fireEvent.click(screen.getByRole("radio", { name: /4/ }));
     await waitFor(() => expect(close.disabled).toBe(false));
@@ -201,7 +213,7 @@ describe("state A: editable", () => {
   it("double click sends exactly one POST; 201 flips to state B with badge", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
-    const close = (await screen.findByRole("button", { name: /cerrar sesión/i })) as HTMLButtonElement;
+    const close = (await primaryClose()) as HTMLButtonElement;
     fireEvent.click(screen.getByRole("radio", { name: /3/ }));
     await waitFor(() => expect(close.disabled).toBe(false));
     fireEvent.click(close);
@@ -213,7 +225,7 @@ describe("state A: editable", () => {
   it("400 with field → banner names the field, draft stays editable", async () => {
     mockApi({ postReply: { status: 400, body: { error: "Required", field: "sets.0.setIndex" } } });
     renderAt("/sesion/2026-09-02");
-    const close = (await screen.findByRole("button", { name: /cerrar sesión/i })) as HTMLButtonElement;
+    const close = (await primaryClose()) as HTMLButtonElement;
     fireEvent.click(screen.getByRole("radio", { name: /3/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /press banca serie 1/i }));
     await waitFor(() => expect(close.disabled).toBe(false));
@@ -229,7 +241,7 @@ describe("state A: editable", () => {
       log: loggedPayload([{ templateExerciseId: TE_BENCH, setIndex: 0, weightKg: 60, reps: 8, done: true }], 2, "fuerte"),
     });
     renderAt("/sesion/2026-09-02");
-    const close = (await screen.findByRole("button", { name: /cerrar sesión/i })) as HTMLButtonElement;
+    const close = (await primaryClose()) as HTMLButtonElement;
     fireEvent.click(screen.getByRole("radio", { name: /3/ }));
     await waitFor(() => expect(close.disabled).toBe(false));
     fireEvent.click(close);
@@ -258,7 +270,12 @@ describe("state B: read-only", () => {
     expect(screen.getByText("sesión floja")).toBeDefined();
     expect(screen.getByText(/—/)).toBeDefined();
     expect(container.querySelectorAll("input, textarea, select").length).toBe(0);
-    expect(screen.queryByRole("button", { name: /cerrar sesión/i })).toBeNull();
+    // No primary (workout) close button in read-only state; the shell logout
+    // (desktop, text-secondary) is unrelated.
+    const closeBtns = [...document.querySelectorAll("button")].filter(
+      (x) => (x as HTMLButtonElement).className?.includes("btn-primary") && /cerrar sesión/i.test(x.textContent ?? ""),
+    );
+    expect(closeBtns).toHaveLength(0);
     // effort 2 of 5 filled
     const dots = screen.getAllByTestId("effort-dot");
     expect(dots.filter((d) => d.getAttribute("data-filled") === "true").length).toBe(2);

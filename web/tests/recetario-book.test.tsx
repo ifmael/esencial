@@ -24,9 +24,16 @@ describe("/recetario book", () => {
   it("shows loading then cards with names, tag chips and photo placeholder", async () => {
     let resolve!: (r: Response) => void;
     const pending = new Promise<Response>((res) => (resolve = res));
-    vi.stubGlobal("fetch", vi.fn().mockReturnValue(pending));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).includes("/api/auth/status")) return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers: { "content-type": "application/json" } });
+        return pending;
+      }),
+    );
     renderAt("/recetario");
-    expect(screen.getByText("Cargando recetario…")).toBeDefined();
+    // Guard probe resolves first, then the book shows loading while /api/recipes pend.
+    await screen.findByText("Cargando recetario…");
 
     resolve(new Response(JSON.stringify(three), { status: 200 }));
     await screen.findByText("Arroz con pollo");

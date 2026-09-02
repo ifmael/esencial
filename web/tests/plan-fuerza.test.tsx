@@ -59,7 +59,8 @@ describe("plan screen", () => {
     expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
     const chips = screen.getAllByRole("button", { name: "C — Piernas" });
     expect(chips.length).toBeGreaterThanOrEqual(2); // chip + card header
-    expect(api.calls[0].url).toBe("/api/templates");
+    const biz = api.calls.find((c) => !c.url.includes("/api/auth/status"));
+    expect(biz?.url).toBe("/api/templates");
   });
 
   it("empty state invites creating the first template", async () => {
@@ -75,8 +76,10 @@ describe("plan screen", () => {
     let fail = true;
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
-        if (fail) {
+      vi.fn(async (url: string) => {
+        // Guard probe must succeed so the page mounts; only /api/templates fails.
+        if (String(url).includes("/api/auth/status")) return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers: { "content-type": "application/json" } });
+        if (fail && String(url).includes("/api/templates")) {
           fail = false;
           throw new TypeError("Network error");
         }

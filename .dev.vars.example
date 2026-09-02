@@ -1,5 +1,6 @@
-# Copy to api/.dev.vars (gitignored) for `wrangler dev`. Generate values:
+# Copy to .dev.vars (gitignored, WORKSPACE ROOT — wrangler reads it from cwd)
+# for `wrangler dev`. Generate values:
 #   node --experimental-strip-types api/scripts/hash-password.ts 'tu clave'
-# AUTH_SECRET: any 32+ random chars, e.g. `openssl rand -base64 24`
+#   openssl rand -base64 24
 AUTH_SECRET="replace-me-32-bytes-minimum-xxxxxxx"
 PASSWORD_HASH="pbkdf2$210000$...$..."

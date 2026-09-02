@@ -45,8 +45,13 @@ afterEach(() => {
 describe("catalog", () => {
   it("lists cards with name + tag chips in API order", async () => {
     renderAt("/ejercicios");
-    await screen.findByRole("heading", { name: "Ejercicios" });
-    const cards = screen.getAllByRole("link").filter((a) => a.getAttribute("href")?.startsWith("/ejercicios/"));
+    // The E7 guard (probe /api/auth/status) adds an async tick before the
+    // catalog mounts; wait for the cards, not just the heading.
+    // Wait for the first card's content (the E7 guard adds an async tick
+    // before the catalog mounts; the heading alone is the loading state).
+    await screen.findByText("Press banca");
+    const all = screen.getAllByRole("link");
+    const cards = all.filter((a) => a.getAttribute("href")?.startsWith("/ejercicios/"));
     expect(cards.map((c) => c.getAttribute("href"))).toEqual(["/ejercicios/7", "/ejercicios/8", "/ejercicios/9"]);
     expect(screen.getByText("pecho")).toBeDefined();
     expect(screen.getByText("tríceps")).toBeDefined();

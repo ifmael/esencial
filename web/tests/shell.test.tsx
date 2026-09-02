@@ -1,6 +1,6 @@
 // UI tests: shell navigation (active state, deep links) + Día empty states.
 // E7: App now checks /api/auth/status on mount — stub it as authenticated.
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
@@ -58,6 +58,8 @@ describe("Día (E5)", () => {
     }));
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  it("renders navigable date header and three empty sections", async () => {
 
     renderAt("/");
     await waitFor(() => expect(screen.getByText("FUERZA")).toBeDefined());

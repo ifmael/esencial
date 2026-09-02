@@ -26,6 +26,8 @@ function mockFetch({
     if (u.startsWith("/api/auth/status")) return Response.json({ authenticated });
     if (u.startsWith("/api/auth/login")) return Response.json(login.body, { status: login.status });
     if (u.startsWith("/api/auth/logout")) return Response.json({ ok: true });
+    if (u.startsWith("/api/day/"))
+      return Response.json({ date: "2026-09-02", isoWeek: "2026-W36", dayIndex: 2, meals: [], session: null, note: { text: "" } });
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   });
   vi.stubGlobal("fetch", fetchMock);

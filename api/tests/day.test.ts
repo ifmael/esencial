@@ -110,11 +110,11 @@ describe("GET /api/day/:date", () => {
     const log = await post("/api/workout-logs/2026-09-02", {
       effort: 3,
       sets: [
-        { templateExerciseId: teBench, set_index: 0, weight_kg: 60, reps: 8, done: true },
-        { templateExerciseId: teBench, set_index: 1, weight_kg: 60, reps: 7, done: true },
-        { templateExerciseId: teBench, set_index: 2, weight_kg: 62, reps: 6, done: true },
-        { templateExerciseId: teCurl, set_index: 0, weight_kg: 10, reps: 12, done: true },
-        { templateExerciseId: teCurl, set_index: 1, weight_kg: 10, reps: 10, done: true },
+        { templateExerciseId: teBench, setIndex: 0, weightKg: 60, reps: 8, done: true },
+        { templateExerciseId: teBench, setIndex: 1, weightKg: 60, reps: 7, done: true },
+        { templateExerciseId: teBench, setIndex: 2, weightKg: 62, reps: 6, done: true },
+        { templateExerciseId: teCurl, setIndex: 0, weightKg: 10, reps: 12, done: true },
+        { templateExerciseId: teCurl, setIndex: 1, weightKg: 10, reps: 10, done: true },
       ],
     });
     expect(log.status).toBe(201);
