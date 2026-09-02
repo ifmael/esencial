@@ -7,6 +7,7 @@ export const ingredientSchema = z.object({
   food: z.string().min(1),
   quantity: z.number().positive().optional().nullable(),
   unit: z.string().optional().nullable(),
+  section: z.string().optional().nullable(),
 });
 
 export const recipeSchema = z.object({
@@ -91,3 +92,32 @@ export type WorkoutLogInput = z.infer<typeof workoutLogSchema>;
 export const dayNoteSchema = z.object({
   text: z.string(),
 });
+
+// --- Shopping list (E3) -----------------------------------------------------
+
+export const shoppingItemSchema = z.object({
+  food: z.string().min(1),
+  quantity: z.number().positive().optional().nullable(),
+  unit: z.string().optional().nullable(),
+  section: z.string().optional().nullable(),
+  checked: z.boolean().optional().default(false),
+});
+
+export const shoppingItemsSchema = z.object({
+  items: z.array(shoppingItemSchema),
+});
+export type ShoppingItemInput = z.infer<typeof shoppingItemSchema>;
+// PATCH body: at least one updatable field (no defaults — an absent `checked`
+// must not silently rewrite the stored flag). Unknown-only keys strip to {}
+// and fail the refinement.
+export const shoppingItemPatchSchema = z
+  .object({
+    food: z.string().min(1).optional(),
+    quantity: z.number().positive().optional().nullable(),
+    unit: z.string().optional().nullable(),
+    section: z.string().optional().nullable(),
+    checked: z.boolean().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), {
+    message: "At least one of food, quantity, unit, section, checked is required",
+  });

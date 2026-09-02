@@ -22,7 +22,7 @@ export async function loadRecipe(db: D1Database, id: number): Promise<Row | null
   if (!head) return null;
   head.ingredients = await rows(
     db,
-    "SELECT id, food, quantity, unit FROM recipe_ingredients WHERE recipe_id = ? ORDER BY position, id",
+    "SELECT id, food, quantity, unit, section FROM recipe_ingredients WHERE recipe_id = ? ORDER BY position, id",
     id,
   );
   head.steps = (
