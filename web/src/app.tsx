@@ -6,6 +6,7 @@ import { PlanRecetasPage } from "./routes/plan-recetas";
 import { PlanFuerzaPage } from "./routes/plan-fuerza";
 import { RecetarioPage, RecetarioDetallePage } from "./routes/recetario";
 import { EjerciciosPage, EjercicioDetailPage } from "./routes/ejercicios";
+import { SesionPage } from "./routes/sesion";
 
 export function App() {
   return (
@@ -19,6 +20,7 @@ export function App() {
           <Route path="/recetario/:id" element={<RecetarioDetallePage />} />
           <Route path="/ejercicios" element={<EjerciciosPage />} />
           <Route path="/ejercicios/:id" element={<EjercicioDetailPage />} />
+          <Route path="/sesion/:date" element={<SesionPage />} />
         </Routes>
       </Shell>
     </BrowserRouter>

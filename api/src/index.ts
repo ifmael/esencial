@@ -12,6 +12,7 @@ import { planSessions } from "./routes/plan-sessions";
 import { workoutLogs } from "./routes/workout-logs";
 import { notes } from "./routes/notes";
 import { shoppingList } from "./routes/shopping-list";
+import { day } from "./routes/day";
 
 export const api = new Hono<{ Bindings: Env }>()
   .get("/health", (c) => json({ ok: true }))
@@ -22,7 +23,8 @@ export const api = new Hono<{ Bindings: Env }>()
   .route("/plan-sessions", planSessions)
   .route("/workout-logs", workoutLogs)
   .route("/notes", notes)
-  .route("/shopping-list", shoppingList);
+  .route("/shopping-list", shoppingList)
+  .route("/day", day);
 
 const app = new Hono<{ Bindings: Env }>()
   .route("/api", api)
