@@ -67,9 +67,9 @@ describe("/api/workout-logs/:date", () => {
       effort: 3,
       note: "se sintió fuerte",
       sets: [
-        { templateExerciseId: s.teBench, set_index: 0, weight_kg: 57.5, reps: 8, done: true },
-        { templateExerciseId: s.teBench, set_index: 1, weight_kg: 57.5, reps: 6, done: true },
-        { templateExerciseId: s.teCurl, set_index: 0, weight_kg: 20, reps: 12, done: false },
+        { templateExerciseId: s.teBench, setIndex: 0, weightKg: 57.5, reps: 8, done: true },
+        { templateExerciseId: s.teBench, setIndex: 1, weightKg: 57.5, reps: 6, done: true },
+        { templateExerciseId: s.teCurl, setIndex: 0, weightKg: 20, reps: 12, done: false },
       ],
     });
     expect(res.status).toBe(201);
@@ -92,12 +92,12 @@ describe("/api/workout-logs/:date", () => {
     await post("/api/plan-sessions", { date: "2026-09-06", templateId: s.templateId });
     const good = {
       effort: 2,
-      sets: [{ templateExerciseId: s.teBench, set_index: 0, weight_kg: 60, reps: 5, done: true }],
+      sets: [{ templateExerciseId: s.teBench, setIndex: 0, weightKg: 60, reps: 5, done: true }],
     };
     await post("/api/workout-logs/2026-09-06", good);
     const again = await post("/api/workout-logs/2026-09-06", {
       effort: 5,
-      sets: [{ templateExerciseId: s.teCurl, set_index: 0, weight_kg: 99, reps: 1, done: true }],
+      sets: [{ templateExerciseId: s.teCurl, setIndex: 0, weightKg: 99, reps: 1, done: true }],
     });
     expect(again.status).toBe(409);
     const got = await body(await get("/api/workout-logs/2026-09-06"));
@@ -120,6 +120,43 @@ describe("/api/workout-logs/:date", () => {
     expect((await body(res)).field).toBe("effort");
   });
 
+  // E6 debt (design D3): clean break — snake_case wire names are rejected.
+  it("400 on snake_case set fields; no workout_logs row created", async () => {
+    const s = await seed();
+    await post("/api/plan-sessions", { date: "2026-09-11", templateId: s.templateId });
+    const res = await post("/api/workout-logs/2026-09-11", {
+      effort: 3,
+      sets: [{ templateExerciseId: s.teBench, set_index: 0, weight_kg: 60, reps: 8, done: true }],
+    });
+    expect(res.status).toBe(400);
+    const r = await body(res);
+    // the error must reference the missing camelCase key, not the old name
+    expect(String(r.field)).toContain("setIndex");
+    expect(String(r.field)).not.toContain("set_index");
+    const count = await d1.get<{ n: number }>("SELECT COUNT(*) AS n FROM workout_logs");
+    expect(count?.n).toBe(0);
+    const ps = await d1.get<{ status: string }>("SELECT status FROM plan_sessions WHERE date='2026-09-11'");
+    expect(ps?.status).toBe("planned");
+  });
+
+  // Contract lock (task 1.3): POST response echoes the camelCase wire shape.
+  it("POST 201 response echoes setIndex/weightKg/done:boolean camelCase", async () => {
+    const s = await seed();
+    await post("/api/plan-sessions", { date: "2026-09-12", templateId: s.templateId });
+    const res = await post("/api/workout-logs/2026-09-12", {
+      effort: 4,
+      sets: [{ templateExerciseId: s.teCurl, setIndex: 0, weightKg: 20, reps: 12, done: true }],
+    });
+    expect(res.status).toBe(201);
+    const r = await body(res);
+    const sets = r.sets as Record<string, unknown>[];
+    expect(sets[0].setIndex).toBe(0);
+    expect(sets[0].weightKg).toBe(20);
+    expect(sets[0].done).toBe(true);
+    expect(sets[0]).not.toHaveProperty("set_index");
+    expect(sets[0]).not.toHaveProperty("weight_kg");
+  });
+
   it("GET unknown date → 404", async () => {
     expect((await get("/api/workout-logs/2020-01-01")).status).toBe(404);
   });
@@ -132,13 +169,13 @@ describe("last values per exercise", () => {
     await post("/api/plan-sessions", { date: "2026-09-09", templateId: s.templateId });
     await post("/api/workout-logs/2026-09-09", {
       effort: 2,
-      sets: [{ templateExerciseId: s.teBench, set_index: 0, weight_kg: 55, reps: 8, done: true }],
+      sets: [{ templateExerciseId: s.teBench, setIndex: 0, weightKg: 55, reps: 8, done: true }],
     });
     // newer day wins
     await post("/api/plan-sessions", { date: "2026-09-10", templateId: s.templateId });
     await post("/api/workout-logs/2026-09-10", {
       effort: 3,
-      sets: [{ templateExerciseId: s.teBench, set_index: 0, weight_kg: 57.5, reps: 8, done: true }],
+      sets: [{ templateExerciseId: s.teBench, setIndex: 0, weightKg: 57.5, reps: 8, done: true }],
     });
     const res = await get(`/api/exercises/${s.benchId}/last`);
     expect(res.status).toBe(200);
@@ -154,6 +191,23 @@ describe("last values per exercise", () => {
     const res = await get(`/api/exercises/${id}/last`);
     expect(res.status).toBe(200);
     expect(((await res.json()) as { last: unknown }).last).toBeNull();
+  });
+
+  it("skips logged sets without weight/reps (E6 smoke)", async () => {
+    const s = await seed();
+    await post("/api/plan-sessions", { date: "2026-09-13", templateId: s.templateId });
+    await post("/api/workout-logs/2026-09-13", {
+      effort: 2,
+      sets: [
+        { templateExerciseId: s.teBench, setIndex: 0, weightKg: 60, reps: 8, done: true },
+        // skipped set logged empty — must not poison prefill
+        { templateExerciseId: s.teBench, setIndex: 1, weightKg: null, reps: null, done: false },
+      ],
+    });
+    const r = await body(await get(`/api/exercises/${s.benchId}/last`));
+    const last = r.last as { weightKg: number; reps: number };
+    expect(last.weightKg).toBe(60);
+    expect(last.reps).toBe(8);
   });
 
   it("404 for unknown exercise", async () => {

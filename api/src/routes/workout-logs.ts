@@ -91,7 +91,7 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
               `INSERT INTO set_logs (workout_log_id, template_exercise_id, set_index, weight_kg, reps, done)
                VALUES (${LOG_ID}, ?, ?, ?, ?, ?)`,
             )
-            .bind(date, s.templateExerciseId, s.set_index, s.weight_kg ?? null, s.reps ?? null, s.done ? 1 : 0),
+            .bind(date, s.templateExerciseId, s.setIndex, s.weightKg ?? null, s.reps ?? null, s.done ? 1 : 0),
         ),
         db.prepare("UPDATE plan_sessions SET status = 'logged' WHERE id = ?").bind(Number(session.id)),
       ]);

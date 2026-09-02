@@ -1,34 +1,55 @@
-// Shared fetch envelope client (E4). The API answers every failure with
-// {error, field?}; non-JSON/failed parses keep a generic message.
-export type ApiError = Error & { status: number; field?: string };
+// Shared typed fetch helper (E6, design D7): parses the {error, field?}
+// envelope into ApiError so screens can branch on status/field. E4 surfaces
+// (apiFetch/apiField) are kept as compat over the same core.
+export class ApiError extends Error {
+  constructor(
+    public readonly error: string,
+    public readonly field: string | undefined,
+    public readonly status: number,
+  ) {
+    super(error);
+    this.name = "ApiError";
+  }
+}
 
-export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-  });
-  if (res.status === 204) return undefined as T;
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, init);
+  } catch {
+    throw new ApiError("No se pudo conectar con el servidor", undefined, 0);
+  }
   let body: unknown = null;
   try {
     body = await res.json();
   } catch {
-    /* non-JSON error body */
+    /* non-JSON (204 etc.) */
   }
   if (!res.ok) {
-    const env: { error?: unknown; field?: unknown } =
-      body && typeof body === "object" ? (body as { error?: unknown; field?: unknown }) : {};
-    const err = new Error(
-      typeof env.error === "string" ? env.error : `Request failed (${res.status})`,
-    ) as ApiError;
-    err.status = res.status;
-    if (typeof env.field === "string") err.field = env.field;
-    throw err;
+    const env = (body ?? {}) as { error?: string; field?: string };
+    throw new ApiError(env.error ?? `HTTP ${res.status}`, env.field, res.status);
   }
   return body as T;
 }
 
-/** The failing field of an ApiError envelope, narrowed at runtime. */
+// E4 compat: fetch-style helper that always sends JSON and surfaces ApiError.
+export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const headers = { "content-type": "application/json", ...(init?.headers ?? {}) };
+  return request<T>(url, { ...init, headers });
+}
+
+export const apiGet = <T>(path: string) => request<T>(path);
+
+export const apiSend = <T>(path: string, method: string, body: unknown) =>
+  request<T>(path, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+/** The failing field of an ApiError envelope, narrowed at runtime (E4 compat). */
 export function apiField(e: unknown): string | undefined {
+  if (e instanceof ApiError) return e.field;
   if (e && typeof e === "object" && "field" in e && typeof e.field === "string") return e.field;
   return undefined;
 }
