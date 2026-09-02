@@ -284,7 +284,7 @@ window.TREE = {
             { kind: "decidido", text: "Implementada por agente especializado con TDD (28 min): 13 rutas API BFF + esquema SQLite idempotente. 60 tests verdes, build verde, journey E2E verificado en producción por el orquestador: receta → plan → sesión → registro (409 en duplicado) → últimos valores (60×6) → borrado de receta deja slot vacío." },
             { kind: "decidido", text: "Fix crítico: serverExternalPackages better-sqlite3 (segfault del addon nativo bundlado). Deuda conocida: naming mixto en setLogSchema (templateExerciseId vs set_index) — normalizar en E6." },
         ] },
-        { title: "E2 — Recetario + Receta X", status: "pendiente" },
+        { title: "E2 — Recetario + Receta X", status: "activo", notes: [{ kind: "nota", text: "Change e2-recetario creado (proposal/spec/design/tasks): libro de recetas con búsqueda, detalle, editor crear/editar y borrado con confirmación, sobre la API de E1. Foto como URL/placeholder (subida real se decide en evaluación). Esperando validación del usuario antes de delegar a agentes." }] },
         { title: "E3 — Plan semanal + lista de compra", status: "pendiente" },
         { title: "E4 — Plan fuerza + catálogo", status: "pendiente" },
         { title: "E5 — Día (home)", status: "pendiente" },
