@@ -280,7 +280,10 @@ window.TREE = {
             { kind: "nota", text: "Hecho: navegación sidebar+tabs verificada, DÍA con fecha navegable y 3 secciones vacías, tokens DESIGN.md, tests 3/3, build verde. Interactividad verificada en producción (prod build): fecha navegable ← → OK. El modo dev de Next 16+turbopack tiene un retardo de hidratación en headless, no afecta a producción ni a uso real; se investigará si molesta en desarrollo." },
           ],
         },
-        { title: "E1 — Modelo de datos + API", status: "activo", notes: [{ kind: "nota", text: "Change e1-data-model creado (proposal, spec, design, tasks): esquema SQLite completo (recetas, ingredientes, ejercicios, plantillas, plan semanal, sesiones, logs, notas) + API BFF con validación Zod. Esperando validación del usuario antes de implementar con agentes." }] },
+        { title: "E1 — Modelo de datos + API", status: "decidido", notes: [
+            { kind: "decidido", text: "Implementada por agente especializado con TDD (28 min): 13 rutas API BFF + esquema SQLite idempotente. 60 tests verdes, build verde, journey E2E verificado en producción por el orquestador: receta → plan → sesión → registro (409 en duplicado) → últimos valores (60×6) → borrado de receta deja slot vacío." },
+            { kind: "decidido", text: "Fix crítico: serverExternalPackages better-sqlite3 (segfault del addon nativo bundlado). Deuda conocida: naming mixto en setLogSchema (templateExerciseId vs set_index) — normalizar en E6." },
+        ] },
         { title: "E2 — Recetario + Receta X", status: "pendiente" },
         { title: "E3 — Plan semanal + lista de compra", status: "pendiente" },
         { title: "E4 — Plan fuerza + catálogo", status: "pendiente" },
