@@ -1,0 +1,182 @@
+// /ejercicios catalog + detail + editor + add-to-template (E4 tasks 4.1-5.4, 6.2).
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { App } from "../src/app";
+import { mockApi, type MockApi } from "./api-mock";
+import type { Exercise } from "../src/lib/exercises";
+import type { Template } from "../src/lib/templates";
+
+const press: Exercise = {
+  id: 7,
+  name: "Press banca",
+  description: "Empuje horizontal con barra.",
+  setupCues: "Escápulas retraídas, arcos naturales.",
+  techniqueUrl: "https://youtu.be/example",
+  tags: ["pecho", "tríceps"],
+};
+const remo: Exercise = { id: 8, name: "Remo", description: null, setupCues: null, techniqueUrl: null, tags: ["espalda"] };
+const peso: Exercise = { id: 9, name: "Peso muerto", description: null, setupCues: null, techniqueUrl: null, tags: ["pierna"] };
+
+const tplA = (): Template => ({
+  id: 1,
+  name: "A — Empuje",
+  rotation_index: 0,
+  exercises: [
+    { id: 11, exerciseId: 7, position: 0, target_sets: 3, target_reps_min: 8, target_reps_max: 8, exerciseName: "Press banca" },
+    { id: 12, exerciseId: 8, position: 1, target_sets: null, target_reps_min: null, target_reps_max: null, exerciseName: "Remo" },
+  ],
+});
+
+let api: MockApi;
+
+function renderAt(path: string) {
+  window.history.pushState({}, "", path);
+  return render(<App />);
+}
+
+beforeEach(() => {
+  api = mockApi({ templates: [tplA()], exercises: [press, remo, peso] });
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("catalog", () => {
+  it("lists cards with name + tag chips in API order", async () => {
+    renderAt("/ejercicios");
+    await screen.findByRole("heading", { name: "Ejercicios" });
+    const cards = screen.getAllByRole("link").filter((a) => a.getAttribute("href")?.startsWith("/ejercicios/"));
+    expect(cards.map((c) => c.getAttribute("href"))).toEqual(["/ejercicios/7", "/ejercicios/8", "/ejercicios/9"]);
+    expect(screen.getByText("pecho")).toBeDefined();
+    expect(screen.getByText("tríceps")).toBeDefined();
+  });
+
+  it("client-side search by name and tag; clearing restores", async () => {
+    renderAt("/ejercicios");
+    const search = await screen.findByPlaceholderText(/buscar/i);
+    fireEvent.change(search, { target: { value: "pecho" } });
+    await waitFor(() => expect(screen.queryByText("Remo")).toBeNull());
+    expect(screen.getByText("Press banca")).toBeDefined();
+    const calls = api.calls.length;
+    fireEvent.change(search, { target: { value: "" } });
+    await waitFor(() => expect(screen.getByText("Remo")).toBeDefined());
+    expect(api.calls.length).toBe(calls);
+  });
+
+  it("empty catalog invites creating the first exercise", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({ templates: [], exercises: [] });
+    renderAt("/ejercicios");
+    await screen.findByText(/primer ejercicio/i);
+    expect(screen.getByRole("button", { name: "+ Nuevo ejercicio" })).toBeDefined();
+  });
+
+  it("create flow: name required, ≥1 tag, valid save → POST 201 + detail shows data", async () => {
+    renderAt("/ejercicios");
+    fireEvent.click(await screen.findByRole("button", { name: "+ Nuevo ejercicio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    expect(screen.getByText(/nombre es obligatorio/i)).toBeDefined();
+    expect(api.calls.some((c) => c.method === "POST")).toBe(false);
+
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Hip thrust" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    expect(screen.getByText(/tag es obligatorio/i)).toBeDefined();
+    expect(api.calls.some((c) => c.method === "POST")).toBe(false);
+
+    fireEvent.change(screen.getByPlaceholderText(/añadir tag/i), { target: { value: "glúteo" } });
+    fireEvent.keyDown(screen.getByPlaceholderText(/añadir tag/i), { key: "Enter" });
+    fireEvent.change(screen.getByLabelText(/técnica/i), { target: { value: "https://youtu.be/ht" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.exercises).toHaveLength(4));
+    await screen.findByRole("heading", { name: "Hip thrust" });
+    expect(screen.getByText("glúteo")).toBeDefined();
+  });
+});
+
+describe("detail", () => {
+  it("renders description, cues, chips; Ver técnica link with safe attrs", async () => {
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    expect(screen.getByText("Empuje horizontal con barra.")).toBeDefined();
+    expect(screen.getByText("Escápulas retraídas, arcos naturales.")).toBeDefined();
+    const link = screen.getByRole("link", { name: /ver técnica/i });
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    expect(link.getAttribute("href")).toBe("https://youtu.be/example");
+  });
+
+  it("no techniqueUrl → no Ver técnica control", async () => {
+    renderAt("/ejercicios/8");
+    await screen.findByRole("heading", { name: "Remo" });
+    expect(screen.queryByRole("link", { name: /ver técnica/i })).toBeNull();
+  });
+
+  it("unknown id → not-found card with back link, no crash", async () => {
+    renderAt("/ejercicios/9999");
+    await screen.findByText(/no existe/i);
+    expect(screen.getByRole("link", { name: /volver/i })).toBeDefined();
+  });
+
+  it("add to template: PUT appends last, preserves entries + rotation; success, no nav", async () => {
+    renderAt("/ejercicios/9");
+    await screen.findByRole("heading", { name: "Peso muerto" });
+    fireEvent.click(screen.getByRole("button", { name: /añadir a plantilla/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "A — Empuje" }));
+    await waitFor(() => expect(api.calls.some((c) => c.method === "PUT")).toBe(true));
+    const put = api.calls.find((c) => c.method === "PUT")!;
+    expect(put.url).toBe("/api/templates/1");
+    const body = put.body as { exercises: { exerciseId: number }[]; rotation_index: number };
+    expect(body.exercises.map((e) => e.exerciseId)).toEqual([7, 8, 9]);
+    expect(body.rotation_index).toBe(0);
+    await screen.findByText(/añadido/i);
+    expect(window.location.pathname).toBe("/ejercicios/9");
+  });
+
+  it("add-to-template with no templates: empty state links to plan, no call", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({ templates: [], exercises: [peso] });
+    renderAt("/ejercicios/9");
+    await screen.findByRole("heading", { name: "Peso muerto" });
+    fireEvent.click(screen.getByRole("button", { name: /añadir a plantilla/i }));
+    const link = await screen.findByRole("link", { name: /ir a plan fuerza/i });
+    expect(link.getAttribute("href")).toBe("/plan-fuerza");
+    expect(api.calls.some((c) => c.method === "PUT" || c.method === "POST")).toBe(false);
+  });
+
+  it("edit flow: pre-filled PUT; server 400 on technique_url shown inline, draft kept", async () => {
+    renderAt("/ejercicios/8");
+    await screen.findByRole("heading", { name: "Remo" });
+    fireEvent.click(screen.getByRole("button", { name: /editar/i }));
+    const name = await screen.findByLabelText("Nombre");
+    expect((name as HTMLInputElement).value).toBe("Remo");
+    fireEvent.change(screen.getByLabelText(/técnica/i), { target: { value: "no-es-url" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await screen.findByText(/valid url/i);
+    expect((screen.getByLabelText(/técnica/i) as HTMLInputElement).value).toBe("no-es-url");
+    const put = api.calls.find((c) => c.method === "PUT")!;
+    expect(put.url).toBe("/api/exercises/8");
+  });
+
+  it("delete: confirm → 204 back to catalog, card gone", async () => {
+    renderAt("/ejercicios/9");
+    await screen.findByRole("heading", { name: "Peso muerto" });
+    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.getByRole("heading", { name: "Peso muerto" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(api.state.exercises).toHaveLength(2));
+    await screen.findByRole("heading", { name: "Ejercicios" });
+    expect(screen.queryByText("Peso muerto")).toBeNull();
+  });
+
+  it("delete in-use: server message shown, item stays", async () => {
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+    await screen.findByText(/in-use record/i);
+    expect(screen.getByRole("heading", { name: "Press banca" })).toBeDefined();
+  });
+});

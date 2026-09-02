@@ -24,7 +24,7 @@ describe("Shell", () => {
     renderAt("/");
     fireEvent.click(screen.getAllByText("Plan fuerza")[0]);
     expect(window.location.pathname).toBe("/plan-fuerza");
-    expect(screen.getByText("Plantillas rotatorias — llegan en E4.")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
   });
 });
 
