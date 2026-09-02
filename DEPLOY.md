@@ -17,10 +17,15 @@ npx wrangler d1 create esencial
 Copia el `database_id` que imprime y pégalo en `api/wrangler.toml`
 (reemplaza el placeholder `REPLACE_WITH_DATABASE_ID`).
 
-## 3. Aplicar el esquema (cada vez que cambie schema.sql)
+## 3. Aplicar migraciones (cada vez que cambie el esquema)
 
 ```bash
-npm run db:migrate:remote   # = wrangler d1 execute esencial --remote --file=api/schema.sql
+
+# = wrangler d1 migrations apply esencial --remote
+# Registra cada archivo de api/migrations/ en _cf_D1_MIGRATIONS y lo ejecuta
+# una sola vez (idempotente). El baseline v1 (schema.sql) ya se aplicó antes;
+# 0001 es un no-op. Desde E3, los cambios aditivos viven en api/migrations/.
+pnpm db:migrate:remote
 ```
 
 ## 4. Deploy

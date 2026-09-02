@@ -1,9 +1,10 @@
 // API contract (E1): envelope helpers + healthcheck + idempotent schema.
 import { beforeAll, describe, expect, it } from "vitest";
 import { env } from "cloudflare:test";
-import { freshDb, get } from "./helpers";
+import { d1, freshDb, get } from "./helpers";
 import { dbFailure, guard } from "../src/http";
 import schemaSql from "../schema.sql?raw";
+import m0003 from "../migrations/0003_e3_shopping.sql?raw";
 
 beforeAll(freshDb);
 
@@ -41,5 +42,28 @@ describe("worker surface", () => {
 
   it("schema.sql is idempotent (second apply is a no-op)", async () => {
     await expect(env.DB.batch([env.DB.prepare(schemaSql)])).resolves.toBeTruthy();
+  });
+});
+
+describe("e3 shopping migration (D1 runner semantics)", () => {
+  it("shopping_items table + recipe_ingredients.section exist after freshDb", async () => {
+    const shop = await d1.all(`SELECT name FROM pragma_table_info('shopping_items')`);
+    expect(shop.map((c) => c.name)).toEqual(
+      expect.arrayContaining(["id", "week_plan_id", "position", "food", "quantity", "unit", "section", "checked"]),
+    );
+    const ri = await d1.all(`SELECT name FROM pragma_table_info('recipe_ingredients')`);
+    expect(ri.map((c) => c.name)).toContain("section");
+  });
+
+  it("re-applying bootstrap + CREATE IF NOT EXISTS neither errors nor duplicates", async () => {
+    // The wrangler runner owns ALTER idempotency (_cf_D1_MIGRATIONS); the test
+    // bootstrap is guarded by a once-flag and CREATE TABLE IF NOT EXISTS is
+    // replay-safe by SQL. Neither path may error or duplicate.
+    await expect(freshDb()).resolves.toBeUndefined();
+    await expect(env.DB.batch([env.DB.prepare(/CREATE TABLE[^;]+;/.exec(m0003)![0])])).resolves.toBeTruthy();
+    const { count } = (await d1.get(`SELECT COUNT(*) AS count FROM shopping_items`))!;
+    expect(count).toBe(0);
+    const ri = await d1.all(`SELECT name FROM pragma_table_info('recipe_ingredients')`);
+    expect(ri.filter((c) => c.name === "section").length).toBe(1);
   });
 });

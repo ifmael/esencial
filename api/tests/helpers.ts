@@ -3,6 +3,7 @@
 import { env } from "cloudflare:test";
 import app from "../src/index";
 import schemaSql from "../schema.sql?raw";
+import m0003Sql from "../migrations/0003_e3_shopping.sql?raw";
 
 let bootstrapped = false;
 
@@ -11,12 +12,16 @@ async function bootstrap(): Promise<void> {
   if (bootstrapped) return;
   // batch() runs a multi-statement query when unbound: schema applies atomically.
   await env.DB.batch([env.DB.prepare(schemaSql)]);
+  // Reproduce the wrangler runner's end state: each additive migration file
+  // in filename order. The plain ALTER in 0003 is safe because this runs once
+  // per worker instance (bootstrapped flag), mirroring _cf_D1_MIGRATIONS.
+  for (const sql of [m0003Sql]) await env.DB.batch(sql.split(";").filter((s) => s.trim()).map((s) => env.DB.prepare(s)));
   bootstrapped = true;
 }
 
 // Child-before-parent order keeps FK checks happy if enforcement is on.
 const TABLES = [
-  "set_logs",
+  "shopping_items",
   "workout_logs",
   "plan_sessions",
   "meal_slots",

@@ -1,0 +1,3 @@
+-- Baseline no-op: databases bootstrapped from api/schema.sql (E1/CM1) align
+-- with the wrangler runner here without re-running anything. Additive changes
+-- live in numbered files from here on.

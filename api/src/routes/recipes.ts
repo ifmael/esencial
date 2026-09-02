@@ -11,15 +11,15 @@ import { zBody } from "../validation";
 const RECIPE_ID = "(SELECT id FROM recipes WHERE name = ?)";
 
 function childStatements(name: string, input: {
-  ingredients: { food: string; quantity?: number | null; unit?: string | null }[];
+  ingredients: { food: string; quantity?: number | null; unit?: string | null; section?: string | null }[];
   steps: string[];
   materials: string[];
 }, db: D1Database): D1PreparedStatement[] {
   return [
     ...input.ingredients.map((i, pos) =>
       db
-        .prepare(`INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit) VALUES (${RECIPE_ID}, ?, ?, ?, ?)`)
-        .bind(name, pos, i.food, i.quantity ?? null, i.unit ?? null),
+        .prepare(`INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit, section) VALUES (${RECIPE_ID}, ?, ?, ?, ?, ?)`)
+        .bind(name, pos, i.food, i.quantity ?? null, i.unit ?? null, i.section ?? null),
     ),
     ...input.steps.map((text, pos) =>
       db.prepare(`INSERT INTO recipe_steps (recipe_id, position, text) VALUES (${RECIPE_ID}, ?, ?)`).bind(name, pos, text),
@@ -78,7 +78,7 @@ export const recipes = new Hono<{ Bindings: Env }>()
         db.prepare("DELETE FROM recipe_materials WHERE recipe_id=?").bind(id),
         ...[
           ...input.ingredients.map((i, pos) =>
-            db.prepare("INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit) VALUES (?, ?, ?, ?, ?)").bind(id, pos, i.food, i.quantity ?? null, i.unit ?? null),
+            db.prepare("INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit, section) VALUES (?, ?, ?, ?, ?, ?)").bind(id, pos, i.food, i.quantity ?? null, i.unit ?? null, i.section ?? null),
           ),
           ...input.steps.map((text, pos) =>
             db.prepare("INSERT INTO recipe_steps (recipe_id, position, text) VALUES (?, ?, ?)").bind(id, pos, text),

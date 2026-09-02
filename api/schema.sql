@@ -1,6 +1,7 @@
 -- Esencial schema v1 (OpenSpec change e1-data-model design D3, ported for D1 in CM1).
 -- Idempotent bootstrap: every statement is CREATE TABLE IF NOT EXISTS.
--- No PRAGMAs: D1 manages WAL/journal itself. Apply with `npm run db:migrate:local`.
+-- No PRAGMAs: D1 manages WAL/journal itself. NOTE: additive changes now live in
+-- api/migrations/ and apply with `pnpm db:migrate:local` (wrangler d1 migrations).
 
 CREATE TABLE IF NOT EXISTS recipes (
   id          INTEGER PRIMARY KEY,
