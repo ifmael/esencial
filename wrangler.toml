@@ -12,5 +12,4 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "esencial"
-# Replace with the real id after `wrangler d1 create esencial` (deploy checklist).
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "989acff9-fbad-4ef7-a001-695d4966d264"
