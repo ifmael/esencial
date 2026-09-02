@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Registro de Entrenamiento - Esencial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d6dcd3",
+                        "on-error": "#ffffff",
+                        "text-secondary": "#78716C",
+                        "primary-container": "#15803d",
+                        "on-tertiary-container": "#fff1f1",
+                        "error-container": "#ffdad6",
+                        "on-background": "#181d17",
+                        "secondary-fixed-dim": "#a0d663",
+                        "surface-container-high": "#e4eae1",
+                        "outline-variant": "#becabc",
+                        "secondary-fixed": "#bbf37c",
+                        "tertiary-fixed": "#ffd9dd",
+                        "background": "#FAFAF9",
+                        "primary": "#00652c",
+                        "tertiary-container": "#b64c62",
+                        "outline": "#6f7a6e",
+                        "on-primary-container": "#d3ffd5",
+                        "on-surface-variant": "#3f493f",
+                        "surface-tint": "#006d30",
+                        "surface": "#FFFFFF",
+                        "primary-fixed-dim": "#79db8d",
+                        "surface-bright": "#f6fbf2",
+                        "secondary": "#3e6a00",
+                        "error": "#B91C1C",
+                        "text-primary": "#1C1917",
+                        "surface-container": "#eaefe6",
+                        "primary-dark": "#166534",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-on-surface": "#edf2e9",
+                        "on-tertiary-fixed-variant": "#81233b",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed": "#400013",
+                        "surface-container-low": "#f0f5ec",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#b9f079",
+                        "on-primary-fixed-variant": "#005323",
+                        "inverse-surface": "#2c322c",
+                        "on-secondary-fixed-variant": "#2e4f00",
+                        "warning-pending": "#D97706",
+                        "on-primary-fixed": "#00210a",
+                        "on-error-container": "#93000a",
+                        "badge-done-text": "#166534",
+                        "tertiary": "#97344a",
+                        "badge-pending-text": "#92400E",
+                        "on-surface": "#181d17",
+                        "badge-pending-bg": "#FEF3C7",
+                        "surface-muted": "#F5F5F4",
+                        "surface-container-highest": "#dfe4db",
+                        "primary-fixed": "#95f8a7",
+                        "inverse-primary": "#79db8d",
+                        "on-secondary-container": "#416e00",
+                        "border": "#E7E5E4",
+                        "badge-done-bg": "#DCFCE7",
+                        "on-secondary-fixed": "#0f2000",
+                        "tertiary-fixed-dim": "#ffb2bd",
+                        "surface-variant": "#dfe4db"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "lg": "16px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "base": "8px",
+                        "section-gap": "24px",
+                        "page-margin": "16px",
+                        "md": "12px",
+                        "xxl": "32px",
+                        "xl": "24px"
+                    },
+                    "fontFamily": {
+                        "badge": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "badge": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "label-sm": ["13px", { "lineHeight": "19.5px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["18px", { "lineHeight": "22.5px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .effort-dot {
+                @apply w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center transition-colors;
+            }
+            .effort-dot.filled {
+                @apply bg-primary text-white;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary font-body-md antialiased min-h-screen flex flex-col md:flex-row">
+<!-- JSON Component: SideNavBar -->
+<nav class="hidden md:flex flex-col fixed left-0 top-0 h-full p-lg w-64 border-r border-border bg-surface z-40 shrink-0">
+<div class="mb-xxl flex flex-col items-start px-4">
+<span class="font-headline-lg text-headline-lg text-primary tracking-tight">Esencial</span>
+<span class="font-label-sm text-label-sm text-text-secondary mt-1">Bienestar Personal</span>
+</div>
+<div class="flex flex-col gap-2 flex-grow">
+<!-- Hoy - Inactive -->
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors scale-98 active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-headline-md text-[16px]">Hoy</span>
+</a>
+<!-- Plan recetas - Inactive -->
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors scale-98 active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-headline-md text-[16px]">Plan recetas</span>
+</a>
+<!-- Plan fuerza - Active -->
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg scale-98 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center" data-weight="fill" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+<span class="font-headline-md text-[16px]">Plan fuerza</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 w-full max-w-[1200px] mx-auto pb-xxl md:pb-lg">
+<!-- Header -->
+<header class="px-page-margin py-xl sticky top-0 bg-background/90 backdrop-blur-sm z-30 flex items-center justify-between border-b border-border/50">
+<div class="flex items-center gap-4">
+<button class="text-text-secondary hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-muted">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-text-primary flex items-center gap-3">
+                        Sesión: Empuje A
+                        <span class="bg-badge-done-bg text-badge-done-text font-badge text-badge px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center self-center">Registrado</span>
+</h1>
+<p class="font-label-sm text-label-sm text-text-secondary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="calendar_month">calendar_month</span>
+                        Jueves, 24 de Octubre
+                    </p>
+</div>
+</div>
+<div class="hidden md:flex gap-3">
+<button class="px-lg py-sm rounded-lg border border-primary text-primary font-headline-md text-[14px] hover:bg-surface-muted transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+                    Editar registro
+                </button>
+</div>
+</header>
+<!-- Content Grid -->
+<div class="px-page-margin mt-section-gap grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Left Column: Exercises Table -->
+<div class="lg:col-span-2 space-y-lg">
+<div class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<div class="p-lg border-b border-border bg-surface-muted/50 flex justify-between items-center">
+<h2 class="font-headline-md text-headline-md text-text-primary">Ejercicios Realizados</h2>
+<span class="font-label-sm text-label-sm text-text-secondary">4 ejercicios completados</span>
+</div>
+<div class="divide-y divide-border">
+<!-- Exercise 1 -->
+<div class="p-lg hover:bg-surface-muted/30 transition-colors">
+<div class="flex justify-between items-start mb-md">
+<a class="font-headline-md text-primary hover:underline flex items-center gap-2 group" href="#">
+                                    Press de Banca Plano
+                                    <span class="material-symbols-outlined text-[18px] opacity-0 group-hover:opacity-100 transition-opacity" data-icon="open_in_new">open_in_new</span>
+</a>
+<div class="bg-surface-muted px-3 py-1 rounded-md text-text-secondary font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="timer">timer</span>
+                                    Rest: 120s
+                                </div>
+</div>
+<div class="grid grid-cols-4 gap-4 text-center font-label-sm text-label-sm text-text-secondary pb-xs border-b border-border/50 mb-sm">
+<div>Serie</div>
+<div>Objetivo</div>
+<div>Realizado</div>
+<div>Estado</div>
+</div>
+<div class="space-y-2">
+<div class="grid grid-cols-4 gap-4 text-center items-center py-2 bg-surface-muted/50 rounded-md">
+<div class="font-headline-md text-text-primary">1</div>
+<div class="text-text-secondary">60kg x 8-10</div>
+<div class="font-headline-md text-text-primary">60kg x 10</div>
+<div class="flex justify-center text-primary"><span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>
+</div>
+<div class="grid grid-cols-4 gap-4 text-center items-center py-2 bg-surface-muted/50 rounded-md">
+<div class="font-headline-md text-text-primary">2</div>
+<div class="text-text-secondary">62.5kg x 8-10</div>
+<div class="font-headline-md text-text-primary">62.5kg x 8</div>
+<div class="flex justify-center text-primary"><span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>
+</div>
+<div class="grid grid-cols-4 gap-4 text-center items-center py-2 bg-surface-muted/50 rounded-md border-l-2 border-primary pl-[-2px]">
+<div class="font-headline-md text-text-primary">3</div>
+<div class="text-text-secondary">65kg x 8</div>
+<div class="font-headline-md text-text-primary">65kg x 7</div>
+<div class="flex justify-center text-primary"><span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>
+</div>
+</div>
+</div>
+<!-- Exercise 2 -->
+<div class="p-lg hover:bg-surface-muted/30 transition-colors">
+<div class="flex justify-between items-start mb-md">
+<a class="font-headline-md text-primary hover:underline flex items-center gap-2 group" href="#">
+                                    Press Inclinado c/ Mancuernas
+                                    <span class="material-symbols-outlined text-[18px] opacity-0 group-hover:opacity-100 transition-opacity" data-icon="open_in_new">open_in_new</span>
+</a>
+<div class="bg-surface-muted px-3 py-1 rounded-md text-text-secondary font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="timer">timer</span>
+                                    Rest: 90s
+                                </div>
+</div>
+<div class="grid grid-cols-4 gap-4 text-center font-label-sm text-label-sm text-text-secondary pb-xs border-b border-border/50 mb-sm">
+<div>Serie</div>
+<div>Objetivo</div>
+<div>Realizado</div>
+<div>Estado</div>
+</div>
+<div class="space-y-2">
+<div class="grid grid-cols-4 gap-4 text-center items-center py-2 bg-surface-muted/50 rounded-md">
+<div class="font-headline-md text-text-primary">1</div>
+<div class="text-text-secondary">22.5kg x 10</div>
+<div class="font-headline-md text-text-primary">22.5kg x 10</div>
+<div class="flex justify-center text-primary"><span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>
+</div>
+<div class="grid grid-cols-4 gap-4 text-center items-center py-2 bg-surface-muted/50 rounded-md">
+<div class="font-headline-md text-text-primary">2</div>
+<div class="text-text-secondary">22.5kg x 10</div>
+<div class="font-headline-md text-text-primary">22.5kg x 9</div>
+<div class="flex justify-center text-primary"><span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Panel: Session Details -->
+<div class="space-y-lg">
+<!-- Effort & Notes Card -->
+<div class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-lg flex flex-col gap-lg">
+<div>
+<h3 class="font-headline-md text-headline-md text-text-primary mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary" data-icon="vital_signs">vital_signs</span>
+                            Esfuerzo Percibido (RPE)
+                        </h3>
+<div class="bg-surface-muted rounded-lg p-md">
+<div class="flex justify-between items-center mb-2 px-2">
+<span class="font-label-sm text-label-sm text-text-secondary">Fácil</span>
+<span class="font-headline-md text-text-primary">8 / 10</span>
+<span class="font-label-sm text-label-sm text-text-secondary">Máximo</span>
+</div>
+<div class="flex justify-between gap-1 mt-md">
+<div class="effort-dot filled"></div>
+<div class="effort-dot filled"></div>
+<div class="effort-dot filled"></div>
+<div class="effort-dot filled"></div>
+<div class="effort-dot"></div>
+</div>
+<p class="font-label-sm text-label-sm text-text-secondary mt-3 text-center">Intensidad alta, cerca del fallo en últimas series.</p>
+</div>
+</div>
+<hr class="border-border"/>
+<div>
+<h3 class="font-headline-md text-headline-md text-text-primary mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary" data-icon="notes">notes</span>
+                            Notas de la Sesión
+                        </h3>
+<div class="bg-surface-muted/50 rounded-lg p-md border border-border/50 min-h-[100px]">
+<p class="font-body-md text-body-md text-text-primary leading-relaxed">
+                                Buen entrenamiento hoy. Sentí algo de molestia en el hombro derecho durante las primeras series de calentamiento del press inclinado, pero desapareció tras unas movilidades extra. <br/><br/>Subir peso en press plano la próxima semana a 65kg desde la primera serie.
+                            </p>
+</div>
+</div>
+<!-- Mobile Action -->
+<button class="md:hidden w-full px-lg py-md mt-sm rounded-lg border border-primary text-primary font-headline-md text-headline-md hover:bg-surface-muted transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+                        Editar registro
+                    </button>
+</div>
+<!-- Secondary Info Card (Decorative/Atmospheric) -->
+<div class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-lg">
+<h3 class="font-headline-md text-headline-md text-text-primary mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary" data-icon="query_stats">query_stats</span>
+                            Resumen Rápido
+                    </h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-start bg-surface-muted/30 p-md rounded-lg">
+<span class="font-label-sm text-label-sm text-text-secondary">Duración</span>
+<span class="font-headline-lg text-headline-lg text-text-primary">55m</span>
+</div>
+<div class="flex flex-col items-start bg-surface-muted/30 p-md rounded-lg">
+<span class="font-label-sm text-label-sm text-text-secondary">Volumen Total</span>
+<span class="font-headline-lg text-headline-lg text-text-primary">3,240kg</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Esencial - Plan Recetas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "badge-done-bg": "#DCFCE7",
+                        "on-surface-variant": "#3f493f",
+                        "primary-container": "#15803d",
+                        "surface-container-highest": "#dfe4db",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#81233b",
+                        "secondary-fixed-dim": "#a0d663",
+                        "on-tertiary-container": "#fff1f1",
+                        "on-tertiary-fixed": "#400013",
+                        "warning-pending": "#D97706",
+                        "tertiary-fixed-dim": "#ffb2bd",
+                        "inverse-primary": "#79db8d",
+                        "surface-variant": "#dfe4db",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#b64c62",
+                        "surface-container-low": "#f0f5ec",
+                        "on-background": "#181d17",
+                        "surface-container-high": "#e4eae1",
+                        "primary-fixed": "#95f8a7",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-muted": "#F5F5F4",
+                        "on-error": "#ffffff",
+                        "surface-bright": "#f6fbf2",
+                        "background": "#FAFAF9",
+                        "surface-container": "#eaefe6",
+                        "on-primary-container": "#d3ffd5",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#97344a",
+                        "primary": "#00652c",
+                        "on-secondary": "#ffffff",
+                        "badge-pending-text": "#92400E",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#005323",
+                        "surface-dim": "#d6dcd3",
+                        "text-secondary": "#78716C",
+                        "on-secondary-fixed": "#0f2000",
+                        "on-surface": "#181d17",
+                        "outline-variant": "#becabc",
+                        "surface-tint": "#006d30",
+                        "outline": "#6f7a6e",
+                        "badge-done-text": "#166534",
+                        "primary-dark": "#166534",
+                        "primary-fixed-dim": "#79db8d",
+                        "surface": "#FFFFFF",
+                        "text-primary": "#1C1917",
+                        "secondary": "#3e6a00",
+                        "secondary-container": "#b9f079",
+                        "secondary-fixed": "#bbf37c",
+                        "inverse-surface": "#2c322c",
+                        "on-secondary-fixed-variant": "#2e4f00",
+                        "inverse-on-surface": "#edf2e9",
+                        "on-secondary-container": "#416e00",
+                        "tertiary-fixed": "#ffd9dd",
+                        "on-primary-fixed": "#00210a",
+                        "error": "#B91C1C",
+                        "border": "#E7E5E4",
+                        "badge-pending-bg": "#FEF3C7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "xs": "4px",
+                        "section-gap": "24px",
+                        "page-margin": "16px",
+                        "xl": "24px",
+                        "base": "8px",
+                        "xxl": "32px",
+                        "md": "12px",
+                        "lg": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "badge": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "badge": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["18px", { "lineHeight": "22.5px", "fontWeight": "600" }],
+                        "headline-lg": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "label-sm": ["13px", { "lineHeight": "19.5px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #E7E5E4;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary font-body-md antialiased overflow-hidden flex h-screen">
+<!-- SideNavBar -->
+<nav class="hidden lg:flex flex-col p-lg gap-sm bg-surface fixed left-0 top-0 h-screen w-64 border-r border-border z-20 shadow-sm">
+<div class="mb-8">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">Esencial</h1>
+<p class="text-text-secondary font-label-sm text-label-sm mt-1">Bienestar Personal</p>
+</div>
+<ul class="flex flex-col gap-2">
+<li>
+<a class="flex items-center gap-3 p-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-md text-body-md">Hoy</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 p-3 rounded-lg bg-primary-container text-on-primary-container font-bold transition-all scale-98 shadow-sm" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-body-md text-body-md">Plan recetas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 p-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+<span class="font-body-md text-body-md">Plan fuerza</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto flex items-center gap-3 p-3 border-t border-border pt-4">
+<div class="w-10 h-10 rounded-full bg-surface-muted overflow-hidden border border-border">
+<img class="w-full h-full object-cover" data-alt="A clean, professional headshot profile picture of a relaxed user in a light-filled minimalist wellness space, bright corporate aesthetics, subtle natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAakb7pn6qx9bNMs_ZK8YbjtunwOgbc5PRUeeulXKQ2eIscLUcgkJ-GE5_PjnDKYoAe90F31pdcxzyWS0Cke-aIatCf2vk-yU3VewZNaUXbv64nEahG9dIimkPqDN8TW6bDI7HSdpJQGDWX_js9mEDsKtKjePRQSIlzKcCzojMTanTXgc1Jcf5_FdTx_XPYxE8non60Yg269OEEFtYh9NA6F-0L-5jgsk0tE1yloo-mBKSvJxHvzKypZA"/>
+</div>
+<span class="font-body-md text-body-md text-text-primary">Usuario</span>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="ml-0 lg:ml-64 flex-1 flex flex-col lg:flex-row h-screen w-full overflow-hidden">
+<!-- Planner Grid -->
+<main class="flex-1 overflow-y-auto overflow-x-auto custom-scrollbar p-section-gap relative">
+<div class="max-w-[1200px] mx-auto min-w-[900px]">
+<header class="flex justify-between items-center mb-section-gap sticky left-0">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-text-primary">Plan Semanal</h2>
+<p class="text-text-secondary mt-1">Organiza tus comidas de la semana</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 rounded-lg border border-border bg-surface text-text-primary hover:bg-surface-muted transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="px-4 py-2 rounded-lg border border-border bg-surface text-text-primary font-bold shadow-sm">
+                            Esta semana
+                        </button>
+<button class="px-4 py-2 rounded-lg border border-border bg-surface text-text-primary hover:bg-surface-muted transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</header>
+<div class="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+<!-- Grid Header (Days) -->
+<div class="grid grid-cols-8 border-b border-border bg-surface-muted/50">
+<div class="p-3 border-r border-border text-center font-bold text-text-secondary text-sm"></div>
+<div class="p-3 border-r border-border text-center font-bold text-text-primary">Lun</div>
+<div class="p-3 border-r border-border text-center font-bold text-text-primary">Mar</div>
+<div class="p-3 border-r border-border text-center font-bold text-text-primary">Mié</div>
+<div class="p-3 border-r border-border text-center font-bold text-text-primary bg-primary-container/10">Jue</div>
+<div class="p-3 border-r border-border text-center font-bold text-text-primary">Vie</div>
+<div class="p-3 border-r border-border text-center font-bold text-text-primary">Sáb</div>
+<div class="p-3 text-center font-bold text-text-primary">Dom</div>
+</div>
+<!-- Row: Desayuno -->
+<div class="grid grid-cols-8 border-b border-border">
+<div class="p-4 border-r border-border flex items-center justify-center font-bold text-text-secondary rotate-180" style="writing-mode: vertical-rl;">
+                            Desayuno
+                        </div>
+<!-- Lunes -->
+<div class="p-2 border-r border-border">
+<div class="h-full bg-surface border border-border rounded-lg p-2 shadow-sm relative group hover:border-primary-fixed transition-colors">
+<div class="w-full h-16 bg-surface-muted rounded mb-2 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean top-down view of an oatmeal bowl with fresh berries on a light marble counter, bright soft natural lighting, minimalist wellness aesthetic, high clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsROBPID7sdd1jwvmj1J8CZbUX-rHbUi8jNSTORH41p9EFZ6cLxDAQLXFwX0cUgGNSgOH-ZwSYXJAOufqLWcNXPf8SIKijzf5aX7mkVQDOd_WWzorevrGaPOAMeKjqcCS5T-J61nYNUVAqaKVxaXCGt2SVaa5ITqvQqfj81768gmYP_hUuH5R_fLKUzfdX6WwIjmHErimJZjNYTKaLSOIKPPabboBCnrYbERoX4sTmcWCKFh0P4pLwCw"/>
+</div>
+<p class="font-body-md text-sm font-bold text-text-primary leading-tight line-clamp-2">Avena con Frutas</p>
+<div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex bg-surface/90 rounded shadow-sm">
+<button class="p-1 text-text-secondary hover:text-primary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+</div>
+</div>
+</div>
+<!-- Martes -->
+<div class="p-2 border-r border-border">
+<button class="w-full h-full min-h-[100px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-text-secondary hover:text-primary hover:border-primary transition-colors bg-surface-muted/30">
+<span class="material-symbols-outlined mb-1">add</span>
+<span class="text-xs font-bold">Añadir</span>
+</button>
+</div>
+<!-- Miercoles -->
+<div class="p-2 border-r border-border">
+<div class="h-full bg-surface border border-border rounded-lg p-2 shadow-sm relative group hover:border-primary-fixed transition-colors">
+<div class="w-full h-16 bg-surface-muted rounded mb-2 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A minimalist presentation of avocado toast on whole wheat bread, bright morning light, clean white background, personal wellness app photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmT-ZryFhsDD1y1d7ymOAMqtD1Z8m7UHGyvkYTKuG8FfF5NO-t-zOZEWv0QAzJcOBktPdRsq3Ridq4VAuf5q7ECKhAIM0eXFaLOQIeQXJiCDyyqeQnnp-KOXeFl61wb4Qb3O1vVaQX-C8s_TMsaJvjrXddkbnx4SE3loVfG231MXiyqkmiUU7p0EOv1zW9pP6FD5etXjzHhH-ElsDRXdsk0ORFizIhxuFeJX5zAThAWyt5ajl8aG5GRQ"/>
+</div>
+<p class="font-body-md text-sm font-bold text-text-primary leading-tight line-clamp-2">Tostada Aguacate</p>
+</div>
+</div>
+<!-- Jueves -->
+<div class="p-2 border-r border-border bg-primary-container/5">
+<button class="w-full h-full min-h-[100px] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center text-text-secondary hover:text-primary hover:border-primary transition-colors bg-surface">
+<span class="material-symbols-outlined mb-1">add</span>
+<span class="text-xs font-bold">Añadir</span>
+</button>
+</div>
+<!-- Viernes to Domingo empty slots for brevity -->
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+</div>
+<!-- Row: Almuerzo -->
+<div class="grid grid-cols-8 border-b border-border">
+<div class="p-4 border-r border-border flex items-center justify-center font-bold text-text-secondary rotate-180" style="writing-mode: vertical-rl;">
+                            Almuerzo
+                        </div>
+<!-- Lunes -->
+<div class="p-2 border-r border-border">
+<div class="h-full bg-surface border border-border rounded-lg p-2 shadow-sm relative group">
+<div class="w-full h-16 bg-surface-muted rounded mb-2 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A fresh chicken salad bowl with greens and cherry tomatoes, bright, healthy, minimalist corporate aesthetic, clean tabletop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6yEmiPKhUjEMyfzaksGIyvucsBBwaXu5Q9YifHT4eLOZyJmddpY_91Ji2MMksdi0cLiaWmE3N-xe8YfgxHanyfeymXIIQdz3d6fwTydz-BkNHR8LAcx5fnNIHLHJ_rPolf66UyEWWSwFlqfig3OZUsk-LJm2rt_LBS4fVAU9XTfks1-VfT6cuyNQogfwN9n3fv9-DADGs3Qox9C-bAzFhnFOhsHUNTnG55aUPTDSmvoYLZ-zPuvA3zQ"/>
+</div>
+<p class="font-body-md text-sm font-bold text-text-primary leading-tight line-clamp-2">Ensalada de Pollo</p>
+</div>
+</div>
+<!-- Martes -->
+<div class="p-2 border-r border-border">
+<div class="h-full bg-surface border border-border rounded-lg p-2 shadow-sm relative group">
+<div class="w-full h-16 bg-surface-muted rounded mb-2 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean shot of grilled salmon with quinoa and steamed broccoli, brightly lit wellness food photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3Suyqs0SuWK2-0fnNuagqO8tXnSC0aALMy1iQkHBFtjXQje9HmE0465HTphnNborXfrmKOP7NLdZ6CwLFNkBjYZqpFLEosHZEx-aapUvJhb9mr0haAaobyEIS58q8umipy9E7CViTreCkhcbrEY45BXjGklIczWF8Eq76MQ6noahODH03Q7EDwffOTHB_Vw9rrW3m6-gJcFxs1JNXzdUAH8RIokfX0vgNqahT04240M_fPxeXYAqWWw"/>
+</div>
+<p class="font-body-md text-sm font-bold text-text-primary leading-tight line-clamp-2">Salmón con Quinoa</p>
+</div>
+</div>
+<!-- Empty slots -->
+<div class="p-2 border-r border-border"><button class="w-full h-full min-h-[100px] border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2 border-r border-border bg-primary-container/5"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary bg-surface"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+</div>
+<!-- Row: Cena -->
+<div class="grid grid-cols-8">
+<div class="p-4 border-r border-border flex items-center justify-center font-bold text-text-secondary rotate-180" style="writing-mode: vertical-rl;">
+                            Cena
+                        </div>
+<!-- Empty slots for most -->
+<div class="p-2 border-r border-border"><button class="w-full h-full min-h-[100px] border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<!-- Jueves Cena -->
+<div class="p-2 border-r border-border bg-primary-container/5">
+<div class="h-full bg-surface border border-border rounded-lg p-2 shadow-sm relative group bg-surface">
+<div class="w-full h-16 bg-surface-muted rounded mb-2 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A light vegetable soup bowl, minimalist setting, soothing evening light, clean modern wellness app visual style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8v5NGSHOLimRVUCYIoKCP2JSeEo-3MunxSX2q9ohbagatNybwwF0XXsl54x4J0GBg0ZmmRN1XjS0IEQJEw0Sngl0ZGJ-4BB-DDrCFZ3hPxwGYqLSNNhonzMJYBDRtYKSgnqrMK2-mRxv2Vr4iftnWOyNzVncTYoGgcTIJMAy_QjRm_U10ws0t27gHQQWDQ78hEUiBDVQgASyEh-0j0UdbYhwzwCZEaRmc9lh395KD5wezH5xM8xvSXw"/>
+</div>
+<p class="font-body-md text-sm font-bold text-text-primary leading-tight line-clamp-2">Sopa de Verduras</p>
+</div>
+</div>
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2 border-r border-border"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+<div class="p-2"><button class="w-full h-full border-2 border-dashed border-border rounded-lg flex items-center justify-center text-text-secondary"><span class="material-symbols-outlined">add</span></button></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Right Sidebar (Shopping List) -->
+<aside class="w-full lg:w-80 bg-surface border-l border-border h-full flex flex-col z-10 shadow-[-4px_0_15px_rgba(0,0,0,0.02)]">
+<div class="p-4 border-b border-border flex justify-between items-center bg-surface-muted/30">
+<h3 class="font-headline-md text-headline-md text-text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">shopping_cart</span>
+                    Lista de la compra
+                </h3>
+<button class="text-text-secondary hover:text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+<!-- Category 1 -->
+<div>
+<h4 class="font-bold text-sm text-text-secondary mb-3 uppercase tracking-wider">Frutas y Verduras</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-3 group">
+<input class="mt-1 rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer" type="checkbox"/>
+<span class="text-sm text-text-primary flex-1">Espinacas — 2 manojos</span>
+<button class="text-border hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">close</span></button>
+</li>
+<li class="flex items-start gap-3 group">
+<input class="mt-1 rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer" type="checkbox"/>
+<span class="text-sm text-text-primary flex-1">Tomates Cherry — 1 caja</span>
+<button class="text-border hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">close</span></button>
+</li>
+<li class="flex items-start gap-3 group">
+<input class="mt-1 rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer" type="checkbox"/>
+<span class="text-sm text-text-primary flex-1">Plátanos — 5 uds</span>
+<button class="text-border hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">close</span></button>
+</li>
+</ul>
+<div class="mt-3">
+<input class="w-full bg-surface border-0 border-b border-border text-sm p-2 focus:ring-0 focus:border-primary text-text-secondary placeholder:text-text-secondary/50" placeholder="+ añadir artículo..." type="text"/>
+</div>
+</div>
+<!-- Category 2 -->
+<div>
+<h4 class="font-bold text-sm text-text-secondary mb-3 uppercase tracking-wider">Carnes y Pescados</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-3 group">
+<input class="mt-1 rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer" type="checkbox"/>
+<span class="text-sm text-text-primary flex-1">Pechuga de Pollo — 500g</span>
+<button class="text-border hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">close</span></button>
+</li>
+<li class="flex items-start gap-3 group">
+<input class="mt-1 rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer" type="checkbox"/>
+<span class="text-sm text-text-primary flex-1">Salmón fresco — 2 filetes</span>
+<button class="text-border hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-outlined text-[18px]">close</span></button>
+</li>
+</ul>
+<div class="mt-3">
+<input class="w-full bg-surface border-0 border-b border-border text-sm p-2 focus:ring-0 focus:border-primary text-text-secondary placeholder:text-text-secondary/50" placeholder="+ añadir artículo..." type="text"/>
+</div>
+</div>
+<!-- Category 3 -->
+<div>
+<h4 class="font-bold text-sm text-text-secondary mb-3 uppercase tracking-wider">Lácteos</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-3 group">
+<input class="mt-1 rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer" type="checkbox"/>
+<span class="text-sm text-text-primary flex-1">Huevos — 1 docena</span>
+</li>
+</ul>
+<div class="mt-3">
+<input class="w-full bg-surface border-0 border-b border-border text-sm p-2 focus:ring-0 focus:border-primary text-text-secondary placeholder:text-text-secondary/50" placeholder="+ añadir artículo..." type="text"/>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border bg-surface-muted/30">
+<button class="w-full bg-[#15803D] text-white font-bold py-[10px] px-[16px] rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">print</span>
+                    Exportar Lista
+                </button>
+</div>
+</aside>
+</div>
+</body></html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Esencial - Press de banca</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-container": "#fff1f1",
+                      "on-primary-fixed": "#00210a",
+                      "badge-pending-bg": "#FEF3C7",
+                      "tertiary-container": "#b64c62",
+                      "on-error": "#ffffff",
+                      "on-secondary-fixed-variant": "#2e4f00",
+                      "outline": "#6f7a6e",
+                      "inverse-on-surface": "#edf2e9",
+                      "border": "#E7E5E4",
+                      "warning-pending": "#D97706",
+                      "text-secondary": "#78716C",
+                      "tertiary-fixed": "#ffd9dd",
+                      "on-secondary": "#ffffff",
+                      "on-surface-variant": "#3f493f",
+                      "primary-dark": "#166534",
+                      "on-tertiary-fixed-variant": "#81233b",
+                      "on-secondary-fixed": "#0f2000",
+                      "badge-pending-text": "#92400E",
+                      "inverse-primary": "#79db8d",
+                      "badge-done-bg": "#DCFCE7",
+                      "error": "#B91C1C",
+                      "secondary": "#3e6a00",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed": "#bbf37c",
+                      "primary-fixed-dim": "#79db8d",
+                      "surface-tint": "#006d30",
+                      "error-container": "#ffdad6",
+                      "surface-container-high": "#e4eae1",
+                      "inverse-surface": "#2c322c",
+                      "surface-muted": "#F5F5F4",
+                      "secondary-container": "#b9f079",
+                      "surface-container": "#eaefe6",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-container": "#416e00",
+                      "primary": "#00652c",
+                      "on-surface": "#181d17",
+                      "on-tertiary-fixed": "#400013",
+                      "on-background": "#181d17",
+                      "text-primary": "#1C1917",
+                      "surface-bright": "#f6fbf2",
+                      "primary-container": "#15803d",
+                      "surface-variant": "#dfe4db",
+                      "surface-container-highest": "#dfe4db",
+                      "outline-variant": "#becabc",
+                      "on-tertiary": "#ffffff",
+                      "surface": "#FFFFFF",
+                      "surface-dim": "#d6dcd3",
+                      "tertiary-fixed-dim": "#ffb2bd",
+                      "badge-done-text": "#166534",
+                      "on-error-container": "#93000a",
+                      "on-primary-container": "#d3ffd5",
+                      "on-primary-fixed-variant": "#005323",
+                      "secondary-fixed-dim": "#a0d663",
+                      "tertiary": "#97344a",
+                      "surface-container-low": "#f0f5ec",
+                      "primary-fixed": "#95f8a7",
+                      "background": "#FAFAF9"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "24px",
+                      "md": "12px",
+                      "base": "8px",
+                      "xxl": "32px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "lg": "16px",
+                      "section-gap": "24px",
+                      "page-margin": "16px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "badge": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "badge": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "19.5px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "22.5px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        #modal-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #template-picker {
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #template-picker.active {
+            transform: translateY(0);
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased pb-[144px]"> <!-- Padding to account for bottom nav and fixed button -->
+<!-- TopAppBar -->
+<header class="w-full sticky top-0 flex items-center px-page-margin h-16 bg-background text-primary transition-opacity duration-200 z-40">
+<button aria-label="Volver" class="text-on-surface-variant hover:opacity-80 transition-opacity flex items-center justify-center p-2 -ml-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-container">
+<span class="material-symbols-outlined text-2xl" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="ml-4 font-headline-md text-headline-md font-bold flex-1 text-center pr-8 text-on-background">Press de banca</h1>
+</header>
+<main class="px-page-margin pt-4 flex flex-col gap-section-gap">
+<!-- Hero Image -->
+<section class="w-full overflow-hidden rounded-xl border border-border shadow-sm">
+<img alt="Ilustración de press de banca" class="w-full h-64 object-cover object-center bg-surface-muted" data-alt="A highly professional and clean illustration showing a person performing a bench press exercise. The scene is brightly lit with a soft, modern light-mode aesthetic, utilizing white surfaces and subtle green accents in the background. The anatomy of the lifter is clear, highlighting proper form on the bench with a barbell. The mood is focused and energetic, tailored for a premium fitness application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAriXZyfw1hCR10VgYcYHKS3Aa7RpbTONZPwFjzsrzf18hfP88RNReNiVJclyWWSM9yAd5tQ8QFExmMhNClfFs3gOR4ebWdSk0iylWvYoHho1vaOcDzTo0jd6GXYRWA9Gj-cmuEkU_mjcovLoqdH6m-WF-n3Hpyi3TRTqj3WNMKSpelqc-1pndNBATWuNfmVzeMGkcNKOMmkDl1rizMB6YIY1YLuPoyO4cif-sTQsZtZegIg-VrDldUhw"/>
+</section>
+<!-- Metadata & Description -->
+<section class="flex flex-col gap-md">
+<div class="flex flex-wrap gap-xs">
+<span class="px-3 py-1 rounded-full bg-badge-done-bg text-badge-done-text font-badge text-badge">PECHO</span>
+<span class="px-3 py-1 rounded-full bg-surface-muted border border-border text-text-secondary font-badge text-badge">TRÍCEPS</span>
+<span class="px-3 py-1 rounded-full bg-surface-muted border border-border text-text-secondary font-badge text-badge">HOMBRO ANTERIOR</span>
+</div>
+<p class="text-text-primary leading-relaxed mt-2">
+                El press de banca es un ejercicio fundamental de empuje que trabaja principalmente el pectoral mayor, los deltoides anteriores y los tríceps.
+            </p>
+<button class="flex items-center justify-center gap-2 mt-2 w-full py-[10px] px-lg border border-primary-container text-primary-container rounded-lg font-bold hover:bg-surface-muted transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="play_circle">play_circle</span>
+                Ver técnica
+            </button>
+</section>
+<!-- Technique Cues -->
+<section class="bg-surface rounded-[12px] p-lg border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex flex-col gap-md">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary-container" data-icon="info" data-weight="fill">info</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Claves de técnica</h2>
+</div>
+<ul class="flex flex-col gap-3">
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-surface-muted flex items-center justify-center text-text-secondary flex-shrink-0 mt-0.5 border border-border">
+<span class="font-badge text-[10px]">1</span>
+</div>
+<p class="text-text-primary">Mantén los pies apoyados firmemente en el suelo.</p>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-surface-muted flex items-center justify-center text-text-secondary flex-shrink-0 mt-0.5 border border-border">
+<span class="font-badge text-[10px]">2</span>
+</div>
+<p class="text-text-primary">Retrae las escápulas antes de bajar la barra.</p>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-surface-muted flex items-center justify-center text-text-secondary flex-shrink-0 mt-0.5 border border-border">
+<span class="font-badge text-[10px]">3</span>
+</div>
+<p class="text-text-primary">Baja la barra de forma controlada hasta el esternón.</p>
+</li>
+</ul>
+</section>
+</main>
+<!-- Floating Action Area (Above Nav) -->
+<div class="fixed bottom-[88px] left-0 w-full px-page-margin z-30 flex justify-center pointer-events-none">
+<button class="pointer-events-auto bg-primary-container text-on-primary w-full max-w-sm rounded-full py-3 px-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-primary-dark transition-colors active:scale-95 duration-150" onclick="openPicker()">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+            Añadir a plantilla
+        </button>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center bg-surface px-4 py-2 h-[72px] shadow-sm shadow-[0_-1px_3px_rgba(0,0,0,0.05)] border-t border-border">
+<!-- Hoy - Inactive -->
+<a class="flex flex-col items-center justify-center text-text-secondary hover:bg-surface-container-low transition-transform duration-150 active:scale-95 rounded-xl w-16 h-14" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl" data-icon="calendar_today">calendar_today</span>
+<span class="font-label-sm text-[11px] leading-tight">Hoy</span>
+</a>
+<!-- Recetas - Inactive -->
+<a class="flex flex-col items-center justify-center text-text-secondary hover:bg-surface-container-low transition-transform duration-150 active:scale-95 rounded-xl w-16 h-14" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-label-sm text-[11px] leading-tight">Recetas</span>
+</a>
+<!-- Fuerza - Active (Semantic match for exercise detail) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1.5 transition-transform duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-0.5 text-2xl" data-icon="fitness_center" data-weight="fill">fitness_center</span>
+<span class="font-label-sm text-[11px] font-semibold leading-tight tracking-wide">Fuerza</span>
+</a>
+</nav>
+<!-- Add to Template Overlay / Picker -->
+<div class="fixed inset-0 bg-inverse-surface/40 z-[60] flex items-end justify-center backdrop-blur-[2px]" id="modal-overlay">
+<!-- Clickable background to close -->
+<div class="absolute inset-0" onclick="closePicker()"></div>
+<!-- Bottom Sheet -->
+<div class="relative w-full max-w-lg bg-surface rounded-t-[24px] p-page-margin pb-12 shadow-[0_-4px_24px_rgba(0,0,0,0.1)]" id="template-picker">
+<!-- Drag Handle indicator -->
+<div class="w-12 h-1.5 bg-border rounded-full mx-auto mb-6"></div>
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-md text-headline-md font-bold text-on-surface">Selecciona una plantilla</h3>
+<button class="text-text-secondary hover:text-on-surface p-1 rounded-full hover:bg-surface-muted transition-colors" onclick="closePicker()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<ul class="flex flex-col gap-2">
+<li>
+<button class="w-full text-left flex items-center justify-between p-4 rounded-xl border border-border hover:border-primary-container focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none transition-colors group" onclick="selectTemplate('Empuje A')">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-muted flex items-center justify-center text-text-secondary group-hover:text-primary-container group-hover:bg-primary-container/10 transition-colors">
+<span class="material-symbols-outlined" data-icon="view_list">view_list</span>
+</div>
+<span class="font-body-md text-body-md font-semibold text-on-surface">Empuje A</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary-container transition-colors" data-icon="chevron_right">chevron_right</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left flex items-center justify-between p-4 rounded-xl border border-border hover:border-primary-container focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none transition-colors group" onclick="selectTemplate('Empuje B')">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-muted flex items-center justify-center text-text-secondary group-hover:text-primary-container group-hover:bg-primary-container/10 transition-colors">
+<span class="material-symbols-outlined" data-icon="view_list">view_list</span>
+</div>
+<span class="font-body-md text-body-md font-semibold text-on-surface">Empuje B</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary-container transition-colors" data-icon="chevron_right">chevron_right</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left flex items-center justify-between p-4 rounded-xl border border-border hover:border-primary-container focus:border-primary-container focus:ring-1 focus:ring-primary-container focus:outline-none transition-colors group" onclick="selectTemplate('Torso')">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-muted flex items-center justify-center text-text-secondary group-hover:text-primary-container group-hover:bg-primary-container/10 transition-colors">
+<span class="material-symbols-outlined" data-icon="view_list">view_list</span>
+</div>
+<span class="font-body-md text-body-md font-semibold text-on-surface">Torso</span>
+</div>
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary-container transition-colors" data-icon="chevron_right">chevron_right</span>
+</button>
+</li>
+</ul>
+</div>
+</div>
+<script>
+        const overlay = document.getElementById('modal-overlay');
+        const picker = document.getElementById('template-picker');
+
+        function openPicker() {
+            overlay.classList.add('active');
+            // Small delay to allow display block to render before animation
+            setTimeout(() => {
+                picker.classList.add('active');
+            }, 10);
+            
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePicker() {
+            picker.classList.remove('active');
+            // Wait for slide down animation to finish before hiding overlay
+            setTimeout(() => {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        function selectTemplate(name) {
+            // Visual feedback could be added here
+            console.log(`Selected: ${name}`);
+            
+            // Close after selection
+            setTimeout(() => {
+                closePicker();
+                
+                // Show a quick toast/notification (simulated)
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-4 py-2 rounded-lg text-sm font-medium z-50 shadow-lg transition-opacity duration-300 opacity-0';
+                toast.textContent = `Añadido a ${name}`;
+                document.body.appendChild(toast);
+                
+                // Fade in
+                setTimeout(() => toast.style.opacity = '1', 10);
+                
+                // Fade out and remove
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, 2000);
+                
+            }, 200);
+        }
+    </script>
+</body></html>

@@ -1,0 +1,31 @@
+Design a mobile workout day screen for the same app, two states in one design. Header:
+back button, date and assigned session name (e.g. "Empuje A"). State A (not logged):
+list of exercises "Ejercicio 1: Press banca", "Ejercicio 2: Remo con barra"... each row
+with checkboxes for its series; expanding an exercise shows per-series rows with numeric
+steppers for weight (kg) and reps, prefilled with last session's values ("última: 57.5×8"
+helper); at the end perceived effort as a 1-5 scale (large selectable dots "Muy fácil" a
+"Máximo") and a free-text note; primary button "Cerrar sesión". State B (already logged):
+same layout read-only, weights/reps as text, effort dots filled, "Registrado" badge in
+header. Each exercise name is tappable and opens the exercise detail screen.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with
+subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions
+and completion states, amber for pending items, red only for discarded/error. Typography:
+system sans-serif. Mobile-first, generous touch targets (min 44px), bottom tab navigation
+with 3 tabs: Today, Food, Training. Spanish UI labels.
+
+---
+
+DESKTOP VARIANT (en Stitch, modo Web/Desktop):
+
+Design a DESKTOP web version of the same workout day screen. Left sidebar navigation
+(Esencial: Hoy, Plan recetas, Plan fuerza). Header: date and session name (e.g. "Empuje
+A") with "Registrado" badge when logged. Main area: exercises as rows in a table-like
+layout — columns: exercise name (tappable to exercise detail), series list with weight
+(kg) and reps steppers inline, done-checkboxes. Right side panel: perceived effort 1-5
+dots, free-text note, and primary button "Cerrar sesión" (or read-only summary if
+logged). Prefill weights/reps with last session values ("última: 57.5×8" helper). Two
+states: A not logged (editable) and B logged (read-only). Same visual style, desktop
+density.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions and completion states, amber for pending items, red only for discarded/error. Typography: system sans-serif. Spanish UI labels.

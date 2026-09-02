@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recetario - Esencial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error": "#ffffff",
+                    "on-background": "#181d17",
+                    "tertiary": "#97344a",
+                    "tertiary-container": "#b64c62",
+                    "on-secondary": "#ffffff",
+                    "on-primary-container": "#d3ffd5",
+                    "surface-tint": "#006d30",
+                    "text-primary": "#1C1917",
+                    "border": "#E7E5E4",
+                    "primary-fixed": "#95f8a7",
+                    "on-secondary-fixed": "#0f2000",
+                    "inverse-on-surface": "#edf2e9",
+                    "surface-container-high": "#e4eae1",
+                    "surface": "#FFFFFF",
+                    "badge-done-bg": "#DCFCE7",
+                    "secondary-container": "#b9f079",
+                    "tertiary-fixed": "#ffd9dd",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed": "#00210a",
+                    "error-container": "#ffdad6",
+                    "primary-fixed-dim": "#79db8d",
+                    "on-secondary-fixed-variant": "#2e4f00",
+                    "on-surface": "#181d17",
+                    "surface-dim": "#d6dcd3",
+                    "surface-container": "#eaefe6",
+                    "inverse-primary": "#79db8d",
+                    "warning-pending": "#D97706",
+                    "tertiary-fixed-dim": "#ffb2bd",
+                    "on-tertiary-fixed": "#400013",
+                    "badge-done-text": "#166534",
+                    "surface-container-low": "#f0f5ec",
+                    "secondary-fixed": "#bbf37c",
+                    "on-tertiary-fixed-variant": "#81233b",
+                    "text-secondary": "#78716C",
+                    "on-primary": "#ffffff",
+                    "inverse-surface": "#2c322c",
+                    "background": "#FAFAF9",
+                    "outline": "#6f7a6e",
+                    "surface-muted": "#F5F5F4",
+                    "surface-container-highest": "#dfe4db",
+                    "outline-variant": "#becabc",
+                    "error": "#B91C1C",
+                    "on-primary-fixed-variant": "#005323",
+                    "badge-pending-text": "#92400E",
+                    "secondary": "#3e6a00",
+                    "badge-pending-bg": "#FEF3C7",
+                    "primary-dark": "#166534",
+                    "primary": "#00652c",
+                    "surface-variant": "#dfe4db",
+                    "primary-container": "#15803d",
+                    "on-surface-variant": "#3f493f",
+                    "secondary-fixed-dim": "#a0d663",
+                    "on-secondary-container": "#416e00",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-container": "#fff1f1",
+                    "surface-bright": "#f6fbf2",
+                    "on-tertiary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "lg": "16px",
+                    "page-margin": "16px",
+                    "xxl": "32px",
+                    "sm": "8px",
+                    "md": "12px",
+                    "xl": "24px",
+                    "xs": "4px",
+                    "section-gap": "24px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Inter"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "badge": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "headline-md": [
+                            "18px",
+                            {
+                                    "lineHeight": "22.5px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "24px",
+                            {
+                                    "lineHeight": "30px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "label-sm": [
+                            "13px",
+                            {
+                                    "lineHeight": "19.5px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "badge": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+    </style>
+</head>
+<body class="bg-background text-text-primary font-body-md text-body-md antialiased md:hidden pb-32">
+<!-- Header Section -->
+<header class="px-page-margin pt-xl pb-md bg-background sticky top-0 z-40">
+<div class="flex justify-between items-center mb-md">
+<h1 class="font-headline-lg text-headline-lg">Recetario</h1>
+<button class="bg-primary-container text-on-primary font-body-md font-semibold px-4 py-2 rounded-lg flex items-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm">add</span>
+                Nueva receta
+            </button>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary">search</span>
+<input class="w-full bg-surface border border-border rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors text-body-md" placeholder="Buscar recetas, ingredientes..." type="text"/>
+</div>
+</header>
+<!-- Main Content List -->
+<main class="px-page-margin space-y-md">
+<!-- Recipe Card 1 -->
+<article class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex active:scale-[0.98] transition-transform cursor-pointer">
+<div class="w-1/3 aspect-square relative shrink-0">
+<img class="absolute inset-0 w-full h-full object-cover" data-alt="A vibrant top-down food photography shot of a healthy quinoa bowl with roasted vegetables and a bright green herb dressing. Clean, modern light mode aesthetic with soft natural lighting and warm undertones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3bjCpIvmUzkwu2bhbh7cc2Pt1fOwnVQsJAnmRCOe5VU5ViER_NzbMKgrrdD9JBsegNylAGrmC-S1ynZEeyECeDt6XAmDr1_DhajxJt7altlChl_kv42qz2jfIuqM0BxJNYZyYBnkthyL_jPbuGM5i5kHclJdAEXqQoyjgsQR8au1Ct4gPuAKaRDwNLuE-f0roRO74XwrDRdXvWXL37YMGReciCmRIhIYWMHdBrHw5U6R_Pyx2aFMX6g"/>
+</div>
+<div class="p-md flex flex-col justify-between w-full">
+<h2 class="font-headline-md text-headline-md line-clamp-2">Bowl de Quinoa y Vegetales Asados</h2>
+<div class="flex gap-2 flex-wrap mt-xs">
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">almuerzo</span>
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">25 min</span>
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">batch</span>
+</div>
+</div>
+</article>
+<!-- Recipe Card 2 -->
+<article class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex active:scale-[0.98] transition-transform cursor-pointer">
+<div class="w-1/3 aspect-square relative shrink-0">
+<img class="absolute inset-0 w-full h-full object-cover" data-alt="Close up food photography of overnight oats in a clear glass jar topped with fresh berries and chia seeds. Bright, airy, morning light setting, minimalist modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQvVkMELssogTfB0gLcZ7XorWFYa0YMC_e5gpf3bMZf1C9ahh0JVGm0U2-uQxzf8SPCJS4OPXNw8MadUMfenYjQQ67PGpf5qV1O3S49nlCDH5O707VpSlklfYYK3FEvUMImyxhNHtY0alU0bNIvfyIMdebZJHs-HC8mplCGxhVNbL4YKDQ2bushMUvBCwQXDCO_7eZI_3b9_A3fR92DW_7jwp86iJ5Yuuv_Enz7N0rHIwDgsdAJyMm2w"/>
+</div>
+<div class="p-md flex flex-col justify-between w-full">
+<h2 class="font-headline-md text-headline-md line-clamp-2">Avena Trasnochada con Frutos Rojos</h2>
+<div class="flex gap-2 flex-wrap mt-xs">
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">desayuno</span>
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">5 min</span>
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">batch</span>
+</div>
+</div>
+</article>
+<!-- Recipe Card 3 -->
+<article class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex active:scale-[0.98] transition-transform cursor-pointer">
+<div class="w-1/3 aspect-square relative shrink-0">
+<img class="absolute inset-0 w-full h-full object-cover" data-alt="A comforting bowl of lentil stew with carrots and potatoes, garnished with fresh parsley. Rustic yet clean presentation on a white table cloth, soft diffused lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAk2hviQjsTZj8sAGFhDYdabM0NXl0frlS4hm_w1yLojFgY0V2OL9s0KrRSZMMYCyn6XEi7V3xrBWHFWWd5Te8hGzZt2rMnkw62nULCHAprojm0AGu5jJoVzRbv0kOUOZzMbghULJkAFu8frpyAZU5dG4XD-HdxmuppPw2pWVQRO7TIuC2BnYkwUOPesn8sN5XxSwXJKQAjUf-QvI4FFPUgJs31fCzpRLavy_lHHsfouSX97CrEbFWQtA"/>
+</div>
+<div class="p-md flex flex-col justify-between w-full">
+<h2 class="font-headline-md text-headline-md line-clamp-2">Guiso de Lentejas Casero</h2>
+<div class="flex gap-2 flex-wrap mt-xs">
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">cena</span>
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">45 min</span>
+</div>
+</div>
+</article>
+<!-- Recipe Card 4 -->
+<article class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex active:scale-[0.98] transition-transform cursor-pointer">
+<div class="w-1/3 aspect-square relative shrink-0">
+<img class="absolute inset-0 w-full h-full object-cover" data-alt="A piece of grilled salmon next to steamed asparagus and a lemon wedge on a clean white ceramic plate. High-key lighting, minimalist and healthy aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBc_iVQzNlStaOKrvBu4XQ7oOSfnWlxUwwyVkdMxivlU2z8HjXNeoVnufCO-fhS-t_ZJKlRkzOMLmfXr_dmbpTVmKsQUMN6crlJqWMtBrg0ZUyaW26dInlNhFTYIOHyw0be0G7VXvZEx6Kjtsh9U13L6aOrcpupj8FN3PCLOryYxqHEmO63bi2pHsqNLHwuNpqpE9_a4GKD_LyCu73AkwVe-082sc0ZXA_mIha2Rp-Cnn9GY_lSuJqd5A"/>
+</div>
+<div class="p-md flex flex-col justify-between w-full">
+<h2 class="font-headline-md text-headline-md line-clamp-2">Salmón a la Plancha con Espárragos</h2>
+<div class="flex gap-2 flex-wrap mt-xs">
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">cena</span>
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">15 min</span>
+<span class="bg-surface-muted text-text-secondary font-badge text-badge px-2 py-1 rounded-full uppercase tracking-wider">alto en p</span>
+</div>
+</div>
+</article>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-lg py-sm pb-safe bg-surface dark:bg-surface-container rounded-t-xl shadow-[0_-1px_3px_rgba(0,0,0,0.08)]">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined text-2xl mb-1">calendar_today</span>
+<span class="font-label-sm text-label-sm">Hoy</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined text-2xl mb-1" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-label-sm text-label-sm font-semibold">Plan recetas</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined text-2xl mb-1">fitness_center</span>
+<span class="font-label-sm text-label-sm">Plan fuerza</span>
+</button>
+</nav>
+</body></html>

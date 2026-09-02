@@ -1,0 +1,24 @@
+Design a mobile exercise detail screen for the same app. Header: back button, exercise
+name (e.g. "Press banca"). Body: large illustration/photo of the movement, description
+text, muscle group tags (pecho, tríceps...), setup cues, and a YouTube button "Ver
+técnica". Primary button "Añadir a plantilla" opening a picker of the user's session
+templates (Empuje A, Tirón B...). Keep the same style system.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with
+subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions
+and completion states, amber for pending items, red only for discarded/error. Typography:
+system sans-serif. Mobile-first, generous touch targets (min 44px), bottom tab navigation
+with 3 tabs: Today, Food, Training. Spanish UI labels.
+
+---
+
+DESKTOP VARIANT (en Stitch, modo Web/Desktop):
+
+Design a DESKTOP web version of the same exercise detail screen. Left sidebar
+navigation (Esencial: Hoy, Plan recetas, Plan fuerza). Header: back button, exercise
+name (e.g. "Press banca"). Two-column body: left — large illustration/photo, description,
+setup cues; right — muscle group tags, YouTube button "Ver técnica", and primary button
+"Añadir a plantilla" with template picker (Empuje A, Tirón B...). Same visual style,
+desktop density.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions and completion states, amber for pending items, red only for discarded/error. Typography: system sans-serif. Spanish UI labels.

@@ -1,0 +1,25 @@
+# dependencies / build
+node_modules/
+.next/
+out/
+build/
+coverage/
+
+# data (SQLite lives here in dev and LXC bind mount)
+app/data/*.db*
+!.gitkeep
+
+# env / secrets
+.env*
+
+# misc
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# wireframes draft assets
+wireframes/design.zip
+
+# agent config (local)
+app/AGENTS.md
+app/CLAUDE.md

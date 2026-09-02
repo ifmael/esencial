@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recetario - Esencial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-container": "#ffdad6",
+                      "surface-container-lowest": "#ffffff",
+                      "surface": "#FFFFFF",
+                      "tertiary-fixed": "#ffd9dd",
+                      "on-tertiary": "#ffffff",
+                      "text-primary": "#1C1917",
+                      "inverse-surface": "#2c322c",
+                      "inverse-on-surface": "#edf2e9",
+                      "on-secondary": "#ffffff",
+                      "on-primary-fixed": "#00210a",
+                      "badge-pending-bg": "#FEF3C7",
+                      "tertiary-fixed-dim": "#ffb2bd",
+                      "on-secondary-fixed": "#0f2000",
+                      "primary-fixed": "#95f8a7",
+                      "warning-pending": "#D97706",
+                      "on-tertiary-fixed": "#400013",
+                      "on-background": "#181d17",
+                      "surface-container-high": "#e4eae1",
+                      "tertiary-container": "#b64c62",
+                      "primary": "#00652c",
+                      "primary-dark": "#166534",
+                      "surface-variant": "#dfe4db",
+                      "tertiary": "#97344a",
+                      "surface-muted": "#F5F5F4",
+                      "surface-tint": "#006d30",
+                      "border": "#E7E5E4",
+                      "surface-container-highest": "#dfe4db",
+                      "surface-container": "#eaefe6",
+                      "surface-bright": "#f6fbf2",
+                      "on-error": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed-variant": "#005323",
+                      "on-tertiary-container": "#fff1f1",
+                      "inverse-primary": "#79db8d",
+                      "surface-dim": "#d6dcd3",
+                      "secondary-fixed": "#bbf37c",
+                      "secondary-container": "#b9f079",
+                      "secondary": "#3e6a00",
+                      "on-primary": "#ffffff",
+                      "outline": "#6f7a6e",
+                      "on-tertiary-fixed-variant": "#81233b",
+                      "primary-container": "#15803d",
+                      "background": "#FAFAF9",
+                      "on-primary-container": "#d3ffd5",
+                      "error": "#B91C1C",
+                      "surface-container-low": "#f0f5ec",
+                      "badge-pending-text": "#92400E",
+                      "on-surface": "#181d17",
+                      "text-secondary": "#78716C",
+                      "on-surface-variant": "#3f493f",
+                      "secondary-fixed-dim": "#a0d663",
+                      "outline-variant": "#becabc",
+                      "on-secondary-container": "#416e00",
+                      "badge-done-bg": "#DCFCE7",
+                      "badge-done-text": "#166534",
+                      "primary-fixed-dim": "#79db8d",
+                      "on-secondary-fixed-variant": "#2e4f00"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "base": "8px",
+                      "section-gap": "24px",
+                      "xxl": "32px",
+                      "lg": "16px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "xl": "24px",
+                      "page-margin": "16px",
+                      "md": "12px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "badge": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "22.5px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "badge": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "19.5px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+      </style>
+</head>
+<body class="bg-background text-text-primary min-h-screen font-body-md text-body-md flex">
+<!-- Desktop SideNav -->
+<nav class="h-screen w-64 fixed left-0 top-0 hidden lg:flex flex-col bg-surface border-r border-border shadow-sm z-50">
+<div class="p-xl space-y-base flex flex-col h-full">
+<div class="mb-xl">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">Esencial</h1>
+</div>
+<div class="flex-1 space-y-sm">
+<!-- Inactive Nav Item -->
+<a class="flex items-center gap-md px-lg py-md text-on-surface-variant hover:bg-surface-container-low rounded-xl scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-md text-body-md">Hoy</span>
+</a>
+<!-- Active Nav Item (Recipe Plan aligns with Recipes) -->
+<a class="flex items-center gap-md px-lg py-md bg-secondary-container text-on-secondary-container rounded-xl font-bold scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu" data-weight="fill">restaurant_menu</span>
+<span class="font-body-md text-body-md">Plan recetas</span>
+</a>
+<!-- Inactive Nav Item -->
+<a class="flex items-center gap-md px-lg py-md text-on-surface-variant hover:bg-surface-container-low rounded-xl scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+<span class="font-body-md text-body-md">Plan fuerza</span>
+</a>
+</div>
+<div class="mt-auto">
+<button class="w-full bg-primary-container text-on-primary font-bold px-lg py-md rounded-xl hover:bg-primary-dark transition-colors flex justify-center items-center gap-sm">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    Nueva actividad
+                 </button>
+</div>
+</div>
+</nav>
+<!-- Mobile TopAppBar & BottomNav (Suppressed as requested Desktop specific layout, but keeping basic top bar for md:hidden safety) -->
+<header class="lg:hidden flex justify-between items-center px-page-margin w-full h-16 bg-background">
+<div class="font-headline-lg text-headline-lg font-bold text-primary">Esencial</div>
+<div class="flex gap-md text-primary">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 lg:ml-64 p-page-margin lg:p-xxl max-w-[1200px] mx-auto w-full">
+<!-- Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-xl gap-md">
+<h2 class="font-headline-lg text-headline-lg font-bold text-text-primary">Recetario</h2>
+<div class="flex w-full md:w-auto items-center gap-md">
+<div class="relative w-full md:w-64">
+<span class="material-symbols-outlined absolute left-sm top-1/2 transform -translate-y-1/2 text-text-secondary">search</span>
+<input class="w-full pl-xl pr-sm py-sm border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-surface font-body-md text-body-md" placeholder="Buscar recetas..." type="text"/>
+</div>
+<button class="hidden md:flex bg-primary-container text-on-primary font-bold px-lg py-sm rounded-xl hover:bg-primary-dark transition-colors whitespace-nowrap items-center gap-xs">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                    Nueva receta
+                </button>
+</div>
+</div>
+<!-- Recipe Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-lg">
+<!-- Recipe Card 1 -->
+<a class="group bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col hover:shadow-md transition-shadow" href="#">
+<div class="h-40 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A top-down view of a vibrant, healthy quinoa bowl with roasted vegetables, avocado slices, and a light dressing. The lighting is bright and natural, creating a clean, modern aesthetic. The scene is shot on a light wood surface, emphasizing a calm, nutritious lifestyle aligned with a wellness brand. Soft shadows and high-key exposure." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXrSn10P90YaJnNwxFZBO8jchAL4zQXuwv7LO_dmaQ6Wg17yXNiQcK--PSPXLL4H4w_RaJoYcLny5qBZxU9Akutmc6GKczrc0_NWURD6A1EsKnK1p1A0FBU1YTkg967SGXztLTCyr6Sp9IB1muAxp2ahH5A3GJPC3KDAr2rxzjOY6cUpc1SjA-XH_ug7KpV0K0QmqiJTyyDIqN66hDgV1RIZPmEU4-hOYcmznVhhWf_ZdU8EPhcUdC5Q"/>
+</div>
+<div class="p-lg flex-1 flex flex-col">
+<h3 class="font-headline-md text-headline-md text-text-primary mb-sm line-clamp-2">Bowl de Quinoa y Vegetales Asados</h3>
+<div class="mt-auto flex flex-wrap gap-xs">
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Almuerzo</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">30 min</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Batch</span>
+</div>
+</div>
+</a>
+<!-- Recipe Card 2 -->
+<a class="group bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col hover:shadow-md transition-shadow" href="#">
+<div class="h-40 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A close-up shot of a freshly prepared green smoothie in a clear glass, garnished with a sprig of mint. The background is a clean, white marble countertop with soft, diffused daylight pouring in from a nearby window. The aesthetic is minimalist, fresh, and health-focused, perfectly suited for a wellness and nutrition app. High key, light mode." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCe8ANzKbQLkFSbC8XXhaBxIRQyOGt9PGGWf4GcDDX0zXhKtZwUOmT3T7Gf8ktR6tmVGSdPIkhyuAE9dili_qm4RkN4EI4cpLWznv8niOb7_M_TXDBLFoGDJXCzozxPdtF01_Rdix4FjWbsXtsjm6jI5_fceszwTpFiGvIpTYuxwIcXnl_KzH4Yo7PxZTX86ErI9s2xuCSbPj1u6GnlFOXpgZYhqS-QwKNqVpiseTRRy0G3HNx2uPzVyA"/>
+</div>
+<div class="p-lg flex-1 flex flex-col">
+<h3 class="font-headline-md text-headline-md text-text-primary mb-sm line-clamp-2">Smoothie Verde Energizante</h3>
+<div class="mt-auto flex flex-wrap gap-xs">
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Desayuno</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">5 min</span>
+</div>
+</div>
+</a>
+<!-- Recipe Card 3 -->
+<a class="group bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col hover:shadow-md transition-shadow" href="#">
+<div class="h-40 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A beautifully plated portion of baked salmon alongside steamed asparagus and a lemon wedge. The composition is elegant and simple, resting on a matte white plate against a light cream background. The lighting is soft and airy, highlighting the texture of the fish and the vibrant green of the asparagus. A clean, calm, corporate wellness style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDy-hxmwenY84dQGmwGBtxcDT9dw_bshYgdWic9YbYnUh99Ax75Ym73ksIbc6UAxq1L-z3nQmfjiGz63i1XrbP8GyPJsEKGQ50biltgWihFDHmJ3NDINVjqmnDQglEeVLK5UUa9p5_Tg3rCg7IDWDoJYdN1F6Vx_RCqXdvw8yzN8gkb0kaYBj2U1l6Hqkv7iTwqF-u97fnnDV3Js2X-SRNPZ8owIHKQhPU9xMBekIJ5BHb5dA9vpSShTw"/>
+</div>
+<div class="p-lg flex-1 flex flex-col">
+<h3 class="font-headline-md text-headline-md text-text-primary mb-sm line-clamp-2">Salmón al Horno con Espárragos</h3>
+<div class="mt-auto flex flex-wrap gap-xs">
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Cena</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">25 min</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Proteína</span>
+</div>
+</div>
+</a>
+<!-- Recipe Card 4 -->
+<a class="group bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col hover:shadow-md transition-shadow" href="#">
+<div class="h-40 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A rustic yet modern presentation of a hearty lentil soup in a ceramic bowl. A slice of crusty whole-grain bread rests on the side. The scene is lit with warm, inviting light, conveying comfort and nourishment. The setting is minimal, with neutral tones and a focus on the rich colors of the soup, fitting a clean health aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEzCM2nDhJ7fdCKkkZRPJeHY_oWdiAlUc8c11PA9BwsWuIIrx_0E7WVt0UqyGstIDzCksdTuRfHo7fAMBYwTDDe-7frWzdZZG_Bu18JWWjPyOnhgUhHOYEswgK_qYYwPY5_-pMmbDf0VJ9GNhzE8-oZgVEX9L1O8IMbZIATvn_beQiChqavAfcTJe5eKVMOh0AZLemAy2MmLtafOfnT6kn5aD1hMgSSQsU797WWHDVUp0HDxMHoxXVLw"/>
+</div>
+<div class="p-lg flex-1 flex flex-col">
+<h3 class="font-headline-md text-headline-md text-text-primary mb-sm line-clamp-2">Sopa de Lentejas Reconfortante</h3>
+<div class="mt-auto flex flex-wrap gap-xs">
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Almuerzo</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">45 min</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Batch</span>
+</div>
+</div>
+</a>
+<!-- Recipe Card 5 -->
+<a class="group bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col hover:shadow-md transition-shadow" href="#">
+<div class="h-40 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Overhead shot of avocado toast on sourdough bread, topped with microgreens and a sprinkle of red pepper flakes, served on a textured ceramic plate. The background is a soft, light-toned linen cloth. The aesthetic is modern, bright, and organic, emphasizing daily wellness and clean eating habits in a bright light-mode environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1xFiP75GrHqyiAFcB7LsU7TLV2JqH9NwwHN7Fmv_xRSkKBW6txc96aHPEJ9-65AyS6tvoEEV3LmeICPLTytp9ZRr5RUuGPNqz7xS5z9HI99xBEFH5ETO0Q_Pj0KgemrY_KgK4I-qV3JboU0sukFu1m1d-7sU2Kw_sZm9MtLq-v3nEmJiCiSCAOB9P9J_16hCrEQAjYEJBaha_9y0QRiLbN4u_b8HULUKQbKcUvlY-_d7E-zOzFpzHAQ"/>
+</div>
+<div class="p-lg flex-1 flex flex-col">
+<h3 class="font-headline-md text-headline-md text-text-primary mb-sm line-clamp-2">Tostada de Aguacate y Microbrotes</h3>
+<div class="mt-auto flex flex-wrap gap-xs">
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">Desayuno</span>
+<span class="bg-surface-muted text-text-secondary font-label-sm text-label-sm px-sm py-[2px] rounded-full border border-border">10 min</span>
+</div>
+</div>
+</a>
+</div>
+</main>
+<!-- Mobile BottomNavBar -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.08)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-variant/50 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-label-sm text-label-sm mt-xs">Hoy</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-2xl px-4 py-2 hover:bg-surface-variant/50 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu" data-weight="fill">restaurant_menu</span>
+<span class="font-label-sm text-label-sm mt-xs font-bold">Recetas</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-variant/50 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+<span class="font-label-sm text-label-sm mt-xs">Fuerza</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Esencial - Registro de Entrenamiento</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#d6dcd3",
+                      "on-error": "#ffffff",
+                      "text-secondary": "#78716C",
+                      "primary-container": "#15803d",
+                      "on-tertiary-container": "#fff1f1",
+                      "error-container": "#ffdad6",
+                      "on-background": "#181d17",
+                      "secondary-fixed-dim": "#a0d663",
+                      "surface-container-high": "#e4eae1",
+                      "outline-variant": "#becabc",
+                      "secondary-fixed": "#bbf37c",
+                      "tertiary-fixed": "#ffd9dd",
+                      "background": "#FAFAF9",
+                      "primary": "#00652c",
+                      "tertiary-container": "#b64c62",
+                      "outline": "#6f7a6e",
+                      "on-primary-container": "#d3ffd5",
+                      "on-surface-variant": "#3f493f",
+                      "surface-tint": "#006d30",
+                      "surface": "#FFFFFF",
+                      "primary-fixed-dim": "#79db8d",
+                      "surface-bright": "#f6fbf2",
+                      "secondary": "#3e6a00",
+                      "error": "#B91C1C",
+                      "text-primary": "#1C1917",
+                      "surface-container": "#eaefe6",
+                      "primary-dark": "#166534",
+                      "on-primary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "inverse-on-surface": "#edf2e9",
+                      "on-tertiary-fixed-variant": "#81233b",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary-fixed": "#400013",
+                      "surface-container-low": "#f0f5ec",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-container": "#b9f079",
+                      "on-primary-fixed-variant": "#005323",
+                      "inverse-surface": "#2c322c",
+                      "on-secondary-fixed-variant": "#2e4f00",
+                      "warning-pending": "#D97706",
+                      "on-primary-fixed": "#00210a",
+                      "on-error-container": "#93000a",
+                      "badge-done-text": "#166534",
+                      "tertiary": "#97344a",
+                      "badge-pending-text": "#92400E",
+                      "on-surface": "#181d17",
+                      "badge-pending-bg": "#FEF3C7",
+                      "surface-muted": "#F5F5F4",
+                      "surface-container-highest": "#dfe4db",
+                      "primary-fixed": "#95f8a7",
+                      "inverse-primary": "#79db8d",
+                      "on-secondary-container": "#416e00",
+                      "border": "#E7E5E4",
+                      "badge-done-bg": "#DCFCE7",
+                      "on-secondary-fixed": "#0f2000",
+                      "tertiary-fixed-dim": "#ffb2bd",
+                      "surface-variant": "#dfe4db"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "16px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "base": "8px",
+                      "section-gap": "24px",
+                      "page-margin": "16px",
+                      "md": "12px",
+                      "xxl": "32px",
+                      "xl": "24px"
+              },
+              "fontFamily": {
+                      "badge": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-md": ["Inter"]
+              },
+              "fontSize": {
+                      "badge": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "label-sm": ["13px", {"lineHeight": "19.5px", "fontWeight": "400"}],
+                      "headline-lg": ["24px", {"lineHeight": "30px", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["18px", {"lineHeight": "22.5px", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background h-full font-body-md text-body-md antialiased overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-screen w-64 border-r border-border bg-surface flex-shrink-0 z-40 fixed left-0 top-0 p-lg">
+<div class="flex items-center gap-3 mb-section-gap px-2">
+<div class="h-10 w-10 bg-primary-container text-on-primary-container rounded-lg flex items-center justify-center font-bold text-xl">
+                E
+            </div>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight leading-none">Esencial</h1>
+<p class="text-xs text-text-secondary">Bienestar Personal</p>
+</div>
+</div>
+<ul class="flex flex-col gap-2">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-surface-container-high rounded-lg transition-colors scale-98 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span>Hoy</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-surface-container-high rounded-lg transition-colors scale-98 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span>Plan recetas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg scale-98 active:scale-95 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+<span>Plan fuerza</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-surface-container-high rounded-lg transition-colors" href="#">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A small circular profile picture of a fit individual smiling slightly against a clean white background, conveying health and wellness." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHQ4IQ-A91hXArg3NkFG_oJMwOwsvobpmLGCxtIqA5DmPLUiD5zlG3WgKvnZa8_5ibmUyKRiQWNwqje7TmuBna0j-EB1xOVt-vFgZHDoeh79qk5EMuxq2rKMZI_V-G8nBmaUkaCKw5OwFQT68v2_CObbqrqnCcio3FOFtDJNfWVLGudZTkaaPfk5GLAfC_Pgj_UMe7nP_SQ1D8OJ1YkHeqM86yDpbrMDTEOOu4beh3kaKWT1me0xZC2A"/>
+<span>Mi Perfil</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-0 md:ml-64 h-full overflow-y-auto w-full relative">
+<div class="max-w-[1200px] mx-auto p-page-margin md:p-section-gap pt-6 md:pt-section-gap w-full">
+<!-- Header -->
+<header class="flex items-center gap-4 mb-section-gap sticky top-0 bg-background/95 backdrop-blur-sm z-30 py-2 -mx-page-margin px-page-margin md:mx-0 md:px-0">
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors text-text-secondary">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div>
+<p class="font-label-sm text-label-sm text-text-secondary mb-1">Lunes, 1 sept.</p>
+<h2 class="font-headline-lg text-headline-lg text-text-primary">Sesión: Empuje A</h2>
+</div>
+</header>
+<!-- 2-Column Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-section-gap">
+<!-- Left Column (Exercises) -->
+<div class="lg:col-span-2 flex flex-col gap-sm">
+<!-- Exercise Card 1 -->
+<div class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<div class="p-4 border-b border-border bg-surface-bright flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md text-primary-dark">Press de banca</h3>
+<button class="text-primary hover:text-primary-dark font-label-sm text-label-sm flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="info">info</span> Historial
+                            </button>
+</div>
+<div class="p-4 flex flex-col gap-0">
+<!-- Header Row -->
+<div class="grid grid-cols-12 gap-2 text-text-secondary font-label-sm text-label-sm pb-2 border-b border-border px-2">
+<div class="col-span-2 text-center">Set</div>
+<div class="col-span-4 text-center">Peso (kg)</div>
+<div class="col-span-4 text-center">Reps</div>
+<div class="col-span-2 text-center">Listo</div>
+</div>
+<!-- Set 1 -->
+<div class="grid grid-cols-12 gap-2 items-center py-3 border-b border-border/50 px-2 min-h-[48px] hover:bg-surface-muted transition-colors">
+<div class="col-span-2 text-center font-bold text-text-primary">1</div>
+<div class="col-span-4 flex flex-col items-center gap-1">
+<div class="flex items-center gap-1 bg-surface-container rounded-lg p-1 border border-border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+<input class="w-12 text-center bg-transparent border-none p-0 focus:ring-0 font-body-md text-body-md text-text-primary" type="number" value="55"/>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">add</span></button>
+</div>
+<span class="text-[10px] text-text-secondary tracking-wide">última: 55</span>
+</div>
+<div class="col-span-4 flex flex-col items-center gap-1">
+<div class="flex items-center gap-1 bg-surface-container rounded-lg p-1 border border-border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+<input class="w-12 text-center bg-transparent border-none p-0 focus:ring-0 font-body-md text-body-md text-text-primary" type="number" value="8"/>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">add</span></button>
+</div>
+<span class="text-[10px] text-text-secondary tracking-wide">última: 8</span>
+</div>
+<div class="col-span-2 flex justify-center">
+<label class="relative flex items-center p-3 rounded-full cursor-pointer" htmlfor="check1">
+<input checked="" class="before:content[''] peer relative h-6 w-6 cursor-pointer appearance-none rounded-md border border-border transition-all before:absolute before:top-2/4 before:left-2/4 before:block before:h-12 before:w-12 before:-translate-y-2/4 before:-translate-x-2/4 before:rounded-full before:bg-primary-container before:opacity-0 before:transition-opacity checked:border-primary-container checked:bg-primary-container checked:before:bg-primary-container hover:before:opacity-10 bg-surface-container-low" id="check1" type="checkbox"/>
+<span class="absolute text-white transition-opacity opacity-0 pointer-events-none top-2/4 left-2/4 -translate-y-2/4 -translate-x-2/4 peer-checked:opacity-100">
+<svg class="h-3.5 w-3.5" fill="currentColor" stroke="currentColor" stroke-width="1" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fill-rule="evenodd"></path>
+</svg>
+</span>
+</label>
+</div>
+</div>
+<!-- Set 2 -->
+<div class="grid grid-cols-12 gap-2 items-center py-3 px-2 min-h-[48px] hover:bg-surface-muted transition-colors bg-surface-bright">
+<div class="col-span-2 text-center font-bold text-text-primary">2</div>
+<div class="col-span-4 flex flex-col items-center gap-1">
+<div class="flex items-center gap-1 bg-surface-container rounded-lg p-1 border border-primary ring-1 ring-primary focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+<input class="w-12 text-center bg-transparent border-none p-0 focus:ring-0 font-body-md text-body-md text-text-primary" type="number" value="57.5"/>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">add</span></button>
+</div>
+<span class="text-[10px] text-text-secondary tracking-wide">última: 57.5</span>
+</div>
+<div class="col-span-4 flex flex-col items-center gap-1">
+<div class="flex items-center gap-1 bg-surface-container rounded-lg p-1 border border-border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+<input class="w-12 text-center bg-transparent border-none p-0 focus:ring-0 font-body-md text-body-md text-text-primary" type="number" value="8"/>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">add</span></button>
+</div>
+<span class="text-[10px] text-text-secondary tracking-wide">última: 8</span>
+</div>
+<div class="col-span-2 flex justify-center">
+<label class="relative flex items-center p-3 rounded-full cursor-pointer" htmlfor="check2">
+<input class="before:content[''] peer relative h-6 w-6 cursor-pointer appearance-none rounded-md border border-border transition-all before:absolute before:top-2/4 before:left-2/4 before:block before:h-12 before:w-12 before:-translate-y-2/4 before:-translate-x-2/4 before:rounded-full before:bg-primary-container before:opacity-0 before:transition-opacity checked:border-primary-container checked:bg-primary-container checked:before:bg-primary-container hover:before:opacity-10 bg-surface-container-low" id="check2" type="checkbox"/>
+<span class="absolute text-white transition-opacity opacity-0 pointer-events-none top-2/4 left-2/4 -translate-y-2/4 -translate-x-2/4 peer-checked:opacity-100">
+<svg class="h-3.5 w-3.5" fill="currentColor" stroke="currentColor" stroke-width="1" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fill-rule="evenodd"></path>
+</svg>
+</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Exercise Card 2 -->
+<div class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden opacity-70 hover:opacity-100 transition-opacity">
+<div class="p-4 border-b border-border bg-surface-bright flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md text-primary-dark">Prensa de piernas</h3>
+<button class="text-primary hover:text-primary-dark font-label-sm text-label-sm flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="info">info</span> Historial
+                            </button>
+</div>
+<div class="p-4 flex flex-col gap-0">
+<!-- Header Row -->
+<div class="grid grid-cols-12 gap-2 text-text-secondary font-label-sm text-label-sm pb-2 border-b border-border px-2">
+<div class="col-span-2 text-center">Set</div>
+<div class="col-span-4 text-center">Peso (kg)</div>
+<div class="col-span-4 text-center">Reps</div>
+<div class="col-span-2 text-center">Listo</div>
+</div>
+<!-- Set 1 -->
+<div class="grid grid-cols-12 gap-2 items-center py-3 px-2 min-h-[48px] hover:bg-surface-muted transition-colors">
+<div class="col-span-2 text-center font-bold text-text-primary">1</div>
+<div class="col-span-4 flex flex-col items-center gap-1">
+<div class="flex items-center gap-1 bg-surface-container rounded-lg p-1 border border-border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+<input class="w-12 text-center bg-transparent border-none p-0 focus:ring-0 font-body-md text-body-md text-text-primary" type="number" value="120"/>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">add</span></button>
+</div>
+<span class="text-[10px] text-text-secondary tracking-wide">última: 120</span>
+</div>
+<div class="col-span-4 flex flex-col items-center gap-1">
+<div class="flex items-center gap-1 bg-surface-container rounded-lg p-1 border border-border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+<input class="w-12 text-center bg-transparent border-none p-0 focus:ring-0 font-body-md text-body-md text-text-primary" type="number" value="10"/>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-high text-text-secondary"><span class="material-symbols-outlined text-[16px]">add</span></button>
+</div>
+<span class="text-[10px] text-text-secondary tracking-wide">última: 10</span>
+</div>
+<div class="col-span-2 flex justify-center">
+<label class="relative flex items-center p-3 rounded-full cursor-pointer" htmlfor="check3">
+<input class="before:content[''] peer relative h-6 w-6 cursor-pointer appearance-none rounded-md border border-border transition-all before:absolute before:top-2/4 before:left-2/4 before:block before:h-12 before:w-12 before:-translate-y-2/4 before:-translate-x-2/4 before:rounded-full before:bg-primary-container before:opacity-0 before:transition-opacity checked:border-primary-container checked:bg-primary-container checked:before:bg-primary-container hover:before:opacity-10 bg-surface-container-low" id="check3" type="checkbox"/>
+<span class="absolute text-white transition-opacity opacity-0 pointer-events-none top-2/4 left-2/4 -translate-y-2/4 -translate-x-2/4 peer-checked:opacity-100">
+<svg class="h-3.5 w-3.5" fill="currentColor" stroke="currentColor" stroke-width="1" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fill-rule="evenodd"></path>
+</svg>
+</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full py-4 border-2 border-dashed border-border rounded-xl text-text-secondary font-headline-md text-headline-md hover:bg-surface-muted hover:border-text-secondary transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add</span> Añadir ejercicio
+                    </button>
+</div>
+<!-- Right Sidebar (Session Meta) -->
+<div class="lg:col-span-1">
+<div class="bg-surface rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-lg sticky top-[100px] flex flex-col gap-xl">
+<!-- Effort Scale -->
+<div>
+<h4 class="font-headline-md text-headline-md text-text-primary mb-md">Esfuerzo percibido</h4>
+<div class="flex justify-between items-center px-2">
+<!-- Dot 1 -->
+<button class="w-8 h-8 rounded-full border-2 border-primary-container bg-surface flex items-center justify-center hover:bg-surface-container transition-colors"></button>
+<!-- Dot 2 -->
+<button class="w-8 h-8 rounded-full border-2 border-primary-container bg-surface flex items-center justify-center hover:bg-surface-container transition-colors"></button>
+<!-- Dot 3 (Selected) -->
+<button class="w-8 h-8 rounded-full border-2 border-primary-container bg-primary-container flex items-center justify-center shadow-md scale-110 transition-transform">
+<span class="material-symbols-outlined text-white text-[16px]">check</span>
+</button>
+<!-- Dot 4 -->
+<button class="w-8 h-8 rounded-full border-2 border-border bg-surface flex items-center justify-center hover:bg-surface-container transition-colors"></button>
+<!-- Dot 5 -->
+<button class="w-8 h-8 rounded-full border-2 border-border bg-surface flex items-center justify-center hover:bg-surface-container transition-colors"></button>
+</div>
+<div class="flex justify-between mt-2 px-1 text-text-secondary font-label-sm text-label-sm">
+<span>Muy fácil</span>
+<span>Máximo</span>
+</div>
+</div>
+<!-- Notes Area -->
+<div>
+<h4 class="font-headline-md text-headline-md text-text-primary mb-sm">Notas de la sesión</h4>
+<textarea class="w-full rounded-lg border border-border bg-surface p-3 font-body-md text-body-md text-text-primary focus:border-primary focus:ring-1 focus:ring-primary resize-none placeholder-text-secondary" placeholder="¿Cómo te sentiste hoy? Molestias, energía, etc..." rows="4"></textarea>
+</div>
+<!-- Action Button -->
+<div class="pt-4 mt-auto">
+<button class="w-full bg-primary-container text-white font-headline-md text-headline-md py-3 px-4 rounded-lg hover:bg-primary shadow-sm hover:shadow transition-all active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">task_alt</span> Cerrar sesión
+                            </button>
+<button class="w-full mt-3 text-error hover:text-error-container font-label-sm text-label-sm py-2 transition-colors">
+                                Descartar sesión
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

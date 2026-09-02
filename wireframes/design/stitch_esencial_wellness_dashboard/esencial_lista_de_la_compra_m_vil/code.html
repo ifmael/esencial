@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lista de la Compra - Esencial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#93000a",
+                      "secondary-fixed-dim": "#a0d663",
+                      "background": "#FAFAF9",
+                      "badge-done-text": "#166534",
+                      "surface-container-low": "#f0f5ec",
+                      "text-secondary": "#78716C",
+                      "error": "#B91C1C",
+                      "surface-variant": "#dfe4db",
+                      "tertiary-fixed-dim": "#ffb2bd",
+                      "outline-variant": "#becabc",
+                      "on-error": "#ffffff",
+                      "outline": "#6f7a6e",
+                      "on-surface": "#181d17",
+                      "primary-dark": "#166534",
+                      "surface-container": "#eaefe6",
+                      "tertiary-fixed": "#ffd9dd",
+                      "on-tertiary-fixed": "#400013",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#b9f079",
+                      "primary-container": "#15803d",
+                      "on-secondary-container": "#416e00",
+                      "primary-fixed-dim": "#79db8d",
+                      "badge-done-bg": "#DCFCE7",
+                      "surface-container-high": "#e4eae1",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#2e4f00",
+                      "on-tertiary-fixed-variant": "#81233b",
+                      "inverse-surface": "#2c322c",
+                      "secondary-fixed": "#bbf37c",
+                      "on-primary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "surface-dim": "#d6dcd3",
+                      "surface": "#FFFFFF",
+                      "border": "#E7E5E4",
+                      "on-primary-container": "#d3ffd5",
+                      "badge-pending-text": "#92400E",
+                      "secondary": "#3e6a00",
+                      "surface-tint": "#006d30",
+                      "inverse-primary": "#79db8d",
+                      "on-primary-fixed-variant": "#005323",
+                      "text-primary": "#1C1917",
+                      "on-surface-variant": "#3f493f",
+                      "on-background": "#181d17",
+                      "surface-muted": "#F5F5F4",
+                      "surface-bright": "#f6fbf2",
+                      "on-secondary-fixed": "#0f2000",
+                      "warning-pending": "#D97706",
+                      "tertiary": "#97344a",
+                      "tertiary-container": "#b64c62",
+                      "on-tertiary-container": "#fff1f1",
+                      "primary-fixed": "#95f8a7",
+                      "surface-container-highest": "#dfe4db",
+                      "inverse-on-surface": "#edf2e9",
+                      "badge-pending-bg": "#FEF3C7",
+                      "on-primary-fixed": "#00210a",
+                      "surface-container-lowest": "#ffffff",
+                      "primary": "#00652c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "page-margin": "16px",
+                      "base": "8px",
+                      "xs": "4px",
+                      "lg": "16px",
+                      "section-gap": "24px",
+                      "sm": "8px",
+                      "xxl": "32px",
+                      "xl": "24px",
+                      "md": "12px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "badge": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "22.5px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "badge": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "19.5px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        /* Custom styles for checkboxes to match brand green */
+        .brand-checkbox {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #D6D3D1;
+            border-radius: 4px;
+            display: grid;
+            place-content: center;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+
+        .brand-checkbox::before {
+            content: "";
+            width: 14px;
+            height: 14px;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            background-color: transparent;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        .brand-checkbox:checked {
+            background-color: #15803D;
+            border-color: #15803D;
+        }
+
+        .brand-checkbox:checked::before {
+            transform: scale(1);
+        }
+      </style>
+</head>
+<body class="bg-background text-text-primary h-full font-body-md text-body-md flex flex-col md:flex-row pb-24 md:pb-0">
+<!-- TopAppBar (Mobile) / SideNav (Desktop) Semantic mapping -->
+<!-- For mobile shopping list, context is a deep link, so shell suppression rules might apply, but user requested TopAppBar + Back -->
+<header class="w-full top-0 sticky bg-background dark:bg-on-surface text-primary dark:text-primary-fixed-dim font-headline-lg-mobile text-headline-lg-mobile flex items-center justify-between px-page-margin h-16 w-full z-40 md:hidden">
+<button aria-label="Volver" class="flex items-center text-on-surface-variant dark:text-outline-variant hover:bg-surface-container dark:hover:bg-surface-variant p-2 rounded-full transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<span class="font-headline-md text-headline-md font-bold tracking-tight truncate flex-1 text-center pr-10 text-primary-dark">Lista de la Compra</span>
+</header>
+<!-- Desktop Sidebar (Hidden on Mobile) - Standard pattern implementation for structural completeness -->
+<aside class="hidden md:flex flex-col w-64 h-full bg-surface border-r border-border sticky top-0">
+<div class="p-6">
+<div class="flex items-center gap-2 text-primary font-headline-lg text-headline-lg font-bold">
+<span class="material-symbols-outlined" data-icon="spa" data-weight="fill">spa</span>
+<span>Esencial</span>
+</div>
+</div>
+<nav class="flex-1 px-4 py-2 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary hover:bg-surface-container-low transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="today">today</span>
+<span class="font-body-md text-body-md">Hoy</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-medium transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-body-md text-body-md">Plan recetas</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary hover:bg-surface-container-low transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+<span class="font-body-md text-body-md">Plan fuerza</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 max-w-[1200px] w-full mx-auto px-page-margin pt-4 md:pt-8 md:px-8 space-y-section-gap">
+<!-- Desktop Header (Hidden on Mobile) -->
+<div class="hidden md:flex items-center justify-between mb-8">
+<div class="flex items-center gap-4">
+<button aria-label="Volver" class="p-2 rounded-full hover:bg-surface-muted transition-colors text-text-secondary">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg text-primary-dark">Lista de la Compra</h1>
+</div>
+</div>
+<!-- Section: Frutas y Verduras -->
+<section class="bg-surface rounded-[12px] p-4 border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<h2 class="font-headline-md text-headline-md text-primary-dark mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[20px]" data-icon="nutrition">nutrition</span>
+                Frutas y Verduras
+            </h2>
+<div class="space-y-0">
+<!-- Item -->
+<label class="flex items-center gap-3 min-h-[48px] py-2 border-b border-border cursor-pointer group">
+<input class="brand-checkbox shrink-0" type="checkbox"/>
+<div class="flex-1">
+<span class="group-has-[:checked]:line-through group-has-[:checked]:text-text-secondary transition-all">Espinacas</span>
+<span class="text-text-secondary text-sm ml-1">— 2 manojos</span>
+</div>
+</label>
+<!-- Item -->
+<label class="flex items-center gap-3 min-h-[48px] py-2 border-b border-border cursor-pointer group">
+<input class="brand-checkbox shrink-0" type="checkbox"/>
+<div class="flex-1">
+<span class="group-has-[:checked]:line-through group-has-[:checked]:text-text-secondary transition-all">Plátanos</span>
+<span class="text-text-secondary text-sm ml-1">— 1 kg</span>
+</div>
+</label>
+</div>
+<!-- Add Input -->
+<div class="mt-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary shrink-0" data-icon="add">add</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 p-0 text-body-md placeholder:text-text-secondary" placeholder="Añadir artículo..." type="text"/>
+</div>
+</section>
+<!-- Section: Carnes y Pescados -->
+<section class="bg-surface rounded-[12px] p-4 border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<h2 class="font-headline-md text-headline-md text-primary-dark mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[20px]" data-icon="set_meal">set_meal</span>
+                Carnes y Pescados
+            </h2>
+<div class="space-y-0">
+<!-- Item -->
+<label class="flex items-center gap-3 min-h-[48px] py-2 border-b border-border cursor-pointer group">
+<input class="brand-checkbox shrink-0" type="checkbox"/>
+<div class="flex-1">
+<span class="group-has-[:checked]:line-through group-has-[:checked]:text-text-secondary transition-all">Pechuga de pollo</span>
+<span class="text-text-secondary text-sm ml-1">— 300g</span>
+</div>
+</label>
+<!-- Item -->
+<label class="flex items-center gap-3 min-h-[48px] py-2 border-b border-border cursor-pointer group">
+<input checked="" class="brand-checkbox shrink-0" type="checkbox"/>
+<div class="flex-1">
+<span class="group-has-[:checked]:line-through group-has-[:checked]:text-text-secondary transition-all">Salmón fresco</span>
+<span class="text-text-secondary text-sm ml-1">— 2 lomos</span>
+</div>
+</label>
+</div>
+<!-- Add Input -->
+<div class="mt-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary shrink-0" data-icon="add">add</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 p-0 text-body-md placeholder:text-text-secondary" placeholder="Añadir artículo..." type="text"/>
+</div>
+</section>
+<!-- Section: Lácteos -->
+<section class="bg-surface rounded-[12px] p-4 border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<h2 class="font-headline-md text-headline-md text-primary-dark mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[20px]" data-icon="egg">egg</span>
+                Lácteos
+            </h2>
+<div class="space-y-0">
+<!-- Item -->
+<label class="flex items-center gap-3 min-h-[48px] py-2 border-b border-border cursor-pointer group">
+<input class="brand-checkbox shrink-0" type="checkbox"/>
+<div class="flex-1">
+<span class="group-has-[:checked]:line-through group-has-[:checked]:text-text-secondary transition-all">Leche de avena</span>
+<span class="text-text-secondary text-sm ml-1">— 1 litro</span>
+</div>
+</label>
+</div>
+<!-- Add Input -->
+<div class="mt-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary shrink-0" data-icon="add">add</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 p-0 text-body-md placeholder:text-text-secondary" placeholder="Añadir artículo..." type="text"/>
+</div>
+</section>
+<!-- Section: Despensa -->
+<section class="bg-surface rounded-[12px] p-4 border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<h2 class="font-headline-md text-headline-md text-primary-dark mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary text-[20px]" data-icon="inventory_2">inventory_2</span>
+                Despensa
+            </h2>
+<div class="space-y-0">
+<!-- Item -->
+<label class="flex items-center gap-3 min-h-[48px] py-2 border-b border-border cursor-pointer group">
+<input class="brand-checkbox shrink-0" type="checkbox"/>
+<div class="flex-1">
+<span class="group-has-[:checked]:line-through group-has-[:checked]:text-text-secondary transition-all">Arroz integral</span>
+<span class="text-text-secondary text-sm ml-1">— 500g</span>
+</div>
+</label>
+<!-- Item -->
+<label class="flex items-center gap-3 min-h-[48px] py-2 border-b border-border cursor-pointer group">
+<input class="brand-checkbox shrink-0" type="checkbox"/>
+<div class="flex-1">
+<span class="group-has-[:checked]:line-through group-has-[:checked]:text-text-secondary transition-all">Aceite de oliva virgen extra</span>
+<span class="text-text-secondary text-sm ml-1">— 1 botella</span>
+</div>
+</label>
+</div>
+<!-- Add Input -->
+<div class="mt-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-secondary shrink-0" data-icon="add">add</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 p-0 text-body-md placeholder:text-text-secondary" placeholder="Añadir artículo..." type="text"/>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 border-t border-border dark:border-outline-variant bg-surface dark:bg-inverse-surface shadow-sm pb-safe">
+<!-- Tab: Hoy (Inactive) -->
+<a class="flex flex-col items-center justify-center text-text-secondary dark:text-outline-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-on-surface-variant active:scale-95 transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary-dark transition-colors" data-icon="today">today</span>
+<span class="font-label-sm text-label-sm mt-1">Hoy</span>
+</a>
+<!-- Tab: Plan recetas (Active - based on user prompt mapping) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-xl px-4 py-1 active:scale-95 transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu" data-weight="fill">restaurant_menu</span>
+<span class="font-label-sm text-label-sm mt-1 font-medium">Recetas</span>
+</a>
+<!-- Tab: Plan fuerza (Inactive) -->
+<a class="flex flex-col items-center justify-center text-text-secondary dark:text-outline-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-on-surface-variant active:scale-95 transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary-dark transition-colors" data-icon="fitness_center">fitness_center</span>
+<span class="font-label-sm text-label-sm mt-1">Fuerza</span>
+</a>
+</nav>
+</body></html>

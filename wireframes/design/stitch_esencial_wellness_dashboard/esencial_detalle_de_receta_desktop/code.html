@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Esencial - Plan recetas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#ffb2bd",
+                        "primary-fixed-dim": "#79db8d",
+                        "text-secondary": "#78716C",
+                        "on-tertiary-fixed-variant": "#81233b",
+                        "on-secondary-fixed-variant": "#2e4f00",
+                        "outline": "#6f7a6e",
+                        "surface-container": "#eaefe6",
+                        "badge-done-bg": "#DCFCE7",
+                        "surface-container-lowest": "#ffffff",
+                        "warning-pending": "#D97706",
+                        "primary-dark": "#166534",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#400013",
+                        "primary-container": "#15803d",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#3e6a00",
+                        "surface-container-high": "#e4eae1",
+                        "on-tertiary-container": "#fff1f1",
+                        "inverse-primary": "#79db8d",
+                        "on-secondary-container": "#416e00",
+                        "tertiary-fixed": "#ffd9dd",
+                        "on-primary-fixed-variant": "#005323",
+                        "error": "#B91C1C",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed": "#0f2000",
+                        "secondary-fixed": "#bbf37c",
+                        "on-surface-variant": "#3f493f",
+                        "tertiary": "#97344a",
+                        "surface-bright": "#f6fbf2",
+                        "inverse-surface": "#2c322c",
+                        "surface-container-highest": "#dfe4db",
+                        "primary": "#00652c",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-dim": "#d6dcd3",
+                        "border": "#E7E5E4",
+                        "primary-fixed": "#95f8a7",
+                        "on-surface": "#181d17",
+                        "surface-container-low": "#f0f5ec",
+                        "on-tertiary": "#ffffff",
+                        "badge-pending-text": "#92400E",
+                        "secondary-container": "#b9f079",
+                        "inverse-on-surface": "#edf2e9",
+                        "outline-variant": "#becabc",
+                        "on-primary-container": "#d3ffd5",
+                        "text-primary": "#1C1917",
+                        "surface-variant": "#dfe4db",
+                        "tertiary-container": "#b64c62",
+                        "surface": "#FFFFFF",
+                        "badge-pending-bg": "#FEF3C7",
+                        "on-background": "#181d17",
+                        "secondary-fixed-dim": "#a0d663",
+                        "background": "#FAFAF9",
+                        "badge-done-text": "#166534",
+                        "on-primary-fixed": "#00210a",
+                        "surface-tint": "#006d30",
+                        "surface-muted": "#F5F5F4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "12px",
+                        "xl": "24px",
+                        "page-margin": "16px",
+                        "base": "8px",
+                        "xxl": "32px",
+                        "sm": "8px",
+                        "section-gap": "24px",
+                        "xs": "4px",
+                        "lg": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "badge": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["13px", { "lineHeight": "19.5px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "badge": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["18px", { "lineHeight": "22.5px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-text-primary min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="h-screen w-64 fixed left-0 top-0 hidden lg:flex flex-col bg-surface border-r border-border shadow-sm p-xl space-y-base z-10">
+<div class="font-headline-lg text-headline-lg font-bold text-primary mb-xl">
+            Esencial
+        </div>
+<div class="space-y-sm flex-1">
+<a class="flex items-center gap-md px-lg py-md text-on-surface-variant hover:bg-surface-container-low rounded-xl scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-weight="regular">calendar_today</span>
+<span class="font-body-md text-body-md">Hoy</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md bg-secondary-container text-on-secondary-container rounded-xl font-bold scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-body-md text-body-md">Plan recetas</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md text-on-surface-variant hover:bg-surface-container-low rounded-xl scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-weight="regular">fitness_center</span>
+<span class="font-body-md text-body-md">Plan fuerza</span>
+</a>
+</div>
+<div class="mt-auto flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">person</span>
+</div>
+<div>
+<div class="font-body-md text-body-md font-semibold text-text-primary">Usuario</div>
+<div class="font-label-sm text-label-sm text-text-secondary">Tu bienestar diario</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 lg:ml-64 p-page-margin lg:p-xxl flex justify-center">
+<div class="w-full max-w-[760px]">
+<!-- Header / Hero Image -->
+<div class="relative w-full h-[320px] rounded-xl overflow-hidden mb-section-gap shadow-[0_1px_3px_rgba(0,0,0,0.08)] bg-surface-muted">
+<img class="w-full h-full object-cover" data-alt="A high-quality, top-down culinary photograph of a fresh, healthy chicken and quinoa salad in a ceramic bowl. The lighting is bright and natural, creating a clean, modern wellness aesthetic. The composition features vibrant greens from fresh spinach, perfectly cooked golden chicken breast, and fluffy quinoa, set against a pristine, light-toned surface. The mood is calm, appetizing, and nourishing, fitting perfectly within a clean health and wellness app UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfOtZTEwvca5Aie5iRWDi-2mGWSB8Q_6yGS-_uDWKdPGJAy1HOg7G9cWNfsuc4NZomhtVccGB7urq9t2wTx0cYFSLpq91wQPh8-UdLVbi6rGZQ49XCfzA-HPrjbn-0BXwvwOCt_GHKafZ45Gt2gRHC0eNsLMvLZAFX6gb1KQsPP78XnR92RBUcwWL81Ui1E2dnaYEzI8q89EZhKUtWGfkj1xu7polKNj3wSXHHE5nyVdPjjU53Qs9AKQ"/>
+<button class="absolute top-md right-md bg-surface/80 backdrop-blur-sm p-sm rounded-full shadow-sm text-text-primary hover:bg-surface transition-colors duration-200">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<div class="mb-section-gap">
+<h1 class="font-headline-lg text-headline-lg text-text-primary mb-sm">Ensalada de Pollo y Quinoa</h1>
+<div class="flex items-center gap-lg text-text-secondary font-label-sm text-label-sm">
+<span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">schedule</span> 25 min</span>
+<span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">local_fire_department</span> 450 kcal</span>
+<span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">restaurant</span> Principal</span>
+</div>
+</div>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-section-gap">
+<!-- Left Column: Ingredients & Materials -->
+<div class="md:col-span-5 space-y-section-gap">
+<!-- Ingredientes -->
+<div class="bg-surface rounded-xl p-lg border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<h2 class="font-headline-md text-headline-md text-text-primary mb-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-container text-[20px]">grocery</span>
+                            Ingredientes
+                        </h2>
+<ul class="space-y-sm">
+<li class="flex justify-between items-center py-sm border-b border-border/50 last:border-0 font-body-md text-body-md">
+<span class="text-text-primary">Arroz integral</span>
+<span class="text-text-secondary font-semibold">80g</span>
+</li>
+<li class="flex justify-between items-center py-sm border-b border-border/50 last:border-0 font-body-md text-body-md">
+<span class="text-text-primary">Pechuga de pollo</span>
+<span class="text-text-secondary font-semibold">150g</span>
+</li>
+<li class="flex justify-between items-center py-sm border-b border-border/50 last:border-0 font-body-md text-body-md">
+<span class="text-text-primary">Quinoa</span>
+<span class="text-text-secondary font-semibold">50g</span>
+</li>
+<li class="flex justify-between items-center py-sm border-b border-border/50 last:border-0 font-body-md text-body-md">
+<span class="text-text-primary">Espinacas frescas</span>
+<span class="text-text-secondary font-semibold">1 manojo</span>
+</li>
+</ul>
+</div>
+<!-- Materiales -->
+<div class="bg-surface rounded-xl p-lg border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<h2 class="font-headline-md text-headline-md text-text-primary mb-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-container text-[20px]">skillet</span>
+                            Materiales
+                        </h2>
+<div class="flex flex-wrap gap-sm">
+<span class="inline-flex items-center px-md py-xs rounded-full bg-surface-container-low border border-border text-text-primary font-label-sm text-label-sm">
+                                Sartén
+                            </span>
+<span class="inline-flex items-center px-md py-xs rounded-full bg-surface-container-low border border-border text-text-primary font-label-sm text-label-sm">
+                                Olla
+                            </span>
+<span class="inline-flex items-center px-md py-xs rounded-full bg-surface-container-low border border-border text-text-primary font-label-sm text-label-sm">
+                                Batidora
+                            </span>
+<span class="inline-flex items-center px-md py-xs rounded-full bg-surface-container-low border border-border text-text-primary font-label-sm text-label-sm">
+                                Cuchillo de chef
+                            </span>
+</div>
+</div>
+</div>
+<!-- Right Column: Elaboración -->
+<div class="md:col-span-7">
+<div class="bg-surface rounded-xl p-lg border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<h2 class="font-headline-md text-headline-md text-text-primary mb-lg flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-container text-[20px]">blender</span>
+                            Elaboración
+                        </h2>
+<div class="space-y-md">
+<div class="flex gap-md">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-body-md text-body-md">1</div>
+<div class="font-body-md text-body-md text-text-primary pt-sm">
+                                    Enjuaga la quinoa y el arroz integral. Cuécelos en ollas separadas según las instrucciones del paquete hasta que estén tiernos. Escurre y deja enfriar.
+                                </div>
+</div>
+<div class="flex gap-md">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-body-md text-body-md">2</div>
+<div class="font-body-md text-body-md text-text-primary pt-sm">
+                                    Corta la pechuga de pollo en dados medianos. Calienta la sartén con unas gotas de aceite de oliva y dora el pollo hasta que esté completamente cocinado.
+                                </div>
+</div>
+<div class="flex gap-md">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-body-md text-body-md">3</div>
+<div class="font-body-md text-body-md text-text-primary pt-sm">
+                                    Lava las espinacas frescas y córtalas en trozos más pequeños si es necesario.
+                                </div>
+</div>
+<div class="flex gap-md">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-body-md text-body-md">4</div>
+<div class="font-body-md text-body-md text-text-primary pt-sm">
+                                    En un bol grande, mezcla la quinoa, el arroz, el pollo dorado y las espinacas. Aliña al gusto (opcional: limón, aceite de oliva, sal y pimienta) y sirve inmediatamente.
+                                </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Hidden on desktop, present for semantic correctness if screen resized) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-surface shadow-[0_-1px_3px_rgba(0,0,0,0.08)] lg:hidden border-t border-border/50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-variant/50 rounded-xl active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined mb-xs" data-weight="regular">calendar_today</span>
+<span class="font-label-sm text-label-sm">Hoy</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-2xl px-4 py-2 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined mb-xs" data-weight="fill" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-label-sm text-label-sm font-bold">Recetas</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-variant/50 rounded-xl active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined mb-xs" data-weight="regular">fitness_center</span>
+<span class="font-label-sm text-label-sm">Fuerza</span>
+</a>
+</nav>
+</body></html>

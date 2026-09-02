@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nueva Receta - Esencial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error": "#ffffff",
+                      "on-background": "#181d17",
+                      "tertiary": "#97344a",
+                      "tertiary-container": "#b64c62",
+                      "on-secondary": "#ffffff",
+                      "on-primary-container": "#d3ffd5",
+                      "surface-tint": "#006d30",
+                      "text-primary": "#1C1917",
+                      "border": "#E7E5E4",
+                      "primary-fixed": "#95f8a7",
+                      "on-secondary-fixed": "#0f2000",
+                      "inverse-on-surface": "#edf2e9",
+                      "surface-container-high": "#e4eae1",
+                      "surface": "#FFFFFF",
+                      "badge-done-bg": "#DCFCE7",
+                      "secondary-container": "#b9f079",
+                      "tertiary-fixed": "#ffd9dd",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed": "#00210a",
+                      "error-container": "#ffdad6",
+                      "primary-fixed-dim": "#79db8d",
+                      "on-secondary-fixed-variant": "#2e4f00",
+                      "on-surface": "#181d17",
+                      "surface-dim": "#d6dcd3",
+                      "surface-container": "#eaefe6",
+                      "inverse-primary": "#79db8d",
+                      "warning-pending": "#D97706",
+                      "tertiary-fixed-dim": "#ffb2bd",
+                      "on-tertiary-fixed": "#400013",
+                      "badge-done-text": "#166534",
+                      "surface-container-low": "#f0f5ec",
+                      "secondary-fixed": "#bbf37c",
+                      "on-tertiary-fixed-variant": "#81233b",
+                      "text-secondary": "#78716C",
+                      "on-primary": "#ffffff",
+                      "inverse-surface": "#2c322c",
+                      "background": "#FAFAF9",
+                      "outline": "#6f7a6e",
+                      "surface-muted": "#F5F5F4",
+                      "surface-container-highest": "#dfe4db",
+                      "outline-variant": "#becabc",
+                      "error": "#B91C1C",
+                      "on-primary-fixed-variant": "#005323",
+                      "badge-pending-text": "#92400E",
+                      "secondary": "#3e6a00",
+                      "badge-pending-bg": "#FEF3C7",
+                      "primary-dark": "#166534",
+                      "primary": "#00652c",
+                      "surface-variant": "#dfe4db",
+                      "primary-container": "#15803d",
+                      "on-surface-variant": "#3f493f",
+                      "secondary-fixed-dim": "#a0d663",
+                      "on-secondary-container": "#416e00",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#fff1f1",
+                      "surface-bright": "#f6fbf2",
+                      "on-tertiary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "16px",
+                      "page-margin": "16px",
+                      "xxl": "32px",
+                      "sm": "8px",
+                      "md": "12px",
+                      "xl": "24px",
+                      "xs": "4px",
+                      "section-gap": "24px",
+                      "base": "8px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "badge": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "22.5px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "19.5px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "badge": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.text-primary');
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Custom scrollbar for horizontal lists */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+      </style>
+</head>
+<body class="bg-background text-text-primary pb-24">
+<!-- TopAppBar (suppressed as per instructions for sub-pages, creating custom header instead) -->
+<header class="sticky top-0 z-40 bg-background/90 backdrop-blur-md px-page-margin py-md flex items-center justify-between border-b border-transparent shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-shadow" id="mainHeader">
+<button class="w-10 h-10 flex items-center justify-center rounded-full active:bg-surface-muted transition-colors text-text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-text-primary">Nueva receta</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+<main class="px-page-margin pt-sm flex flex-col gap-section-gap max-w-xl mx-auto">
+<!-- Photo Upload -->
+<section class="flex flex-col gap-sm">
+<div class="w-full aspect-[4/3] bg-surface-muted rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined text-4xl text-text-secondary mb-xs" style="font-variation-settings: 'FILL' 0;">add_a_photo</span>
+<span class="font-label-sm text-label-sm text-text-secondary">Añadir foto principal</span>
+</div>
+</section>
+<!-- Basic Info Form -->
+<section class="bg-surface p-lg rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-border flex flex-col gap-md">
+<div>
+<label class="block font-label-sm text-label-sm text-text-secondary mb-xs" for="recipe-name">Nombre de la receta</label>
+<input class="w-full bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" id="recipe-name" placeholder="Ej. Ensalada templada de quinoa" type="text"/>
+</div>
+<div class="flex gap-md">
+<div class="flex-1">
+<label class="block font-label-sm text-label-sm text-text-secondary mb-xs" for="prep-time">Tiempo (min)</label>
+<input class="w-full bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" id="prep-time" placeholder="30" type="number"/>
+</div>
+<div class="flex-1">
+<label class="block font-label-sm text-label-sm text-text-secondary mb-xs" for="servings">Raciones</label>
+<input class="w-full bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" id="servings" placeholder="2" type="number"/>
+</div>
+</div>
+</section>
+<!-- Ingredients Section -->
+<section class="bg-surface p-lg rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-border flex flex-col gap-md">
+<h2 class="font-headline-md text-headline-md text-text-primary">Ingredientes</h2>
+<div class="flex flex-col gap-sm" id="ingredients-list">
+<!-- Ingredient Row 1 -->
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-text-secondary cursor-grab active:cursor-grabbing" style="font-variation-settings: 'FILL' 0;">drag_indicator</span>
+<input class="flex-[2] bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" placeholder="Ingrediente" type="text"/>
+<input class="flex-1 bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" placeholder="Cant." type="number"/>
+<select class="flex-1 bg-background border border-[#D6D3D1] rounded-lg px-xs py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors appearance-none">
+<option>g</option>
+<option>ml</option>
+<option>ud</option>
+<option>cda</option>
+</select>
+<button class="p-xs text-text-secondary hover:text-error transition-colors rounded-full"><span class="material-symbols-outlined text-[20px]">close</span></button>
+</div>
+<!-- Ingredient Row 2 -->
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-text-secondary cursor-grab active:cursor-grabbing" style="font-variation-settings: 'FILL' 0;">drag_indicator</span>
+<input class="flex-[2] bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" placeholder="Ingrediente" type="text"/>
+<input class="flex-1 bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors" placeholder="Cant." type="number"/>
+<select class="flex-1 bg-background border border-[#D6D3D1] rounded-lg px-xs py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors appearance-none">
+<option>g</option>
+<option>ml</option>
+<option>ud</option>
+<option>cda</option>
+</select>
+<button class="p-xs text-text-secondary hover:text-error transition-colors rounded-full"><span class="material-symbols-outlined text-[20px]">close</span></button>
+</div>
+</div>
+<button class="mt-xs text-primary-container font-label-sm text-label-sm font-semibold flex items-center justify-center gap-xs py-sm rounded-lg hover:bg-surface-muted transition-colors active:scale-95 border border-dashed border-primary-container/30">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Añadir ingrediente
+            </button>
+</section>
+<!-- Steps Section -->
+<section class="bg-surface p-lg rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-border flex flex-col gap-md">
+<h2 class="font-headline-md text-headline-md text-text-primary">Pasos</h2>
+<div class="flex flex-col gap-md" id="steps-list">
+<!-- Step 1 -->
+<div class="flex gap-sm items-start">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-badge text-badge shrink-0 mt-2">1</div>
+<textarea class="flex-1 bg-background border border-[#D6D3D1] rounded-lg px-md py-[10px] font-body-md text-body-md focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors resize-none" placeholder="Describe el paso..." rows="2"></textarea>
+<button class="p-xs text-text-secondary hover:text-error transition-colors rounded-full mt-1"><span class="material-symbols-outlined text-[20px]">delete</span></button>
+</div>
+</div>
+<button class="text-primary-container font-label-sm text-label-sm font-semibold flex items-center justify-center gap-xs py-sm rounded-lg hover:bg-surface-muted transition-colors active:scale-95 border border-dashed border-primary-container/30">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Añadir paso
+            </button>
+</section>
+<!-- Tags / Categories -->
+<section class="bg-surface p-lg rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-border flex flex-col gap-md">
+<h2 class="font-headline-md text-headline-md text-text-primary">Etiquetas</h2>
+<div class="flex flex-wrap gap-sm">
+<button class="px-3 py-1 rounded-full border border-[#D6D3D1] font-label-sm text-label-sm text-text-secondary bg-surface hover:bg-surface-muted transition-colors active:bg-primary-container active:text-on-primary active:border-primary-container">Desayuno</button>
+<button class="px-3 py-1 rounded-full border border-primary-container font-label-sm text-label-sm text-on-primary bg-primary-container transition-colors">Comida</button>
+<button class="px-3 py-1 rounded-full border border-[#D6D3D1] font-label-sm text-label-sm text-text-secondary bg-surface hover:bg-surface-muted transition-colors active:bg-primary-container active:text-on-primary active:border-primary-container">Cena</button>
+<button class="px-3 py-1 rounded-full border border-[#D6D3D1] font-label-sm text-label-sm text-text-secondary bg-surface hover:bg-surface-muted transition-colors active:bg-primary-container active:text-on-primary active:border-primary-container">Snack</button>
+<button class="px-3 py-1 rounded-full border border-primary-container font-label-sm text-label-sm text-on-primary bg-primary-container transition-colors">Alto en proteína</button>
+<button class="px-3 py-1 rounded-full border border-[#D6D3D1] font-label-sm text-label-sm text-text-secondary bg-surface hover:bg-surface-muted transition-colors active:bg-primary-container active:text-on-primary active:border-primary-container">Vegano</button>
+</div>
+</section>
+<!-- Save Button -->
+<button class="w-full bg-primary-container text-on-primary font-headline-md text-headline-md py-[14px] rounded-lg shadow-md hover:bg-primary-dark transition-colors active:scale-[0.98] mt-sm mb-lg">
+            Guardar receta
+        </button>
+</main>
+<!-- BottomNavBar (Hidden on MD as per Shared Components Logic) -->
+<!-- Suppressed Nav Shell since this is a transactional/task-focused sub-page ("Nueva receta" editor with back button) as per logic rules -->
+<script>
+        // Simple header scroll effect
+        const header = document.getElementById('mainHeader');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-sm');
+                header.classList.replace('border-transparent', 'border-border');
+            } else {
+                header.classList.remove('shadow-sm');
+                header.classList.replace('border-border', 'border-transparent');
+            }
+        });
+    </script>
+</body></html>

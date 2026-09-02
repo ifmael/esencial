@@ -1,0 +1,32 @@
+Design a mobile app home screen called "Esencial" for a personal wellness app. Header: large
+date title "Hoy — lunes 1 septiembre" with left/right arrows to navigate days and a
+calendar icon to jump to any date. Under the header, two text-link buttons side by side:
+"Plan recetas" and "Plan fuerza" (navigate to the weekly meal planner and the strength
+plan screens). Section "RECETA": compact card per planned meal with recipe name and small
+photo thumbnail if available; tapping a card opens the full recipe detail screen. Section
+"FUERZA": one card with today's planned session (e.g. "Sesión: Empuje A"); if not logged
+yet show amber "Pendiente" state with a primary button "Registrar sesión"; if logged show
+green summary (exercises done, series, effort) — tapping opens the day's workout screen.
+Section "NOTAS DEL DÍA": text area with the day's reflections (or empty state "Escribe
+algo sobre hoy") with autosave indicator. Bottom tab bar: Hoy (active), Plan recetas,
+Plan fuerza. Spanish UI labels.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with
+subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions
+and completion states, amber for pending items, red only for discarded/error. Typography:
+system sans-serif. Mobile-first, generous touch targets (min 44px), bottom tab navigation
+with 3 tabs: Today, Food, Training. Spanish UI labels.
+
+---
+
+DESKTOP VARIANT (en Stitch, modo Web/Desktop, en un chat aparte o el mismo tras el móvil):
+
+Design a desktop web version of the same "Día" screen for a personal wellness app. Left
+sidebar navigation: app name "Esencial" at top; items Hoy (active), Plan recetas, Plan
+fuerza. Main area: wide date header "Hoy — lunes 1 septiembre" with day arrows and a
+calendar picker. Three-column layout: left column "RECETA" with compact recipe cards
+(name + photo thumbnail, tappable to recipe detail); middle column "FUERZA" with the
+session card (amber "Pendiente" state with primary button "Registrar sesión", or green
+summary if already logged — tappable to the workout screen); right column "NOTAS DEL
+DÍA" with a tall text area and autosave indicator. Same visual style, adapted to desktop
+density. Spanish UI labels.

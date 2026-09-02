@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-width=1.0" name="viewport"/>
+<title>Esencial - Hoy</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed-variant": "#005323",
+                    "surface-muted": "#F5F5F4",
+                    "badge-pending-bg": "#FEF3C7",
+                    "on-primary-fixed": "#00210a",
+                    "on-primary": "#ffffff",
+                    "on-secondary-container": "#416e00",
+                    "secondary": "#3e6a00",
+                    "primary-fixed": "#95f8a7",
+                    "border": "#E7E5E4",
+                    "on-background": "#181d17",
+                    "text-primary": "#1C1917",
+                    "secondary-fixed-dim": "#a0d663",
+                    "inverse-primary": "#79db8d",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed": "#bbf37c",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#15803d",
+                    "outline-variant": "#becabc",
+                    "on-surface-variant": "#3f493f",
+                    "tertiary-fixed": "#ffd9dd",
+                    "badge-done-text": "#166534",
+                    "surface-dim": "#d6dcd3",
+                    "surface-tint": "#006d30",
+                    "error": "#B91C1C",
+                    "on-error": "#ffffff",
+                    "on-surface": "#181d17",
+                    "badge-pending-text": "#92400E",
+                    "outline": "#6f7a6e",
+                    "on-tertiary-fixed-variant": "#81233b",
+                    "primary-dark": "#166534",
+                    "primary-fixed-dim": "#79db8d",
+                    "secondary-container": "#b9f079",
+                    "background": "#FAFAF9",
+                    "primary": "#00652c",
+                    "tertiary": "#97344a",
+                    "tertiary-fixed-dim": "#ffb2bd",
+                    "inverse-surface": "#2c322c",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-container": "#fff1f1",
+                    "badge-done-bg": "#DCFCE7",
+                    "inverse-on-surface": "#edf2e9",
+                    "text-secondary": "#78716C",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#2e4f00",
+                    "surface-container-high": "#e4eae1",
+                    "surface-container-highest": "#dfe4db",
+                    "on-tertiary-fixed": "#400013",
+                    "surface-bright": "#f6fbf2",
+                    "surface-variant": "#dfe4db",
+                    "surface": "#FFFFFF",
+                    "surface-container-low": "#f0f5ec",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-container": "#d3ffd5",
+                    "tertiary-container": "#b64c62",
+                    "warning-pending": "#D97706",
+                    "surface-container": "#eaefe6",
+                    "on-secondary-fixed": "#0f2000"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "24px",
+                    "md": "12px",
+                    "page-margin": "16px",
+                    "xxl": "32px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "base": "8px",
+                    "lg": "16px",
+                    "section-gap": "24px"
+            },
+            "fontFamily": {
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "badge": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "headline-md": [
+                            "18px",
+                            {
+                                    "lineHeight": "22.5px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "24px",
+                            {
+                                    "lineHeight": "30px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-sm": [
+                            "13px",
+                            {
+                                    "lineHeight": "19.5px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "badge": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md h-screen overflow-hidden flex">
+<!-- NavigationDrawer (Left Sidebar) -->
+<nav class="hidden lg:flex flex-col p-lg gap-base h-full w-64 fixed left-0 top-0 border-r border-border bg-surface z-40">
+<div class="mb-xxl flex items-center gap-md">
+<img alt="Esencial Brand Logo" class="w-10 h-10 rounded-full object-cover border border-border" data-alt="A minimalist, modern corporate logo for a wellness and fitness brand named 'Esencial'. The logo features a stylized, organic green leaf or subtle dumbbell motif incorporated into clean, geometric typography. The design is set against a pure white background, emphasizing calm, clarity, and health." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCu7zz7esAGpUDvCBa5So8cMJGgSwBAbSWE2HuYuXyw2nkVKN-Od6eJOKbT0XYJqIOUUCXNOzaOm1sk_JmGCwMevpncdSORIV_7zEbr_CLItjAGwHH3XlqNzT_rPpvsu6Td1FTlSbR3n5BMyD4Om05ubQTb_cPd32VHbAU0pFBAD3ZrrA-hM2fDXArd3pEkyRwbxGwsh-4hYo1IOOw9IsYBDvMHHUJyTnbbY2OfYhnZfyEZze_6xPJEeQ"/>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary mb-0 leading-tight">Esencial</h1>
+<p class="font-label-sm text-label-sm text-text-secondary leading-tight">Bienestar Personal</p>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-sm mt-md">
+<a class="flex items-center gap-md bg-secondary-container text-on-secondary-container rounded-lg px-lg py-md font-bold active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today" data-weight="fill">calendar_today</span>
+                Hoy
+            </a>
+<a class="flex items-center gap-md text-on-surface-variant px-lg py-md hover:bg-surface-container-high transition-colors active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+                Plan recetas
+            </a>
+<a class="flex items-center gap-md text-on-surface-variant px-lg py-md hover:bg-surface-container-high transition-colors active:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+                Plan fuerza
+            </a>
+</div>
+<div class="mt-auto pb-lg px-lg">
+<p class="font-label-sm text-label-sm text-text-secondary">v1.0</p>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-64 h-full overflow-y-auto w-full p-section-gap flex justify-center">
+<div class="w-full max-w-[1200px] flex flex-col gap-section-gap pb-xxl">
+<!-- Header -->
+<header class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-lg">
+<button class="p-2 rounded-full hover:bg-surface-muted transition-colors text-text-secondary">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<h2 class="font-headline-lg text-headline-lg font-bold text-text-primary">Hoy — lunes 1 septiembre</h2>
+<button class="p-2 rounded-full hover:bg-surface-muted transition-colors text-text-secondary">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<button class="flex items-center gap-sm px-4 py-2 bg-surface border border-border rounded-lg font-headline-md text-headline-md text-text-primary shadow-sm hover:bg-surface-muted transition-colors">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+                    Seleccionar fecha
+                </button>
+</header>
+<!-- Three-Column Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-section-gap">
+<!-- Column 1: RECETA -->
+<section class="flex flex-col gap-md">
+<h3 class="font-badge text-badge text-text-secondary uppercase tracking-wider mb-sm">RECETA</h3>
+<div class="bg-surface border border-border rounded-xl p-page-margin shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex flex-col gap-md">
+<div class="flex gap-md items-center border-b border-border pb-md">
+<img alt="Desayuno" class="w-16 h-16 rounded-lg object-cover" data-alt="A beautifully styled bowl of oatmeal topped with fresh, vibrant mixed berries (strawberries, blueberries, raspberries) and a drizzle of honey. The image is taken from a top-down perspective on a clean, light wood table. Soft, natural morning light creates a warm, healthy, and inviting aesthetic typical of modern food photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdFvJ-ED6fGPbj2ImRJ_DrPNwD7IQhvyvbdZbkq8aU0v_Q2r8xmgDHH-YyjsT4oZcR7J4ACmT003Xhybyg1LaG2RSZQYGELFsqsPOYd8fqf2lPDe_rwhcOjaZNZkCDq-5JoWt7xKs9X9F76voktFW7JOpw7xg9sw1hXJyf3JiNWCI5mEJS2dhmH4T_NYr5zTxxpHB0K4Td4KAdro9Yu7vQrxA0vJEzFjEV0qKknXWvuodiVDUoPAIOmQ"/>
+<div>
+<p class="font-label-sm text-label-sm text-text-secondary uppercase">Desayuno</p>
+<p class="font-headline-md text-headline-md text-text-primary">Avena con bayas</p>
+</div>
+</div>
+<div class="flex gap-md items-center border-b border-border pb-md">
+<img alt="Almuerzo" class="w-16 h-16 rounded-lg object-cover" data-alt="A vibrant, fresh quinoa salad in a modern ceramic bowl. The salad features colorful diced vegetables like bell peppers, cucumbers, and cherry tomatoes, garnished with fresh herbs. The lighting is bright and airy, highlighting the textures of the healthy ingredients against a crisp, white marble countertop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5uxgOovVWR6jAQA38iQduMPPhn6giOOahwGhE9TRLWC0R4VlHhqDnMi5aQ1fwz_Lh7JE9lRkB3uUZ-HgB5XwN89quOxMGElPdyojmTrebYJgyZ4CdRUFvrwCk4F5cE5yKDZEB8yUY5LIQGMIiq4uN0gC2WoeS10VAdRxRmnW7vsLvttipbrNSEESqPkm-VN6wNUdhEm9K2hezQ27VDA65NM7ZwVZtZ-3QbPgVLhKsbg7MqjqBx3dflA"/>
+<div>
+<p class="font-label-sm text-label-sm text-text-secondary uppercase">Almuerzo</p>
+<p class="font-headline-md text-headline-md text-text-primary">Ensalada de quinoa</p>
+</div>
+</div>
+<div class="flex gap-md items-center">
+<img alt="Cena" class="w-16 h-16 rounded-lg object-cover" data-alt="A perfectly baked salmon fillet on a pristine white plate, accompanied by a side of roasted green asparagus. The salmon has a slight golden crust and is garnished with a slice of lemon and fresh dill. The scene is lit with soft, warm dinner lighting, emphasizing a clean, high-protein meal in a minimalist setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeCcHvb5ThrhOKJvZ6Ta7H0cucNs4rJU3qv4e4gq_hyjJ-Bmo7F-odjuohvEz5CaIKBCjk88TR4LGlhfNGbXoiRdhPfW-n3oqsVRPP4eX6fzk5kzV1I4ySA3iZK57SeOp0cuQhKrlyJLnyi_VHgSq0JQiDa7T3UqUw_2nmsPoyjGvIXoUVRyWzTiq6OHGoM6pVwt2cdi4hcz6dO2xzyzUBz4lqAmh7MiXwHrxXLTnBpUT2aFSnv46DsA"/>
+<div>
+<p class="font-label-sm text-label-sm text-text-secondary uppercase">Cena</p>
+<p class="font-headline-md text-headline-md text-text-primary">Salmón al horno</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Column 2: FUERZA -->
+<section class="flex flex-col gap-md">
+<h3 class="font-badge text-badge text-text-secondary uppercase tracking-wider mb-sm">FUERZA</h3>
+<div class="bg-surface border border-border rounded-xl p-page-margin shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex flex-col gap-lg h-full">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-headline-md text-headline-md text-text-primary mb-xs">Sesión: Empuje A</p>
+<p class="font-label-sm text-label-sm text-text-secondary">45 - 60 min</p>
+</div>
+<span class="bg-badge-pending-bg text-badge-pending-text font-badge text-badge px-3 py-1 rounded-full uppercase">Pendiente</span>
+</div>
+<div class="bg-surface-muted rounded-lg p-md flex flex-col gap-sm flex-1">
+<div class="flex items-center gap-md border-b border-border pb-sm">
+<span class="w-6 h-6 rounded-full border border-border flex items-center justify-center text-xs text-text-secondary font-bold">1</span>
+<p class="font-body-md text-body-md text-text-primary">Press de banca plano</p>
+</div>
+<div class="flex items-center gap-md border-b border-border pb-sm">
+<span class="w-6 h-6 rounded-full border border-border flex items-center justify-center text-xs text-text-secondary font-bold">2</span>
+<p class="font-body-md text-body-md text-text-primary">Press militar</p>
+</div>
+<div class="flex items-center gap-md border-b border-border pb-sm">
+<span class="w-6 h-6 rounded-full border border-border flex items-center justify-center text-xs text-text-secondary font-bold">3</span>
+<p class="font-body-md text-body-md text-text-primary">Aperturas con mancuernas</p>
+</div>
+<div class="flex items-center gap-md">
+<span class="w-6 h-6 rounded-full border border-border flex items-center justify-center text-xs text-text-secondary font-bold">4</span>
+<p class="font-body-md text-body-md text-text-primary">Extensiones de tríceps</p>
+</div>
+</div>
+<button class="w-full bg-primary-container text-on-primary font-headline-md text-headline-md py-3 px-4 rounded-lg font-bold hover:opacity-90 transition-opacity">
+                            Registrar sesión
+                        </button>
+</div>
+</section>
+<!-- Column 3: NOTAS DEL DÍA -->
+<section class="flex flex-col gap-md">
+<h3 class="font-badge text-badge text-text-secondary uppercase tracking-wider mb-sm">NOTAS DEL DÍA</h3>
+<div class="bg-surface border border-border rounded-xl p-page-margin shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex flex-col gap-md h-full">
+<textarea class="w-full flex-1 border-none bg-transparent resize-none focus:ring-0 p-0 font-body-md text-body-md text-text-primary placeholder:text-text-secondary min-h-[300px]" placeholder="¿Cómo te sientes hoy?..."></textarea>
+<div class="flex items-center justify-end gap-sm text-text-secondary mt-auto pt-md border-t border-border">
+<span class="material-symbols-outlined text-sm" data-icon="cloud_done">cloud_done</span>
+<span class="font-label-sm text-label-sm">Autoguardado</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>

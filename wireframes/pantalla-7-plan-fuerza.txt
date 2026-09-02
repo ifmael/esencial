@@ -1,0 +1,27 @@
+Design a mobile strength plan screen for the same app. Header "Plan fuerza". List of
+session templates as expandable cards: "A — Empuje", "B — Tirón", "C — Piernas"... each
+showing its exercise list (rows with exercise name + target series), tap on an exercise
+opens the exercise detail. Each template card has an edit mode: add exercise (opens
+exercise picker with search), remove, reorder (drag handle), duplicate template; a
+primary button "+ Nueva plantilla" at the bottom. Small hint of rotation order (A→B→C)
+as chips at the top. Keep the same style system.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with
+subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions
+and completion states, amber for pending items, red only for discarded/error. Typography:
+system sans-serif. Mobile-first, generous touch targets (min 44px), bottom tab navigation
+with 3 tabs: Today, Food, Training. Spanish UI labels.
+
+---
+
+DESKTOP VARIANT (en Stitch, modo Web/Desktop):
+
+Design a DESKTOP web version of the same strength plan screen. Left sidebar navigation
+(Esencial: Hoy, Plan recetas, Plan fuerza). Header "Plan fuerza" with rotation order
+chips (A→B→C). Main: templates as columns or wide cards ("A — Empuje", "B — Tirón", "C —
+Piernas"...) each listing its exercises (name + target series), exercise names tappable
+to exercise detail. Edit mode per template: add exercise (picker with search), remove,
+reorder (drag handle), duplicate. Primary button "+ Nueva plantilla" bottom. Same visual
+style, desktop density.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions and completion states, amber for pending items, red only for discarded/error. Typography: system sans-serif. Spanish UI labels.

@@ -1,0 +1,25 @@
+Design a mobile recipe detail screen for the same app. Top: full-width dish photo with
+back button and the recipe name overlaid at the bottom of the image. Below, stacked
+sections: short description text; "Ingredientes" as a checklist with quantity per serving
+(e.g. "Arroz integral — 80 g"); "Elaboración" as numbered steps (1. 2. 3.) with generous
+line height; "Materiales" as chips listing utensils (sartén, olla, batidora). A small
+edit (pencil) icon in the header for editing the recipe. Keep the same style system.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with
+subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions
+and completion states, amber for pending items, red only for discarded/error. Typography:
+system sans-serif. Mobile-first, generous touch targets (min 44px), bottom tab navigation
+with 3 tabs: Today, Food, Training. Spanish UI labels.
+
+---
+
+DESKTOP VARIANT (en Stitch, modo Web/Desktop):
+
+Design a DESKTOP web version of the same recipe detail screen. Centered content
+column max-width 760px; left sidebar navigation (Esencial: Hoy, Plan recetas, Plan
+fuerza). Top: large dish photo with the recipe name below it (not overlaid), edit pencil
+top-right. Two-column body: left column "Ingredientes" checklist with quantities and
+"Materiales" chips; right column "Elaboración" numbered steps. Same visual style,
+desktop density.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions and completion states, amber for pending items, red only for discarded/error. Typography: system sans-serif. Spanish UI labels.

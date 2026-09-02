@@ -1,0 +1,29 @@
+Design a mobile weekly meal planner screen for the same app (also used on desktop; show
+the mobile version). A 7-day grid: rows = days of the week (L-D), columns = desayuno /
+almuerzo / cena; empty slots show a dashed "+ añadir" that opens the recipe picker from
+the recipe book; filled slots show recipe name + small thumbnail and TAP NAVIGATES to the
+recipe detail screen (with a small edit/remove affordance). Sticky button "Lista de la
+compra" that opens the generated shopping list: items grouped by supermarket section
+(Frutas y verduras, Carnes, Lácteos, Despensa...) with quantities aggregated from the
+recipes, checkbox per item, and a free-entry row "+ añadir artículo" at each section end.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with
+subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions
+and completion states, amber for pending items, red only for discarded/error. Typography:
+system sans-serif. Mobile-first, generous touch targets (min 44px), bottom tab navigation
+with 3 tabs: Today, Food, Training. Spanish UI labels.
+
+---
+
+DESKTOP VARIANT (en Stitch, modo Web/Desktop):
+
+Design a DESKTOP web version of the same weekly meal planner. Left sidebar navigation
+(Esencial: Hoy, Plan recetas, Plan fuerza). Main: full-width grid, columns = days L-D,
+rows = desayuno / almuerzo / cena; empty slots dashed "+ añadir" (opens recipe picker),
+filled slots show recipe name + thumbnail, click navigates to recipe detail, with
+edit/remove affordance. Right panel or bottom bar: generated shopping list grouped by
+supermarket section (Frutas y verduras, Carnes, Lácteos, Despensa...) with quantities,
+checkboxes and free-entry "+ añadir artículo" rows. Same visual style, desktop density —
+the whole week visible at a glance.
+
+Style: clean, calm personal wellness app; light background (#FAFAF9), soft cards with subtle shadows, rounded corners (12px), one accent green (#15803D) for primary actions and completion states, amber for pending items, red only for discarded/error. Typography: system sans-serif. Spanish UI labels.

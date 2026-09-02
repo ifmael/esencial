@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  App: Esencial — personal wellness web app (meals planning, strength training, daily view).
+  Stack: Next.js (App Router, TypeScript) + Tailwind CSS, SQLite via better-sqlite3.
+  Architecture: SPA (client-side rendering); Next API routes act as the BFF and are the ONLY layer touching SQLite.
+  Deployment: LXC on Proxmox (Node direct or Docker), LAN access via Tailscale; Cloudflare later.
+  Management site: project-site/ static decision tree (do not mix with app code).
+
+strict_tdd: true
+
+testing:
+  unit: vitest
+  e2e: playwright (to be added when first UI epic lands)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Scope one epic per change (E0..E7 per project-site roadmap)
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Document architecture decisions with rationale
+    - Data model changes MUST include SQLite migration notes
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow existing code patterns
+    tdd: true
+    test_command: "npm test"
+  verify:
+    test_command: "npm test"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas

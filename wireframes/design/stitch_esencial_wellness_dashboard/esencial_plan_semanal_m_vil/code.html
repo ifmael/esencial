@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Plan Semanal - Esencial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#93000a",
+                      "secondary-fixed-dim": "#a0d663",
+                      "background": "#FAFAF9",
+                      "badge-done-text": "#166534",
+                      "surface-container-low": "#f0f5ec",
+                      "text-secondary": "#78716C",
+                      "error": "#B91C1C",
+                      "surface-variant": "#dfe4db",
+                      "tertiary-fixed-dim": "#ffb2bd",
+                      "outline-variant": "#becabc",
+                      "on-error": "#ffffff",
+                      "outline": "#6f7a6e",
+                      "on-surface": "#181d17",
+                      "primary-dark": "#166534",
+                      "surface-container": "#eaefe6",
+                      "tertiary-fixed": "#ffd9dd",
+                      "on-tertiary-fixed": "#400013",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#b9f079",
+                      "primary-container": "#15803d",
+                      "on-secondary-container": "#416e00",
+                      "primary-fixed-dim": "#79db8d",
+                      "badge-done-bg": "#DCFCE7",
+                      "surface-container-high": "#e4eae1",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#2e4f00",
+                      "on-tertiary-fixed-variant": "#81233b",
+                      "inverse-surface": "#2c322c",
+                      "secondary-fixed": "#bbf37c",
+                      "on-primary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "surface-dim": "#d6dcd3",
+                      "surface": "#FFFFFF",
+                      "border": "#E7E5E4",
+                      "on-primary-container": "#d3ffd5",
+                      "badge-pending-text": "#92400E",
+                      "secondary": "#3e6a00",
+                      "surface-tint": "#006d30",
+                      "inverse-primary": "#79db8d",
+                      "on-primary-fixed-variant": "#005323",
+                      "text-primary": "#1C1917",
+                      "on-surface-variant": "#3f493f",
+                      "on-background": "#181d17",
+                      "surface-muted": "#F5F5F4",
+                      "surface-bright": "#f6fbf2",
+                      "on-secondary-fixed": "#0f2000",
+                      "warning-pending": "#D97706",
+                      "tertiary": "#97344a",
+                      "tertiary-container": "#b64c62",
+                      "on-tertiary-container": "#fff1f1",
+                      "primary-fixed": "#95f8a7",
+                      "surface-container-highest": "#dfe4db",
+                      "inverse-on-surface": "#edf2e9",
+                      "badge-pending-bg": "#FEF3C7",
+                      "on-primary-fixed": "#00210a",
+                      "surface-container-lowest": "#ffffff",
+                      "primary": "#00652c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "page-margin": "16px",
+                      "base": "8px",
+                      "xs": "4px",
+                      "lg": "16px",
+                      "section-gap": "24px",
+                      "sm": "8px",
+                      "xxl": "32px",
+                      "xl": "24px",
+                      "md": "12px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "badge": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "22.5px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "badge": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "19.5px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-24 relative selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-background dark:bg-on-surface z-40">
+<div class="flex items-center justify-between px-page-margin h-16 w-full">
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-primary dark:text-primary-fixed-dim hover:bg-surface-container dark:hover:bg-surface-variant transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="spa" style="font-variation-settings: 'FILL' 1;">spa</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary dark:text-primary-fixed-dim font-bold tracking-tight">Plan Semanal</h1>
+<div class="w-10 h-10"></div> <!-- Spacer for center alignment -->
+</div>
+</header>
+<!-- Main Content -->
+<main class="px-page-margin py-section-gap space-y-section-gap max-w-xl mx-auto">
+<!-- Day Card: Lunes -->
+<section class="bg-surface rounded-[12px] border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<div class="bg-surface-muted px-4 py-3 border-b border-border flex justify-between items-center">
+<h2 class="font-headline-md text-headline-md text-text-primary">Lunes</h2>
+<span class="font-badge text-badge bg-badge-done-bg text-badge-done-text px-2 py-0.5 rounded-full uppercase">Completado</span>
+</div>
+<div class="p-4 space-y-3">
+<!-- Desayuno (Filled) -->
+<div class="flex items-center gap-3 bg-background rounded-lg p-2 border border-border">
+<img class="w-16 h-16 rounded-md object-cover" data-alt="A close up shot of a healthy bowl of oatmeal with fresh berries, nuts, and a drizzle of honey, set on a bright wooden table by a window in a modern kitchen, shot in soft natural morning light, realistic photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUDX6Rf3Yroxoa4-tq0UGGjRDXrsbO37QHyNhFGoHHSJoBTya4a0zmUf3p6zgsqZcBIPaKgRkQWkt_MFeVJuVpakZ3DZwTKVdlw8pVTpX3wqb4Gpiu6isX2ESM_b2Eib4k2t7DQatSvd8KFPNT4dTBds4D1eEhvmeshtMV815_eXRvbj0oIdVFkWZYlTxsEYvXlp1JInSyEGBcPC5eyfTiFci-QSrS1L0YRHey8jGRk3Y6vodobS0kHA"/>
+<div class="flex-1">
+<p class="font-label-sm text-label-sm text-text-secondary uppercase mb-1">Desayuno</p>
+<p class="font-body-md text-body-md text-text-primary font-medium">Avena con Frutas</p>
+</div>
+</div>
+<!-- Almuerzo (Filled) -->
+<div class="flex items-center gap-3 bg-background rounded-lg p-2 border border-border">
+<img class="w-16 h-16 rounded-md object-cover" data-alt="A top-down view of a vibrant quinoa salad bowl featuring cherry tomatoes, avocado, black beans, and lime dressing, arranged neatly in a white ceramic bowl on a clean marble surface, bright fresh modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtsxm6RSBRDZNp2IFOd6VosUhZLKj9VnIHESAbJYi78DN5R-oQRhc30yGrdPpxhbsccfpWXEEy0pIVOfGO2ngIZjdUP3fcQl9EhklHXbCxUNiE2QNKjGA4woDVnq94LfPQl9pOqz2ZfdP9gkQmoC8z3IcwMIplMT3tJlf9U5Q5jqO9BvZoRsrMWWA4ErHuSWwXVnnCzAb3zBivPKAcJ9sGN7lFwiY4CJBUDvvgL8KAsboMm1vEA_u1Vg"/>
+<div class="flex-1">
+<p class="font-label-sm text-label-sm text-text-secondary uppercase mb-1">Almuerzo</p>
+<p class="font-body-md text-body-md text-text-primary font-medium">Ensalada de Quinoa</p>
+</div>
+</div>
+<!-- Cena (Empty) -->
+<button class="w-full flex items-center justify-center gap-2 bg-background rounded-lg p-4 border-2 border-dashed border-outline-variant text-primary-container hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="font-body-md text-body-md font-medium">Añadir Cena</span>
+</button>
+</div>
+</section>
+<!-- Day Card: Martes -->
+<section class="bg-surface rounded-[12px] border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<div class="bg-surface-muted px-4 py-3 border-b border-border flex justify-between items-center">
+<h2 class="font-headline-md text-headline-md text-text-primary">Martes</h2>
+<span class="font-badge text-badge bg-badge-pending-bg text-badge-pending-text px-2 py-0.5 rounded-full uppercase">Pendiente</span>
+</div>
+<div class="p-4 space-y-3">
+<!-- Desayuno (Empty) -->
+<button class="w-full flex items-center justify-center gap-2 bg-background rounded-lg p-4 border-2 border-dashed border-outline-variant text-primary-container hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="font-body-md text-body-md font-medium">Añadir Desayuno</span>
+</button>
+<!-- Almuerzo (Filled) -->
+<div class="flex items-center gap-3 bg-background rounded-lg p-2 border border-border">
+<img class="w-16 h-16 rounded-md object-cover" data-alt="A perfectly baked piece of salmon with a golden crust, served alongside roasted asparagus and a lemon wedge on a minimalist matte dark gray plate, dramatic directional lighting highlighting the texture of the fish." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4-x4Rv2QeGCtlgA6hjja3N7pE48MDNRD_RdN9rrE7aG6fspUvXvCMbHFvw4aQPBhE5gXIlHbytJFlOBPbGH1iBK7Wmf-88YeBfEcVQusns9YcOUadSk3b9RPhCP9Fj0JhYYvBxITQuqCDu3qnX3_nvjVyd10z4yN5Lv-hTLrD-H_pRL5dKLtAZfYDsBXawMf89MZSIjLaEuXwzDhAhSTKgyEnHH9RIuu3eQY2xBGpKr4s5c35ktFd-A"/>
+<div class="flex-1">
+<p class="font-label-sm text-label-sm text-text-secondary uppercase mb-1">Almuerzo</p>
+<p class="font-body-md text-body-md text-text-primary font-medium">Salmón al Horno</p>
+</div>
+</div>
+<!-- Cena (Empty) -->
+<button class="w-full flex items-center justify-center gap-2 bg-background rounded-lg p-4 border-2 border-dashed border-outline-variant text-primary-container hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="font-body-md text-body-md font-medium">Añadir Cena</span>
+</button>
+</div>
+</section>
+<!-- Day Card: Miércoles -->
+<section class="bg-surface rounded-[12px] border border-border shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden opacity-75">
+<div class="bg-surface-muted px-4 py-3 border-b border-border">
+<h2 class="font-headline-md text-headline-md text-text-primary">Miércoles</h2>
+</div>
+<div class="p-4 space-y-3">
+<button class="w-full flex items-center justify-center gap-2 bg-background rounded-lg p-4 border-2 border-dashed border-outline-variant text-text-secondary hover:text-primary-container hover:border-primary-container transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="font-body-md text-body-md font-medium">Planificar día</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Floating Action Button (Lista de la compra) -->
+<div class="fixed bottom-[90px] left-1/2 -translate-x-1/2 z-40 w-full px-page-margin max-w-xl md:hidden">
+<button class="w-full bg-[#15803D] hover:bg-primary-dark text-on-primary font-headline-md text-headline-md py-3 px-4 rounded-full shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
+<span class="material-symbols-outlined">shopping_cart</span>
+            Lista de la compra
+        </button>
+</div>
+<!-- BottomNavBar -->
+<nav class="md:hidden border-t border-border dark:border-outline-variant bg-surface dark:bg-inverse-surface shadow-sm fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2">
+<button class="flex flex-col items-center justify-center text-text-secondary dark:text-outline-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-on-surface-variant active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined mb-1" data-icon="today">today</span>
+<span class="font-label-sm text-label-sm">Hoy</span>
+</button>
+<!-- Active Tab -->
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-xl px-4 py-1 hover:bg-surface-container-low dark:hover:bg-on-surface-variant active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined mb-1" data-icon="restaurant_menu" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-label-sm text-label-sm font-medium">Recetas</span>
+</button>
+<button class="flex flex-col items-center justify-center text-text-secondary dark:text-outline-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-on-surface-variant active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined mb-1" data-icon="fitness_center">fitness_center</span>
+<span class="font-label-sm text-label-sm">Fuerza</span>
+</button>
+</nav>
+</body></html>

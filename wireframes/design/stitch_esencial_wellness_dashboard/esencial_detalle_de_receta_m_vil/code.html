@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Esencial - Ensalada de Pollo y Quinoa</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#3e6a00",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#97344a",
+                        "background": "#FAFAF9",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#00210a",
+                        "surface-tint": "#006d30",
+                        "surface": "#FFFFFF",
+                        "on-secondary-container": "#416e00",
+                        "on-secondary-fixed-variant": "#2e4f00",
+                        "surface-container": "#eaefe6",
+                        "primary-fixed-dim": "#79db8d",
+                        "on-primary-container": "#d3ffd5",
+                        "surface-container-highest": "#dfe4db",
+                        "primary-dark": "#166534",
+                        "badge-done-text": "#166534",
+                        "on-surface-variant": "#3f493f",
+                        "outline-variant": "#becabc",
+                        "text-primary": "#1C1917",
+                        "primary-container": "#15803d",
+                        "surface-bright": "#f6fbf2",
+                        "on-secondary-fixed": "#0f2000",
+                        "inverse-on-surface": "#edf2e9",
+                        "tertiary-fixed": "#ffd9dd",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#005323",
+                        "on-tertiary-fixed": "#400013",
+                        "outline": "#6f7a6e",
+                        "text-secondary": "#78716C",
+                        "primary": "#00652c",
+                        "surface-dim": "#d6dcd3",
+                        "tertiary-container": "#b64c62",
+                        "warning-pending": "#D97706",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f0f5ec",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#79db8d",
+                        "on-surface": "#181d17",
+                        "error": "#B91C1C",
+                        "primary-fixed": "#95f8a7",
+                        "on-background": "#181d17",
+                        "secondary-fixed-dim": "#a0d663",
+                        "badge-done-bg": "#DCFCE7",
+                        "surface-variant": "#dfe4db",
+                        "surface-container-high": "#e4eae1",
+                        "tertiary-fixed-dim": "#ffb2bd",
+                        "secondary-fixed": "#bbf37c",
+                        "badge-pending-text": "#92400E",
+                        "secondary-container": "#b9f079",
+                        "inverse-surface": "#2c322c",
+                        "on-tertiary-container": "#fff1f1",
+                        "surface-muted": "#F5F5F4",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#81233b",
+                        "border": "#E7E5E4",
+                        "badge-pending-bg": "#FEF3C7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "page-margin": "16px",
+                        "section-gap": "24px",
+                        "md": "12px",
+                        "sm": "8px",
+                        "base": "8px",
+                        "xl": "24px",
+                        "lg": "16px",
+                        "xs": "4px",
+                        "xxl": "32px"
+                    },
+                    "fontFamily": {
+                        "badge": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "badge": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-lg": ["24px", { "lineHeight": "30px", "fontWeight": "700" }],
+                        "label-sm": ["13px", { "lineHeight": "19.5px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["18px", { "lineHeight": "22.5px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom Checkbox Styles */
+        .ingredient-checkbox {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #becabc; /* outline-variant */
+            border-radius: 50%;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+        }
+        
+        .ingredient-checkbox:checked {
+            background-color: #15803d; /* primary-container */
+            border-color: #15803d;
+        }
+
+        .ingredient-checkbox:checked::after {
+            content: '\e5ca'; /* Material Icons check */
+            font-family: 'Material Symbols Outlined';
+            color: white;
+            font-size: 16px;
+            position: absolute;
+        }
+
+        .ingredient-label.checked {
+            text-decoration: line-through;
+            color: #78716C; /* text-secondary */
+        }
+    </style>
+</head>
+<body class="bg-background text-text-primary min-h-screen pb-[90px] font-body-md antialiased md:max-w-[420px] md:mx-auto md:border-x md:border-border md:shadow-sm">
+<!-- Header / Hero Image -->
+<header class="relative w-full h-[320px]">
+<div class="w-full h-full bg-cover bg-center" data-alt="A beautifully plated close-up of a healthy chicken and quinoa salad in a modern, shallow ceramic bowl. Bright, natural daylight coming from a side window highlights the fresh green spinach, perfectly grilled chicken breast slices, and fluffy quinoa. The setting is a clean, minimalist kitchen countertop with subtle organic textures. The overall mood is fresh, vibrant, and appetizing, emphasizing a modern wellness aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBoRfx8blpXC8TgW_ZhXY40kJIFqrvmd7xUMhfJrvuFOpYNsOpZd2iJNm9b22ya5aYtM86kzzxOXxM1WaBqgSuLjp3FuvjNZJlvd3fy0ySEKbUfFDr7a55rmOPg5XP6TAjrZzMqe8L1h09lMotgiTWOMgyuwaxY25kwCeKnSikuX1gOCaozcgPAl_uRWw-0TKQPBvsWqVyBdywYuwMa74DlFWgiBBWWKf9gFf3R40Pc-ybPceObBdX2eg')"></div>
+<!-- Gradient Overlay for readability -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10"></div>
+<!-- Top Actions -->
+<div class="absolute top-0 left-0 w-full flex justify-between items-center p-page-margin pt-safe">
+<button aria-label="Volver" class="w-10 h-10 flex items-center justify-center bg-black/30 backdrop-blur-md rounded-full text-white active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<button aria-label="Editar receta" class="w-10 h-10 flex items-center justify-center bg-black/30 backdrop-blur-md rounded-full text-white active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+</div>
+<!-- Title -->
+<div class="absolute bottom-0 left-0 w-full p-page-margin">
+<h1 class="font-headline-lg text-headline-lg text-white mb-2">Ensalada de Pollo y Quinoa</h1>
+</div>
+</header>
+<!-- Main Content -->
+<main class="p-page-margin space-y-section-gap">
+<!-- Description -->
+<section>
+<p class="font-body-md text-body-md text-text-secondary leading-relaxed">
+                Una opción ligera y nutritiva, perfecta para mantener la energía durante el día. Rica en proteínas y fibra.
+            </p>
+</section>
+<!-- Ingredientes -->
+<section class="bg-surface rounded-xl p-lg border border-border shadow-sm">
+<h2 class="font-headline-md text-headline-md text-primary mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="shopping_basket">shopping_basket</span>
+                Ingredientes
+            </h2>
+<div class="space-y-0">
+<!-- Item 1 -->
+<label class="flex items-center gap-sm py-md border-b border-border last:border-0 cursor-pointer">
+<input class="ingredient-checkbox shrink-0" onchange="toggleStrikeThrough(this)" type="checkbox"/>
+<span class="ingredient-label font-body-md text-body-md transition-colors">Arroz integral — 80 g</span>
+</label>
+<!-- Item 2 -->
+<label class="flex items-center gap-sm py-md border-b border-border last:border-0 cursor-pointer">
+<input class="ingredient-checkbox shrink-0" onchange="toggleStrikeThrough(this)" type="checkbox"/>
+<span class="ingredient-label font-body-md text-body-md transition-colors">Pechuga de pollo — 150 g</span>
+</label>
+<!-- Item 3 -->
+<label class="flex items-center gap-sm py-md border-b border-border last:border-0 cursor-pointer">
+<input class="ingredient-checkbox shrink-0" onchange="toggleStrikeThrough(this)" type="checkbox"/>
+<span class="ingredient-label font-body-md text-body-md transition-colors">Quinoa — 50 g</span>
+</label>
+<!-- Item 4 -->
+<label class="flex items-center gap-sm py-md border-b border-border last:border-0 cursor-pointer">
+<input class="ingredient-checkbox shrink-0" onchange="toggleStrikeThrough(this)" type="checkbox"/>
+<span class="ingredient-label font-body-md text-body-md transition-colors">Espinacas frescas — 1 manojo</span>
+</label>
+</div>
+</section>
+<!-- Elaboración -->
+<section class="bg-surface rounded-xl p-lg border border-border shadow-sm">
+<h2 class="font-headline-md text-headline-md text-primary mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="cooking">cooking</span>
+                Elaboración
+            </h2>
+<div class="space-y-md">
+<div class="flex gap-md items-start">
+<div class="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center font-headline-md text-headline-md text-primary shrink-0 mt-1">1</div>
+<p class="font-body-md text-body-md leading-relaxed text-text-primary pt-1">
+                        Cocer la quinoa y el arroz integral según las instrucciones del paquete. Escurrir y dejar enfriar.
+                    </p>
+</div>
+<div class="flex gap-md items-start">
+<div class="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center font-headline-md text-headline-md text-primary shrink-0 mt-1">2</div>
+<p class="font-body-md text-body-md leading-relaxed text-text-primary pt-1">
+                        Saltear el pollo a la plancha con un poco de aceite de oliva, sal y pimienta hasta que esté dorado. Cortar en tiras.
+                    </p>
+</div>
+<div class="flex gap-md items-start">
+<div class="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center font-headline-md text-headline-md text-primary shrink-0 mt-1">3</div>
+<p class="font-body-md text-body-md leading-relaxed text-text-primary pt-1">
+                        En un bol grande, mezclar la quinoa, el arroz, las espinacas frescas lavadas y el pollo. Aliñar al gusto.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Materiales -->
+<section>
+<h2 class="font-headline-md text-headline-md text-primary mb-md">Materiales</h2>
+<div class="flex flex-wrap gap-sm">
+<div class="px-lg py-sm bg-surface-container-low border border-outline-variant rounded-full font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="skillet">skillet</span>
+                    Sartén
+                </div>
+<div class="px-lg py-sm bg-surface-container-low border border-outline-variant rounded-full font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="cooking_pot">graph_4</span>
+                    Olla
+                </div>
+<div class="px-lg py-sm bg-surface-container-low border border-outline-variant rounded-full font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="blender">blender</span>
+                    Batidora
+                </div>
+<div class="px-lg py-sm bg-surface-container-low border border-outline-variant rounded-full font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="kitchen">kitchen</span>
+                    Cuchillo de chef
+                </div>
+</div>
+</section>
+<!-- Action Button -->
+<div class="mt-section-gap pt-md">
+<button class="w-full bg-primary-container text-on-primary font-headline-md text-headline-md py-3 px-lg rounded-lg shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="done">done</span>
+                Marcar como completada
+            </button>
+</div>
+</main>
+<!-- BottomNavBar (Shared Component) -->
+<nav class="bg-surface dark:bg-surface font-label-sm text-label-sm fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant shadow-sm fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-[72px] px-4 pb-safe md:max-w-[420px] md:left-1/2 md:-translate-x-1/2 md:border-x md:border-b-0">
+<!-- Tab: Hoy (Inactive) -->
+<button aria-label="Hoy" class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 transition-transform p-2 rounded-lg min-w-[64px]">
+<span class="material-symbols-outlined mb-1" data-icon="calendar_today">calendar_today</span>
+<span>Hoy</span>
+</button>
+<!-- Tab: Plan recetas (Active) -->
+<button aria-label="Plan recetas" class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-container-low transition-colors active:scale-95 transition-transform min-w-[64px]">
+<span class="material-symbols-outlined mb-1" data-icon="restaurant_menu" data-weight="fill" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-semibold">Plan recetas</span>
+</button>
+<!-- Tab: Plan fuerza (Inactive) -->
+<button aria-label="Plan fuerza" class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95 transition-transform p-2 rounded-lg min-w-[64px]">
+<span class="material-symbols-outlined mb-1" data-icon="fitness_center">fitness_center</span>
+<span>Plan fuerza</span>
+</button>
+</nav>
+<script>
+        // Simple micro-interaction for ingredients checklist
+        function toggleStrikeThrough(checkbox) {
+            const label = checkbox.nextElementSibling;
+            if (checkbox.checked) {
+                label.classList.add('checked');
+            } else {
+                label.classList.remove('checked');
+            }
+        }
+    </script>
+</body></html>
