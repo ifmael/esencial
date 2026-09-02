@@ -9,6 +9,14 @@ export function json(data: unknown, status = 200): Response {
   });
 }
 
+/** `json` plus a Set-Cookie header (Hono's setCookie is lost on returned Responses). */
+export function jsonWithCookie(data: unknown, cookie: string, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json", "set-cookie": cookie },
+  });
+}
+
 export function fail(error: string, field?: string, status = 400): Response {
   return json(field ? { error, field } : { error }, status);
 }
