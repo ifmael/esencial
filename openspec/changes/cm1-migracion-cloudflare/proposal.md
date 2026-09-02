@@ -28,3 +28,7 @@ The user set the destination platform: Cloudflare Workers (always-on, no home se
 ## Decision
 
 Approve to proceed with `sdd-spec` for CM1 (this change). E1 is superseded by this change (its behavior is preserved, not its driver).
+
+## Validation
+
+Spec approved by the user (2026-09-02, "Vale" on spec-lectura-es.md). Proceeding to delegated implementation with specialized build agents.
