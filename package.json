@@ -21,5 +21,8 @@
     "workerd@1.20260815.1": true,
     "workerd@1.20260831.1": true
   },
-  "packageManager": "pnpm@11.25.0"
+  "packageManager": "pnpm@11.25.0",
+  "volta": {
+    "node": "24.20.0"
+  }
 }
