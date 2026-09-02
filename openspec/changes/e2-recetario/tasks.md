@@ -1,5 +1,7 @@
 # Tasks — E2 recetario
 
+> SUPERSEDED by cm1-migracion-cloudflare (2026-09-02): stack pivot to React+Vite + Hono Workers + D1 before any feature work. These tasks were written for the Next.js stack; the spec (behavior) carries over to the new stack and will be re-based after CM1 lands. Kept for record until then.
+
 ## 1. Foundation (TDD)
 - [ ] 1.1 RED+GREEN: `photo_path` additive migration (guarded ALTER, idempotent, data preserved)
 - [ ] 1.2 RED+GREEN: `useRecipes` hook — list/create/update/delete with pending + error flags (mocked fetch)

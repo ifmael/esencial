@@ -284,7 +284,12 @@ window.TREE = {
             { kind: "decidido", text: "Implementada por agente especializado con TDD (28 min): 13 rutas API BFF + esquema SQLite idempotente. 60 tests verdes, build verde, journey E2E verificado en producción por el orquestador: receta → plan → sesión → registro (409 en duplicado) → últimos valores (60×6) → borrado de receta deja slot vacío." },
             { kind: "decidido", text: "Fix crítico: serverExternalPackages better-sqlite3 (segfault del addon nativo bundlado). Deuda conocida: naming mixto en setLogSchema (templateExerciseId vs set_index) — normalizar en E6." },
         ] },
-        { title: "E2 — Recetario + Receta X", status: "activo", notes: [{ kind: "nota", text: "Change e2-recetario creado (proposal/spec/design/tasks): libro de recetas con búsqueda, detalle, editor crear/editar y borrado con confirmación, sobre la API de E1. Foto como URL/placeholder (subida real se decide en evaluación). Esperando validación del usuario antes de delegar a agentes." }] },
+        {
+          title: "CM1 — Migración a Cloudflare (Vite+React, Hono Workers, D1)",
+          status: "activo",
+          notes: [{ kind: "decidido", text: "Pivote aprobado por el usuario: destino final Cloudflare Workers (siempre encendido) y rechazo de Next como API. Nueva arquitectura: SPA React+Vite (web/) + API Hono (api/) en un único Worker con D1 (SQLite de Cloudflare). E1 se conserva como especificación de comportamiento (13 rutas, Zod, esquema SQL portable); su capa de driver se reescribe. E2-E6 se escribirán ya sobre este stack. Deploy de prueba con la cuenta del usuario tras la migración." }],
+        },
+        { title: "E2 — Recetario + Receta X", status: "pendiente", notes: [{ kind: "nota", text: "Spec redactada y puesta en espera: el pivote a Cloudflare (cm1-migracion-cloudflare) va primero. El comportamiento (búsqueda, detalle, editor, borrado) se conserva; se re-basa sobre el nuevo stack tras la migración." }] },
         { title: "E3 — Plan semanal + lista de compra", status: "pendiente" },
         { title: "E4 — Plan fuerza + catálogo", status: "pendiente" },
         { title: "E5 — Día (home)", status: "pendiente" },
