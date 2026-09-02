@@ -1,0 +1,10 @@
+# Test-only Worker config for @cloudflare/vitest-pool-workers (real local D1,
+# no account needed). Deploy/dev config lives in the root wrangler.toml.
+name = "esencial-api-test"
+main = "src/index.ts"
+compatibility_date = "2026-08-22"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "esencial"
+database_id = "test-local"

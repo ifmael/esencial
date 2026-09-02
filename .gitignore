@@ -4,9 +4,11 @@ node_modules/
 out/
 build/
 coverage/
+dist/
+.wrangler/
 
 # data (SQLite lives here in dev and LXC bind mount)
-app/data/*.db*
+legacy/next-app/data/*.db*
 !.gitkeep
 
 # env / secrets
@@ -21,5 +23,5 @@ next-env.d.ts
 wireframes/design.zip
 
 # agent config (local)
-app/AGENTS.md
-app/CLAUDE.md
+legacy/next-app/AGENTS.md
+legacy/next-app/CLAUDE.md
