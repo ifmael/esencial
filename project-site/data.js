@@ -286,8 +286,8 @@ window.TREE = {
         ] },
         {
           title: "CM1 — Migración a Cloudflare (Vite+React, Hono Workers, D1)",
-          status: "activo",
-          notes: [{ kind: "decidido", text: "Migración ejecutada por agentes (57 min) y verificada por el orquestador: api 56/56 tests sobre D1 local real, web 6/6, build verde, journey E1 completo contra wrangler dev (409 duplicados, cascade, last-values, deep links). Deploy: DEPLOY.md con checklist para la cuenta del usuario; tras validar el deploy se borra legacy/next-app/. Commit 883d9f3." }],
+          status: "decidido",
+          notes: [{ kind: "decidido", text: "VERIFICADA EN PRODUCCIÓN por el usuario (deploy en workers.dev, 2026-09-02). Fix del database_id (72f807a). legacy/next-app/ borrado incl. BD de pruebas. Change archivado: openspec/changes/archive/2026-09-02-cm1-migracion-cloudflare. La app corre como un único Worker: SPA React+Vite + API Hono + D1." }],
         },
         { title: "E2 — Recetario + Receta X", status: "pendiente", notes: [{ kind: "nota", text: "Spec redactada y puesta en espera: el pivote a Cloudflare (cm1-migracion-cloudflare) va primero. El comportamiento (búsqueda, detalle, editor, borrado) se conserva; se re-basa sobre el nuevo stack tras la migración." }] },
         { title: "E3 — Plan semanal + lista de compra", status: "pendiente" },

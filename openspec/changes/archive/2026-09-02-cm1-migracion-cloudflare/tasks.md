@@ -18,4 +18,4 @@
 - [x] 4.1 Suite completa verde sin red; `npm run build` verde
 - [x] 4.2 Journey E1 completo contra `wrangler dev` (agente) + re-verificación independiente del orquestador: receta→plan→sesión→log 201→dup 409→last-values 60×10→delete→slot vacío; UNIQUE→400 {field name}; deep links y assets 200; notes upsert OK; schema idempotente (14 tablas al 2º pase)
 - [x] 4.3 Checklist de deploy documentado en `DEPLOY.md` (login, d1 create + database_id, migrate:remote, deploy, verificación post-deploy, rollback) — ejecución pendiente de la cuenta del usuario
-- [ ] 4.4 Borrar `legacy/next-app/`, actualizar project-site tree, archivar change, evaluación conjunta
+- [x] 4.4 Deploy verified by user ("Deploy hecho y funcionando"); legacy/next-app/ deleted (incl. untracked test DB); project-site updated; change archived below
