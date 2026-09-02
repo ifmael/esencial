@@ -28,7 +28,21 @@ Copia el `database_id` que imprime y pégalo en `api/wrangler.toml`
 pnpm db:migrate:remote
 ```
 
-## 4. Deploy
+## 4. Secretos de acceso (E7 — una vez, y al rotar la contraseña)
+
+```bash
+# Clave de firma de sesión (cualquier string ≥32 aleatorios):
+openssl rand -base64 24 | npx wrangler secret put AUTH_SECRET
+# Digest PBKDF2 de TU contraseña real (el script lo genera y auto-verifica):
+node --disable-warning=ExperimentalWarning api/scripts/hash-password.ts 'tu-clave' \
+  | npx wrangler secret put PASSWORD_HASH
+```
+
+Rotación = repetir los dos comandos anteriores con la nueva clave (dos comandos, sin deploy).
+Local: copia `api/.dev.vars.example` → `api/.dev.vars` con los mismos valores.
+Sin secretos, el Worker falla cerrado (500 en login, 401 en todo lo protegido).
+
+## 5. Deploy
 
 ```bash
 npm run deploy              # build del SPA + wrangler deploy
@@ -37,13 +51,17 @@ npm run deploy              # build del SPA + wrangler deploy
 La primera vez crea el Worker `esencial` y publica: SPA + API en la misma URL
 (https://esencial.<tu-subdominio>.workers.dev — la imprime el propio comando).
 
-## 5. Verificación post-deploy (2 min)
+## 6. Verificación post-deploy (2 min)
 
-1. Abre la URL workers.dev → debe cargar el placeholder DÍA.
-2. Navega a `/plan-recetas` (deep link) → debe cargar la SPA.
-3. Crea una receta desde la API o espera a E2; recarga: los datos persisten (D1 remoto).
+1. `curl -i https://esencial.<sub>.workers.dev/` sin sesión → **302** a `/login?next=%2F`.
+2. `curl https://esencial.<sub>.workers.dev/api/health` → **200** `{ ok: true }` (abierto).
+3. `curl -i .../api/recipes` sin cookie → **401** `{ "error": "Unauthorized" }`.
+4. Abre `/login` en el navegador → entra con tu contraseña → el DÍA carga.
+5. Botón "Cerrar sesión" → vuelve a `/login`; `curl` con la cookie vieja → 401 otra vez.
 
 ## Rollback
 
-`npx wrangler rollback` revierte el Worker a la versión anterior. La BD no se
-toca por el deploy (el esquema es aditivo e idempotente).
+`npx wrangler rollback` revierte el Worker a la versión anterior (la BD no se
+toca; el esquema es aditivo e idempotente). Los secretos quedan inerte: la
+versión previa no los lee. Para cerrar el acceso sin deploy: rota `AUTH_SECRET`
+— todas las cookies emitidas dejan de verificar.

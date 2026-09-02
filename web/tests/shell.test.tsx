@@ -1,9 +1,13 @@
-// UI tests: shell navigation (active state, deep links) + Día sections.
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+// UI tests: shell navigation (active state, deep links) + Día empty states.
+// E7: App now checks /api/auth/status on mount — stub it as authenticated.
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
 
+beforeAll(() => {
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ authenticated: true })));
+});
 afterEach(cleanup);
 
 function renderAt(path: string) {
@@ -18,8 +22,10 @@ function localToday(): string {
 }
 
 describe("Shell", () => {
-  it("marks the active route with aria-current", () => {
+  it("marks the active route with aria-current", async () => {
     renderAt("/plan-recetas");
+    // E7 guard: the shell appears once /api/auth/status resolves.
+    await waitFor(() => expect(screen.getAllByText("Plan recetas").length).toBeGreaterThan(0));
     const links = screen.getAllByText("Plan recetas");
     expect(links.some((el) => el.getAttribute("aria-current") === "page")).toBe(true);
     expect(
@@ -27,8 +33,9 @@ describe("Shell", () => {
     ).toBe(true);
   });
 
-  it("navigates between tabs client-side", () => {
+  it("navigates between tabs client-side", async () => {
     renderAt("/");
+    await waitFor(() => expect(screen.getAllByText("Plan fuerza").length).toBeGreaterThan(0));
     fireEvent.click(screen.getAllByText("Plan fuerza")[0]);
     expect(window.location.pathname).toBe("/plan-fuerza");
     expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
@@ -45,14 +52,15 @@ describe("Día (E5)", () => {
       session: null,
       note: { text: "" },
     };
-    vi.stubGlobal("fetch", vi.fn(async (url: string) =>
-      Response.json({ ...empty, date: String(url).slice("/api/day/".length) }),
-    ));
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (String(url).includes("/api/auth/status")) return Response.json({ authenticated: true });
+      return Response.json({ ...empty, date: String(url).slice("/api/day/".length) });
+    }));
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("renders navigable date header and three sections", async () => {
     renderAt("/");
+    await waitFor(() => expect(screen.getByText("FUERZA")).toBeDefined());
     const before = screen.getByRole("heading", { level: 1 }).textContent;
     expect(before).toMatch(/^Hoy/); // abre en la fecha local
     fireEvent.click(screen.getByRole("button", { name: "Día siguiente" }));

@@ -8,3 +8,17 @@ compatibility_date = "2026-08-22"
 binding = "DB"
 database_name = "esencial"
 database_id = "test-local"
+
+# E7: test credentials (NEVER real ones). PASSWORD_HASH is the PBKDF2 digest of
+# "test-password-123" produced by src/auth.ts (rotate both together if the
+# test password changes). AUTH_SECRET is a fixed 32-char signing key.
+[vars]
+AUTH_SECRET = "test-auth-secret-32-bytes-long-xx"
+PASSWORD_HASH = "pbkdf2$210000$w96YZTwA8VV+FIucnHHGeQ==$uxU0SzCOX6HKPgMKm1TgAtFlwpKIZkP5004JDJhFRQM="
+
+# Minimal SPA fixture so the page guard can serve an index.html in tests.
+[assets]
+directory = "./tests/fixtures/spa"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true

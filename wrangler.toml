@@ -6,8 +6,10 @@ compatibility_date = "2026-08-31"
 [assets]
 directory = "./web/dist"
 binding = "ASSETS"
+# E7: the Worker must SEE every request to gate HTML pages (pageGuard);
+# allowed responses are served via env.ASSETS.fetch inside the Worker.
+run_worker_first = true
 # Deep links (/plan-recetas) fall through to index.html.
-not_found_handling = "single-page-application"
 
 [[d1_databases]]
 binding = "DB"

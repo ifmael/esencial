@@ -1,6 +1,6 @@
 # Design — E7 auth
 
-## D1: Opciones evaluadas y decisión (ABIERTA al usuario)
+## D1: Opciones evaluadas y decisión — CONFIRMADA: opción A (usuario, 2026-09-02)
 
 Un solo usuario, una app personal, deploy en Workers. Tres opciones inventariadas:
 

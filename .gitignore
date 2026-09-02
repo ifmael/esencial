@@ -13,6 +13,8 @@ legacy/next-app/data/*.db*
 
 # env / secrets
 .env*
+!api/.dev.vars.example
+.dev.vars
 
 # misc
 .DS_Store

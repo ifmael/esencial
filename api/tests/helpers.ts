@@ -1,5 +1,7 @@
 // Shared test helpers: real local D1 (miniflare via vitest-pool-workers) +
 // fetch-style request builders against the Hono app. Parity with E1 helpers.
+// E7: get/post/put/del carry a session cookie obtained once per worker via a
+// real /api/auth/login; anon* builders exercise the 401 gate.
 import { env } from "cloudflare:test";
 import app from "../src/index";
 import migrations0002 from "../migrations/0002_e2_recipes_photo_tags.sql?raw";
@@ -65,11 +67,30 @@ function url(path: string): string {
   return `http://localhost${path}`;
 }
 
-export async function get(path: string): Promise<Response> {
-  return await app.request(url(path), {}, env);
+// One real login per worker instance; the digest ships in wrangler.test.toml.
+let session: Promise<Record<string, string>> | null = null;
+function authCookieHeader(): Promise<Record<string, string>> {
+  session ??= (async () => {
+    const res = await app.request(
+      url("/api/auth/login"),
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: "test-password-123" }),
+      },
+      env,
+    );
+    if (res.status !== 200) throw new Error("test login failed: " + res.status);
+    return { cookie: (res.headers.get("set-cookie") ?? "").split(";")[0] };
+  })();
+  return session;
 }
 
-export async function send(path: string, method: string, body: unknown): Promise<Response> {
+/** Request WITHOUT a session (E7 gate contract). */
+export async function anonGet(path: string): Promise<Response> {
+  return await app.request(url(path), {}, env);
+}
+export async function anonSend(path: string, method: string, body: unknown): Promise<Response> {
   return await app.request(
     url(path),
     {
@@ -81,8 +102,24 @@ export async function send(path: string, method: string, body: unknown): Promise
   );
 }
 
+export async function get(path: string): Promise<Response> {
+  return await app.request(url(path), { headers: await authCookieHeader() }, env);
+}
+
+export async function send(path: string, method: string, body: unknown): Promise<Response> {
+  return await app.request(
+    url(path),
+    {
+      method,
+      headers: { "content-type": "application/json", ...(await authCookieHeader()) },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    },
+    env,
+  );
+}
+
 export const post = (path: string, body: unknown) => send(path, "POST", body);
 export const put = (path: string, body: unknown) => send(path, "PUT", body);
 export async function del(path: string): Promise<Response> {
-  return await app.request(url(path), { method: "DELETE" }, env);
+  return await app.request(url(path), { method: "DELETE", headers: await authCookieHeader() }, env);
 }
