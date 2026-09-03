@@ -79,7 +79,7 @@ window.TREE = {
         },
         {
           title: "Should — en cuanto el MVP básico arranque",
-          status: "pendiente",
+          status: "decidido",
           notes: [
             { kind: "nota", text: "Protección con contraseña para acceder a la app (single-user; el modelo exacto —auth mínima del servidor— se decide en Fase 4)." },
           ],
