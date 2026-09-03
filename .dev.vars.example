@@ -3,4 +3,4 @@
 #   node --experimental-strip-types api/scripts/hash-password.ts 'tu clave'
 #   openssl rand -base64 24
 AUTH_SECRET="replace-me-32-bytes-minimum-xxxxxxx"
-PASSWORD_HASH="pbkdf2$210000$...$..."
+PASSWORD_HASH="pbkdf2$100000$...$..."

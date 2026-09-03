@@ -8,8 +8,6 @@ dist/
 .wrangler/
 
 # data (SQLite lives here in dev and LXC bind mount)
-legacy/next-app/data/*.db*
-!.gitkeep
 
 # env / secrets
 .env*
@@ -24,5 +22,3 @@ next-env.d.ts
 wireframes/design.zip
 
 # agent config (local)
-legacy/next-app/AGENTS.md
-legacy/next-app/CLAUDE.md
