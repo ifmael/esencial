@@ -30,5 +30,7 @@ function renderNode(node) {
   return wrap;
 }
 
-document.getElementById("updated").textContent = TREE.updated;
-document.getElementById("tree").appendChild(renderNode(TREE));
+const updated = document.getElementById("updated");
+const treeRoot = document.getElementById("tree");
+if (updated) updated.textContent = TREE.updated;
+if (treeRoot) treeRoot.appendChild(renderNode(TREE));

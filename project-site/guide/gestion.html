@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestión del proyecto — Esencial</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+
+<div class="hero">
+  <h1>Gestión del proyecto: el árbol de decisiones</h1>
+  <p>Todas las decisiones de Esencial —fases, épicas, descartes— viven en un único árbol
+  (<code style="background:rgba(255,255,255,.15);padding:.05rem .4rem;border-radius:4px">project-site/data.js</code>).
+  Esta página lo renderiza con el mismo estilo de la guía. <b>Editar el data.js actualiza esta página y el site clásico a la vez.</b></p>
+</div>
+
+<div class="gestion-updated">Actualizado: <span id="updated"></span></div>
+<div id="tree"></div>
+<div class="gestion-legend">
+  <span><span class="badge decidido">decidido</span> decisión tomada</span>
+  <span><span class="badge descartado">descartado</span> opción rechazada</span>
+  <span><span class="badge pendiente">pendiente</span> por decidir</span>
+  <span><span class="badge activo">activo</span> en curso</span>
+</div>
+
+<div class="pager">
+  <a href="frontend.html"><span class="dir">anterior</span>← Frontend</a>
+</div>
+
+</main>
+<script src="../data.js"></script>
+<script src="../app.js"></script>
+<script>
+// app.js escribe en #updated y #tree del site clásico; mismos IDs aquí.
+</script>
+<script src="chrome.js"></script>
+<script src="site.js"></script>
+</body>
+</html>
