@@ -14,14 +14,14 @@ const sent: Exercise = { id: 9, name: "Sentadilla", description: null, setupCues
 const tplA = (): Template => ({
   id: 1,
   name: "A — Empuje",
-  rotation_index: 0,
+  rotationIndex: 0,
   exercises: [
-    { id: 11, exerciseId: 7, position: 0, target_sets: 3, target_reps_min: 8, target_reps_max: 8, exerciseName: "Press banca" },
-    { id: 12, exerciseId: 8, position: 1, target_sets: null, target_reps_min: null, target_reps_max: null, exerciseName: "Remo" },
+    { id: 11, exerciseId: 7, position: 0, targetSets: 3, targetRepsMin: 8, targetRepsMax: 8, exerciseName: "Press banca" },
+    { id: 12, exerciseId: 8, position: 1, targetSets: null, targetRepsMin: null, targetRepsMax: null, exerciseName: "Remo" },
   ],
 });
-const tplB = (): Template => ({ id: 2, name: "B — Tirón", rotation_index: 1, exercises: [] });
-const tplC = (): Template => ({ id: 3, name: "C — Piernas", rotation_index: 2, exercises: [] });
+const tplB = (): Template => ({ id: 2, name: "B — Tirón", rotationIndex: 1, exercises: [] });
+const tplC = (): Template => ({ id: 3, name: "C — Piernas", rotationIndex: 2, exercises: [] });
 
 let api: MockApi;
 
@@ -138,7 +138,7 @@ describe("template editor", () => {
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
     expect(payloadAt(0).exercises).toEqual([
-      { exerciseId: 9, target_sets: null, target_reps_min: null, target_reps_max: null },
+      { exerciseId: 9, targetSets: null, targetRepsMin: null, targetRepsMax: null },
     ]);
     await screen.findByText("D — Movilidad");
     expect(screen.queryByLabelText("Nombre")).toBeNull();
@@ -160,9 +160,9 @@ describe("template editor", () => {
     expect(put.url).toBe("/api/templates/1");
     const body = put.body as unknown as TemplatePayload;
     expect(body.name).toBe("A — Empuje y núcleo");
-    expect(body.rotation_index).toBe(0);
+    expect(body.rotationIndex).toBe(0);
     expect(body.exercises.map((e) => e.exerciseId)).toEqual([8, 7]); // displaced swap, no gaps/dupes
-    expect(body.exercises[1].target_sets).toBe(4);
+    expect(body.exercises[1].targetSets).toBe(4);
     await screen.findByText("A — Empuje y núcleo");
   });
 
@@ -201,7 +201,7 @@ describe("template editor", () => {
     fireEvent.change(screen.getAllByLabelText("Reps máx")[0], { target: { value: "8" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(mutations().some((c) => c.method === "PUT")).toBe(true));
-    expect(payloadAt(0).exercises[0]).toEqual({ exerciseId: 7, target_sets: 4, target_reps_min: 6, target_reps_max: 8 });
+    expect(payloadAt(0).exercises[0]).toEqual({ exerciseId: 7, targetSets: 4, targetRepsMin: 6, targetRepsMax: 8 });
     await screen.findByText("4×6–8");
   });
 
@@ -222,8 +222,8 @@ describe("template editor", () => {
     const copy = api.state.templates[3];
     expect(copy.name).toBe("A — Empuje (copia)");
     expect(copy.exercises.map((e) => e.exerciseId)).toEqual([7, 8]);
-    expect(copy.exercises[0].target_sets).toBe(3);
-    expect(copy.rotation_index).toBe(0);
+    expect(copy.exercises[0].targetSets).toBe(3);
+    expect(copy.rotationIndex).toBe(0);
     await screen.findByText("A — Empuje (copia)");
   });
 

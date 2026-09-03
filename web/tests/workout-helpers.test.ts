@@ -9,7 +9,7 @@ import {
 } from "../src/lib/workout";
 
 describe("defaultSetCount", () => {
-  it("usa target_sets cuando existe", () => {
+  it("usa targetSets cuando existe", () => {
     expect(defaultSetCount(4)).toBe(4);
   });
   it("por defecto 3 si falta", () => {

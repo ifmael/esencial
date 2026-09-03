@@ -1,6 +1,6 @@
 // Pure helpers for the workout-day screen (E6 task 2.3). No React, no fetch.
 
-/** `target_sets ?? 3`: the client owns set-row count (design D2). */
+/** `targetSets ?? 3`: the client owns set-row count (design D2). */
 export function defaultSetCount(targetSets?: number | null): number {
   return targetSets ?? 3;
 }

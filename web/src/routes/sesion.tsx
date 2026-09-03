@@ -30,7 +30,7 @@ type TemplateExercise = {
   exerciseId: number;
   exerciseName: string;
   position: number;
-  target_sets: number | null;
+  targetSets: number | null;
 };
 
 type LastValue = { weightKg: number; reps: number; date: string };
@@ -115,7 +115,7 @@ export function useWorkoutDay(date: string) {
           return {
             te,
             last,
-            sets: Array.from({ length: defaultSetCount(te.target_sets) }, () => ({
+            sets: Array.from({ length: defaultSetCount(te.targetSets) }, () => ({
               weightKg: last?.weightKg ?? null,
               reps: last?.reps ?? null,
               done: false,

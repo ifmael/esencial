@@ -25,25 +25,25 @@ const TE_ROW = 12; // template_exercise id for "Remo con barra"
 const TEMPLATE = {
   id: 5,
   name: "Empuje A",
-  rotation_index: 0,
+  rotationIndex: 0,
   exercises: [
     {
       id: TE_BENCH,
       exerciseId: 21,
       exerciseName: "Press banca",
       position: 0,
-      target_sets: 3,
-      target_reps_min: 6,
-      target_reps_max: 8,
+      targetSets: 3,
+      targetRepsMin: 6,
+      targetRepsMax: 8,
     },
     {
       id: TE_ROW,
       exerciseId: 22,
       exerciseName: "Remo con barra",
       position: 1,
-      target_sets: null,
-      target_reps_min: null,
-      target_reps_max: null,
+      targetSets: null,
+      targetRepsMin: null,
+      targetRepsMax: null,
     },
   ],
 };

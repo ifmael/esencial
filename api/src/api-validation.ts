@@ -27,8 +27,8 @@ export type RecipeInput = z.infer<typeof recipeSchema>;
 export const exerciseSchema = z.object({
   name: z.string().min(1, "Exercise name is required"),
   description: z.string().optional().nullable(),
-  setup_cues: z.string().optional().nullable(),
-  technique_url: z.url("technique_url must be a valid URL").optional().nullable(),
+  setupCues: z.string().optional().nullable(),
+  techniqueUrl: z.url("technique_url must be a valid URL").optional().nullable(),
   tags: z.array(z.string().min(1)).min(1, "At least one tag is required"),
 });
 export type ExerciseInput = z.infer<typeof exerciseSchema>;
@@ -37,15 +37,15 @@ export type ExerciseInput = z.infer<typeof exerciseSchema>;
 
 export const templateExerciseSchema = z.object({
   exerciseId: z.number().int().positive(),
-  target_sets: z.number().int().positive().optional().nullable(),
-  target_reps_min: z.number().int().positive().optional().nullable(),
-  target_reps_max: z.number().int().positive().optional().nullable(),
+  targetSets: z.number().int().positive().optional().nullable(),
+  targetRepsMin: z.number().int().positive().optional().nullable(),
+  targetRepsMax: z.number().int().positive().optional().nullable(),
 });
 
 export const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
   // Absent on PUT means "preserve the stored value" (no default).
-  rotation_index: z.number().int().min(0).optional(),
+  rotationIndex: z.number().int().min(0).optional(),
   exercises: z.array(templateExerciseSchema).optional().default([]),
 });
 export type TemplateInput = z.infer<typeof templateSchema>;

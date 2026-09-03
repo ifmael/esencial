@@ -20,10 +20,10 @@ const peso: Exercise = { id: 9, name: "Peso muerto", description: null, setupCue
 const tplA = (): Template => ({
   id: 1,
   name: "A — Empuje",
-  rotation_index: 0,
+  rotationIndex: 0,
   exercises: [
-    { id: 11, exerciseId: 7, position: 0, target_sets: 3, target_reps_min: 8, target_reps_max: 8, exerciseName: "Press banca" },
-    { id: 12, exerciseId: 8, position: 1, target_sets: null, target_reps_min: null, target_reps_max: null, exerciseName: "Remo" },
+    { id: 11, exerciseId: 7, position: 0, targetSets: 3, targetRepsMin: 8, targetRepsMax: 8, exerciseName: "Press banca" },
+    { id: 12, exerciseId: 8, position: 1, targetSets: null, targetRepsMin: null, targetRepsMax: null, exerciseName: "Remo" },
   ],
 });
 
@@ -131,9 +131,9 @@ describe("detail", () => {
     await waitFor(() => expect(api.calls.some((c) => c.method === "PUT")).toBe(true));
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/templates/1");
-    const body = put.body as { exercises: { exerciseId: number }[]; rotation_index: number };
+    const body = put.body as { exercises: { exerciseId: number }[]; rotationIndex: number };
     expect(body.exercises.map((e) => e.exerciseId)).toEqual([7, 8, 9]);
-    expect(body.rotation_index).toBe(0);
+    expect(body.rotationIndex).toBe(0);
     await screen.findByText(/añadido/i);
     expect(window.location.pathname).toBe("/ejercicios/9");
   });
@@ -149,7 +149,7 @@ describe("detail", () => {
     expect(api.calls.some((c) => c.method === "PUT" || c.method === "POST")).toBe(false);
   });
 
-  it("edit flow: pre-filled PUT; server 400 on technique_url shown inline, draft kept", async () => {
+  it("edit flow: pre-filled PUT; server 400 on techniqueUrl shown inline, draft kept", async () => {
     renderAt("/ejercicios/8");
     await screen.findByRole("heading", { name: "Remo" });
     fireEvent.click(screen.getByRole("button", { name: /editar/i }));

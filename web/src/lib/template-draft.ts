@@ -54,27 +54,27 @@ export const moveEntry = (draft: Draft, from: number, to: number): Draft => ({
 
 export type TemplateEntryPayload = {
   exerciseId: number;
-  target_sets: number | null;
-  target_reps_min: number | null;
-  target_reps_max: number | null;
+  targetSets: number | null;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
 };
 
 export type TemplatePayload = {
   name: string;
   // Optional like the server schema: absent = preserve stored rotation (COALESCE).
-  rotation_index?: number;
+  rotationIndex?: number;
   exercises: TemplateEntryPayload[];
 };
 
 export function buildTemplatePayload(draft: Draft): TemplatePayload {
   return {
     name: draft.name,
-    rotation_index: draft.rotationIndex,
+    rotationIndex: draft.rotationIndex,
     exercises: draft.entries.map((e) => ({
       exerciseId: e.exerciseId,
-      target_sets: e.targetSets,
-      target_reps_min: e.targetRepsMin,
-      target_reps_max: e.targetRepsMax,
+      targetSets: e.targetSets,
+      targetRepsMin: e.targetRepsMin,
+      targetRepsMax: e.targetRepsMax,
     })),
   };
 }

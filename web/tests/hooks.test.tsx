@@ -89,8 +89,8 @@ describe("useTemplates", () => {
   it("loads templates in API order", async () => {
     mockFetch(() =>
       jsonResponse([
-        { id: 1, name: "A — Empuje", rotation_index: 0, exercises: [] },
-        { id: 2, name: "B — Tirón", rotation_index: 1, exercises: [] },
+        { id: 1, name: "A — Empuje", rotationIndex: 0, exercises: [] },
+        { id: 2, name: "B — Tirón", rotationIndex: 1, exercises: [] },
       ]),
     );
     const { result } = renderHook(() => useTemplates());

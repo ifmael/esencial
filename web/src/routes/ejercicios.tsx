@@ -35,12 +35,12 @@ const toDraft = (x: Exercise): Draft => ({
 const toInput = (d: Draft): ExerciseInput => ({
   name: d.name.trim(),
   description: d.description || null,
-  setup_cues: d.setupCues || null,
-  technique_url: d.techniqueUrl || null,
+  setupCues: d.setupCues || null,
+  techniqueUrl: d.techniqueUrl || null,
   tags: d.tags,
 });
 
-type FieldErrors = { name?: string; tags?: string; technique_url?: string };
+type FieldErrors = { name?: string; tags?: string; techniqueUrl?: string };
 
 function ExerciseEditor({
   initial,
@@ -76,7 +76,7 @@ function ExerciseEditor({
       // Envelope-driven (D6): el mensaje del servidor va junto al campo que falló.
       const field = apiField(e);
       setErrors(
-        field === "technique_url" || field === "name" || field === "tags" ? { [field]: errorMessage(e) } : {},
+        field === "techniqueUrl" || field === "name" || field === "tags" ? { [field]: errorMessage(e) } : {},
       );
       setSubmitting(false);
     }
@@ -121,7 +121,7 @@ function ExerciseEditor({
           value={draft.techniqueUrl}
           onChange={(e) => setDraft({ ...draft, techniqueUrl: e.target.value })}
         />
-        {errors.technique_url && <span className="text-sm text-error">{errors.technique_url}</span>}
+        {errors.techniqueUrl && <span className="text-sm text-error">{errors.techniqueUrl}</span>}
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <span id="ex-tags-label">Tags</span>
@@ -248,15 +248,15 @@ function AddToTemplate({ exercise, state }: { exercise: Exercise; state: Templat
     try {
       await updateTemplate(t.id, {
         name: t.name,
-        rotation_index: t.rotation_index,
+        rotationIndex: t.rotationIndex,
         exercises: [
           ...t.exercises.map((e) => ({
             exerciseId: e.exerciseId,
-            target_sets: e.target_sets,
-            target_reps_min: e.target_reps_min,
-            target_reps_max: e.target_reps_max,
+            targetSets: e.targetSets,
+            targetRepsMin: e.targetRepsMin,
+            targetRepsMax: e.targetRepsMax,
           })),
-          { exerciseId: exercise.id, target_sets: null, target_reps_min: null, target_reps_max: null },
+          { exerciseId: exercise.id, targetSets: null, targetRepsMin: null, targetRepsMax: null },
         ],
       });
       setDone(true);

@@ -77,10 +77,10 @@ describe("buildTemplatePayload", () => {
     const payload = buildTemplatePayload(draft(a, b));
     expect(payload).toEqual({
       name: "A — Empuje",
-      rotation_index: 0,
+      rotationIndex: 0,
       exercises: [
-        { exerciseId: 7, target_sets: 3, target_reps_min: 8, target_reps_max: 12 },
-        { exerciseId: 9, target_sets: null, target_reps_min: null, target_reps_max: null },
+        { exerciseId: 7, targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 },
+        { exerciseId: 9, targetSets: null, targetRepsMin: null, targetRepsMax: null },
       ],
     });
   });

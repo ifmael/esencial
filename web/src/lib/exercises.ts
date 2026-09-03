@@ -14,8 +14,8 @@ export type Exercise = {
 export type ExerciseInput = {
   name: string;
   description?: string | null;
-  setup_cues?: string | null;
-  technique_url?: string | null;
+  setupCues?: string | null;
+  techniqueUrl?: string | null;
   tags: string[];
 };
 

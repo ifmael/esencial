@@ -1,5 +1,5 @@
 // useTemplates hook (E4, E2 useRecipes pattern): list in API order
-// (rotation_index, name) + mutate + refetch.
+// (rotationIndex, name) + mutate + refetch.
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "./api";
 import type { TemplatePayload } from "./template-draft";
@@ -8,16 +8,16 @@ export type TemplateExerciseRow = {
   id: number;
   exerciseId: number;
   position: number;
-  target_sets: number | null;
-  target_reps_min: number | null;
-  target_reps_max: number | null;
+  targetSets: number | null;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
   exerciseName: string;
 };
 
 export type Template = {
   id: number;
   name: string;
-  rotation_index: number;
+  rotationIndex: number;
   exercises: TemplateExerciseRow[];
 };
 

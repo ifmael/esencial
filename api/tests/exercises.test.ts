@@ -15,7 +15,7 @@ async function makePressBanca(): Promise<number> {
   const res = await post("/api/exercises", {
     name: "Press banca",
     description: "Barra, banca plana",
-    setup_cues: "Escápulas retraídas, pies firmes",
+    setupCues: "Escápulas retraídas, pies firmes",
     tags: ["pecho", "tríceps"],
   });
   expect(res.status).toBe(201);
@@ -64,10 +64,10 @@ describe("/api/exercises", () => {
     expect((await body(res)).field).toBe("tags");
   });
 
-  it("400 on invalid technique_url", async () => {
-    const res = await post("/api/exercises", { name: "Malo", tags: ["x"], technique_url: "no-es-url" });
+  it("400 on invalid techniqueUrl", async () => {
+    const res = await post("/api/exercises", { name: "Malo", tags: ["x"], techniqueUrl: "no-es-url" });
     expect(res.status).toBe(400);
-    expect((await body(res)).field).toBe("technique_url");
+    expect((await body(res)).field).toBe("techniqueUrl");
   });
 
   it("PUT replaces tags and fields", async () => {
@@ -75,7 +75,7 @@ describe("/api/exercises", () => {
     const res = await put(`/api/exercises/${id}`, {
       name: "Press banca inclinado",
       tags: ["pecho"],
-      setup_cues: "30 grados",
+      setupCues: "30 grados",
     });
     expect(res.status).toBe(200);
     const got = await body(await get(`/api/exercises/${id}`));

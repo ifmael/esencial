@@ -57,14 +57,14 @@ export async function loadExercise(db: D1Database, id: number): Promise<Row | nu
 export async function loadTemplate(db: D1Database, id: number): Promise<Row | null> {
   const head = await row(
     db,
-    "SELECT id, name, rotation_index FROM session_templates WHERE id = ?",
+    "SELECT id, name, rotation_index AS rotationIndex FROM session_templates WHERE id = ?",
     id,
   );
   if (!head) return null;
   head.exercises = await rows(
     db,
     `SELECT te.id, te.exercise_id AS exerciseId, te.position,
-            te.target_sets, te.target_reps_min, te.target_reps_max,
+            te.target_sets AS targetSets, te.target_reps_min AS targetRepsMin, te.target_reps_max AS targetRepsMax,
             e.name AS exerciseName
      FROM template_exercises te JOIN exercises e ON e.id = te.exercise_id
      WHERE te.template_id = ? ORDER BY te.position, te.id`,

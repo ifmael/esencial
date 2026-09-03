@@ -1,4 +1,4 @@
-// E1 parity: template CRUD with ordered exercises + rotation_index.
+// E1 parity: template CRUD with ordered exercises + rotationIndex.
 import { beforeAll, describe, expect, it } from "vitest";
 import { freshDb, d1, get, post, put, del } from "./helpers";
 
@@ -20,10 +20,10 @@ beforeAll(async () => {
 
 const payload = (name: string) => ({
   name,
-  rotation_index: 0,
+  rotationIndex: 0,
   exercises: [
-    { exerciseId: benchId, target_sets: 4, target_reps_min: 6, target_reps_max: 8 },
-    { exerciseId: squatId, target_sets: 3, target_reps_min: 8, target_reps_max: 12 },
+    { exerciseId: benchId, targetSets: 4, targetRepsMin: 6, targetRepsMax: 8 },
+    { exerciseId: squatId, targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 },
   ],
 });
 
@@ -31,29 +31,29 @@ describe("/api/templates", () => {
   it("creates template with ordered exercises", async () => {
     const res = await post("/api/templates", {
       ...payload("A — Empuje"),
-      rotation_index: 0,
+      rotationIndex: 0,
       exercises: [
         ...payload("x").exercises,
-        { exerciseId: rowId, target_sets: 3, target_reps_min: 10, target_reps_max: null },
+        { exerciseId: rowId, targetSets: 3, targetRepsMin: 10, targetRepsMax: null },
       ],
     });
     expect(res.status).toBe(201);
     const t = await body(res);
-    const exs = t.exercises as { exerciseId: number; target_sets: number; position: number }[];
+    const exs = t.exercises as { exerciseId: number; targetSets: number; position: number }[];
     expect(exs.map((e) => e.exerciseId)).toEqual([benchId, squatId, rowId]);
-    expect(exs[0].target_sets).toBe(4);
+    expect(exs[0].targetSets).toBe(4);
   });
 
-  it("GET list preserves order and rotation_index", async () => {
+  it("GET list preserves order and rotationIndex", async () => {
     const created = await body(await post("/api/templates", {
       ...payload("B — Tirón"),
-      rotation_index: 1,
+      rotationIndex: 1,
     }));
     const res = await get("/api/templates");
     expect(res.status).toBe(200);
-    const list = (await res.json()) as { name: string; rotation_index: number; exercises: unknown[] }[];
+    const list = (await res.json()) as { name: string; rotationIndex: number; exercises: unknown[] }[];
     const b = list.find((t) => t.name === "B — Tirón");
-    expect(b?.rotation_index).toBe(1);
+    expect(b?.rotationIndex).toBe(1);
     expect((b?.exercises as { exerciseId: number }[]).map((e) => e.exerciseId)).toEqual([benchId, squatId]);
     expect(Number(created.id)).toBeGreaterThan(0);
   });
@@ -63,31 +63,31 @@ describe("/api/templates", () => {
     const id = Number(created.id);
     const res = await put(`/api/templates/${id}`, {
       name: "C — Pierna",
-      rotation_index: created.rotation_index ?? 2,
+      rotationIndex: created.rotationIndex ?? 2,
       exercises: [
-        { exerciseId: squatId, target_sets: 5, target_reps_min: 5, target_reps_max: 5 },
-        { exerciseId: benchId, target_sets: 2, target_reps_min: 15, target_reps_max: 20 },
+        { exerciseId: squatId, targetSets: 5, targetRepsMin: 5, targetRepsMax: 5 },
+        { exerciseId: benchId, targetSets: 2, targetRepsMin: 15, targetRepsMax: 20 },
       ],
     });
     expect(res.status).toBe(200);
     const got = await body(await get(`/api/templates/${id}`));
-    const exs = got.exercises as { exerciseId: number; target_sets: number }[];
+    const exs = got.exercises as { exerciseId: number; targetSets: number }[];
     expect(exs.map((e) => e.exerciseId)).toEqual([squatId, benchId]);
-    expect(exs[0].target_sets).toBe(5);
+    expect(exs[0].targetSets).toBe(5);
   });
 
-  it("PUT without rotation_index preserves the stored value", async () => {
+  it("PUT without rotationIndex preserves the stored value", async () => {
     const created = await body(await post("/api/templates", {
       ...payload("D — Full"),
-      rotation_index: 3,
+      rotationIndex: 3,
     }));
     const id = Number(created.id);
     await put(`/api/templates/${id}`, {
       name: "D — Full v2",
-      exercises: [{ exerciseId: benchId, target_sets: 3 }],
+      exercises: [{ exerciseId: benchId, targetSets: 3 }],
     });
     const got = await body(await get(`/api/templates/${id}`));
-    expect(got.rotation_index).toBe(3);
+    expect(got.rotationIndex).toBe(3);
     expect(got.name).toBe("D — Full v2");
   });
 
@@ -100,7 +100,7 @@ describe("/api/templates", () => {
   it("400 when referencing an unknown exercise", async () => {
     const res = await post("/api/templates", {
       name: "Rota",
-      exercises: [{ exerciseId: 999999, target_sets: 3 }],
+      exercises: [{ exerciseId: 999999, targetSets: 3 }],
     });
     expect(res.status).toBe(400);
   });

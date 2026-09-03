@@ -17,26 +17,26 @@ import {
 } from "../lib/template-draft";
 
 function formatTarget(e: {
-  target_sets: number | null;
-  target_reps_min: number | null;
-  target_reps_max: number | null;
+  targetSets: number | null;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
 }): string | null {
-  if (e.target_sets == null) return null; // objetivos parciales/ausentes → solo nombre
-  const { target_reps_min: min, target_reps_max: max } = e;
+  if (e.targetSets == null) return null; // objetivos parciales/ausentes → solo nombre
+  const { targetRepsMin: min, targetRepsMax: max } = e;
   const reps = min != null && max != null && min !== max ? `${min}–${max}` : (min ?? max);
-  return reps == null ? `${e.target_sets}×` : `${e.target_sets}×${reps}`;
+  return reps == null ? `${e.targetSets}×` : `${e.targetSets}×${reps}`;
 }
 
 const toDraft = (t: Template): Draft => ({
   name: t.name,
-  rotationIndex: t.rotation_index,
+  rotationIndex: t.rotationIndex,
   entries: t.exercises.map((e) => ({
     key: `s${e.id}`,
     exerciseId: e.exerciseId,
     exerciseName: e.exerciseName,
-    targetSets: e.target_sets,
-    targetRepsMin: e.target_reps_min,
-    targetRepsMax: e.target_reps_max,
+    targetSets: e.targetSets,
+    targetRepsMin: e.targetRepsMin,
+    targetRepsMax: e.targetRepsMax,
   })),
 });
 
@@ -352,7 +352,7 @@ export function PlanFuerzaPage() {
         <div className="mb-4 flex flex-wrap gap-2">
           {templates.map((t) => (
             <button key={t.id} className="badge-pending min-h-11" aria-label={t.name} onClick={() => goTo(t)}>
-              {t.name.split("—")[0].trim() || String(t.rotation_index + 1)}
+              {t.name.split("—")[0].trim() || String(t.rotationIndex + 1)}
             </button>
           ))}
         </div>

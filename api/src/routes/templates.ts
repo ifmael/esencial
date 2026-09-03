@@ -9,9 +9,9 @@ import { zBody } from "../validation";
 
 type Entry = {
   exerciseId: number;
-  target_sets?: number | null;
-  target_reps_min?: number | null;
-  target_reps_max?: number | null;
+  targetSets?: number | null;
+  targetRepsMin?: number | null;
+  targetRepsMax?: number | null;
 };
 
 // Ordered-entry INSERT builders (by-name subselect keeps POST atomic in one batch).
@@ -22,7 +22,7 @@ function entriesForNewTemplate(name: string, entries: Entry[], db: D1Database) {
         `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max)
          VALUES ((SELECT id FROM session_templates WHERE name = ?), ?, ?, ?, ?, ?)`,
       )
-      .bind(name, e.exerciseId, pos, e.target_sets ?? null, e.target_reps_min ?? null, e.target_reps_max ?? null),
+      .bind(name, e.exerciseId, pos, e.targetSets ?? null, e.targetRepsMin ?? null, e.targetRepsMax ?? null),
   );
 }
 
@@ -33,7 +33,7 @@ function entriesForTemplate(templateId: number, entries: Entry[], db: D1Database
         `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .bind(templateId, e.exerciseId, pos, e.target_sets ?? null, e.target_reps_min ?? null, e.target_reps_max ?? null),
+      .bind(templateId, e.exerciseId, pos, e.targetSets ?? null, e.targetRepsMin ?? null, e.targetRepsMax ?? null),
   );
 }
 
@@ -54,7 +54,7 @@ export const templates = new Hono<{ Bindings: Env }>()
       const db = getDb(c.env);
       const name = input.name.trim();
       const results = await db.batch([
-        db.prepare("INSERT INTO session_templates (name, rotation_index) VALUES (?, ?)").bind(name, input.rotation_index ?? 0),
+        db.prepare("INSERT INTO session_templates (name, rotation_index) VALUES (?, ?)").bind(name, input.rotationIndex ?? 0),
         ...entriesForNewTemplate(name, input.exercises, db),
       ]);
       return json(await loadTemplate(db, Number(results[0].meta.last_row_id)), 201);
@@ -79,7 +79,7 @@ export const templates = new Hono<{ Bindings: Env }>()
       await db.batch([
         db
           .prepare("UPDATE session_templates SET name = ?, rotation_index = COALESCE(?, rotation_index) WHERE id = ?")
-          .bind(input.name.trim(), input.rotation_index ?? null, id),
+          .bind(input.name.trim(), input.rotationIndex ?? null, id),
         db.prepare("DELETE FROM template_exercises WHERE template_id = ?").bind(id),
         ...entriesForTemplate(id, input.exercises, db),
       ]);

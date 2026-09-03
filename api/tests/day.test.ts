@@ -45,7 +45,7 @@ describe("GET /api/day/:date", () => {
     const bench = await post("/api/exercises", { name: "Press banca", tags: ["pecho"] });
     const template = await post("/api/templates", {
       name: "Empuje A",
-      exercises: [{ exerciseId: Number((await body(bench)).id), target_sets: 3 }],
+      exercises: [{ exerciseId: Number((await body(bench)).id), targetSets: 3 }],
     });
     const templateId = Number((await body(template)).id);
     await post("/api/plan-sessions", { date: "2026-09-02", templateId });
@@ -96,8 +96,8 @@ describe("GET /api/day/:date", () => {
     const template = await post("/api/templates", {
       name: "Empuje B",
       exercises: [
-        { exerciseId: Number((await body(bench)).id), target_sets: 4 },
-        { exerciseId: Number((await body(curl)).id), target_sets: 4 },
+        { exerciseId: Number((await body(bench)).id), targetSets: 4 },
+        { exerciseId: Number((await body(curl)).id), targetSets: 4 },
       ],
     });
     const templateId = Number((await body(template)).id);
