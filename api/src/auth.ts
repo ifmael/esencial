@@ -7,7 +7,7 @@ export const SESSION_COOKIE = "esencial_session";
 /** 30 days — personal app; renewal is a re-login (design D3). */
 export const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 
-const PBKDF2_ITERATIONS = 210_000;
+const PBKDF2_ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const HASH_BYTES = 32;
 

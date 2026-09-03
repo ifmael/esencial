@@ -19,7 +19,8 @@ import { day } from "./routes/day";
 import { authRoutes } from "./routes/auth";
 
 export const api = new Hono<{ Bindings: Env }>()
-  .get("/health", (c) => json({ ok: true }))
+  // TEMP debug: env presence probe (no value disclosure).
+.get("/health", (c) => json({ ok: true }))
   .route("/auth", authRoutes())
   .route("/recipes", recipes)
   .route("/exercises", exercises)
