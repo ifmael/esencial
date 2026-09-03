@@ -293,7 +293,7 @@ window.TREE = {
         { title: "E3 — Plan semanal + lista de compra", status: "decidido", notes: [{ kind: "decidido", text: 'Implementado (669faa7) e integrado. Rejilla 7×3 con navegación por semana, lista de la compra server-side (agrega por recetas N×, secciones, ítems manuales); migración 0003.' }] },
         { title: "E4 — Plan fuerza + catálogo", status: "decidido", notes: [{ kind: "decidido", text: "Implementado (778c323) e integrado. Plantillas con rotación, editor con reordenar, catálogo /ejercicios con detalle y 'Ver técnica'." }] },
         { title: "E5 — Día (home)", status: "decidido", notes: [{ kind: "decidido", text: 'Implementado (5b8aa06) e integrado. Agregación GET /api/day/:date, autosave de notas, estados vacíos con CTA.' }] },
-        { title: "E6 — Registro gym móvil-first", status: "decidido", notes: [{ kind: "decidido", text: "Implementado (ff010d8) e integrado. /sesion/:date con prefill 'última', esfuerzo 1-5, cierre → read-only, 409; ruptura limpia a camelCase en sets." }] },
+        { title: "E6 — Registro gym móvil-first", status: "decidido", notes: [{ kind: "decidido", text: "Implementado (ff010d8) e integrado. /sesion/:date con prefill 'última', esfuerzo 1-5, cierre → read-only, 409; ruptura limpia a camelCase en sets. Deuda de naming snake→camel en inputs de ejercicios/plantillas RESUELTA (9514d33)." }] },
         { title: "E7 — Auth + hardening", status: "decidido", notes: [{ kind: "decidido", text: 'Implementado (af5a798) e integrado. Password + cookie HMAC, gate 401/302, rate-limit, headers; guard en SPA. run_worker_first. Verificado en smoke: login real 200 + recipes autenticado.' }] },
       ],
     },
