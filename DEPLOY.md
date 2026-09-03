@@ -23,8 +23,8 @@ Copia el `database_id` que imprime y pégalo en `api/wrangler.toml`
 
 # = wrangler d1 migrations apply esencial --remote
 # Registra cada archivo de api/migrations/ en _cf_D1_MIGRATIONS y lo ejecuta
-# una sola vez (idempotente). El baseline v1 (schema.sql) ya se aplicó antes;
-# 0001 es un no-op. Desde E3, los cambios aditivos viven en api/migrations/.
+# una sola vez (idempotente). 0001 es el baseline (espejo de api/schema.sql)
+# y bootstrapea una base vacía; los deltas aditivos viven en 0002+.
 pnpm db:migrate:remote
 ```
 
@@ -39,7 +39,9 @@ node --disable-warning=ExperimentalWarning api/scripts/hash-password.ts 'tu-clav
 ```
 
 Rotación = repetir los dos comandos anteriores con la nueva clave (dos comandos, sin deploy).
-Local: copia `api/.dev.vars.example` → `api/.dev.vars` con los mismos valores.
+Local: crea `.dev.vars` en la **raíz del repo** (junto a `wrangler.toml`) con los
+mismos valores. IMPORTANTE: wrangler lee `.dev.vars` desde la raíz, no desde
+`api/`; si lo pones en `api/` el Worker no ve los secretos y login da 500.
 Sin secretos, el Worker falla cerrado (500 en login, 401 en todo lo protegido).
 
 ## 5. Deploy
