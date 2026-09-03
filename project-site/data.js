@@ -2,7 +2,7 @@
 window.TREE = {
   title: "Proyecto Esencial",
   open: true,
-  updated: "2026-09-02",
+  updated: "2026-09-03",
   children: [
     {
       title: "Meta — Definición del goal",
@@ -295,6 +295,38 @@ window.TREE = {
         { title: "E5 — Día (home)", status: "decidido", notes: [{ kind: "decidido", text: 'Implementado (5b8aa06) e integrado. Agregación GET /api/day/:date, autosave de notas, estados vacíos con CTA.' }] },
         { title: "E6 — Registro gym móvil-first", status: "decidido", notes: [{ kind: "decidido", text: "Implementado (ff010d8) e integrado. /sesion/:date con prefill 'última', esfuerzo 1-5, cierre → read-only, 409; ruptura limpia a camelCase en sets. Deuda de naming snake→camel en inputs de ejercicios/plantillas RESUELTA (9514d33)." }] },
         { title: "E7 — Auth + hardening", status: "decidido", notes: [{ kind: "decidido", text: 'Implementado (af5a798) e integrado. Password + cookie HMAC, gate 401/302, rate-limit, headers; guard en SPA. run_worker_first. Verificado en smoke: login real 200 + recipes autenticado.' }] },
+      ],
+    },
+    {
+      title: "Post-MVP — Ciclo de producto",
+      status: "activo",
+      notes: [{ kind: "nota", text: "MVP completo y desplegado (E0-E7 + CM1, naming normalizado, repo privado ifmael/esencial). Siguiente fase: convertir el MVP en herramienta de uso real, no añadir features." }],
+      children: [
+        {
+          title: "Congelar features y usar la app 2 semanas",
+          status: "decidido",
+          notes: [{ kind: "decidido", text: "No construir nada del MoSCoW 'Could' (gráficas, macros) hasta validar uso real. Hito de v1 estable: 3+ usos/semana (comidas + gym) durante 1 mes sin bugs bloqueantes." }],
+        },
+        {
+          title: "Backup + recuperación de datos",
+          status: "pendiente",
+          notes: [{ kind: "pendiente", text: "BD en Cloudflare D1 sin copia. Hacer `wrangler d1 export esencial` semanal (cron o manual) y guardar el password real en gestor de contraseñas (nunca en repo). ~15 min. Único riesgo de pérdida irreversible." }],
+        },
+        {
+          title: "Backlog de fricción (issues del repo)",
+          status: "decidido",
+          notes: [{ kind: "decidido", text: "Cada fricción real de uso → issue en GitHub. Regla: lo que repitas 3 veces se arregla; lo que pase 1 vez no. El backlog de issues es el roadmap." }],
+        },
+        {
+          title: "Observabilidad mínima",
+          status: "pendiente",
+          notes: [{ kind: "pendiente", text: "Cloudflare registra errores del Worker gratis. Activar alertas de 500s o revisar el dashboard 1 vez/mes: si la app falla en el gym y no te enteras, pierdes confianza." }],
+        },
+        {
+          title: "Revisar el árbol cada iteración",
+          status: "decidido",
+          notes: [{ kind: "decidido", text: "Este site es el informe de producto: al cerrar cada issue del backlog, mover a decidido. (Ya en práctica.)" }],
+        },
       ],
     },
   ],
