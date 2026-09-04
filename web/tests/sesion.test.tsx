@@ -157,7 +157,7 @@ describe("state A: editable", () => {
     expect(boxes.length).toBe(6); // 3 + 3
     const rows = screen.getAllByRole("link", { name: /press banca|remo con barra/i });
     expect(rows.map((r) => r.textContent)).toEqual(["Press banca", "Remo con barra"]);
-    expect(rows[0].getAttribute("href")).toBe("/ejercicio/21");
+    expect(rows[0].getAttribute("href")).toBe("/ejercicios/21");
   });
 
   it("expanding shows steppers; increment is draft-only (no fetch)", async () => {

@@ -1,7 +1,7 @@
 // /plan-fuerza — plantillas rotatorias expandibles + editor de borrador local.
 // Diseño E4: D2 (un PUT atómico), D3 (↑/↓ sin drag), D5 (chips = orden API).
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useTemplates, type Template } from "../lib/templates";
 import { useExercises } from "../lib/exercises";
 import { apiField } from "../lib/api";
@@ -119,7 +119,7 @@ function TemplateEditor({
       <ul className="flex flex-col gap-2">
         {draft.entries.map((entry, i) => (
           <li key={entry.key} className="flex flex-wrap items-end gap-2">
-            <span className="min-w-32 pb-2 font-medium">{entry.exerciseName}</span>
+            <Link className="min-w-32 pb-2 font-medium text-primary underline-offset-4 hover:underline" to={`/ejercicios/${entry.exerciseId}`}>{entry.exerciseName}</Link>
             <label className="text-sm">
               Series
               <input
@@ -258,7 +258,7 @@ function TemplateCard({
             const target = formatTarget(e);
             return (
               <li key={e.id}>
-                <button className="min-h-11 text-left" onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}>
+                <button className="min-h-11 text-left text-primary underline-offset-4 hover:underline" onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}>
                   {e.exerciseName}
                   {target && <span className="ml-2 text-text-secondary">{target}</span>}
                 </button>

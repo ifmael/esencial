@@ -431,7 +431,7 @@ export function SesionPage() {
             <section key={ex.te.id} className="card">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Link to={`/ejercicio/${ex.te.exerciseId}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link to={`/ejercicios/${ex.te.exerciseId}`} className="font-semibold text-primary underline-offset-4 hover:underline">
                     {ex.te.exerciseName}
                   </Link>
                   <button
