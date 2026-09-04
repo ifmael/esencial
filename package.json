@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "pnpm build && wrangler dev",
     "build": "pnpm --filter web build",
     "test": "pnpm --filter api test && pnpm --filter web test",
     "deploy": "pnpm build && wrangler deploy",

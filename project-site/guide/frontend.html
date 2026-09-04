@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frontend — Esencial</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+
+<div class="hero">
+  <h1>Frontend: React sin estado global</h1>
+  <p>7 pantallas, react-router 7 en modo declarativo, Tailwind 4, y una regla de oro:
+  <b>cada pantalla es dueña de sus datos</b>. No hay Redux, no hay Context de datos, no hay cache client.
+  Un hook por pantalla, un fetch, estado local.</p>
+</div>
+
+<h2><span class="n">1.</span> El mapa de rutas</h2>
+<pre data-lang="tsx">&lt;BrowserRouter&gt;
+  &lt;Routes&gt;
+    &lt;Route path="/login" element={&lt;LoginPage /&gt;} /&gt;
+    &lt;Route element={&lt;GuardedShell /&gt;}&gt;          {/* chequea /api/auth/status 1 vez */}
+      &lt;Route path="/" element={&lt;DiaPage /&gt;} /&gt;              {/* pantalla principal */}
+      &lt;Route path="/plan-recetas" element={&lt;PlanRecetasPage /&gt;} /&gt;
+      &lt;Route path="/plan-fuerza" element={&lt;PlanFuerzaPage /&gt;} /&gt;
+      &lt;Route path="/recetario" element={&lt;RecetarioPage /&gt;} /&gt;
+      &lt;Route path="/recetario/:id" element={&lt;RecetarioDetallePage /&gt;} /&gt;
+      &lt;Route path="/ejercicios" element={&lt;EjerciciosPage /&gt;} /&gt;
+      &lt;Route path="/sesion/:date" element={&lt;SesionPage /&gt;} /&gt;
+    &lt;/Route&gt;
+  &lt;/Routes&gt;
+&lt;/BrowserRouter&gt;</pre>
+<p style="font-size:.85rem;color:var(--text2)">Fuente: <code>web/src/app.tsx</code>. <code>GuardedShell</code> pregunta a
+<code>/api/auth/status</code> al arrancar; si no hay sesión → <code>/login?next=…</code>. Es defensa extra: el 302 del server ya te habría mandado ahí.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 880 300" width="880" role="img" aria-label="Navegación de la SPA">
+  <defs>
+    <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#15803d"/>
+    </marker>
+  </defs>
+  <style>
+    .pg { fill:#fff; stroke:#e7e5e4; rx:9 }
+    .pl { font: 600 13px system-ui; fill:#1c1917 }
+    .ps { font: 10px system-ui; fill:#78716c }
+    .nav { stroke:#15803d; stroke-width:1.5; fill:none; marker-end:url(#arr3) }
+    .hot { fill:#f0fdf4; stroke:#15803d }
+  </style>
+  <rect class="pg hot" x="20" y="110" width="150" height="60" rx="9"/>
+  <text class="pl" x="95" y="136" text-anchor="middle">Hoy ("/")</text>
+  <text class="ps" x="95" y="154" text-anchor="middle">GET /api/day/:date</text>
+
+  <rect class="pg" x="230" y="30" width="160" height="60" rx="9"/>
+  <text class="pl" x="310" y="56" text-anchor="middle">Plan recetas</text>
+  <text class="ps" x="310" y="74" text-anchor="middle">rejilla 7×3 semanal</text>
+  <rect class="pg" x="230" y="190" width="160" height="60" rx="9"/>
+  <text class="pl" x="310" y="216" text-anchor="middle">Plan fuerza</text>
+  <text class="ps" x="310" y="234" text-anchor="middle">plantillas A/B/C</text>
+
+  <rect class="pg" x="450" y="30" width="170" height="60" rx="9"/>
+  <text class="pl" x="535" y="56" text-anchor="middle">Lista de compra</text>
+  <text class="ps" x="535" y="74" text-anchor="middle">bottom-sheet modal</text>
+  <rect class="pg" x="450" y="190" width="170" height="60" rx="9"/>
+  <text class="pl" x="535" y="216" text-anchor="middle">Sesión /sesion/:date</text>
+  <text class="ps" x="535" y="234" text-anchor="middle">registrar kg × reps</text>
+
+  <rect class="pg" x="680" y="30" width="180" height="60" rx="9"/>
+  <text class="pl" x="770" y="56" text-anchor="middle">Recetario</text>
+  <text class="ps" x="770" y="74" text-anchor="middle">lista + detalle + editor</text>
+  <rect class="pg" x="680" y="190" width="180" height="60" rx="9"/>
+  <text class="pl" x="770" y="216" text-anchor="middle">Ejercicios</text>
+  <text class="ps" x="770" y="234" text-anchor="middle">catálogo + detalle</text>
+
+  <path class="nav" d="M 172 128 C 205 100, 210 70, 228 62"/>
+  <path class="nav" d="M 172 155 C 205 185, 210 215, 228 218"/>
+  <path class="nav" d="M 392 60 L 448 60"/>
+  <path class="nav" d="M 392 220 L 448 220"/>
+  <path class="nav" d="M 622 60 L 678 60"/>
+  <path class="nav" d="M 622 220 L 678 220"/>
+</svg>
+<p class="cap">Todo cuelga de "Hoy". La sesión de gym se abre desde el día programado; la lista de compra es un sheet sobre el plan semanal.</p>
+</div>
+
+<h2><span class="n">2.</span> El patrón de datos: hooks por pantalla</h2>
+<p>Cada pantalla tiene un hook que encapsula su única fuente de datos. Este es <code>useDay</code>, corazón de la app:</p>
+<pre data-lang="ts">export function useDay(date: string): DayState {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [nonce, setNonce] = useState(0);
+  const current = useRef(date);
+  current.current = date;                    // el ref SIEMPRE sabe la fecha viva
+
+  useEffect(() =&gt; {
+    let live = true;
+    setData(null);                           // nada de datos rancios mientras carga
+    setLoading(true);
+    fetch(`/api/day/${date}`)
+      .then((res) =&gt; res.json())
+      .then((d) =&gt; {
+        if (live &amp;&amp; current.current === date) setData(d);  // descarta respuestas viejas
+      });
+    return () =&gt; { live = false; };          // cleanup al desmontar/cambiar fecha
+  }, [date, nonce]);
+
+  return { data, loading, error, reload: () =&gt; setNonce((n) =&gt; n + 1) };
+}</pre>
+<p style="font-size:.85rem;color:var(--text2)">Fuente: <code>web/src/lib/day.ts</code>. Fíjate en <code>current.current === date</code>:
+si navegas rápido entre días, la respuesta lenta del día viejo <b>se descarta</b>. Es el bug clásico de race condition, resuelto en 3 líneas.</p>
+
+<h2><span class="n">3.</span> Autosave de la nota: debounce + desmontaje</h2>
+<p>La nota del día se guarda sola. El truco está en cómo el padre monta el editor:</p>
+<pre data-lang="tsx">// El padre lo monta con key={date}: al cambiar de fecha, el desmontaje
+// guarda lo pendiente contra la fecha VIEJA (closure de `date`),
+// y el editor nuevo arranca con la nota de la fecha nueva.
+&lt;NoteEditor key={date} date={date} initial={note.text} /&gt;
+
+// dentro de NoteEditor: debounce de 800ms + flush en unmount
+useEffect(() =&gt; {
+  if (!dirty) return;
+  const t = setTimeout(() =&gt; apiSend(`/api/notes/${date}`, "PUT", { text }), 800);
+  return () =&gt; clearTimeout(t);
+}, [text]);</pre>
+<p style="font-size:.85rem;color:var(--text2)">Fuente: <code>web/src/routes/dia.tsx</code>. Nada de "guardar" manual: escribes, esperas 0.8s, guardado.</p>
+
+<h2><span class="n">4.</span> Sin optimismo: PUT semanal completo</h2>
+<p>El plan de comidas hace algo deliberadamente <b>aburrido</b> (decisión D6 del design): cada cambio persiste con un
+PUT de la semana entera y el estado local se reemplaza con la respuesta del servidor. Sin actualizaciones optimistas, sin diffs:</p>
+<pre data-lang="ts">const save = useCallback(async (next: Slot[]) =&gt; {
+  const ok = await apiSend(`/api/meal-plan/${isoWeek}`, "PUT", { slots: next });
+  if (!ok) refetch();   // PUT fallido → recarga el estado real del servidor
+}, [isoWeek]);</pre>
+<div class="note"><b>Filosofía del repo:</b> para una app de 1 usuario, la simplicidad de "el servidor siempre gana" vale
+más que la fluidez del optimismo. El único draft en memoria es el de la sesión de gym (estado A → B al cerrar).</div>
+
+<h2><span class="n">5.</span> Errores tipados de punta a punta</h2>
+<p>La clase <code>ApiError</code> transporta el sobre <code>{error, field}</code> del servidor hasta los inputs:</p>
+<pre data-lang="ts">export class ApiError extends Error {
+  constructor(
+    public readonly error: string,
+    public readonly field: string | undefined,
+    public readonly status: number,
+  ) { super(error); }
+}
+// en un formulario:
+catch (e) { setFieldError(apiField(e)) }  // pinta el error junto al input exacto</pre>
+<p style="font-size:.85rem;color:var(--text2)">Fuente: <code>web/src/lib/api.ts</code>. Conecta con la sección de errores de la página API: el <code>field</code> que Zod calculó viaja hasta la UI.</p>
+
+<h2><span class="n">6.</span> Estilo: tokens compartidos</h2>
+<p>Los colores que ves en esta guía son <b>los mismos tokens</b> que usa la app (<code>web/src/globals.css</code>):
+verde <code>#15803d</code> primario, ámbar para "pendiente", superficies stone de Tailwind. El shell tiene sidebar en
+desktop y bottom-tabs en móvil con el mismo array <code>NAV</code>:</p>
+<pre data-lang="tsx">const NAV = [
+  { href: "/", label: "Hoy" },
+  { href: "/plan-recetas", label: "Plan recetas" },
+  { href: "/plan-fuerza", label: "Plan fuerza" },
+] as const;
+// el mismo NAV renderiza el sidebar md: y los tabs móviles</pre>
+
+<div class="pager">
+  <a href="api.html"><span class="dir">anterior</span>← API</a>
+</div>
+
+</main>
+<script src="chrome.js"></script>
+<script src="site.js"></script>
+</body>
+</html>

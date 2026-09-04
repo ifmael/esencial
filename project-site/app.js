@@ -30,7 +30,8 @@ function renderNode(node) {
   return wrap;
 }
 
-document.getElementById("updated").textContent = TREE.updated;
+const updatedEl = document.getElementById("updated");
+if (updatedEl) updatedEl.textContent = TREE.updated;
 
 // --- Zona dinámica (CM2): merge de ENTRIES, formulario de autoría, guardado FSA/descarga ---
 const form = document.getElementById("entry-form");
@@ -107,4 +108,3 @@ document.getElementById("f-save").addEventListener("click", async () => {
   URL.revokeObjectURL(a.href);
 });
 
-render();

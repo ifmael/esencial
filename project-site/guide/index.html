@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Esencial — Guía del proyecto</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+
+<div class="hero">
+  <h1>Esencial</h1>
+  <p>Una app personal de <b>comidas + entrenamiento</b> desplegada como <b>un solo Worker de Cloudflare</b>:
+  API Hono bajo <code style="background:rgba(255,255,255,.15);padding:.05rem .4rem;border-radius:4px">/api/*</code>,
+  SPA React servida como assets estáticos, y SQLite (D1) como única base de datos.
+  Esta guía la explica página a página, con el código real del repo.</p>
+</div>
+
+<h2>El proyecto en una frase</h2>
+<p class="lead">Cada día abres la app y ves <b>tu día</b>: qué cocinar (desayuno/almuerzo/cena del plan semanal),
+qué entrenar (la plantilla de fuerza programada) y tus notas. Todo lo demás —recetario, catálogo de ejercicios,
+lista de la compra— existe para alimentar esa pantalla.</p>
+
+<h2>Las 5 piezas</h2>
+<div class="grid2">
+  <a class="card" href="arquitectura.html" style="text-decoration:none;color:inherit">
+    <div class="icon">🏗️</div><h3>Arquitectura</h3>
+    <p>Un Worker, una SPA, una BD. Cómo viaja una petición desde el navegador hasta D1 y vuelta.</p>
+    <span class="badge hot">empieza aquí</span>
+  </a>
+  <a class="card" href="datos.html" style="text-decoration:none;color:inherit">
+    <div class="icon">🗄️</div><h3>Modelo de datos</h3>
+    <p>13 tablas SQLite: recetas, ejercicios, plantillas, planes semanales, logs de entrenamiento.</p>
+  </a>
+  <a class="card" href="api.html" style="text-decoration:none;color:inherit">
+    <div class="icon">🔌</div><h3>API REST</h3>
+    <p>Hono + Zod: validación fail-closed, sobre <code>{error, field}</code> como contrato único de error.</p>
+  </a>
+  <a class="card" href="frontend.html" style="text-decoration:none;color:inherit">
+    <div class="icon">🖥️</div><h3>Frontend</h3>
+    <p>React 7 + Tailwind: rutas, el hook <code>useDay</code>, y por qué no hay estado global.</p>
+  </a>
+  <a class="card" href="gestion.html" style="text-decoration:none;color:inherit">
+    <div class="icon">🧭</div><h3>Gestión</h3>
+    <p>El árbol de decisiones del proyecto: fases, épicas E0–E7, qué quedó descartado y qué está activo.</p>
+  </a>
+</div>
+
+<h2>Lo que hace la app (dominio)</h2>
+<div class="grid3">
+  <div class="card"><h3>🍎 Recetario</h3><p>Recetas con ingredientes por ración, pasos, materiales, foto y tags.</p></div>
+  <div class="card"><h3>📅 Plan semanal</h3><p>Rejilla 7 días × 3 comidas. Asignas recetas a huecos por semana ISO.</p></div>
+  <div class="card"><h3>🛒 Lista de compra</h3><p>Se <b>agrega al vuelo</b> desde el plan: nunca se guarda; mezcla items manuales.</p></div>
+  <div class="card"><h3>💪 Plan de fuerza</h3><p>Plantillas A/B/C con ejercicios, series y rangos de reps. Se programan por fecha.</p></div>
+  <div class="card"><h3>📝 Registro de sesión</h3><p>Kg × reps por serie, esfuerzo 1–5. Al cerrar, el día queda <b>solo lectura</b>.</p></div>
+  <div class="card"><h3>📓 Día</h3><p>Pantalla índice: un solo GET que junta comidas + sesión + nota del día.</p></div>
+</div>
+
+<h2>Cómo se construyó (y por qué te suena)</h2>
+<p class="lead">El repo usa <a href="https://openspec.dev">OpenSpec</a>: cada épica (E0–E7) vive en
+<code>openspec/changes/archive/</code> con <code>proposal.md</code> → <code>design.md</code> → <code>tasks.md</code> →
+<code>specs/</code>. Los specs tienen traducción legible en español (<code>spec-lectura-es.md</code>) — esta guía es su complemento visual.</p>
+
+<div class="note">
+<b>Para leer en orden:</b> Arquitectura → Datos → API → Frontend. Cada página es autónoma y enlaza el archivo real del repo.
+</div>
+
+</main>
+<script src="chrome.js"></script>
+<script src="site.js"></script>
+</body>
+</html>
