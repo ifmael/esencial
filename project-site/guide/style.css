@@ -124,3 +124,10 @@ summary { cursor: pointer; padding: .3rem 0; font-weight: 600; user-select: none
 .badge.nota { background: var(--surface-muted); color: var(--text2) }
 .gestion-updated { color: var(--text2); font-size: .85rem; margin-bottom: 1.5rem }
 .gestion-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; color: var(--text2); font-size: .8rem }
+
+/* formulario de autoría de entradas (CM2) */
+#entry-form { margin-top: 2rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface) }
+#entry-form label { display: block; font-size: .8rem; font-weight: 600; margin: .5rem 0 .15rem }
+#entry-form input, #entry-form select { width: 100%; max-width: 28rem; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: .35rem; font: inherit; background: var(--bg); color: var(--text) }
+#entry-form button { margin-top: .75rem; margin-right: .5rem; padding: .4rem 1rem; border: 0; border-radius: .35rem; background: var(--primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer }
+#entry-form .warn { color: #b91c1c; font-size: .8rem; margin-top: .4rem; min-height: 1em }

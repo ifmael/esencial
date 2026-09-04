@@ -18,12 +18,39 @@
 
 <div class="gestion-updated">Actualizado: <span id="updated"></span></div>
 <div id="tree"></div>
+<form id="entry-form">
+  <label for="f-parent">Nodo de destino</label>
+  <select id="f-parent"></select>
+  <span class="warn" id="f-warn"></span>
+  <label for="f-kind">Tipo</label>
+  <select id="f-kind">
+    <option value="nota">nota</option>
+    <option value="decidido">decidido</option>
+    <option value="pendiente">pendiente</option>
+    <option value="descartado">descartado</option>
+  </select>
+  <label><input type="radio" name="f-mode" value="note" checked> anotación</label>
+  <label><input type="radio" name="f-mode" value="node"> nodo nuevo</label>
+  <div id="f-note-box">
+    <label for="f-text">Texto</label>
+    <input id="f-text" required>
+  </div>
+  <div id="f-node-box" hidden>
+    <label for="f-title">Título del nodo</label>
+    <input id="f-title">
+    <label for="f-status">Estado</label>
+    <select id="f-status">
+      <option value="">(sin estado)</option>
+      <option>decidido</option>
+      <option>descartado</option>
+      <option>pendiente</option>
+      <option>activo</option>
+    </select>
+  </div>
+  <button type="submit">Añadir</button>
+  <button type="button" id="f-save">Guardar entries.js</button>
+</form>
 <div class="gestion-legend">
-  <span><span class="badge decidido">decidido</span> decisión tomada</span>
-  <span><span class="badge descartado">descartado</span> opción rechazada</span>
-  <span><span class="badge pendiente">pendiente</span> por decidir</span>
-  <span><span class="badge activo">activo</span> en curso</span>
-</div>
 
 <div class="pager">
   <a href="frontend.html"><span class="dir">anterior</span>← Frontend</a>
@@ -31,10 +58,9 @@
 
 </main>
 <script src="../data.js"></script>
+<script src="../entries.js"></script>
+<script src="../entries-lib.js"></script>
 <script src="../app.js"></script>
-<script>
-// app.js escribe en #updated y #tree del site clásico; mismos IDs aquí.
-</script>
 <script src="chrome.js"></script>
 <script src="site.js"></script>
 </body>
