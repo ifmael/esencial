@@ -31,4 +31,80 @@ function renderNode(node) {
 }
 
 document.getElementById("updated").textContent = TREE.updated;
-document.getElementById("tree").appendChild(renderNode(TREE));
+
+// --- Zona dinámica (CM2): merge de ENTRIES, formulario de autoría, guardado FSA/descarga ---
+const form = document.getElementById("entry-form");
+
+function titles(tree, acc) {
+  acc = acc || [];
+  acc.push(tree.title);
+  for (const c of tree.children || []) titles(c, acc);
+  return acc;
+}
+
+function render() {
+  const merged = mergeEntries(TREE, window.ENTRIES);
+  const box = document.getElementById("tree");
+  box.textContent = "";
+  box.appendChild(renderNode(merged));
+  const sel = document.getElementById("f-parent");
+  const keep = sel.value;
+  sel.textContent = "";
+  for (const t of titles(merged)) sel.appendChild(el("option", null, t));
+  if (keep) sel.value = keep;
+  document.getElementById("f-warn").textContent =
+    countTitleMatches(merged, sel.value) > 1
+      ? "Aviso: hay varios nodos con este título; la entrada se fijará al primero."
+      : "";
+}
+
+for (const r of form.elements["f-mode"])
+  r.addEventListener("change", () => {
+    const node = form.elements["f-mode"].value === "node";
+    document.getElementById("f-node-box").hidden = !node;
+    document.getElementById("f-note-box").hidden = node;
+    document.getElementById("f-text").required = !node; // no validar un campo oculto
+  });
+
+document.getElementById("f-parent").addEventListener("change", render); // reavisa colisiones al elegir
+form.addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const parent_title = document.getElementById("f-parent").value;
+  if (form.elements["f-mode"].value === "node") {
+    const title = document.getElementById("f-title").value.trim();
+    if (!title) return;
+    const status = document.getElementById("f-status").value;
+    window.ENTRIES.push(status ? { parent_title, title, status } : { parent_title, title });
+    document.getElementById("f-title").value = "";
+  } else {
+    const text = document.getElementById("f-text").value.trim();
+    if (!text) return;
+    window.ENTRIES.push({ parent_title, kind: document.getElementById("f-kind").value, text });
+    document.getElementById("f-text").value = "";
+  }
+  render();
+});
+
+let fileHandle = null;
+document.getElementById("f-save").addEventListener("click", async () => {
+  const data = serializeEntries(window.ENTRIES);
+  if (window.showOpenFilePicker) {
+    try {
+      if (!fileHandle)
+        fileHandle = (await showOpenFilePicker({ suggestedName: "entries.js" }))[0];
+      const w = await fileHandle.createWritable();
+      await w.write(data);
+      await w.close();
+    } catch (err) {
+      if (err.name !== "AbortError") throw err; // cancelar el picker = no guardar
+    }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type: "text/javascript" }));
+  a.download = "entries.js";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+render();
