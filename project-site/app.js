@@ -35,6 +35,7 @@ if (updatedEl) updatedEl.textContent = TREE.updated;
 
 // --- Zona dinámica (CM2): merge de ENTRIES, formulario de autoría, guardado FSA/descarga ---
 const form = document.getElementById("entry-form");
+if (form) {
 
 function titles(tree, acc) {
   acc = acc || [];
@@ -107,4 +108,5 @@ document.getElementById("f-save").addEventListener("click", async () => {
   a.click();
   URL.revokeObjectURL(a.href);
 });
-
+  render();
+}
