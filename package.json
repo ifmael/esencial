@@ -6,6 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "predev": "node api/scripts/ensure-dev-vars.ts",
     "dev": "pnpm build && wrangler dev",
     "build": "pnpm --filter web build",
     "test": "pnpm --filter api test && pnpm --filter web test",

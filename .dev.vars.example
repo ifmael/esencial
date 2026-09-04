@@ -1,5 +1,7 @@
 # Copy to .dev.vars (gitignored, WORKSPACE ROOT — wrangler reads it from cwd)
-# for `wrangler dev`. Generate values:
+# for `wrangler dev`. `pnpm dev` lo autogenera (api/scripts/ensure-dev-vars.ts)
+# leyendo la clave de la variable de entorno ESENCIAL_DEV_PASSWORD; si no está,
+# genera una aleatoria y la muestra al arrancar. Para valores a mano:
 #   node --experimental-strip-types api/scripts/hash-password.ts 'tu clave'
 #   openssl rand -base64 24
 AUTH_SECRET="replace-me-32-bytes-minimum-xxxxxxx"
