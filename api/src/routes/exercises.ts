@@ -37,8 +37,8 @@ export const exercises = new Hono<{ Bindings: Env }>()
       const name = input.name.trim();
       const results = await db.batch([
         db
-          .prepare("INSERT INTO exercises (name, description, setup_cues, technique_url) VALUES (?, ?, ?, ?)")
-          .bind(name, input.description ?? null, input.setupCues ?? null, input.techniqueUrl ?? null),
+          .prepare("INSERT INTO exercises (name, description, setup_cues, technique_url, steps) VALUES (?, ?, ?, ?, ?)")
+          .bind(name, input.description ?? null, input.setupCues ?? null, input.techniqueUrl ?? null, input.steps ? JSON.stringify(input.steps) : null),
         ...tagStatements(name, input.tags, db),
       ]);
       return json(await loadExercise(db, Number(results[0].meta.last_row_id)), 201);
@@ -63,8 +63,8 @@ export const exercises = new Hono<{ Bindings: Env }>()
       const name = input.name.trim();
       await db.batch([
         db
-          .prepare("UPDATE exercises SET name=?, description=?, setup_cues=?, technique_url=? WHERE id=?")
-          .bind(name, input.description ?? null, input.setupCues ?? null, input.techniqueUrl ?? null, id),
+          .prepare("UPDATE exercises SET name=?, description=?, setup_cues=?, technique_url=?, steps=? WHERE id=?")
+          .bind(name, input.description ?? null, input.setupCues ?? null, input.techniqueUrl ?? null, input.steps ? JSON.stringify(input.steps) : null, id),
         db.prepare("DELETE FROM exercise_tags WHERE exercise_id=?").bind(id),
         ...tagStatements(name, input.tags, db),
       ]);

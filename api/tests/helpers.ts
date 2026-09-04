@@ -7,6 +7,7 @@ import app from "../src/index";
 import migrations0002 from "../migrations/0002_e2_recipes_photo_tags.sql?raw";
 import schemaSql from "../schema.sql?raw";
 import m0003Sql from "../migrations/0003_e3_shopping.sql?raw";
+import m0005Sql from "../migrations/0005_exercise_steps.sql?raw";
 
 let bootstrapped = false;
 
@@ -19,7 +20,7 @@ async function bootstrap(): Promise<void> {
   await env.DB.batch([env.DB.prepare(schemaSql), env.DB.prepare(migrations0002)]);
   // Reproduce the wrangler runner's end state: each additive migration file
   // in filename order. E2 0002 + E3 0003 mirror _cf_D1_MIGRATIONS (once per worker).
-  for (const sql of [m0003Sql]) await env.DB.batch(sql.split(";").filter((s) => s.trim()).map((s) => env.DB.prepare(s)));
+  for (const sql of [m0003Sql, m0005Sql]) await env.DB.batch(sql.split(";").filter((s) => s.trim()).map((s) => env.DB.prepare(s)));
   bootstrapped = true;
 }
 

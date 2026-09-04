@@ -7,9 +7,9 @@ import type { Exercise } from "../src/lib/exercises";
 import type { Template } from "../src/lib/templates";
 import type { TemplatePayload } from "../src/lib/template-draft";
 
-const press: Exercise = { id: 7, name: "Press banca", description: null, setupCues: null, techniqueUrl: null, tags: ["pecho"] };
-const remo: Exercise = { id: 8, name: "Remo", description: null, setupCues: null, techniqueUrl: null, tags: ["espalda"] };
-const sent: Exercise = { id: 9, name: "Sentadilla", description: null, setupCues: null, techniqueUrl: null, tags: ["pierna"] };
+const press: Exercise = { id: 7, name: "Press banca", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["pecho"] };
+const remo: Exercise = { id: 8, name: "Remo", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["espalda"] };
+const sent: Exercise = { id: 9, name: "Sentadilla", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["pierna"] };
 
 const tplA = (): Template => ({
   id: 1,

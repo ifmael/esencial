@@ -161,7 +161,8 @@ describe("security headers on every response", () => {
       expect(csp).toContain("img-src 'self' data: blob:");
       expect(csp).toContain("style-src 'self' 'unsafe-inline'");
       expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-      expect(res.headers.get("referrer-policy")).toBe("same-origin");
+      expect(res.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+      expect(csp).toContain("frame-src https://www.youtube.com");
     });
   }
 });

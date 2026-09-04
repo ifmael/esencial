@@ -1,5 +1,5 @@
 // /ejercicios + /ejercicios/:id — catálogo del banco de ejercicios (E4).
-// Diseño D4: "Ver técnica" es un enlace libre (z.url()), no solo YouTube.
+// Diseño D4: "Ver técnica" acepta cualquier URL; los enlaces de YouTube se empotran (E8).
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useExercises, type Exercise, type ExerciseInput } from "../lib/exercises";
@@ -7,6 +7,9 @@ import { apiField } from "../lib/api";
 import { useTemplates, type Template, type TemplatesState } from "../lib/templates";
 
 const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : "Error inesperado");
+
+const ytEmbedId = (url: string): string | null =>
+  url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/)?.[1] ?? null;
 
 const TagChips = ({ tags }: { tags: string[] }) => (
   <ul className="flex flex-wrap gap-1" aria-label="tags">
@@ -20,25 +23,30 @@ const TagChips = ({ tags }: { tags: string[] }) => (
 
 // --- Editor (create + edit) --------------------------------------------------
 
-type Draft = { name: string; description: string; setupCues: string; techniqueUrl: string; tags: string[] };
+type Draft = { name: string; description: string; setupCues: string; techniqueUrl: string; steps: string; tags: string[] };
 
-const emptyDraft = (): Draft => ({ name: "", description: "", setupCues: "", techniqueUrl: "", tags: [] });
+const emptyDraft = (): Draft => ({ name: "", description: "", setupCues: "", techniqueUrl: "", steps: "", tags: [] });
 
 const toDraft = (x: Exercise): Draft => ({
   name: x.name,
   description: x.description ?? "",
   setupCues: x.setupCues ?? "",
   techniqueUrl: x.techniqueUrl ?? "",
+  steps: x.steps?.join("\n") ?? "",
   tags: [...x.tags],
 });
 
-const toInput = (d: Draft): ExerciseInput => ({
-  name: d.name.trim(),
-  description: d.description || null,
-  setupCues: d.setupCues || null,
-  techniqueUrl: d.techniqueUrl || null,
-  tags: d.tags,
-});
+const toInput = (d: Draft): ExerciseInput => {
+  const steps = d.steps.split("\n").map((x) => x.trim()).filter((x) => x.length > 0);
+  return {
+    name: d.name.trim(),
+    description: d.description || null,
+    setupCues: d.setupCues || null,
+    techniqueUrl: d.techniqueUrl || null,
+    steps: steps.length ? steps : null,
+    tags: d.tags,
+  };
+};
 
 type FieldErrors = { name?: string; tags?: string; techniqueUrl?: string };
 
@@ -110,6 +118,16 @@ function ExerciseEditor({
           className="input"
           value={draft.setupCues}
           onChange={(e) => setDraft({ ...draft, setupCues: e.target.value })}
+        />
+      </div>
+      <div className="flex flex-col gap-1 text-sm">
+        <label htmlFor="ex-steps">Pasos de ejecución</label>
+        <textarea
+          id="ex-steps"
+          className="input"
+          placeholder="Un paso por línea"
+          value={draft.steps}
+          onChange={(e) => setDraft({ ...draft, steps: e.target.value })}
         />
       </div>
       <div className="flex flex-col gap-1 text-sm">
@@ -360,6 +378,27 @@ export function EjercicioDetailPage() {
             <h2 className="mb-1 font-semibold">Preparación</h2>
             <p className="whitespace-pre-line">{exercise.setupCues}</p>
           </div>
+        )}
+        {exercise.steps && exercise.steps.length > 0 && (
+          <div>
+            <h2 className="mb-1 font-semibold">Cómo se ejecuta</h2>
+            <ol className="list-decimal space-y-1 pl-5">
+              {exercise.steps.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          </div>
+        )}
+        {exercise.techniqueUrl && ytEmbedId(exercise.techniqueUrl) && (
+          <iframe
+            className="aspect-video w-full rounded-xl"
+            src={`https://www.youtube.com/embed/${ytEmbedId(exercise.techniqueUrl)}`}
+            title={`Vídeo de técnica de ${exercise.name}`}
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
         )}
         {exercise.techniqueUrl && (
           <a className="btn-secondary" href={exercise.techniqueUrl} target="_blank" rel="noopener noreferrer">

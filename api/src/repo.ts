@@ -44,10 +44,11 @@ export async function loadRecipe(db: D1Database, id: number): Promise<Row | null
 export async function loadExercise(db: D1Database, id: number): Promise<Row | null> {
   const head = await row(
     db,
-    "SELECT id, name, description, setup_cues AS setupCues, technique_url AS techniqueUrl FROM exercises WHERE id = ?",
+    "SELECT id, name, description, setup_cues AS setupCues, technique_url AS techniqueUrl, steps FROM exercises WHERE id = ?",
     id,
   );
   if (!head) return null;
+  if (head.steps != null) head.steps = JSON.parse(String(head.steps));
   head.tags = (
     await rows(db, "SELECT tag FROM exercise_tags WHERE exercise_id = ? ORDER BY tag", id)
   ).map((t) => String(t.tag));

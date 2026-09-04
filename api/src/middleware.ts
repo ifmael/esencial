@@ -8,7 +8,7 @@ import type { Env } from "./db";
 import { json } from "./http";
 import { readSessionToken, SESSION_COOKIE } from "./auth";
 
-const CSP = "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'";
+const CSP = "default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'";
 // 'unsafe-inline' style is needed today: Tailwind v4 injects <style> in dev and
 // the build can emit inline assets (design D4); revisit when removing.
 
@@ -18,7 +18,9 @@ export const securityHeaders = createMiddleware(async (c, next) => {
   const h = c.res.headers;
   h.set("Content-Security-Policy", CSP);
   h.set("X-Content-Type-Options", "nosniff");
-  h.set("Referrer-Policy", "same-origin");
+  // strict-origin-when-cross-origin: sin esta, el embed de YouTube llega sin
+  // Referer y el player bloquea el vídeo ("This content is blocked...").
+  h.set("Referrer-Policy", "strict-origin-when-cross-origin");
 });
 
 async function hasValidSession(c: Context<{ Bindings: Env }>): Promise<boolean> {

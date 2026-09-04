@@ -11,11 +11,12 @@ const press: Exercise = {
   name: "Press banca",
   description: "Empuje horizontal con barra.",
   setupCues: "Escápulas retraídas, arcos naturales.",
-  techniqueUrl: "https://youtu.be/example",
+  techniqueUrl: "https://youtu.be/dQw4w9WgXcQ",
+  steps: ["Coloca la barra sobre el pecho.", "Baja controlado y sube empujando."],
   tags: ["pecho", "tríceps"],
 };
-const remo: Exercise = { id: 8, name: "Remo", description: null, setupCues: null, techniqueUrl: null, tags: ["espalda"] };
-const peso: Exercise = { id: 9, name: "Peso muerto", description: null, setupCues: null, techniqueUrl: null, tags: ["pierna"] };
+const remo: Exercise = { id: 8, name: "Remo", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["espalda"] };
+const peso: Exercise = { id: 9, name: "Peso muerto", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["pierna"] };
 
 const tplA = (): Template => ({
   id: 1,
@@ -92,23 +93,41 @@ describe("catalog", () => {
     fireEvent.change(screen.getByPlaceholderText(/añadir tag/i), { target: { value: "glúteo" } });
     fireEvent.keyDown(screen.getByPlaceholderText(/añadir tag/i), { key: "Enter" });
     fireEvent.change(screen.getByLabelText(/técnica/i), { target: { value: "https://youtu.be/ht" } });
+    fireEvent.change(screen.getByLabelText(/pasos de ejecución/i), { target: { value: "Paso uno\nPaso dos" } });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.exercises).toHaveLength(4));
     await screen.findByRole("heading", { name: "Hip thrust" });
     expect(screen.getByText("glúteo")).toBeDefined();
+    const post = api.calls.find((c) => c.method === "POST" && c.url === "/api/exercises")!;
+    expect((post.body as { steps: string[] | null }).steps).toEqual(["Paso uno", "Paso dos"]);
   });
 });
 
 describe("detail", () => {
-  it("renders description, cues, chips; Ver técnica link with safe attrs", async () => {
+  it("renders description, cues, steps, chips; YouTube embed + link with safe attrs", async () => {
     renderAt("/ejercicios/7");
     await screen.findByRole("heading", { name: "Press banca" });
     expect(screen.getByText("Empuje horizontal con barra.")).toBeDefined();
     expect(screen.getByText("Escápulas retraídas, arcos naturales.")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Cómo se ejecuta" })).toBeDefined();
+    expect(screen.getByText("Coloca la barra sobre el pecho.")).toBeDefined();
+    expect(screen.getByText("Baja controlado y sube empujando.")).toBeDefined();
+    const frame = screen.getByTitle(/vídeo de técnica de press banca/i);
+    expect(frame.getAttribute("src")).toBe("https://www.youtube.com/embed/dQw4w9WgXcQ");
     const link = screen.getByRole("link", { name: /ver técnica/i });
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
-    expect(link.getAttribute("href")).toBe("https://youtu.be/example");
+    expect(link.getAttribute("href")).toBe("https://youtu.be/dQw4w9WgXcQ");
+  });
+
+  it("non-YouTube techniqueUrl → link only, no iframe", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({ templates: [], exercises: [{ ...peso, techniqueUrl: "https://example.com/tec", steps: null }] });
+    renderAt("/ejercicios/9");
+    await screen.findByRole("heading", { name: "Peso muerto" });
+    expect(screen.queryByTitle(/vídeo de técnica/i)).toBeNull();
+    const link = screen.getByRole("link", { name: /ver técnica/i });
+    expect(link.getAttribute("href")).toBe("https://example.com/tec");
   });
 
   it("no techniqueUrl → no Ver técnica control", async () => {

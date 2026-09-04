@@ -29,6 +29,7 @@ export const exerciseSchema = z.object({
   description: z.string().optional().nullable(),
   setupCues: z.string().optional().nullable(),
   techniqueUrl: z.url("technique_url must be a valid URL").optional().nullable(),
+  steps: z.array(z.string().min(1, "Each step must be non-empty")).max(40).optional().nullable(),
   tags: z.array(z.string().min(1)).min(1, "At least one tag is required"),
 });
 export type ExerciseInput = z.infer<typeof exerciseSchema>;

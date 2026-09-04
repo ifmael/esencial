@@ -98,6 +98,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           description: b.description ?? null,
           setupCues: b.setupCues ?? null,
           techniqueUrl: b.techniqueUrl ?? null,
+          steps: (b as { steps?: string[] | null }).steps ?? null,
           tags: b.tags,
         };
         api.state.exercises.push(ex);
@@ -115,6 +116,7 @@ export function mockApi(seed: Seed = {}): MockApi {
             description: b.description ?? null,
             setupCues: b.setupCues ?? null,
             techniqueUrl: b.techniqueUrl ?? null,
+            steps: (b as { steps?: string[] | null }).steps ?? null,
             tags: b.tags,
           });
           return json(ex);

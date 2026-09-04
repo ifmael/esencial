@@ -89,4 +89,37 @@ describe("/api/exercises", () => {
     expect(res.status).toBe(204);
     expect((await get(`/api/exercises/${id}`)).status).toBe(404);
   });
+  it("creates exercise with steps and returns them as array", async () => {
+    const all = (await (await get("/api/exercises")).json()) as { id: number }[];
+    for (const e of all) await del(`/api/exercises/${e.id}`);
+    const res = await post("/api/exercises", {
+      name: "Sentadilla trasera",
+      description: "Carga la barra sobre la espalda.",
+      tags: ["pierna"],
+      steps: ["Coloca la barra en la espalda", "Baja con la cadera atrás", "Sube empujando el suelo"],
+    });
+    expect(res.status).toBe(201);
+    const id = Number((await body(res)).id);
+    const got = await body(await get(`/api/exercises/${id}`));
+    expect(got.steps).toEqual(["Coloca la barra en la espalda", "Baja con la cadera atrás", "Sube empujando el suelo"]);
+  });
+
+  it("400 on steps containing an empty string", async () => {
+    const res = await post("/api/exercises", { name: "Pasos malos", tags: ["x"], steps: ["ok", ""] });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("steps.1");
+  });
+
+  it("PUT replaces steps", async () => {
+    const id = await makePressBanca();
+    const res = await put(`/api/exercises/${id}`, {
+      name: "Press banca",
+      tags: ["pecho"],
+      steps: ["Primer paso", "Segundo paso"],
+    });
+    expect(res.status).toBe(200);
+    const got = await body(await get(`/api/exercises/${id}`));
+    expect(got.steps).toEqual(["Primer paso", "Segundo paso"]);
+  });
 });
+

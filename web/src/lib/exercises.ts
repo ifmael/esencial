@@ -8,6 +8,7 @@ export type Exercise = {
   description: string | null;
   setupCues: string | null;
   techniqueUrl: string | null;
+  steps: string[] | null;
   tags: string[];
 };
 
@@ -16,6 +17,7 @@ export type ExerciseInput = {
   description?: string | null;
   setupCues?: string | null;
   techniqueUrl?: string | null;
+  steps?: string[] | null;
   tags: string[];
 };
 
