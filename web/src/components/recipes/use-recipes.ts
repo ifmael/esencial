@@ -34,6 +34,17 @@ export type FieldError = { field: string; message: string };
 
 const jsonHeaders = { "content-type": "application/json" };
 
+/** GET list "returns fully hydrated recipes" — enforce the contract so a recipe
+ *  missing an array field (ingredients/steps/materials/tags) degrades to empty
+ *  instead of crashing the detail render. */
+const normalizeRecipe = (r: Recipe): Recipe => ({
+  ...r,
+  ingredients: r.ingredients ?? [],
+  steps: r.steps ?? [],
+  materials: r.materials ?? [],
+  tags: r.tags ?? [],
+});
+
 export function useRecipes() {
   const [list, setList] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +62,7 @@ export function useRecipes() {
         if (!res.ok) throw new Error(`GET /api/recipes ${res.status}`);
         return (await res.json()) as Recipe[];
       })
-      .then((data) => alive && setList(data))
+      .then((data) => alive && setList(data.map(normalizeRecipe)))
       .catch(() => alive && setError("No se pudo cargar el recetario."))
       .finally(() => alive && setLoading(false));
     return () => {

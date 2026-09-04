@@ -145,6 +145,29 @@ describe("template editor", () => {
     void getsBefore;
   });
 
+  it("body map: selecting a muscle group filters the list; Todos resets; empty group shows state", async () => {
+    await openEditor();
+    expect(screen.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Pecho" }));
+    expect(screen.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Sentadilla$/ })).toBeNull();
+
+    // search refines within the selected group
+    fireEvent.change(screen.getByPlaceholderText("Buscar ejercicio"), { target: { value: "zzz" } });
+    expect(screen.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(screen.getByText(/sin ejercicios/i)).toBeDefined();
+    fireEvent.change(screen.getByPlaceholderText("Buscar ejercicio"), { target: { value: "" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Todos" }));
+    expect(screen.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Core" }));
+    expect(screen.getByText(/sin ejercicios/i)).toBeDefined();
+  });
+
   it("edit: pre-filled; rename + reorder + targets → single PUT", async () => {
     await openPlan();
     fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }));

@@ -252,10 +252,10 @@ export function DiaPage() {
         </div>
       ) : data ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <MealsSection meals={data.meals} />
+          <MealsSection meals={data.meals ?? []} />
           <StrengthSection session={data.session} date={iso} />
           <Section title="NOTAS DEL DÍA">
-            <NoteEditor key={iso} date={iso} initial={data.note.text} />
+            <NoteEditor key={iso} date={iso} initial={data.note?.text ?? ""} />
           </Section>
         </div>
       ) : null}
