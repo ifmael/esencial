@@ -71,6 +71,35 @@ describe("GET /api/day/:date", () => {
     expect(day.note).toEqual({ text: "Buen día" });
   });
 
+  it("planned session incluye exercises [{exerciseId, exerciseName, position}] ordenados por position", async () => {
+    const r1 = await post("/api/exercises", { name: "Press banca", tags: ["pecho"] });
+    const r2 = await post("/api/exercises", { name: "Fondos", tags: ["tríceps"] });
+    const r3 = await post("/api/exercises", { name: "Remo", tags: ["espalda"] });
+    const [e1, e2, e3] = await Promise.all([body(r1), body(r2), body(r3)]).then((rs) =>
+      rs.map((r) => Number(r.id)),
+    );
+    const template = await post("/api/templates", {
+      name: "Empuje B",
+      exercises: [{ exerciseId: e3 }, { exerciseId: e1 }, { exerciseId: e2 }],
+    });
+    const templateId = Number((await body(template)).id);
+    await post("/api/plan-sessions", { date: "2026-09-02", templateId });
+
+    const res = await get("/api/day/2026-09-02");
+    expect(res.status).toBe(200);
+    const day = await body(res);
+    expect(day.session as SessionBox).toMatchObject({
+      templateId,
+      status: "planned",
+    });
+    const session = day.session as SessionBox & { exercises: unknown };
+    expect(session.exercises).toEqual([
+      { exerciseId: e3, exerciseName: "Remo", position: 0 },
+      { exerciseId: e1, exerciseName: "Press banca", position: 1 },
+      { exerciseId: e2, exerciseName: "Fondos", position: 2 },
+    ]);
+});
+
   it("día vacío: sin plan, sin sesión, sin nota → 200 con datos vacíos", async () => {
     const res = await get("/api/day/2026-09-02");
     expect(res.status).toBe(200);

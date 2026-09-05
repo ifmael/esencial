@@ -9,7 +9,7 @@ export type DaySession = {
   templateId: number;
   templateName: string;
   status: "planned" | "logged";
-  summary: { effort: number; exercises: number; sets: number } | null;
+  exercises?: { exerciseId: number; exerciseName: string; position: number }[];
 };
 
 export type DayData = {

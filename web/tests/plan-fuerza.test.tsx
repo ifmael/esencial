@@ -338,3 +338,56 @@ describe("exercise picker modal", () => {
     expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe("A — Empuje 3");
   });
 });
+
+describe("programar (schedule from template card)", () => {
+  const DAY = "2026-09-15";
+
+  // mockApi no conoce /api/plan-sessions; stub directo como en "API error...".
+  async function openWithSessions(postReply: () => Response) {
+    vi.unstubAllGlobals();
+    const base = mockApi({ templates: [tplA()], exercises: [press, remo, sent] });
+    api = base;
+    const fetchMock = vi.fn(async (url: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(url).includes("/api/plan-sessions")) return postReply();
+      return new Response(JSON.stringify(base.state.templates), { status: 200, headers: { "content-type": "application/json" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderAt("/plan-fuerza");
+    await screen.findByText("A — Empuje");
+    fireEvent.click(screen.getByRole("button", { name: "Programar" }));
+    return fetchMock;
+  }
+
+  it("TemplateCard shows a Programar button", async () => {
+    await openPlan();
+    expect(within(cardOf("A — Empuje")).getByRole("button", { name: "Programar" })).toBeDefined();
+  });
+
+  it("Programar opens a native date input", async () => {
+    await openPlan();
+    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Programar" }));
+    const input = await screen.findByLabelText(/fecha/i);
+    expect(input.getAttribute("type")).toBe("date");
+  });
+
+  it("posting /api/plan-sessions {date, templateId}; 201 shows Programada para <fecha>", async () => {
+    const fetchMock = await openWithSessions(() => new Response(JSON.stringify({ id: 1 }), { status: 201 }));
+    fireEvent.change(screen.getByLabelText(/fecha/i), { target: { value: DAY } });
+    fireEvent.click(screen.getByRole("button", { name: /agendar|confirmar|guardar/i }));
+    const post = await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([u, i]) => (i as RequestInit | undefined)?.method === "POST" && String(u).includes("/api/plan-sessions"));
+      expect(call).toBeDefined();
+      return call!;
+    });
+    expect(String(post[0])).toBe("/api/plan-sessions");
+    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ date: DAY, templateId: 1 });
+    await screen.findByText(`Programada para ${DAY}`);
+  });
+
+  it("409 shows Ya hay una sesión ese día", async () => {
+    await openWithSessions(() => new Response(JSON.stringify({ error: "Session exists" }), { status: 409 }));
+    fireEvent.change(screen.getByLabelText(/fecha/i), { target: { value: DAY } });
+    fireEvent.click(screen.getByRole("button", { name: /agendar|confirmar|guardar/i }));
+    await screen.findByText("Ya hay una sesión ese día");
+  });
+});

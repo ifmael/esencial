@@ -138,6 +138,13 @@ function StrengthSection({ session, date }: { session: DaySession | null; date: 
             <span className="badge-pending">Pendiente</span>
             <span className="font-semibold">{session.templateName}</span>
           </div>
+          {session.status === "planned" && session.exercises?.length ? (
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
+              {session.exercises.map((e) => (
+                <li key={e.exerciseId}>{e.exerciseName}</li>
+                ))}
+            </ol>
+          ) : null}
           <button className="btn-primary mt-3 min-h-11 w-full" onClick={openWorkout}>
             Registrar sesión
           </button>

@@ -47,6 +47,18 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
        GROUP BY ps.id`,
       date,
     );
+    const exercises = session
+      ? await rows(
+          db,
+          `SELECT te.exercise_id AS exerciseId, e.name AS exerciseName, te.position
+           FROM template_exercises te
+           JOIN exercises e ON e.id = te.exercise_id
+           JOIN plan_sessions ps ON ps.template_id = te.template_id
+           WHERE ps.date = ?
+           ORDER BY te.position`,
+          date,
+        )
+      : [];
 
     const note = await row(db, "SELECT text FROM day_notes WHERE date = ?", date);
 
@@ -61,6 +73,7 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
             templateId: Number(session.templateId),
             templateName: String(session.templateName),
             status: String(session.status),
+            exercises,
             summary:
               session.status === "logged" && session.effort !== null
                 ? {

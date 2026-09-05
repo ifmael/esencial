@@ -188,6 +188,51 @@ describe("sección FUERZA", () => {
     expect(screen.getByText(/esfuerzo 3\/5/)).toBeDefined();
     expect(screen.queryByRole("button", { name: "Registrar sesión" })).toBeNull();
   });
+  it("planned con exercises → 4 listitems numerados en FUERZA", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        payload({
+          session: {
+            id: 3,
+            templateId: 2,
+            templateName: "Empuje A",
+            status: "planned",
+            summary: null,
+            exercises: [
+              { exerciseId: 1, exerciseName: "Press banca", position: 1 },
+              { exerciseId: 2, exerciseName: "Press militar", position: 2 },
+              { exerciseId: 3, exerciseName: "Fondos", position: 3 },
+              { exerciseId: 4, exerciseName: "Aperturas", position: 4 },
+            ],
+          },
+        }),
+      ),
+    );
+    renderAt("/");
+    await settle();
+    const fuerza = screen.getByText("FUERZA").closest("section") as HTMLElement;
+    const items = within(fuerza).getAllByRole("listitem");
+    expect(items).toHaveLength(4);
+    expect(within(fuerza).getByText("Press banca")).toBeDefined();
+  });
+
+  it("exercises ausente o [] no rompe la tarjeta FUERZA", async () => {
+    for (const exercises of [undefined, []]) {
+      cleanup();
+      fetchMock.mockResolvedValue(
+        Response.json(
+          payload({
+            session: { id: 3, templateId: 2, templateName: "Empuje A", status: "planned", summary: null, exercises },
+          }),
+        ),
+      );
+      renderAt("/");
+      await settle();
+      const fuerza = screen.getByText("FUERZA").closest("section") as HTMLElement;
+      expect(within(fuerza).getByText("Empuje A")).toBeDefined();
+      expect(screen.queryByText(/Cannot read|Cannot destructure/)).toBeNull();
+    }
+  });
 });
 
 describe("sección NOTAS con autosave", () => {
