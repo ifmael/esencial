@@ -5,9 +5,16 @@ export function login(request: APIRequestContext, password: string) {
   return request.post("/api/auth/login", { data: { password } });
 }
 
-/** Authenticated API request helper (cookies live in request context). */
-export function apiRequest(request: APIRequestContext, method: string, url: string, data?: unknown) {
-  return request.fetch(url, { method, data });
+/** Authenticated API request helper (cookies live in request context). Parses the JSON body. */
+export async function apiRequest<T = unknown>(
+  request: APIRequestContext,
+  method: string,
+  url: string,
+  data?: unknown,
+): Promise<T> {
+  const res = await request.fetch(url, { method, data });
+  if (!res.ok()) throw new Error(`API ${method} ${url} → ${res.status()}`);
+  return (await res.json()) as T;
 }
 
 /** Unique name per run so tests never collide with existing rows. */

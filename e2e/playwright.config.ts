@@ -7,8 +7,10 @@ export default defineConfig({
   retries: 2,
   use: {
     baseURL: BASE,
-    executablePath: "/usr/bin/brave-browser",
-    launchOptions: { args: ["--no-sandbox"] },
+    launchOptions: {
+      executablePath: "/usr/bin/brave-browser",
+      args: ["--no-sandbox"],
+    },
   },
   webServer: {
     command: "pnpm dev",

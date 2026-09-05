@@ -2,7 +2,8 @@ import { test as setup, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
-const STATE = path.join(__dirname, ".auth", "state.json");
+// playwright.config reads storageState from e2e/.auth/state.json.
+const STATE = path.join(__dirname, "..", ".auth", "state.json");
 
 setup("login", async ({ request }) => {
   const res = await request.post("/api/auth/login", {
