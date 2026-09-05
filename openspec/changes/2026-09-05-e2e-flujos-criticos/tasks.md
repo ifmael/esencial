@@ -46,10 +46,10 @@ Chained PRs recommended: No — delivery is NOT via PRs; one review-only worktre
 
 ## Phase 3: Edge + Full Suite (t3)
 
-- [ ] 3.1 (RED→GREEN) Write `e2e/tests/edge.spec.ts` — week nav, notes autosave, envelope 400/409, deep-link `/login?next=` return; fix bugs until green.
-- [ ] 3.2 Run full `pnpm e2e`: all 4 journeys green; wrong-login at most once per run.
-- [ ] 3.3 Flake cleanup: explicit waits + stable selectors, `retries: 2`, no shared data.
-- [ ] 3.4 Regression: `pnpm test` (unit), `pnpm build` green.
+- [x] 3.1 (RED→GREEN) Write `e2e/tests/edge.spec.ts` — week nav, notes autosave, envelope 400/409, deep-link `/login?next=` return; fix bugs until green.
+- [x] 3.2 Run full `pnpm e2e`: all 4 journeys green; wrong-login at most once per run.
+- [x] 3.3 Flake cleanup: explicit waits + stable selectors, `retries: 2`, no shared data.
+- [x] 3.4 Regression: `pnpm test` (unit), `pnpm build` green.
 
 ## Phase 4: Orchestrator Verify (t4)
 
