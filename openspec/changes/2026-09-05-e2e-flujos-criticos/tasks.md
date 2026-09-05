@@ -28,12 +28,12 @@ Chained PRs recommended: No — delivery is NOT via PRs; one review-only worktre
 
 ## Phase 1: E2E Infrastructure (t1)
 
-- [ ] 1.1 Create `e2e/package.json`: name `@esencial/e2e`, devDependency `@playwright/test`, script `"test": "playwright test"`.
-- [ ] 1.2 Create `e2e/playwright.config.ts`: baseURL `http://127.0.0.1:8787`; webServer `pnpm dev` at repo root (`/api/health`, `reuseExistingServer: true`); Brave `executablePath: "/usr/bin/brave-browser"`, `--no-sandbox`; `retries: 2`; `setup` API-login `hola` → `e2e/.auth/state.json`; authenticated projects `dependOn: ["setup"]`.
-- [ ] 1.3 Create `e2e/tests/helpers.ts`: `login`, `apiRequest`, unique-name generator; no shared fixtures.
-- [ ] 1.4 Add `e2e` to `packages` in `pnpm-workspace.yaml`; add `"e2e": "pnpm --filter @esencial/e2e test"` to root `package.json`.
-- [ ] 1.5 Add `e2e/.auth/`, `test-results/`, `playwright-report/` to `.gitignore`.
-- [ ] 1.6 Smoke: `pnpm install`, `pnpm e2e` — setup logs in, storageState saved; commit `chore(e2e)`.
+- [x] 1.1 Create `e2e/package.json`: name `@esencial/e2e`, devDependency `@playwright/test`, script `"test": "playwright test"`.
+- [x] 1.2 Create `e2e/playwright.config.ts`: baseURL `http://127.0.0.1:8787`; webServer `pnpm dev` at repo root (`/api/health`, `reuseExistingServer: true`); Brave `executablePath: "/usr/bin/brave-browser"`, `--no-sandbox`; `retries: 2`; `setup` API-login `hola` → `e2e/.auth/state.json`; authenticated projects `dependOn: ["setup"]`.
+- [x] 1.3 Create `e2e/tests/helpers.ts`: `login`, `apiRequest`, unique-name generator; no shared fixtures.
+- [x] 1.4 Add `e2e` to `packages` in `pnpm-workspace.yaml`; add `"e2e": "pnpm --filter @esencial/e2e test"` to root `package.json`.
+- [x] 1.5 Add `e2e/.auth/`, `test-results/`, `playwright-report/` to `.gitignore`.
+- [x] 1.6 Smoke: `pnpm install`, `pnpm e2e` — setup logs in, storageState saved; commit `chore(e2e)`.
 
 ## Phase 2: Journeys 1–3 RED→GREEN (t2)
 
