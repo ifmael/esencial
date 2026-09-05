@@ -10,15 +10,17 @@ import { verifyPassword, readSessionToken, SESSION_COOKIE, SESSION_MAX_AGE_S } f
 import { createLoginLimiter, type LoginLimiter } from "../rate-limit";
 
 // Flags required by the spec: HttpOnly; Secure; SameSite=Lax; Path=/.
-// No __Host- prefix: workers.dev serves on a subdomain and the prefix would
-// force omitting Domain (design D3 — Path=/ without Domain is equivalent).
-const COOKIE_OPTS = {
+// `secure` follows the request protocol: https in production keeps Secure;
+// plain-http consumers (wrangler dev on 127.0.0.1, non-browser HTTP clients)
+// get a cookie their cookie jars actually store — browsers treat http://127.0.0.1
+// as trustworthy either way.
+const cookieOpts = (secure: boolean) => ({
   path: "/",
   httpOnly: true,
-  secure: true,
+  secure,
   sameSite: "Lax" as const,
   maxAge: SESSION_MAX_AGE_S,
-};
+});
 
 export interface AuthDeps {
   limiter?: LoginLimiter;
@@ -66,10 +68,8 @@ export function authRoutes(deps: AuthDeps = {}) {
       }
       limiter.recordSuccess(ip);
 
-      // Stateless session: the cookie value is `<exp_epoch>`, HMAC-signed by
-      // setSignedCookie; expiry is enforced in readSessionToken (fail closed).
       const exp = Math.floor(now() / 1000) + SESSION_MAX_AGE_S;
-      await setSignedCookie(c, SESSION_COOKIE, String(exp), secret, COOKIE_OPTS);
+      await setSignedCookie(c, SESSION_COOKIE, String(exp), secret, cookieOpts(new URL(c.req.url).protocol === "https:"));
       return c.json({ ok: true });
     })
     .post("/logout", (c) => {

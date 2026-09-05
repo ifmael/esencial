@@ -35,7 +35,11 @@ function isolated(opts: Parameters<typeof authRoutes>[0] = {}) {
 
 describe("POST /api/auth/login", () => {
   it("200 + HttpOnly/Secure/SameSite=Lax/Path=/ session cookie on correct password", async () => {
-    const res = await loginAt("/api/auth/login", PASSWORD);
+    const res = await app.request(
+      "https://esencial.test/api/auth/login",
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: PASSWORD }) },
+      env,
+    );
     expect(res.status).toBe(200);
     const raw = res.headers.get("set-cookie");
     expect(raw).toBeTruthy();
@@ -50,6 +54,22 @@ describe("POST /api/auth/login", () => {
     const days = (exp * 1000 - Date.now()) / 86_400_000;
     expect(days).toBeGreaterThan(29);
     expect(days).toBeLessThanOrEqual(31);
+  });
+
+  it("Secure flag follows the request protocol: http → no Secure, https → Secure", async () => {
+    const loginVia = (origin: string) =>
+      app.request(
+        `${origin}/api/auth/login`,
+        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: PASSWORD }) },
+        env,
+      );
+    const http = await loginVia("http://127.0.0.1:8787");
+    expect(http.status).toBe(200);
+    expect(http.headers.get("set-cookie")).not.toMatch(/Secure/i);
+
+    const https = await loginVia("https://esencial.example");
+    expect(https.status).toBe(200);
+    expect(https.headers.get("set-cookie")).toMatch(/Secure/i);
   });
 
   it("401 { error, field } + no cookie on wrong password", async () => {
