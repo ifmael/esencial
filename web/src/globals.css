@@ -4,6 +4,8 @@
 :root {
   --color-primary: #15803d;
   --color-primary-dark: #166534;
+  --color-primary-container: #15803d;
+  --color-on-primary: #ffffff;
   --color-secondary: #4d7c0f;
   --color-background: #fafaf9;
   --color-surface: #ffffff;
@@ -22,6 +24,8 @@
 @theme inline {
   --color-primary: var(--color-primary);
   --color-primary-dark: var(--color-primary-dark);
+  --color-primary-container: var(--color-primary-container);
+  --color-on-primary: var(--color-on-primary);
   --color-secondary: var(--color-secondary);
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);

@@ -92,16 +92,16 @@ describe("plan screen", () => {
     await screen.findByText(/primera plantilla/i);
   });
 
-  it("expand/collapse needs zero extra network; rows show targets or name only", async () => {
+  it("expand/collapse needs zero extra network; rows show series or name only", async () => {
     await openPlan();
-    expect(screen.queryByText("3×8")).toBeNull();
+    expect(screen.queryByText("3 series")).toBeNull();
     const before = api.calls.length;
     fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }));
-    await waitFor(() => expect(screen.getByText("3×8")).toBeDefined());
+    await waitFor(() => expect(screen.getByText("3 series")).toBeDefined());
     expect(api.calls.length).toBe(before);
     expect(within(cardOf("A — Empuje")).getByText("Remo").closest("button")?.textContent).toBe("Remo");
     fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }));
-    expect(screen.queryByText("3×8")).toBeNull();
+    expect(screen.queryByText("3 series")).toBeNull();
   });
 
   it("tapping chip C expands the C card", async () => {
@@ -113,7 +113,7 @@ describe("plan screen", () => {
   it("row tap navigates to /ejercicios/:id", async () => {
     await openPlan();
     fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }));
-    await screen.findByText("3×8");
+    await screen.findByText("3 series");
     fireEvent.click(screen.getByRole("button", { name: /^Press banca/ }));
     expect(window.location.pathname).toBe("/ejercicios/7");
   });
@@ -129,11 +129,14 @@ describe("template editor", () => {
   it("create: valid save → single POST 201, card appears, editor closes", async () => {
     await openEditor();
     fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "D — Movilidad" } });
-    fireEvent.change(screen.getByPlaceholderText("Buscar ejercicio"), { target: { value: "sent" } });
-    expect(screen.queryByRole("button", { name: /^Press banca$/ })).toBeNull(); // client-side filter
-    const getsBefore = api.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
+    const dialog = await screen.findByRole("dialog");
+    const dlg = within(dialog);
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), { target: { value: "sent" } });
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull(); // client-side filter
     expect(api.calls.filter((c) => c.url === "/api/exercises").length).toBe(1); // search hit no network
-    fireEvent.click(screen.getByRole("button", { name: /^Sentadilla$/ }));
+    fireEvent.click(dlg.getByRole("button", { name: /^Sentadilla$/ }));
+    fireEvent.click(dlg.getByRole("button", { name: "Cerrar" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
@@ -142,30 +145,32 @@ describe("template editor", () => {
     ]);
     await screen.findByText("D — Movilidad");
     expect(screen.queryByLabelText("Nombre")).toBeNull();
-    void getsBefore;
   });
 
   it("body map: selecting a muscle group filters the list; Todos resets; empty group shows state", async () => {
     await openEditor();
-    expect(screen.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(screen.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
+    const dialog = await screen.findByRole("dialog");
+    const dlg = within(dialog);
+    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Pecho" }));
-    expect(screen.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(screen.queryByRole("button", { name: /^Remo$/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Sentadilla$/ })).toBeNull();
+    fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
+    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    expect(dlg.queryByRole("button", { name: /^Sentadilla$/ })).toBeNull();
 
     // search refines within the selected group
-    fireEvent.change(screen.getByPlaceholderText("Buscar ejercicio"), { target: { value: "zzz" } });
-    expect(screen.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
-    expect(screen.getByText(/sin ejercicios/i)).toBeDefined();
-    fireEvent.change(screen.getByPlaceholderText("Buscar ejercicio"), { target: { value: "" } });
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), { target: { value: "zzz" } });
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(dlg.getByText(/sin ejercicios/i)).toBeDefined();
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), { target: { value: "" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Todos" }));
-    expect(screen.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Core" }));
-    expect(screen.getByText(/sin ejercicios/i)).toBeDefined();
+    fireEvent.click(dlg.getByRole("button", { name: "Core" }));
+    expect(dlg.getByText(/sin ejercicios/i)).toBeDefined();
   });
 
   it("edit: pre-filled; rename + reorder + targets → single PUT", async () => {
@@ -225,7 +230,7 @@ describe("template editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(mutations().some((c) => c.method === "PUT")).toBe(true));
     expect(payloadAt(0).exercises[0]).toEqual({ exerciseId: 7, targetSets: 4, targetRepsMin: 6, targetRepsMax: 8 });
-    await screen.findByText("4×6–8");
+    await screen.findByText("4 series");
   });
 
   it("remove entry from draft", async () => {
@@ -270,5 +275,66 @@ describe("template editor", () => {
     await waitFor(() => expect(save.hasAttribute("disabled")).toBe(true));
     fireEvent.click(save);
     expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
+  });
+});
+
+describe("exercise picker modal", () => {
+  async function openPicker() {
+    await openPlan();
+    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }));
+    await screen.findByLabelText("Nombre");
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
+    return screen.findByRole("dialog");
+  }
+
+  it("opens a dialog with exercises grouped by muscle group", async () => {
+    const dialog = await openPicker();
+    const dlg = within(dialog);
+    expect(dlg.getByRole("heading", { name: "Pecho" })).toBeDefined();
+    expect(dlg.getByRole("heading", { name: "Espalda" })).toBeDefined();
+    expect(dlg.getByRole("heading", { name: "Pierna" })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Sentadilla$/ })).toBeDefined();
+  });
+
+  it("muscle filter narrows the picker list; Todos resets", async () => {
+    const dialog = await openPicker();
+    const dlg = within(dialog);
+    fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+  });
+
+  it("draft exercises are disabled; re-adding is impossible", async () => {
+    const dialog = await openPicker();
+    const dlg = within(dialog);
+    const press = dlg.getByRole("button", { name: /^Press banca$/ });
+    expect(press.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(press);
+    fireEvent.click(dlg.getByRole("button", { name: /^Remo$/ }));
+    expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(2);
+    const sentadilla = dlg.getByRole("button", { name: /^Sentadilla$/ });
+    expect(sentadilla.hasAttribute("disabled")).toBe(false);
+    fireEvent.click(sentadilla);
+    expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(3);
+  });
+
+  it("closing with Cerrar preserves the draft", async () => {
+    const dialog = await openPicker();
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "A — Empuje 2" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cerrar" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe("A — Empuje 2");
+  });
+
+  it("closing with Escape preserves the draft", async () => {
+    const dialog = await openPicker();
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "A — Empuje 3" } });
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe("A — Empuje 3");
   });
 });

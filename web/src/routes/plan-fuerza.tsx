@@ -1,9 +1,9 @@
 // /plan-fuerza — plantillas rotatorias expandibles + editor de borrador local.
 // Diseño E4: D2 (un PUT atómico), D3 (↑/↓ sin drag), D5 (chips = orden API).
-import { useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
 import { useTemplates, type Template } from "../lib/templates";
-import { useExercises } from "../lib/exercises";
+import { useExercises, type Exercise } from "../lib/exercises";
 import { apiField } from "../lib/api";
 import {
   addEntry,
@@ -14,18 +14,10 @@ import {
   removeEntry,
   setTargets,
   type Draft,
+  type DraftEntry,
 } from "../lib/template-draft";
 
-function formatTarget(e: {
-  targetSets: number | null;
-  targetRepsMin: number | null;
-  targetRepsMax: number | null;
-}): string | null {
-  if (e.targetSets == null) return null; // objetivos parciales/ausentes → solo nombre
-  const { targetRepsMin: min, targetRepsMax: max } = e;
-  const reps = min != null && max != null && min !== max ? `${min}–${max}` : (min ?? max);
-  return reps == null ? `${e.targetSets}×` : `${e.targetSets}×${reps}`;
-}
+const letterOf = (t: { rotationIndex: number }): string => String.fromCharCode(65 + t.rotationIndex);
 
 const toDraft = (t: Template): Draft => ({
   name: t.name,
@@ -195,6 +187,135 @@ function BodyMap({
   );
 }
 
+// --- Añadir ejercicio (modal) ------------------------------------------------
+
+function ExercisePicker({
+  exercises,
+  draftEntries,
+  onAdd,
+  onClose,
+}: {
+  exercises: Exercise[];
+  draftEntries: DraftEntry[];
+  onAdd: (e: Exercise) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [group, setGroup] = useState<string | null>(null);
+  const [view, setView] = useState<BodyView>("front");
+
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const q = search.trim().toLowerCase();
+  const picks = exercises.filter((e) => {
+    if (group !== null && !e.tags.includes(group)) return false;
+    if (q && !(e.name.toLowerCase().includes(q) || e.tags.some((t) => t.toLowerCase().includes(q))))
+      return false;
+    return true;
+  });
+  const inDraftIds = new Set(draftEntries.map((en) => en.exerciseId));
+
+  const groups: Record<string, Exercise[]> = {};
+  for (const e of picks) {
+    const tag = e.tags[0] ?? "otro";
+    (groups[tag] ??= []).push(e);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-label="Añadir ejercicio"
+        className="card my-8 flex w-full max-w-xl flex-col gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-bold">Añadir ejercicio</h2>
+
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">Vista:</span>
+          <button
+            className={view === "front" ? "btn-primary" : "btn-secondary"}
+            aria-pressed={view === "front"}
+            onClick={() => setView("front")}
+          >
+            Frontal
+          </button>
+          <button
+            className={view === "back" ? "btn-primary" : "btn-secondary"}
+            aria-pressed={view === "back"}
+            onClick={() => setView("back")}
+          >
+            Trasera
+          </button>
+        </div>
+
+        <BodyMap
+          view={view}
+          group={group}
+          onSelect={(tag) => setGroup((g) => (g === tag ? null : tag))}
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button className={group == null ? "btn-primary" : "btn-secondary"} onClick={() => setGroup(null)}>
+            Todos
+          </button>
+          <span className="text-sm text-text-secondary">
+            Grupo: {group ? GROUP_LABELS[group] : "Todos"}
+          </span>
+        </div>
+
+        <input
+          className="input"
+          placeholder="Buscar ejercicio"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        {picks.length === 0 ? (
+          <p className="text-sm text-text-secondary">Sin ejercicios</p>
+        ) : (
+          Object.entries(groups).map(([tag, list]) => (
+            <section key={tag} className="flex flex-col gap-1">
+              <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+                {GROUP_LABELS[tag] ?? tag}
+              </h3>
+              <ul className="flex flex-wrap gap-2">
+                {list.map((e) => (
+                  <li key={e.id}>
+                    <button
+                      className="btn-secondary"
+                      disabled={inDraftIds.has(e.id)}
+                      onClick={() => {
+                        if (inDraftIds.has(e.id)) return;
+                        onAdd(e);
+                      }}
+                    >
+                      {e.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
+        )}
+
+        <button className="btn-secondary self-end" onClick={onClose}>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // --- Editor ----------------------------------------------------------------
 
 function TemplateEditor({
@@ -209,20 +330,10 @@ function TemplateEditor({
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(initial);
-  const [search, setSearch] = useState("");
-  const [group, setGroup] = useState<string | null>(null);
-  const [view, setView] = useState<BodyView>("front");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const { exercises } = useExercises();
-
-  const q = search.trim().toLowerCase();
-  const picks = exercises.filter((e) => {
-    if (group !== null && !e.tags.includes(group)) return false;
-    if (q && !(e.name.toLowerCase().includes(q) || e.tags.some((t) => t.toLowerCase().includes(q))))
-      return false;
-    return true;
-  });
 
   const save = async () => {
     if (submitting) return;
@@ -242,9 +353,15 @@ function TemplateEditor({
   };
 
   return (
-    <div className="card mb-4 flex flex-col gap-3">
-      <div className="flex flex-wrap gap-3">
-        <div className="flex flex-col gap-1 text-sm">
+    <div className="card flex flex-col gap-3">
+      <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
+        <span
+          aria-hidden
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-container text-xs font-bold text-on-primary"
+        >
+          {letterOf({ rotationIndex: draft.rotationIndex })}
+        </span>
+        <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
           <label htmlFor="tpl-name">Nombre</label>
           <input
             id="tpl-name"
@@ -267,14 +384,19 @@ function TemplateEditor({
             }
           />
         </div>
-      </div>
+      </header>
 
       {serverError && <p className="text-sm text-error">{serverError}</p>}
 
-      <ul className="flex flex-col gap-2">
+      <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
         {draft.entries.map((entry, i) => (
-          <li key={entry.key} className="flex flex-wrap items-end gap-2">
-            <Link className="min-w-32 pb-2 font-medium text-primary underline-offset-4 hover:underline" to={`/ejercicios/${entry.exerciseId}`}>{entry.exerciseName}</Link>
+          <li
+            key={entry.key}
+            className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
+              i < draft.entries.length - 1 ? "border-b border-border" : ""
+            }`}
+          >
+            <Link className="min-w-32 font-medium text-primary underline-offset-4 hover:underline" to={`/ejercicios/${entry.exerciseId}`}>{entry.exerciseName}</Link>
             <label className="text-sm">
               Series
               <input
@@ -334,74 +456,9 @@ function TemplateEditor({
         ))}
       </ul>
 
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">Vista:</span>
-          <button
-            className={view === "front" ? "btn-primary" : "btn-secondary"}
-            aria-pressed={view === "front"}
-            onClick={() => setView("front")}
-          >
-            Frontal
-          </button>
-          <button
-            className={view === "back" ? "btn-primary" : "btn-secondary"}
-            aria-pressed={view === "back"}
-            onClick={() => setView("back")}
-          >
-            Trasera
-          </button>
-        </div>
-
-        <BodyMap
-          view={view}
-          group={group}
-          onSelect={(tag) => setGroup((g) => (g === tag ? null : tag))}
-        />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button className={group == null ? "btn-primary" : "btn-secondary"} onClick={() => setGroup(null)}>
-            Todos
-          </button>
-          <span className="text-sm text-text-secondary">
-            Grupo: {group ? GROUP_LABELS[group] : "Todos"}
-          </span>
-        </div>
-
-        <input
-          className="input"
-          placeholder="Buscar ejercicio"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <ul className="mt-2 flex flex-wrap gap-2">
-          {picks.length === 0 ? (
-            <li className="text-sm text-text-secondary">Sin ejercicios</li>
-          ) : (
-            picks.map((e) => (
-              <li key={e.id}>
-                <button
-                  className="btn-secondary"
-                  onClick={() =>
-                    setDraft(
-                      addEntry(draft, {
-                        key: newEntryKey(),
-                        exerciseId: e.id,
-                        exerciseName: e.name,
-                        targetSets: null,
-                        targetRepsMin: null,
-                        targetRepsMax: null,
-                      }),
-                    )
-                  }
-                >
-                  {e.name}
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
-      </div>
+      <button className="btn-secondary self-start" onClick={() => setPickerOpen(true)}>
+        + Añadir ejercicio
+      </button>
 
       <div className="flex gap-2">
         <button className="btn-primary" disabled={submitting} onClick={save}>
@@ -411,6 +468,26 @@ function TemplateEditor({
           Cancelar
         </button>
       </div>
+
+      {pickerOpen && (
+        <ExercisePicker
+          exercises={exercises}
+          draftEntries={draft.entries}
+          onAdd={(e) =>
+            setDraft(
+              addEntry(draft, {
+                key: newEntryKey(),
+                exerciseId: e.id,
+                exerciseName: e.name,
+                targetSets: null,
+                targetRepsMin: null,
+                targetRepsMax: null,
+              }),
+            )
+          }
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -438,28 +515,67 @@ function TemplateCard({
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const count = template.exercises.length;
+
   return (
-    <section ref={register} data-expanded={String(expanded)} className="card flex flex-col gap-2">
-      <button className="flex items-center justify-between text-left text-lg font-semibold" onClick={onToggle}>
-        <span>{template.name}</span>
-        <span aria-hidden>{expanded ? "▾" : "▸"}</span>
-      </button>
-      {expanded && (
-        <ul className="flex flex-col gap-1">
-          {template.exercises.map((e) => {
-            const target = formatTarget(e);
-            return (
-              <li key={e.id}>
-                <button className="min-h-11 text-left text-primary underline-offset-4 hover:underline" onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}>
-                  {e.exerciseName}
-                  {target && <span className="ml-2 text-text-secondary">{target}</span>}
-                </button>
-              </li>
-            );
-          })}
-          {template.exercises.length === 0 && <li className="text-text-secondary">Sin ejercicios todavía.</li>}
+    <section
+      ref={register}
+      data-expanded={String(expanded)}
+      className={`card flex flex-col gap-3 ${expanded ? "xl:col-span-2" : ""}`}
+    >
+      <header className="flex items-center justify-between gap-2">
+        <button className="flex min-w-0 items-center gap-2 text-left" aria-label={template.name} onClick={onToggle}>
+          <span
+            aria-hidden
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+              expanded ? "bg-primary-container text-on-primary" : "border border-border bg-surface-muted text-text-secondary"
+            }`}
+          >
+            {letterOf(template)}
+          </span>
+          <span className="truncate text-lg font-semibold">{template.name}</span>
+        </button>
+        <button
+          className="min-h-11 px-1 text-text-secondary"
+          aria-label={expanded ? "Contraer" : "Expandir"}
+          onClick={onToggle}
+        >
+          <span aria-hidden>{expanded ? "▾" : "▸"}</span>
+        </button>
+      </header>
+
+      {expanded ? (
+        <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
+          {template.exercises.map((e, i) => (
+            <li
+              key={e.id}
+              className={`flex min-h-12 items-center gap-3 bg-surface px-3 ${
+                i < template.exercises.length - 1 ? "border-b border-border" : ""
+              }`}
+            >
+              <button
+                className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left font-medium"
+                onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}
+              >
+                <span className="truncate">{e.exerciseName}</span>
+                {e.targetSets != null && (
+                  <span className="shrink-0 text-sm text-text-secondary">
+                    {e.targetSets} {e.targetSets === 1 ? "serie" : "series"}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+          {template.exercises.length === 0 && (
+            <li className="bg-surface p-3 text-text-secondary">Sin ejercicios todavía.</li>
+          )}
         </ul>
+      ) : (
+        <p className="text-text-secondary">
+          {count} {count === 1 ? "ejercicio" : "ejercicios"}
+        </p>
       )}
+
       <div className="flex flex-wrap gap-2">
         <button className="btn-secondary" onClick={onEdit}>
           Editar
@@ -538,17 +654,36 @@ export function PlanFuerzaPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Plan fuerza</h1>
-
-      {templates.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {templates.map((t) => (
-            <button key={t.id} className="badge-pending min-h-11" aria-label={t.name} onClick={() => goTo(t)}>
-              {t.name.split("—")[0].trim() || String(t.rotationIndex + 1)}
-            </button>
-          ))}
-        </div>
-      )}
+      <section className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-2xl font-bold">Plan fuerza</h1>
+        {templates.length > 0 && (
+          <div
+            className="flex items-center gap-1 self-start rounded-full border border-border bg-surface-muted p-1.5 md:self-auto"
+            aria-label="Orden de rotación"
+          >
+            {templates.map((t, i) => (
+              <Fragment key={t.id}>
+                {i > 0 && (
+                  <span aria-hidden className="px-1 text-sm text-text-secondary">
+                    →
+                  </span>
+                )}
+                <button
+                  aria-label={t.name}
+                  onClick={() => goTo(t)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                    i === 0
+                      ? "bg-primary-container text-on-primary shadow-sm"
+                      : "border border-border bg-surface text-text-secondary"
+                  }`}
+                >
+                  {letterOf(t)}
+                </button>
+              </Fragment>
+            ))}
+          </div>
+        )}
+      </section>
 
       {error && (
         <div className="card mb-4 flex items-center justify-between">
@@ -557,15 +692,6 @@ export function PlanFuerzaPage() {
             Reintentar
           </button>
         </div>
-      )}
-
-      {editing && (
-        <TemplateEditor
-          draft={editing.template ? toDraft(editing.template) : { name: "", rotationIndex: 0, entries: [] }}
-          submitting={submitting}
-          onSave={save}
-          onCancel={() => setEditing(null)}
-        />
       )}
 
       {pending && templates.length === 0 && !error && <div className="card">Cargando plantillas…</div>}
@@ -577,6 +703,16 @@ export function PlanFuerzaPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {editing && (
+          <div className="xl:col-span-2">
+            <TemplateEditor
+              draft={editing.template ? toDraft(editing.template) : { name: "", rotationIndex: 0, entries: [] }}
+              submitting={submitting}
+              onSave={save}
+              onCancel={() => setEditing(null)}
+            />
+          </div>
+        )}
         {templates.map((t) => (
           <TemplateCard
             key={t.id}
@@ -601,8 +737,11 @@ export function PlanFuerzaPage() {
         ))}
       </div>
 
-      <div className="mt-4">
-        <button className="btn-primary" onClick={() => setEditing({ template: null })}>
+      <div className="mt-8 flex justify-center">
+        <button
+          className="rounded-full bg-primary-container px-6 py-3 font-bold text-on-primary shadow-sm hover:bg-primary-dark"
+          onClick={() => setEditing({ template: null })}
+        >
           + Nueva plantilla
         </button>
       </div>
