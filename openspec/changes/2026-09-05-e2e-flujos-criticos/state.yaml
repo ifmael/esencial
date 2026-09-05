@@ -1,12 +1,12 @@
 change: 2026-09-05-e2e-flujos-criticos
-phase: apply
+phase: verify
 artifact_store: hybrid
 artifacts:
   proposal: true
   specs: true
   design: true
   tasks: true
-tasks_progress:
+tasks_progress_ok: x #
   completed: []
   pending:
     - t1 backend infra (e2e package, playwright config, workspace, gitignore, smoke)

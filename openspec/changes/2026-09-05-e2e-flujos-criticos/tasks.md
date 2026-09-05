@@ -53,4 +53,4 @@ Chained PRs recommended: No — delivery is NOT via PRs; one review-only worktre
 
 ## Phase 4: Orchestrator Verify (t4)
 
-- [ ] 4.1 Write `openspec/changes/2026-09-05-e2e-flujos-criticos/verify-report.md`; no archive; worktree stays review-only.
+- [x] 4.1 Write `openspec/changes/2026-09-05-e2e-flujos-criticos/verify-report.md`; no archive; worktree stays review-only.
