@@ -20,4 +20,4 @@
 ## 4. Verify & close
 - [x] 4.1 `pnpm test` completo + `pnpm build` verdes
 - [x] 4.2 E2E manual (pnpm dev): login → programar hoy en /plan-fuerza → tarjeta FUERZA en / con sesión + ejercicios numerados → reintento misma fecha (409) → comparar con wireframe `esencial_hoy_desktop_v2`
-- [ ] 4.3 `verify-report.md` + commit conventional (reporte escrito; commit pendiente)
+- [x] 4.3 `verify-report.md` + commit conventional (`31f7d5b`)
