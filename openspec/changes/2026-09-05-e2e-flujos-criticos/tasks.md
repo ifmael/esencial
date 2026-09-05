@@ -37,12 +37,12 @@ Chained PRs recommended: No — delivery is NOT via PRs; one review-only worktre
 
 ## Phase 2: Journeys 1–3 RED→GREEN (t2)
 
-- [ ] 2.1 (RED) Write `e2e/tests/auth-dia.spec.ts` — wrong password, `hola` login + reload, `/` empty states; run, confirm failing.
-- [ ] 2.2 (GREEN) Fix product bugs in `web/`/`api/` until auth-dia green; conventional commit.
-- [ ] 2.3 (RED) Write `e2e/tests/recipes.spec.ts` — create → `/recetario` → week plan → shopping sheet (done, manual item); run, confirm failing.
-- [ ] 2.4 (GREEN) Fix product bugs in `web/`/`api/` until recipes green; conventional commit.
-- [ ] 2.5 (RED) Write `e2e/tests/strength.spec.ts` — template → schedule → FUERZA card → session log → duplicate 409; run, confirm failing.
-- [ ] 2.6 (GREEN) Fix product bugs in `web/`/`api/` until strength green; conventional commit.
+- [x] 2.1 (RED) Write `e2e/tests/auth-dia.spec.ts` — wrong password, `hola` login + reload, `/` empty states; run, confirm failing.
+- [x] 2.2 (GREEN) Fix product bugs in `web/`/`api/` until auth-dia green; conventional commit.
+- [x] 2.3 (RED) Write `e2e/tests/recipes.spec.ts` — create → `/recetario` → week plan → shopping sheet (done, manual item); run, confirm failing.
+- [x] 2.4 (GREEN) Fix product bugs in `web/`/`api/` until recipes green; conventional commit.
+- [x] 2.5 (RED) Write `e2e/tests/strength.spec.ts` — template → schedule → FUERZA card → session log → duplicate 409; run, confirm failing.
+- [x] 2.6 (GREEN) Fix product bugs in `web/`/`api/` until strength green; conventional commit.
 
 ## Phase 3: Edge + Full Suite (t3)
 
