@@ -25,7 +25,7 @@ export const planSessions = new Hono<{ Bindings: Env }>()
       if (!(await row(db, "SELECT id FROM session_templates WHERE id = ?", templateId)))
         return fail("Unknown template", "templateId");
       if (await row(db, "SELECT id FROM plan_sessions WHERE date = ?", date))
-        return fail("A session is already scheduled for this date", "date", 409);
+        return fail("Ya hay una sesión ese día", "date", 409);
       const { meta } = await db
         .prepare("INSERT INTO plan_sessions (date, template_id, status) VALUES (?, ?, 'planned')")
         .bind(date, templateId)
