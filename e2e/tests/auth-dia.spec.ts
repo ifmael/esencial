@@ -22,7 +22,7 @@ test.describe("AUTH-DIA", () => {
     // Session survives reload
     await page.reload();
     await page.waitForURL(`${baseURL!}/`);
-    await expect(page.getByRole("heading", { name: /Hoy|RECETA/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Hoy|RECETA/ }).first()).toBeVisible();
   });
 });
 
