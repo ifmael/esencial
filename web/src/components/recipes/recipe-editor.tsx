@@ -1,6 +1,7 @@
 // E2 editor (D2): create/edit recipe as a modal overlay. Cancel = close, no API
 // call; save POSTs/PUTs the whole draft; field errors render beside the field.
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { apiField, photoSrc, apiFetch } from "../../lib/api";
 import type { Recipe, RecipeInput, RecipesApi } from "./use-recipes";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -68,6 +69,9 @@ export function RecipeEditor({
   const [nameError, setNameError] = useState<string | null>(null);
   const [material, setMaterial] = useState("");
   const [tag, setTag] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const uploadingRef = useRef(false);
   const title = recipe ? "Editar receta" : "Nueva receta";
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
@@ -77,6 +81,31 @@ export function RecipeEditor({
     const v = value.trim();
     if (v && !draft[key].includes(v)) set(key, [...draft[key], v]);
     clear();
+  };
+
+  const onFile = async (file: File) => {
+    if (uploadingRef.current) return;
+    uploadingRef.current = true;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
+        method: "POST",
+        body: fd,
+      });
+      set("photo_path", photo_path);
+    } catch (e) {
+      setUploadError(
+        apiField(e) === "file"
+          ? "No se pudo subir el archivo. Inténtalo de nuevo."
+          : "No se pudo conectar con el servidor.",
+      );
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
   };
 
   const payload = (): RecipeInput => ({
@@ -97,7 +126,7 @@ export function RecipeEditor({
   });
 
   const save = async () => {
-    if (api.saving) return;
+    if (api.saving || uploading) return;
     if (!draft.name.trim()) {
       setNameError("El nombre es obligatorio");
       return;
@@ -179,16 +208,36 @@ export function RecipeEditor({
               />
             </div>
             <div className="flex-[2]">
-              <label className={label} htmlFor="recipe-photo">
-                Foto (URL o ruta)
-              </label>
-              <input
-                id="recipe-photo"
-                aria-label="Foto"
-                className={field}
-                value={draft.photo_path}
-                onChange={(e) => set("photo_path", e.target.value)}
-              />
+              <span className={label}>Foto</span>
+              {draft.photo_path ? (
+                <div className="flex items-center gap-3">
+                  <img src={photoSrc(draft.photo_path)} alt="Foto actual" className="h-12 w-12 rounded-lg object-cover" />
+                  <button type="button" className="btn-secondary" onClick={() => set("photo_path", "")}>
+                    Quitar
+                  </button>
+                </div>
+              ) : (
+                <label className="btn-secondary inline-block cursor-pointer">
+                  Subir foto
+                  <input
+                    id="recipe-photo"
+                    aria-label="Foto"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void onFile(f);
+                    }}
+                  />
+                </label>
+              )}
+              {uploadError && (
+                <p className="mt-2 text-sm text-error" role="alert">
+                  {uploadError}
+                </p>
+              )}
             </div>
           </div>
 
@@ -388,8 +437,8 @@ export function RecipeEditor({
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancelar
             </button>
-            <button type="button" className="btn-primary" disabled={api.saving} onClick={save}>
-              {api.saving ? "Guardando…" : "Guardar"}
+            <button type="button" className="btn-primary" disabled={api.saving || uploading} onClick={save}>
+              {api.saving || uploading ? "Guardando…" : "Guardar"}
             </button>
           </div>
         </div>

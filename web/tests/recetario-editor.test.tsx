@@ -46,3 +46,30 @@ describe("editor: edit mode", () => {
     await waitFor(() => expect(screen.findByText("Arroz recaliente")).toBeDefined());
   });
 });
+
+describe("editor: photo upload", () => {
+  it("sube foto desde el modal (R2 key) y la muestra; quitarla deja photo_path null", async () => {
+    const recipe = makeRecipe({ id: 7, photo_path: null });
+    const server = makeServer([recipe]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    renderAt("/recetario/7");
+    fireEvent.click(await screen.findByRole("button", { name: "Editar receta" }));
+    await screen.findByRole("dialog", { name: "Editar receta" });
+
+    const input = document.getElementById("recipe-photo") as HTMLInputElement;
+    expect(input).toBeDefined();
+    const png = new File([new Uint8Array([137, 80, 78, 71])], "f.png", { type: "image/png" });
+    fireEvent.change(input, { target: { files: [png] } });
+
+    await waitFor(() => expect(screen.getByAltText("Foto actual")).toBeDefined());
+    const up = server.calls.find((c) => c.url === "/api/uploads");
+    expect(up?.method).toBe("POST");
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const call = server.calls.find((c) => c.method === "PUT") as {
+      body: Record<string, unknown>;
+    };
+    expect(call.body.photo_path).toMatch(/^recipe-\d+\.png$/);
+  });
+});
