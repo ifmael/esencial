@@ -63,17 +63,17 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
 
 export function RecetarioPage() {
   const api = useRecipes();
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [flash, setFlashState] = useState(takeFlash);
   const [editing, setEditing] = useState<Recipe | null>(null);
-  const [creating, setCreating] = useState(false);
   const visible = filterRecipes(api.list, query);
 
   return (
     <>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Recetario</h1>
-        <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+        <button type="button" className="btn-primary" onClick={() => navigate("/recetario/nueva")}>
           + Nueva receta
         </button>
       </header>
@@ -109,14 +109,11 @@ export function RecetarioPage() {
         </div>
       )}
 
-      {(creating || editing) && (
+      {editing && (
         <RecipeEditor
           api={api}
           recipe={editing}
-          onClose={() => {
-            setCreating(false);
-            setEditing(null);
-          }}
+          onClose={() => setEditing(null)}
         />
       )}
     </>

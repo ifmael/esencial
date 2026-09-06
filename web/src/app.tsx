@@ -45,6 +45,7 @@ function GuardedShell() {
 }
 
 import { RecetarioPage, RecetarioDetallePage } from "./routes/recetario";
+import { NuevaRecetaPage } from "./routes/nueva-receta";
 import { EjerciciosPage, EjercicioDetailPage } from "./routes/ejercicios";
 
 import { SesionPage } from "./routes/sesion";
@@ -61,6 +62,7 @@ export function App() {
 
 
           <Route path="/recetario" element={<RecetarioPage />} />
+          <Route path="/recetario/nueva" element={<NuevaRecetaPage />} />
           <Route path="/recetario/:id" element={<RecetarioDetallePage />} />
           <Route path="/ejercicios" element={<EjerciciosPage />} />
           <Route path="/ejercicios/:id" element={<EjercicioDetailPage />} />
