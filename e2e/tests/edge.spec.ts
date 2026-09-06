@@ -114,7 +114,7 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     // (key={iso}) the editor and flushes the pending draft against the old date.
     await page.getByRole("button", { name: "Día siguiente" }).click();
     await page.getByRole("button", { name: "Día anterior" }).click();
-    await expect(page.getByRole("textbox")).not.toHaveValue(text); // today reloaded; flush is async
+    await expect(notes).not.toHaveValue(text); // today reloaded; flush is async
 
     // The old date's note must exist server-side even though the debounce never fired.
     const iso = await page.evaluate(() => {

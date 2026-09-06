@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
+const BRAVE = "/usr/bin/brave-browser";
 const BASE = "http://127.0.0.1:8787";
 
 export default defineConfig({
@@ -8,7 +10,8 @@ export default defineConfig({
   use: {
     baseURL: BASE,
     launchOptions: {
-      executablePath: "/usr/bin/brave-browser",
+      // Brave en local; en CI, el chromium que instala Playwright.
+      executablePath: existsSync(BRAVE) ? BRAVE : undefined,
       args: ["--no-sandbox"],
     },
   },
