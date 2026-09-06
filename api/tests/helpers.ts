@@ -1,7 +1,9 @@
 // Shared test helpers: real local D1 (miniflare via vitest-pool-workers) +
 // fetch-style request builders against the Hono app. Parity with E1 helpers.
 // E7: get/post/put/del carry a session cookie obtained once per worker via a
-// real /api/auth/login; anon* builders exercise the 401 gate.
+// real /api/auth/login; anon* builders exercise the 401 gate. E8: multipart
+// upload builders for POST /api/uploads (body must stay FormData: no explicit
+// content-type, so fetch sets the boundary).
 import { env } from "cloudflare:test";
 import app from "../src/index";
 import migrations0002 from "../migrations/0002_e2_recipes_photo_tags.sql?raw";
@@ -123,4 +125,14 @@ export const post = (path: string, body: unknown) => send(path, "POST", body);
 export const put = (path: string, body: unknown) => send(path, "PUT", body);
 export async function del(path: string): Promise<Response> {
   return await app.request(url(path), { method: "DELETE", headers: await authCookieHeader() }, env);
+}
+
+/** E8: multipart POST with the session cookie; body stays FormData so fetch
+ *  generates the multipart boundary. */
+export async function postForm(path: string, form: FormData): Promise<Response> {
+  return await app.request(url(path), { method: "POST", body: form, headers: await authCookieHeader() }, env);
+}
+/** E8: multipart POST WITHOUT a session (gate contract). */
+export async function anonPostForm(path: string, form: FormData): Promise<Response> {
+  return await app.request(url(path), { method: "POST", body: form }, env);
 }
