@@ -17,17 +17,6 @@ type Draft = {
   tags: string[];
 };
 
-const blank = (): Draft => ({
-  name: "",
-  description: "",
-  servings: "",
-  photo_path: "",
-  ingredients: [{ food: "", quantity: "", unit: "" }],
-  steps: [""],
-  materials: [],
-  tags: [],
-});
-
 const fromRecipe = (r: Recipe): Draft => ({
   name: r.name,
   description: r.description ?? "",
@@ -62,10 +51,10 @@ export function RecipeEditor({
   onClose,
 }: {
   api: RecipesApi;
-  recipe: Recipe | null;
+  recipe: Recipe;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState<Draft>(() => (recipe ? fromRecipe(recipe) : blank()));
+  const [draft, setDraft] = useState<Draft>(() => fromRecipe(recipe));
   const [nameError, setNameError] = useState<string | null>(null);
   const [material, setMaterial] = useState("");
   const [tag, setTag] = useState("");
@@ -191,9 +180,7 @@ export function RecipeEditor({
     saveCancelledRef.current = false;
     const photo = await ensurePhotoUploaded();
     if (!photo.ok || saveCancelledRef.current) return; // cerrado durante el reintento
-    const ok = recipe
-      ? await api.update(recipe.id, payload(photo.photoPath))
-      : await api.create(payload(photo.photoPath));
+    const ok = await api.update(recipe.id, payload(photo.photoPath));
     if (ok) onClose();
   };
 
