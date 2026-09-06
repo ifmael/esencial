@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useRecipes, type RecipeInput } from "../components/recipes/use-recipes";
 
-import { apiFetch, apiField, photoSrc } from "../lib/api";
+import { ApiError, apiFetch, photoSrc } from "../lib/api";
 
 type IngRow = { food: string; quantity: string; unit: string };
 
@@ -86,14 +86,19 @@ export function NuevaRecetaPage() {
         body: fd,
       });
       set("photo_path", photo_path);
+      // Una selección resuelta invalida cualquier reintento pendiente.
+      pendingFileRef.current = null;
     } catch (e) {
-      // Retener el archivo para reintentar la subida al guardar (re-review 6).
-      pendingFileRef.current = file;
-      setUploadError(
-        apiField(e) === "file"
-          ? "No se pudo subir el archivo. Inténtalo de nuevo o guarda para reintentarlo."
-          : "No se pudo conectar con el servidor. Se reintentará al guardar.",
-      );
+      // 400 (tipo) y 413 (tamaño) son rechazos deterministas del server:
+      // reintentar no los cura. Cualquier otro fallo (red/5xx) es transitorio.
+      const status = e instanceof ApiError ? e.status : 0;
+      if (status === 400 || status === 413) {
+        pendingFileRef.current = null;
+        setUploadError("Archivo no válido (tipo o tamaño). Elige otra imagen.");
+      } else {
+        pendingFileRef.current = file;
+        setUploadError("No se pudo conectar con el servidor. Se reintentará al guardar.");
+      }
     } finally {
       uploadingRef.current = false;
       setUploading(false);

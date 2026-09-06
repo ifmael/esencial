@@ -30,7 +30,7 @@ export type ServerCall = { method: string; url: string; body?: Record<string, un
 
 export function makeServer(initial: Recipe[] = []) {
   const recipes = [...initial];
-  const server = { nextUploadFails: false };
+  const server = { nextUploadFails: false, nextUploadStatus: 500 };
   const calls: ServerCall[] = [];
   let nextId = 100;
   const json = (data: unknown, status = 200) =>
@@ -81,7 +81,8 @@ export function makeServer(initial: Recipe[] = []) {
       }
     }
     if (url === "/api/uploads" && method === "POST") {
-      if (server.nextUploadFails) return json({ error: "No se pudo subir el archivo", field: "file" }, 400);
+      if (server.nextUploadFails)
+        return json({ error: "No se pudo subir el archivo" }, server.nextUploadStatus);
       return json({ photo_path: `recipe-${nextId++}.png` }, 200);
     }
     return json({ error: "Not found" }, 404);

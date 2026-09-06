@@ -186,12 +186,13 @@ describe("nueva-receta: subida de foto", () => {
     expect(screen.queryByRole("img", { name: "Vista previa de la foto" })).toBeNull();
   });
 
-  it("tras fallo de subida, Guardar reintenta la subida antes de crear (re-review 6)", async () => {
+  it("tras fallo transitorio de subida, Guardar reintenta la subida antes de crear (re-review 6)", async () => {
     const stubbed = makeServer([]);
     vi.stubGlobal("fetch", stubbed.fetchMock);
     await openPage();
 
     stubbed.server.nextUploadFails = true;
+    stubbed.server.nextUploadStatus = 500;
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [fileOf("reintento.png")] } });
     await screen.findByRole("alert");
@@ -207,6 +208,29 @@ describe("nueva-receta: subida de foto", () => {
     expect(up.length).toBe(2);
     const create = stubbed.calls.find((c) => c.method === "POST" && c.url === "/api/recipes");
     expect(String((create?.body as Record<string, unknown>)?.photo_path)).toMatch(/^recipe-/);
+  });
+
+  it("rechazo determinista (400) no se retiene: Guardar crea sin reintentar (re-review 7)", async () => {
+    const stubbed = makeServer([]);
+    vi.stubGlobal("fetch", stubbed.fetchMock);
+    await openPage();
+
+    stubbed.server.nextUploadFails = true;
+    stubbed.server.nextUploadStatus = 400;
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [fileOf("animacion.gif", "image/gif")] } });
+    await screen.findByRole("alert");
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
+      target: { value: "Sin foto" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
+    const up = stubbed.calls.filter((c) => c.url === "/api/uploads");
+    expect(up.length).toBe(1);
+    const create = stubbed.calls.find((c) => c.method === "POST" && c.url === "/api/recipes");
+    expect((create?.body as Record<string, unknown>)?.photo_path).toBeNull();
   });
 
   it("la subida FormData no fuerza content-type application/json (DEF-3)", async () => {
