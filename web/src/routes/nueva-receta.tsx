@@ -59,6 +59,7 @@ export function NuevaRecetaPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadingRef = useRef(false);
+  const pendingFileRef = useRef<File | null>(null);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -86,10 +87,12 @@ export function NuevaRecetaPage() {
       });
       set("photo_path", photo_path);
     } catch (e) {
+      // Retener el archivo para reintentar la subida al guardar (re-review 6).
+      pendingFileRef.current = file;
       setUploadError(
         apiField(e) === "file"
-          ? "No se pudo subir el archivo. Inténtalo de nuevo."
-          : "No se pudo conectar con el servidor.",
+          ? "No se pudo subir el archivo. Inténtalo de nuevo o guarda para reintentarlo."
+          : "No se pudo conectar con el servidor. Se reintentará al guardar.",
       );
     } finally {
       uploadingRef.current = false;
@@ -97,11 +100,36 @@ export function NuevaRecetaPage() {
     }
   };
 
-  const payload = (): RecipeInput => ({
+  const ensurePhotoUploaded = async (): Promise<string | null> => {
+    const file = pendingFileRef.current;
+    if (!file) return draft.photo_path;
+    uploadingRef.current = true;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
+        method: "POST",
+        body: fd,
+      });
+      set("photo_path", photo_path);
+      pendingFileRef.current = null;
+      setUploadError(null);
+      return photo_path;
+    } catch {
+      setUploadError("No se pudo subir el archivo. Inténtalo de nuevo.");
+      return null;
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
+  };
+
+  const payload = (photoPath: string): RecipeInput => ({
     name: draft.name.trim(),
     description: null,
     servings: null,
-    photo_path: draft.photo_path || null,
+    photo_path: photoPath || null,
     ingredients: draft.ingredients
       .filter((i) => i.food.trim())
       .map((i) => ({
@@ -121,7 +149,9 @@ export function NuevaRecetaPage() {
       return;
     }
     setNameError(null);
-    const ok = await api.create(payload());
+    const photoKey = await ensurePhotoUploaded();
+    if (photoKey === null) return;
+    const ok = await api.create(payload(photoKey));
     if (ok) navigate("/recetario");
   };
 
