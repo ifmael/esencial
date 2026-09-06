@@ -82,7 +82,7 @@ export function makeServer(initial: Recipe[] = []) {
     }
     if (url === "/api/uploads" && method === "POST") {
       if (server.nextUploadFails) return json({ error: "No se pudo subir el archivo", field: "file" }, 400);
-      return json({ path: `/api/uploads/${nextId++}` }, 201);
+      return json({ photo_path: `recipe-${nextId++}.png` }, 200);
     }
     return json({ error: "Not found" }, 404);
   };
