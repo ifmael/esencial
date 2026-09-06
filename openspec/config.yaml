@@ -30,10 +30,10 @@ rules:
     guidelines:
       - Follow existing code patterns
     tdd: true
-    test_command: "npm test"
+    test_command: "pnpm test"
   verify:
-    test_command: "npm test"
-    build_command: "npm run build"
+    test_command: "pnpm test"
+    build_command: "pnpm build"
     coverage_threshold: 0
   archive:
     - Warn before merging destructive deltas
