@@ -1,5 +1,5 @@
 // E8 nueva-receta: página propia para crear recetas. Upload con contrato
-// fail-closed: POST /api/uploads -> 201 {path}; 400 {error, field:"file"}.
+// fail-closed: POST /api/uploads -> 200 {photo_path}; 400 {error, field:"file"}.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { App } from "../src/app";
@@ -169,7 +169,8 @@ describe("nueva-receta: subida de foto", () => {
     const call = server.calls.find((c) => c.url === "/api/uploads");
     expect(call?.body).toBeInstanceOf(FormData);
     expect(await (call?.body as FormData).get("file")).toBeInstanceOf(File);
-    expect(await screen.findByRole("img", { name: "Vista previa de la foto" })).toBeDefined();
+    const img = await screen.findByAltText("Vista previa de la foto");
+    expect(img.getAttribute("src")).toBe("/api/uploads/recipe-100.png");
   });
 
   it("fallo de subida muestra alerta de error", async () => {
@@ -183,5 +184,22 @@ describe("nueva-receta: subida de foto", () => {
 
     expect(await screen.findByRole("alert")).toBeDefined();
     expect(screen.queryByRole("img", { name: "Vista previa de la foto" })).toBeNull();
+  });
+
+  it("la subida FormData no fuerza content-type application/json (DEF-3)", async () => {
+    const server = makeServer([]);
+    const seen: { contentType: string | null | undefined } = { contentType: undefined };
+    const orig = server.fetchMock;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      seen.contentType = new Headers(init?.headers).get("content-type");
+      return orig(input, init);
+    });
+    await openPage();
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [fileOf("foto.png")] } });
+
+    await waitFor(() => expect(seen.contentType).not.toBeUndefined());
+    expect(seen.contentType).toBeNull();
   });
 });
