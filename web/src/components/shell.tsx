@@ -12,7 +12,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const nav = NAV.map((item) => {
-    const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+    const active =
+      item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
     return (
       <Link
         key={item.href}

@@ -26,7 +26,10 @@ function GuardedShell() {
     let alive = true;
     fetch("/api/auth/status")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { authenticated?: boolean } | null) => alive && setAuthed(d?.authenticated === true))
+      .then(
+        (d: { authenticated?: boolean } | null) =>
+          alive && setAuthed(d?.authenticated === true),
+      )
       // network error: treat as unauthenticated; the server gate is the backstop.
       .catch(() => alive && setAuthed(false));
     return () => {
@@ -36,7 +39,12 @@ function GuardedShell() {
 
   if (authed === null) return null; // checking: render nothing, avoid login flash
   if (!authed)
-    return <Navigate to={`/login?next=${encodeURIComponent(pathname + search)}`} replace />;
+    return (
+      <Navigate
+        to={`/login?next=${encodeURIComponent(pathname + search)}`}
+        replace
+      />
+    );
   return (
     <Shell>
       <Outlet />
@@ -58,7 +66,6 @@ export function App() {
           <Route path="/" element={<DiaPage />} />
           <Route path="/plan-recetas" element={<PlanRecetasPage />} />
           <Route path="/plan-fuerza" element={<PlanFuerzaPage />} />
-
 
           <Route path="/recetario" element={<RecetarioPage />} />
           <Route path="/recetario/:id" element={<RecetarioDetallePage />} />

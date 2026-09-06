@@ -2,7 +2,11 @@
 // loading, error, reload }. Las respuestas de fechas ya superadas se descartan.
 import { useEffect, useRef, useState } from "react";
 
-export type DayMeal = { meal: string; recipeId: number | null; recipeName: string | null };
+export type DayMeal = {
+  meal: string;
+  recipeId: number | null;
+  recipeName: string | null;
+};
 
 export type DaySession = {
   id: number;

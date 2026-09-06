@@ -22,7 +22,9 @@ describe("apiGet / apiSend", () => {
   it("POST sends JSON body and method", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonReply(201, { ok: true }));
     vi.stubGlobal("fetch", fetchMock);
-    await expect(apiSend("/api/workout-logs/2026-09-02", "POST", { effort: 3 })).resolves.toEqual({
+    await expect(
+      apiSend("/api/workout-logs/2026-09-02", "POST", { effort: 3 }),
+    ).resolves.toEqual({
       ok: true,
     });
     const [url, init] = fetchMock.mock.calls[0];
@@ -32,8 +34,17 @@ describe("apiGet / apiSend", () => {
   });
 
   it("400 throws ApiError with error + field + status", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonReply(400, { error: "Required", field: "sets.0.setIndex" })));
-    const err = (await apiSend("/api/x", "POST", {}).catch((e) => e)) as ApiError;
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonReply(400, { error: "Required", field: "sets.0.setIndex" }),
+        ),
+    );
+    const err = (await apiSend("/api/x", "POST", {}).catch(
+      (e) => e,
+    )) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(400);
     expect(err.error).toBe("Required");
@@ -41,7 +52,10 @@ describe("apiGet / apiSend", () => {
   });
 
   it("409 throws ApiError without field", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonReply(409, { error: "already logged" })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonReply(409, { error: "already logged" })),
+    );
     const err = (await apiGet("/api/x").catch((e) => e)) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(409);
@@ -49,7 +63,10 @@ describe("apiGet / apiSend", () => {
   });
 
   it("network failure throws ApiError with status 0", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
     const err = (await apiGet("/api/x").catch((e) => e)) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(0);

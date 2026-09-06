@@ -1,10 +1,22 @@
 // Rejilla semanal E3: /plan-recetas renderiza 7 días × 3 comidas desde
 // GET /api/meal-plan/:week, con navegación de semana, picker y quita de slots.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { App } from "../src/app";
 
-type Slot = { day: number; meal: string; recipeId: number | null; recipeName: string | null };
+type Slot = {
+  day: number;
+  meal: string;
+  recipeId: number | null;
+  recipeName: string | null;
+};
 
 const RECIPES = [
   { id: 7, name: "Pollo al horno" },
@@ -19,7 +31,10 @@ let failNextPut = false;
 let apiDown = false;
 
 const jsonResponse = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json" } });
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 
 function renderAt(path: string) {
   window.history.pushState({}, "", path);
@@ -44,7 +59,10 @@ beforeEach(() => {
         if (method === "PUT") {
           if (failNextPut) {
             failNextPut = false;
-            return jsonResponse({ error: "Duplicate slot", field: "slots" }, 400);
+            return jsonResponse(
+              { error: "Duplicate slot", field: "slots" },
+              400,
+            );
           }
           const body = JSON.parse(String(init!.body)) as {
             slots: { day: number; meal: string; recipeId: number | null }[];
@@ -53,7 +71,8 @@ beforeEach(() => {
             ...s,
             recipeName:
               s.recipeId === null
-                ? (slots.find((old) => old.day === s.day && old.meal === s.meal)?.recipeName ?? null)
+                ? (slots.find((old) => old.day === s.day && old.meal === s.meal)
+                    ?.recipeName ?? null)
                 : (RECIPES.find((r) => r.id === s.recipeId)?.name ?? null),
           }));
         }
@@ -80,7 +99,15 @@ describe("rejilla 7×3", () => {
   it("semana vacía: 21 celdas '+ añadir' y etiquetas de días en español", async () => {
     renderAt("/plan-recetas?week=2026-W36");
     expect((await screen.findAllByText("+ añadir")).length).toBe(21);
-    for (const day of ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]) {
+    for (const day of [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+      "Domingo",
+    ]) {
       expect(screen.getByText(day)).toBeDefined();
     }
     for (const meal of ["desayuno", "almuerzo", "cena"]) {
@@ -89,7 +116,9 @@ describe("rejilla 7×3", () => {
   });
 
   it("slots guardados muestran el nombre de la receta en su celda", async () => {
-    slots = [{ day: 0, meal: "desayuno", recipeId: 7, recipeName: "Pollo al horno" }];
+    slots = [
+      { day: 0, meal: "desayuno", recipeId: 7, recipeName: "Pollo al horno" },
+    ];
     renderAt("/plan-recetas?week=2026-W36");
     expect(await screen.findByText("Pollo al horno")).toBeDefined();
     expect((await screen.findAllByText("+ añadir")).length).toBe(20);
@@ -114,7 +143,9 @@ describe("navegación de semana", () => {
     await waitFor(() => expect(mealPlanCalls).toContain("GET 2026-W35"));
     fireEvent.click(screen.getByRole("button", { name: "Semana siguiente" }));
     await waitFor(() => expect(window.location.search).toBe("?week=2026-W36"));
-    await waitFor(() => expect(mealPlanCalls.filter((c) => c === "GET 2026-W36").length).toBe(2));
+    await waitFor(() =>
+      expect(mealPlanCalls.filter((c) => c === "GET 2026-W36").length).toBe(2),
+    );
   });
 
   it("carga directa con ?week= pide esa semana, no la actual", async () => {
@@ -131,7 +162,9 @@ describe("picker de recetas", () => {
     fireEvent.click(screen.getAllByText("+ añadir")[0]);
     const dialog = await screen.findByRole("dialog");
     await within(dialog).findByText("Pollo al horno");
-    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "pol" } });
+    fireEvent.change(within(dialog).getByRole("textbox"), {
+      target: { value: "pol" },
+    });
     expect(within(dialog).getByText("Pollo al horno")).toBeDefined();
     expect(within(dialog).getByText("Tarta de polen")).toBeDefined();
     expect(within(dialog).queryByText("Lentejas")).toBeNull();
@@ -155,7 +188,9 @@ describe("picker de recetas", () => {
     fireEvent.click(await within(dialog).findByText("Pollo al horno"));
     expect(await screen.findByRole("alert")).toBeDefined();
     // tras recargar, la celda 0 sigue con Lentejas (estado del servidor)
-    await waitFor(() => expect(screen.getAllByText("Lentejas").length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(screen.getAllByText("Lentejas").length).toBeGreaterThan(0),
+    );
     expect(slots.length).toBe(1);
   });
 });
@@ -173,7 +208,9 @@ describe("celda rellena", () => {
     renderAt("/plan-recetas?week=2026-W36");
     await screen.findByText("Lentejas");
     fireEvent.click(screen.getByRole("button", { name: "Quitar Lentejas" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Confirmar quitar" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Confirmar quitar" }),
+    );
     await screen.findAllByText("+ añadir");
     await waitFor(() => expect(slots.length).toBe(0));
     expect(mealPlanCalls).toContain("PUT 2026-W36");
@@ -183,7 +220,11 @@ describe("celda rellena", () => {
 describe("acceso a la lista de la compra", () => {
   it("el botón 'Lista de la compra' abre la hoja", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    fireEvent.click(await screen.findByRole("button", { name: "Lista de la compra" }));
-    expect(await screen.findByRole("heading", { name: "Lista de la compra" })).toBeDefined();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Lista de la compra" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Lista de la compra" }),
+    ).toBeDefined();
   });
 });

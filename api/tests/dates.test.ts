@@ -36,7 +36,14 @@ describe("dayIndexOf", () => {
 });
 
 describe("entrada inválida", () => {
-  for (const bad of ["2026-9-2", "not-a-date", "", "2026-13-45", "2026-02-30", "20x6-09-01"]) {
+  for (const bad of [
+    "2026-9-2",
+    "not-a-date",
+    "",
+    "2026-13-45",
+    "2026-02-30",
+    "20x6-09-01",
+  ]) {
     it(`rechaza ${JSON.stringify(bad)}`, () => {
       expect(isoWeekOf(bad)).toBeNull();
       expect(dayIndexOf(bad)).toBeNull();

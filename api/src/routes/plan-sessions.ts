@@ -22,14 +22,25 @@ export const planSessions = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const { date, templateId } = c.get("validated");
       const db = getDb(c.env);
-      if (!(await row(db, "SELECT id FROM session_templates WHERE id = ?", templateId)))
+      if (
+        !(await row(
+          db,
+          "SELECT id FROM session_templates WHERE id = ?",
+          templateId,
+        ))
+      )
         return fail("Unknown template", "templateId");
       if (await row(db, "SELECT id FROM plan_sessions WHERE date = ?", date))
         return fail("Ya hay una sesión ese día", "date", 409);
       const { meta } = await db
-        .prepare("INSERT INTO plan_sessions (date, template_id, status) VALUES (?, ?, 'planned')")
+        .prepare(
+          "INSERT INTO plan_sessions (date, template_id, status) VALUES (?, ?, 'planned')",
+        )
         .bind(date, templateId)
         .run();
-      return json({ id: Number(meta.last_row_id), date, templateId, status: "planned" }, 201);
+      return json(
+        { id: Number(meta.last_row_id), date, templateId, status: "planned" },
+        201,
+      );
     }),
   );

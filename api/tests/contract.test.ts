@@ -41,17 +41,32 @@ describe("worker surface", () => {
   });
 
   it("schema.sql is idempotent (second apply is a no-op)", async () => {
-    await expect(env.DB.batch([env.DB.prepare(schemaSql)])).resolves.toBeTruthy();
+    await expect(
+      env.DB.batch([env.DB.prepare(schemaSql)]),
+    ).resolves.toBeTruthy();
   });
 });
 
 describe("e3 shopping migration (D1 runner semantics)", () => {
   it("shopping_items table + recipe_ingredients.section exist after freshDb", async () => {
-    const shop = await d1.all(`SELECT name FROM pragma_table_info('shopping_items')`);
-    expect(shop.map((c) => c.name)).toEqual(
-      expect.arrayContaining(["id", "week_plan_id", "position", "food", "quantity", "unit", "section", "checked"]),
+    const shop = await d1.all(
+      `SELECT name FROM pragma_table_info('shopping_items')`,
     );
-    const ri = await d1.all(`SELECT name FROM pragma_table_info('recipe_ingredients')`);
+    expect(shop.map((c) => c.name)).toEqual(
+      expect.arrayContaining([
+        "id",
+        "week_plan_id",
+        "position",
+        "food",
+        "quantity",
+        "unit",
+        "section",
+        "checked",
+      ]),
+    );
+    const ri = await d1.all(
+      `SELECT name FROM pragma_table_info('recipe_ingredients')`,
+    );
     expect(ri.map((c) => c.name)).toContain("section");
   });
 
@@ -60,10 +75,16 @@ describe("e3 shopping migration (D1 runner semantics)", () => {
     // bootstrap is guarded by a once-flag and CREATE TABLE IF NOT EXISTS is
     // replay-safe by SQL. Neither path may error or duplicate.
     await expect(freshDb()).resolves.toBeUndefined();
-    await expect(env.DB.batch([env.DB.prepare(/CREATE TABLE[^;]+;/.exec(m0003)![0])])).resolves.toBeTruthy();
-    const { count } = (await d1.get(`SELECT COUNT(*) AS count FROM shopping_items`))!;
+    await expect(
+      env.DB.batch([env.DB.prepare(/CREATE TABLE[^;]+;/.exec(m0003)![0])]),
+    ).resolves.toBeTruthy();
+    const { count } = (await d1.get(
+      `SELECT COUNT(*) AS count FROM shopping_items`,
+    ))!;
     expect(count).toBe(0);
-    const ri = await d1.all(`SELECT name FROM pragma_table_info('recipe_ingredients')`);
+    const ri = await d1.all(
+      `SELECT name FROM pragma_table_info('recipe_ingredients')`,
+    );
     expect(ri.filter((c) => c.name === "section").length).toBe(1);
   });
 });

@@ -1,6 +1,12 @@
 // E2 task 4: editor create/edit flows, validation, dynamic rows, pending guard.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { App } from "../src/app";
 import { makeRecipe, makeServer } from "./fixtures";
 
@@ -16,7 +22,9 @@ function renderAt(path: string) {
 
 async function openEditor() {
   renderAt("/recetario");
-  fireEvent.click(await screen.findByRole("button", { name: "+ Nueva receta" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "+ Nueva receta" }),
+  );
   return screen.findByRole("dialog", { name: "Nueva receta" });
 }
 
@@ -29,13 +37,19 @@ describe("editor: create", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
       target: { value: "Tortilla" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "Ingrediente 1 alimento" }), {
-      target: { value: "huevo" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Ingrediente 1 alimento" }),
+      {
+        target: { value: "huevo" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Añadir ingrediente" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Ingrediente 2 alimento" }), {
-      target: { value: "patata" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Ingrediente 2 alimento" }),
+      {
+        target: { value: "patata" },
+      },
+    );
     fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
       target: { value: "Batir" },
     });
@@ -44,10 +58,9 @@ describe("editor: create", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     const post = server.calls.find((c) => c.method === "POST");
     expect(post?.body?.name).toBe("Tortilla");
-    expect((post?.body?.ingredients as { food: string }[]).map((i) => i.food)).toEqual([
-      "huevo",
-      "patata",
-    ]);
+    expect(
+      (post?.body?.ingredients as { food: string }[]).map((i) => i.food),
+    ).toEqual(["huevo", "patata"]);
     expect(post?.body?.steps).toEqual(["Batir"]);
     expect(await screen.findByText("Tortilla")).toBeDefined();
   });
@@ -70,9 +83,10 @@ describe("editor: create", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(await screen.findByText("Ya existe")).toBeDefined();
-    expect((screen.getByRole("textbox", { name: "Nombre" }) as HTMLInputElement).value).toBe(
-      "Existente",
-    );
+    expect(
+      (screen.getByRole("textbox", { name: "Nombre" }) as HTMLInputElement)
+        .value,
+    ).toBe("Existente");
     expect(screen.queryByRole("dialog")).not.toBeNull();
   });
 
@@ -93,7 +107,9 @@ describe("editor: create", () => {
     const save = new Promise<Response>((res) => (resolveSave = res));
     const base = makeServer([]).fetchMock;
     const spy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
-      String(input) === "/api/recipes" && init?.method === "POST" ? save : base(input, init),
+      String(input) === "/api/recipes" && init?.method === "POST"
+        ? save
+        : base(input, init),
     );
     vi.stubGlobal("fetch", spy);
     await openEditor();
@@ -101,13 +117,19 @@ describe("editor: create", () => {
       target: { value: "Doble" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    const btn = screen.getByRole("button", { name: /Guardando/ }) as HTMLButtonElement;
+    const btn = screen.getByRole("button", {
+      name: /Guardando/,
+    }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
     fireEvent.click(btn);
     fireEvent.click(btn);
     resolveSave(new Response("{}", { status: 201 }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(spy.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method === "POST").length).toBe(1);
+    expect(
+      spy.mock.calls.filter(
+        (c) => (c[1] as RequestInit | undefined)?.method === "POST",
+      ).length,
+    ).toBe(1);
   });
 });
 
@@ -118,19 +140,36 @@ describe("editor: rows, chips, reorder", () => {
 
     // ingredient add + remove
     fireEvent.click(screen.getByRole("button", { name: "Añadir ingrediente" }));
-    expect(screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ }).length).toBe(2);
-    fireEvent.click(screen.getByRole("button", { name: "Quitar ingrediente 2" }));
-    expect(screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ }).length).toBe(1);
+    expect(
+      screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ })
+        .length,
+    ).toBe(2);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Quitar ingrediente 2" }),
+    );
+    expect(
+      screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ })
+        .length,
+    ).toBe(1);
 
     // steps: fill two, move first down, remove one
-    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), { target: { value: "Uno" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
+      target: { value: "Uno" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Añadir paso" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Paso 2" }), { target: { value: "Dos" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 2" }), {
+      target: { value: "Dos" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Bajar paso 1" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), { target: { value: "Dos" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
+      target: { value: "Dos" },
+    });
     // after reorder both texts swapped: now "Uno" is in step 2
     fireEvent.click(screen.getByRole("button", { name: "Quitar paso 1" }));
-    expect((screen.getByRole("textbox", { name: "Paso 1" }) as HTMLInputElement).value).toBe("Uno");
+    expect(
+      (screen.getByRole("textbox", { name: "Paso 1" }) as HTMLInputElement)
+        .value,
+    ).toBe("Uno");
 
     // materials chips
     fireEvent.change(screen.getByRole("textbox", { name: "Nuevo material" }), {
@@ -138,7 +177,9 @@ describe("editor: rows, chips, reorder", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Añadir material" }));
     expect(screen.getByText("olla")).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "Quitar material olla" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Quitar material olla" }),
+    );
     expect(screen.queryByText("olla")).toBeNull();
 
     // free tags
@@ -156,7 +197,9 @@ describe("editor: edit mode", () => {
     const server = makeServer([recipe]);
     vi.stubGlobal("fetch", server.fetchMock);
     renderAt("/recetario/7");
-    fireEvent.click(await screen.findByRole("button", { name: "Editar receta" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Editar receta" }),
+    );
     await screen.findByRole("dialog", { name: "Editar receta" });
 
     // cancel: nothing sent, original intact
@@ -178,6 +221,8 @@ describe("editor: edit mode", () => {
     const call = server.calls.find((c) => c.method === "PUT");
     expect(call?.url).toBe("/api/recipes/7");
     expect(call?.body?.name).toBe("Arroz recaliente");
-    await waitFor(() => expect(screen.findByText("Arroz recaliente")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.findByText("Arroz recaliente")).toBeDefined(),
+    );
   });
 });

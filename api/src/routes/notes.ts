@@ -13,8 +13,15 @@ export const notes = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const date = c.req.param("date");
       if (!DATE.test(date)) return fail("date must be YYYY-MM-DD", "date");
-      const note = await row(c.env.DB, "SELECT text FROM day_notes WHERE date = ?", date);
-      const text = note && typeof note === "object" && "text" in note ? String(note.text ?? "") : "";
+      const note = await row(
+        c.env.DB,
+        "SELECT text FROM day_notes WHERE date = ?",
+        date,
+      );
+      const text =
+        note && typeof note === "object" && "text" in note
+          ? String(note.text ?? "")
+          : "";
       return json({ date, text });
     }),
   )

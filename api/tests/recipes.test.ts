@@ -151,7 +151,10 @@ describe("E2: recipe photo_path + tags", () => {
     const got = await body(await get(`/api/recipes/${id}`));
     expect(got.photo_path).toBe("/photos/arroz.png");
     expect(got.tags).toEqual(["almuerzo", "batch"]);
-    const list = (await (await get("/api/recipes")).json()) as Record<string, unknown>[];
+    const list = (await (await get("/api/recipes")).json()) as Record<
+      string,
+      unknown
+    >[];
     const row = list.find((x) => Number(x.id) === id)!;
     expect(row.photo_path).toBe("/photos/arroz.png");
     expect(row.tags).toEqual(["almuerzo", "batch"]);
@@ -171,10 +174,16 @@ describe("E2: recipe photo_path + tags", () => {
 
   it("PUT replaces tags wholesale (no leftovers)", async () => {
     const created = await body(
-      await post("/api/recipes", { name: "Ensalada templada", tags: ["cena", "rapido"] }),
+      await post("/api/recipes", {
+        name: "Ensalada templada",
+        tags: ["cena", "rapido"],
+      }),
     );
     const id = Number(created.id);
-    const res = await put(`/api/recipes/${id}`, { name: "Ensalada templada", tags: ["verano"] });
+    const res = await put(`/api/recipes/${id}`, {
+      name: "Ensalada templada",
+      tags: ["verano"],
+    });
     expect(res.status).toBe(200);
     const got = await body(await get(`/api/recipes/${id}`));
     expect(got.tags).toEqual(["verano"]);

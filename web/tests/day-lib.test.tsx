@@ -40,9 +40,12 @@ describe("useDay", () => {
         : Promise.resolve(Response.json(dayPayload("2026-09-03"))),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const { result, rerender } = renderHook(({ d }: { d: string }) => useDay(d), {
-      initialProps: { d: "2026-09-02" },
-    });
+    const { result, rerender } = renderHook(
+      ({ d }: { d: string }) => useDay(d),
+      {
+        initialProps: { d: "2026-09-02" },
+      },
+    );
     rerender({ d: "2026-09-03" });
     await waitFor(() => expect(result.current.data?.date).toBe("2026-09-03"));
     // La respuesta vieja llega tarde: no debe pisar la fecha actual.
@@ -71,7 +74,10 @@ describe("useDay", () => {
   });
 
   it("respuesta no-OK se reporta como error", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 500 })),
+    );
     const { result } = renderHook(() => useDay("2026-09-02"));
     await waitFor(() => expect(result.current.error).not.toBeNull());
   });

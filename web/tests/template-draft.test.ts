@@ -61,7 +61,11 @@ describe("draft reducer", () => {
 
   it("setTargets updates one entry by key", () => {
     const d = draft(ex(1, "a"), ex(2, "b"));
-    const s = setTargets(d, "e2", { targetSets: 4, targetRepsMin: 6, targetRepsMax: 8 });
+    const s = setTargets(d, "e2", {
+      targetSets: 4,
+      targetRepsMin: 6,
+      targetRepsMax: 8,
+    });
     expect(s.entries[1].targetSets).toBe(4);
     expect(s.entries[1].targetRepsMin).toBe(6);
     expect(s.entries[1].targetRepsMax).toBe(8);
@@ -72,7 +76,12 @@ describe("draft reducer", () => {
 
 describe("buildTemplatePayload", () => {
   it("renumbers positions 0..n-1 and emits nullable targets", () => {
-    const a = { ...ex(7, "Press"), targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 };
+    const a = {
+      ...ex(7, "Press"),
+      targetSets: 3,
+      targetRepsMin: 8,
+      targetRepsMax: 12,
+    };
     const b = ex(9, "Remo");
     const payload = buildTemplatePayload(draft(a, b));
     expect(payload).toEqual({
@@ -80,7 +89,12 @@ describe("buildTemplatePayload", () => {
       rotationIndex: 0,
       exercises: [
         { exerciseId: 7, targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 },
-        { exerciseId: 9, targetSets: null, targetRepsMin: null, targetRepsMax: null },
+        {
+          exerciseId: 9,
+          targetSets: null,
+          targetRepsMin: null,
+          targetRepsMax: null,
+        },
       ],
     });
   });
@@ -91,9 +105,15 @@ describe("nextCopyName", () => {
     expect(nextCopyName("B — Tirón", ["B — Tirón"])).toBe("B — Tirón (copia)");
   });
   it("increments on collision", () => {
-    expect(nextCopyName("B — Tirón", ["B — Tirón", "B — Tirón (copia)"])).toBe("B — Tirón (copia 2)");
+    expect(nextCopyName("B — Tirón", ["B — Tirón", "B — Tirón (copia)"])).toBe(
+      "B — Tirón (copia 2)",
+    );
     expect(
-      nextCopyName("B — Tirón", ["B — Tirón", "B — Tirón (copia)", "B — Tirón (copia 2)"]),
+      nextCopyName("B — Tirón", [
+        "B — Tirón",
+        "B — Tirón (copia)",
+        "B — Tirón (copia 2)",
+      ]),
     ).toBe("B — Tirón (copia 3)");
   });
 });

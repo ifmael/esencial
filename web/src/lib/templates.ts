@@ -92,5 +92,13 @@ export function useTemplates(): TemplatesState {
     [reload],
   );
 
-  return { templates, pending, error, reload, createTemplate, updateTemplate, deleteTemplate };
+  return {
+    templates,
+    pending,
+    error,
+    reload,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+  };
 }

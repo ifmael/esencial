@@ -8,7 +8,9 @@ import { apiRequest, uniqueName } from "./helpers";
 test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
   test.use({ storageState: ".auth/state.json" });
 
-  test("week navigation changes the shown week and reloads its plan", async ({ page }) => {
+  test("week navigation changes the shown week and reloads its plan", async ({
+    page,
+  }) => {
     await page.goto("/plan-recetas");
 
     const weekHeading = page.getByRole("heading", { level: 1 });
@@ -23,34 +25,46 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     await expect(weekHeading).toHaveText(baseWeek!);
   });
 
-  test("week nav renders a planned recipe from the other week (plan reloads per week)", async ({ page }) => {
+  test("week nav renders a planned recipe from the other week (plan reloads per week)", async ({
+    page,
+  }) => {
     const name = uniqueName("Nav E2E");
     const food = uniqueName("NavFoodE2E");
-    const created = await apiRequest<{ id: number }>(page.request, "POST", "/api/recipes", {
-      name,
-      description: "e2e",
-      ingredients: [{ food, quantity: 1, unit: null }],
-      steps: [],
-      materials: [],
-      tags: [],
-    });
+    const created = await apiRequest<{ id: number }>(
+      page.request,
+      "POST",
+      "/api/recipes",
+      {
+        name,
+        description: "e2e",
+        ingredients: [{ food, quantity: 1, unit: null }],
+        steps: [],
+        materials: [],
+        tags: [],
+      },
+    );
     expect(created.id).toBeGreaterThan(0);
 
     await page.goto("/plan-recetas");
-    const baseWeek = await page.getByRole("heading", { level: 1 }).textContent();
+    const baseWeek = await page
+      .getByRole("heading", { level: 1 })
+      .textContent();
 
     // Shift the base ISO week +1 client-side; same math as web/src/lib/iso-week.ts.
     const nextWeek = await page.evaluate((week) => {
       const WEEK_MS = 7 * 86_400_000;
       const jan4Of = (isoYear: number) => {
         const jan4 = new Date(Date.UTC(isoYear, 0, 4));
-        return new Date(jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * WEEK_MS);
+        return new Date(
+          jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * WEEK_MS,
+        );
       };
       const isoWeekOf = (date: Date) => {
         const thu = new Date(date.getTime());
         thu.setUTCDate(thu.getUTCDate() - ((thu.getUTCDay() + 6) % 7) + 3);
         const year = thu.getUTCFullYear();
-        const week = Math.floor((thu.getTime() - jan4Of(year).getTime()) / WEEK_MS) + 1;
+        const week =
+          Math.floor((thu.getTime() - jan4Of(year).getTime()) / WEEK_MS) + 1;
         return `${year}-W${String(week).padStart(2, "0")}`;
       };
       const [year, weekNum] = (week as string).split("-W").map(Number);
@@ -88,7 +102,9 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     await expect(notes).toHaveValue(text);
   });
 
-  test("note typed and flushed on immediate date switch saves against the old date", async ({ page }) => {
+  test("note typed and flushed on immediate date switch saves against the old date", async ({
+    page,
+  }) => {
     const text = uniqueName("Nota flush");
     await page.goto("/");
 
@@ -117,16 +133,23 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     expect((saved as { text?: string }).text).toBe(text);
   });
 
-  test("duplicate-slot PUT 400 does not corrupt the week; picker add still lands", async ({ page }) => {
+  test("duplicate-slot PUT 400 does not corrupt the week; picker add still lands", async ({
+    page,
+  }) => {
     const name = uniqueName("Dup Slot E2E");
-    const created = await apiRequest<{ id: number }>(page.request, "POST", "/api/recipes", {
-      name,
-      description: "e2e",
-      ingredients: [],
-      steps: [],
-      materials: [],
-      tags: [],
-    });
+    const created = await apiRequest<{ id: number }>(
+      page.request,
+      "POST",
+      "/api/recipes",
+      {
+        name,
+        description: "e2e",
+        ingredients: [],
+        steps: [],
+        materials: [],
+        tags: [],
+      },
+    );
 
     await page.goto("/plan-recetas");
     const week = await page.getByRole("heading", { level: 1 }).textContent();
@@ -150,7 +173,9 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     await expect(page.locator("a", { hasText: name })).toHaveCount(1);
   });
 
-  test("API 400 envelope renders as visible UI error in /plan-recetas", async ({ page }) => {
+  test("API 400 envelope renders as visible UI error in /plan-recetas", async ({
+    page,
+  }) => {
     // Loading an invalid week returns the 400 {error, field:"week"} envelope;
     // the page MUST render a visible error message, not a blank grid.
     await page.goto("/plan-recetas?week=9999-W99");
@@ -158,7 +183,9 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     await expect(page.getByRole("alert")).toContainText(/No se pudo|week/);
   });
 
-  test("deep link /plan-recetas without session → /login?next=... → lands back on /plan-recetas", async ({ page }) => {
+  test("deep link /plan-recetas without session → /login?next=... → lands back on /plan-recetas", async ({
+    page,
+  }) => {
     // Unauthenticated project: clear storageState for this test only.
     await page.context().clearCookies();
 
@@ -169,6 +196,8 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await page.waitForURL(/\/plan-recetas$/);
-    await expect(page.getByRole("heading", { name: /^\d{4}-W\d{2}$/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /^\d{4}-W\d{2}$/ }),
+    ).toBeVisible();
   });
 });

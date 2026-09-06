@@ -65,7 +65,11 @@ describe("/api/exercises", () => {
   });
 
   it("400 on invalid techniqueUrl", async () => {
-    const res = await post("/api/exercises", { name: "Malo", tags: ["x"], techniqueUrl: "no-es-url" });
+    const res = await post("/api/exercises", {
+      name: "Malo",
+      tags: ["x"],
+      techniqueUrl: "no-es-url",
+    });
     expect(res.status).toBe(400);
     expect((await body(res)).field).toBe("techniqueUrl");
   });
@@ -90,22 +94,36 @@ describe("/api/exercises", () => {
     expect((await get(`/api/exercises/${id}`)).status).toBe(404);
   });
   it("creates exercise with steps and returns them as array", async () => {
-    const all = (await (await get("/api/exercises")).json()) as { id: number }[];
+    const all = (await (await get("/api/exercises")).json()) as {
+      id: number;
+    }[];
     for (const e of all) await del(`/api/exercises/${e.id}`);
     const res = await post("/api/exercises", {
       name: "Sentadilla trasera",
       description: "Carga la barra sobre la espalda.",
       tags: ["pierna"],
-      steps: ["Coloca la barra en la espalda", "Baja con la cadera atrás", "Sube empujando el suelo"],
+      steps: [
+        "Coloca la barra en la espalda",
+        "Baja con la cadera atrás",
+        "Sube empujando el suelo",
+      ],
     });
     expect(res.status).toBe(201);
     const id = Number((await body(res)).id);
     const got = await body(await get(`/api/exercises/${id}`));
-    expect(got.steps).toEqual(["Coloca la barra en la espalda", "Baja con la cadera atrás", "Sube empujando el suelo"]);
+    expect(got.steps).toEqual([
+      "Coloca la barra en la espalda",
+      "Baja con la cadera atrás",
+      "Sube empujando el suelo",
+    ]);
   });
 
   it("400 on steps containing an empty string", async () => {
-    const res = await post("/api/exercises", { name: "Pasos malos", tags: ["x"], steps: ["ok", ""] });
+    const res = await post("/api/exercises", {
+      name: "Pasos malos",
+      tags: ["x"],
+      steps: ["ok", ""],
+    });
     expect(res.status).toBe(400);
     expect((await body(res)).field).toBe("steps.1");
   });
@@ -122,4 +140,3 @@ describe("/api/exercises", () => {
     expect(got.steps).toEqual(["Primer paso", "Segundo paso"]);
   });
 });
-

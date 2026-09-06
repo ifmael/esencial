@@ -2,7 +2,14 @@
 // secciones RECETA/FUERZA/NOTAS con sus estados, autosave con debounce + flush.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
 
@@ -48,8 +55,13 @@ beforeEach(() => {
   fetchMock = vi.fn(async (url: string) => {
     // E7 guard probe must authenticate so the page mounts; /api/day is for the page.
     if (String(url).includes("/api/auth/status"))
-      return Response.json({ authenticated: true }, { status: 200, headers: { "content-type": "application/json" } });
-    return Response.json(payload({ date: String(url).slice("/api/day/".length) }));
+      return Response.json(
+        { authenticated: true },
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    return Response.json(
+      payload({ date: String(url).slice("/api/day/".length) }),
+    );
   });
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -72,7 +84,9 @@ describe("header y navegación", () => {
   it("muestra 'Hoy' con la fecha local actual", async () => {
     renderAt("/");
     await settle();
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Hoy/);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(
+      /^Hoy/,
+    );
   });
 
   it("avanzar días pide cada fecha nueva y quita 'Hoy'", async () => {
@@ -83,9 +97,16 @@ describe("header y navegación", () => {
     await settle();
     fireEvent.click(screen.getByRole("button", { name: "Día siguiente" }));
     await settle();
-    const dayCalls = fetchMock.mock.calls.filter((c) => String(c[0]).startsWith("/api/day/"));
-    expect(dayCalls.map((c) => c[0])).toEqual([`/api/day/${addLocalToday(1)}`, `/api/day/${addLocalToday(2)}`]);
-    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toMatch(/^Hoy/);
+    const dayCalls = fetchMock.mock.calls.filter((c) =>
+      String(c[0]).startsWith("/api/day/"),
+    );
+    expect(dayCalls.map((c) => c[0])).toEqual([
+      `/api/day/${addLocalToday(1)}`,
+      `/api/day/${addLocalToday(2)}`,
+    ]);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toMatch(
+      /^Hoy/,
+    );
   });
 
   it("el botón 'Hoy' vuelve a la fecha actual", async () => {
@@ -96,13 +117,17 @@ describe("header y navegación", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ir a hoy" }));
     await settle();
     expect(fetchMock).toHaveBeenCalledWith(`/api/day/${localToday()}`);
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Hoy/);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(
+      /^Hoy/,
+    );
   });
 
   it("el input de fecha salta a la fecha elegida", async () => {
     renderAt("/");
     await settle();
-    fireEvent.change(screen.getByLabelText("Ir a una fecha"), { target: { value: DAY } });
+    fireEvent.change(screen.getByLabelText("Ir a una fecha"), {
+      target: { value: DAY },
+    });
     await settle();
     expect(fetchMock).toHaveBeenCalledWith(`/api/day/${DAY}`);
   });
@@ -111,8 +136,12 @@ describe("header y navegación", () => {
     const { container } = renderAt("/");
     await settle();
     const header = container.querySelector("header") as HTMLElement;
-    expect(within(header).getByRole("link", { name: "Plan recetas" })).toBeDefined();
-    expect(within(header).getByRole("link", { name: "Plan fuerza" })).toBeDefined();
+    expect(
+      within(header).getByRole("link", { name: "Plan recetas" }),
+    ).toBeDefined();
+    expect(
+      within(header).getByRole("link", { name: "Plan fuerza" }),
+    ).toBeDefined();
   });
 });
 
@@ -138,8 +167,14 @@ describe("sección RECETA", () => {
   it("sin comidas → empty state con CTA a /plan-recetas", async () => {
     renderAt("/");
     await settle();
-    expect(screen.getByText("Aún no has planificado comidas para este día")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Ir al plan semanal" }).getAttribute("href")).toBe("/plan-recetas");
+    expect(
+      screen.getByText("Aún no has planificado comidas para este día"),
+    ).toBeDefined();
+    expect(
+      screen
+        .getByRole("link", { name: "Ir al plan semanal" })
+        .getAttribute("href"),
+    ).toBe("/plan-recetas");
   });
 });
 
@@ -148,15 +183,27 @@ describe("sección FUERZA", () => {
     renderAt("/");
     await settle();
     expect(screen.getByText("Sin sesión asignada")).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Registrar sesión" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Ver el plan de fuerza" }).getAttribute("href")).toBe("/plan-fuerza");
+    expect(
+      screen.queryByRole("button", { name: "Registrar sesión" }),
+    ).toBeNull();
+    expect(
+      screen
+        .getByRole("link", { name: "Ver el plan de fuerza" })
+        .getAttribute("href"),
+    ).toBe("/plan-fuerza");
   });
 
   it("planned → badge pendiente + 'Registrar sesión' lleva a /sesion/<fecha>", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
         payload({
-          session: { id: 3, templateId: 2, templateName: "Empuje A", status: "planned", summary: null },
+          session: {
+            id: 3,
+            templateId: 2,
+            templateName: "Empuje A",
+            status: "planned",
+            summary: null,
+          },
         }),
       ),
     );
@@ -186,7 +233,9 @@ describe("sección FUERZA", () => {
     expect(screen.getByText(/5 ejercicios/)).toBeDefined();
     expect(screen.getByText(/20 series/)).toBeDefined();
     expect(screen.getByText(/esfuerzo 3\/5/)).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Registrar sesión" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Registrar sesión" }),
+    ).toBeNull();
   });
   it("planned con exercises → 4 listitems numerados en FUERZA", async () => {
     fetchMock.mockResolvedValue(
@@ -222,13 +271,22 @@ describe("sección FUERZA", () => {
       fetchMock.mockResolvedValue(
         Response.json(
           payload({
-            session: { id: 3, templateId: 2, templateName: "Empuje A", status: "planned", summary: null, exercises },
+            session: {
+              id: 3,
+              templateId: 2,
+              templateName: "Empuje A",
+              status: "planned",
+              summary: null,
+              exercises,
+            },
           }),
         ),
       );
       renderAt("/");
       await settle();
-      const fuerza = screen.getByText("FUERZA").closest("section") as HTMLElement;
+      const fuerza = screen
+        .getByText("FUERZA")
+        .closest("section") as HTMLElement;
       expect(within(fuerza).getByText("Empuje A")).toBeDefined();
       expect(screen.queryByText(/Cannot read|Cannot destructure/)).toBeNull();
     }
@@ -236,7 +294,8 @@ describe("sección FUERZA", () => {
 });
 
 describe("sección NOTAS con autosave", () => {
-  const puts = () => fetchMock.mock.calls.filter((c) => String(c[0]).startsWith("/api/notes/"));
+  const puts = () =>
+    fetchMock.mock.calls.filter((c) => String(c[0]).startsWith("/api/notes/"));
 
   it("escribe, espera el debounce y hace UN solo PUT con el texto final", async () => {
     renderAt("/");
@@ -251,7 +310,9 @@ describe("sección NOTAS con autosave", () => {
     expect(puts()[0][0]).toBe(`/api/notes/${localToday()}`);
     const init = puts()[0][1] as RequestInit;
     expect(init.method).toBe("PUT");
-    expect(JSON.parse(String(init.body))).toEqual({ text: "Sentado de más otra vez" });
+    expect(JSON.parse(String(init.body))).toEqual({
+      text: "Sentado de más otra vez",
+    });
     await settle();
     expect(screen.getByText("Guardado")).toBeDefined();
   });
@@ -260,7 +321,9 @@ describe("sección NOTAS con autosave", () => {
     renderAt("/");
     await settle();
     const left = localToday();
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "a medias" } });
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "a medias" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Día siguiente" }));
     await settle();
     expect(puts().map((c) => c[0])).toEqual([`/api/notes/${left}`]);
@@ -271,10 +334,14 @@ describe("sección NOTAS con autosave", () => {
   });
 
   it("nota precargada sin editar no dispara PUT", async () => {
-    fetchMock.mockResolvedValue(Response.json(payload({ note: { text: "ya escrita" } })));
+    fetchMock.mockResolvedValue(
+      Response.json(payload({ note: { text: "ya escrita" } })),
+    );
     renderAt("/");
     await settle();
-    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("ya escrita");
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe(
+      "ya escrita",
+    );
     await vi.advanceTimersByTimeAsync(2000);
     expect(puts()).toHaveLength(0);
   });
@@ -286,11 +353,17 @@ describe("sección NOTAS con autosave", () => {
       if (init?.method === "PUT") return new Response("{}", { status: 500 });
       return Response.json(payload());
     });
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "no guarda" } });
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "no guarda" },
+    });
     await vi.advanceTimersByTimeAsync(800);
     await settle();
-    expect(screen.getByRole("button", { name: "Reintentar guardar" })).toBeDefined();
-    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("no guarda");
+    expect(
+      screen.getByRole("button", { name: "Reintentar guardar" }),
+    ).toBeDefined();
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe(
+      "no guarda",
+    );
   });
 });
 
@@ -299,7 +372,10 @@ describe("loading y error", () => {
     const gate = Promise.withResolvers<Response>();
     fetchMock.mockImplementation(async (url: string) => {
       if (String(url).includes("/api/auth/status"))
-        return Response.json({ authenticated: true }, { status: 200, headers: { "content-type": "application/json" } });
+        return Response.json(
+          { authenticated: true },
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
       return gate.promise;
     });
     renderAt("/");
@@ -314,9 +390,14 @@ describe("loading y error", () => {
     let broken = true;
     fetchMock.mockImplementation(async (url: string) => {
       if (String(url).includes("/api/auth/status"))
-        return Response.json({ authenticated: true }, { status: 200, headers: { "content-type": "application/json" } });
+        return Response.json(
+          { authenticated: true },
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
       if (broken) throw new TypeError("network down");
-      return Response.json(payload({ date: String(url).slice("/api/day/".length) }));
+      return Response.json(
+        payload({ date: String(url).slice("/api/day/".length) }),
+      );
     });
     renderAt("/");
     await settle();
@@ -326,6 +407,8 @@ describe("loading y error", () => {
     fireEvent.click(retry);
     await settle();
     expect(screen.queryByRole("button", { name: "Reintentar" })).toBeNull();
-    expect(screen.getByText("Aún no has planificado comidas para este día")).toBeDefined();
+    expect(
+      screen.getByText("Aún no has planificado comidas para este día"),
+    ).toBeDefined();
   });
 });

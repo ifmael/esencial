@@ -4,7 +4,11 @@ import { vi } from "vitest";
 import type { Exercise } from "../src/lib/exercises";
 import type { Template } from "../src/lib/templates";
 
-export type Call = { url: string; method: string; body: Record<string, unknown> | undefined };
+export type Call = {
+  url: string;
+  method: string;
+  body: Record<string, unknown> | undefined;
+};
 
 export type Seed = { templates?: Template[]; exercises?: Exercise[] };
 
@@ -15,14 +19,20 @@ export type MockApi = {
 };
 
 const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json" } });
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 
 const err = (error: string, field?: string, status = 400) =>
   json(field ? { error, field } : { error }, status);
 
 export function mockApi(seed: Seed = {}): MockApi {
   const api: MockApi = {
-    state: { templates: structuredClone(seed.templates ?? []), exercises: structuredClone(seed.exercises ?? []) },
+    state: {
+      templates: structuredClone(seed.templates ?? []),
+      exercises: structuredClone(seed.exercises ?? []),
+    },
     calls: [],
     hang: false,
   };
@@ -30,13 +40,19 @@ export function mockApi(seed: Seed = {}): MockApi {
   let nextTemplateId = Math.max(0, ...api.state.templates.map((t) => t.id)) + 1;
   let nextRowId = 100;
 
-  const impl = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const impl = async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = String(input);
     const method = init?.method ?? "GET";
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
+    const body = init?.body
+      ? (JSON.parse(String(init.body)) as Record<string, unknown>)
+      : undefined;
     api.calls.push({ url, method, body });
     // E7 guard: every page test renders App → GuardedShell probes this once.
-    if (url.startsWith("/api/auth/status")) return json({ authenticated: true });
+    if (url.startsWith("/api/auth/status"))
+      return json({ authenticated: true });
     if (api.hang) return new Promise<Response>(() => {}); // pending forever
 
     const tMatch = /^\/api\/templates(?:\/(\d+))?$/.exec(url);
@@ -46,14 +62,21 @@ export function mockApi(seed: Seed = {}): MockApi {
       const id = tMatch[1] ? Number(tMatch[1]) : null;
       if (method === "GET" && id === null) return json(api.state.templates);
       if (method === "POST") {
-        const b = body as { name: string; rotationIndex: number; exercises: unknown[] };
+        const b = body as {
+          name: string;
+          rotationIndex: number;
+          exercises: unknown[];
+        };
         const name = b.name.trim();
-        if (api.state.templates.some((t) => t.name === name)) return err("Already exists", "name");
+        if (api.state.templates.some((t) => t.name === name))
+          return err("Already exists", "name");
         const t: Template = {
           id: nextTemplateId++,
           name,
           rotationIndex: b.rotationIndex,
-          exercises: b.exercises.map((raw, pos) => hydrate(raw, pos, api, nextRowId++)),
+          exercises: b.exercises.map((raw, pos) =>
+            hydrate(raw, pos, api, nextRowId++),
+          ),
         };
         api.state.templates.push(t);
         return json(t, 201);
@@ -62,12 +85,23 @@ export function mockApi(seed: Seed = {}): MockApi {
         const t = api.state.templates.find((x) => x.id === id);
         if (!t) return err("Not found", undefined, 404);
         if (method === "PUT") {
-          const b = body as { name: string; rotationIndex?: number; exercises: unknown[] };
-          if (api.state.templates.some((x) => x.name === b.name.trim() && x.id !== id))
+          const b = body as {
+            name: string;
+            rotationIndex?: number;
+            exercises: unknown[];
+          };
+          if (
+            api.state.templates.some(
+              (x) => x.name === b.name.trim() && x.id !== id,
+            )
+          )
             return err("Already exists", "name");
           t.name = b.name.trim();
-          if (b.rotationIndex !== undefined && b.rotationIndex !== null) t.rotationIndex = b.rotationIndex;
-          t.exercises = b.exercises.map((raw, pos) => hydrate(raw, pos, api, nextRowId++));
+          if (b.rotationIndex !== undefined && b.rotationIndex !== null)
+            t.rotationIndex = b.rotationIndex;
+          t.exercises = b.exercises.map((raw, pos) =>
+            hydrate(raw, pos, api, nextRowId++),
+          );
           return json(t);
         }
         if (method === "DELETE") {
@@ -80,18 +114,31 @@ export function mockApi(seed: Seed = {}): MockApi {
     if (eMatch) {
       const id = eMatch[1] ? Number(eMatch[1]) : null;
       if (method === "GET" && id === null) return json(api.state.exercises);
-      const validate = (b: { name?: string; tags?: string[]; techniqueUrl?: string | null }) => {
-        if (!b.name || !b.name.trim()) return err("Exercise name is required", "name");
-        if (!b.tags || b.tags.length < 1) return err("At least one tag is required", "tags");
+      const validate = (b: {
+        name?: string;
+        tags?: string[];
+        techniqueUrl?: string | null;
+      }) => {
+        if (!b.name || !b.name.trim())
+          return err("Exercise name is required", "name");
+        if (!b.tags || b.tags.length < 1)
+          return err("At least one tag is required", "tags");
         if (b.techniqueUrl && !/^https?:\/\/\S+$/.test(b.techniqueUrl))
           return err("techniqueUrl must be a valid URL", "techniqueUrl");
         return null;
       };
       if (method === "POST") {
-        const b = body as { name: string; description?: string | null; setupCues?: string | null; techniqueUrl?: string | null; tags: string[] };
+        const b = body as {
+          name: string;
+          description?: string | null;
+          setupCues?: string | null;
+          techniqueUrl?: string | null;
+          tags: string[];
+        };
         const bad = validate(b);
         if (bad) return bad;
-        if (api.state.exercises.some((x) => x.name === b.name.trim())) return err("Already exists", "name");
+        if (api.state.exercises.some((x) => x.name === b.name.trim()))
+          return err("Already exists", "name");
         const ex: Exercise = {
           id: nextExerciseId++,
           name: b.name.trim(),
@@ -108,7 +155,10 @@ export function mockApi(seed: Seed = {}): MockApi {
         const ex = api.state.exercises.find((x) => x.id === id);
         if (!ex) return err("Not found", undefined, 404);
         if (method === "PUT") {
-          const b = body as typeof ex & { setupCues?: string | null; techniqueUrl?: string | null };
+          const b = body as typeof ex & {
+            setupCues?: string | null;
+            techniqueUrl?: string | null;
+          };
           const bad = validate(b);
           if (bad) return bad;
           Object.assign(ex, {
@@ -122,8 +172,11 @@ export function mockApi(seed: Seed = {}): MockApi {
           return json(ex);
         }
         if (method === "DELETE") {
-          const inUse = api.state.templates.some((t) => t.exercises.some((r) => r.exerciseId === id));
-          if (inUse) return err("References a missing or in-use record", "reference");
+          const inUse = api.state.templates.some((t) =>
+            t.exercises.some((r) => r.exerciseId === id),
+          );
+          if (inUse)
+            return err("References a missing or in-use record", "reference");
           api.state.exercises = api.state.exercises.filter((x) => x.id !== id);
           return new Response(null, { status: 204 });
         }
@@ -143,7 +196,12 @@ function hydrate(
   api: MockApi,
   rowId: number,
 ): Template["exercises"][number] {
-  const e = raw as { exerciseId: number; targetSets?: number | null; targetRepsMin?: number | null; targetRepsMax?: number | null };
+  const e = raw as {
+    exerciseId: number;
+    targetSets?: number | null;
+    targetRepsMin?: number | null;
+    targetRepsMax?: number | null;
+  };
   return {
     id: rowId,
     exerciseId: e.exerciseId,
@@ -151,6 +209,7 @@ function hydrate(
     targetSets: e.targetSets ?? null,
     targetRepsMin: e.targetRepsMin ?? null,
     targetRepsMax: e.targetRepsMax ?? null,
-    exerciseName: api.state.exercises.find((x) => x.id === e.exerciseId)?.name ?? "?",
+    exerciseName:
+      api.state.exercises.find((x) => x.id === e.exerciseId)?.name ?? "?",
   };
 }

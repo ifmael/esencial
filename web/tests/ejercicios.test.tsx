@@ -1,6 +1,12 @@
 // /ejercicios catalog + detail + editor + add-to-template (E4 tasks 4.1-5.4, 6.2).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { App } from "../src/app";
 import { mockApi, type MockApi } from "./api-mock";
 import type { Exercise } from "../src/lib/exercises";
@@ -12,19 +18,54 @@ const press: Exercise = {
   description: "Empuje horizontal con barra.",
   setupCues: "Escápulas retraídas, arcos naturales.",
   techniqueUrl: "https://youtu.be/dQw4w9WgXcQ",
-  steps: ["Coloca la barra sobre el pecho.", "Baja controlado y sube empujando."],
+  steps: [
+    "Coloca la barra sobre el pecho.",
+    "Baja controlado y sube empujando.",
+  ],
   tags: ["pecho", "tríceps"],
 };
-const remo: Exercise = { id: 8, name: "Remo", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["espalda"] };
-const peso: Exercise = { id: 9, name: "Peso muerto", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["pierna"] };
+const remo: Exercise = {
+  id: 8,
+  name: "Remo",
+  description: null,
+  setupCues: null,
+  techniqueUrl: null,
+  steps: null,
+  tags: ["espalda"],
+};
+const peso: Exercise = {
+  id: 9,
+  name: "Peso muerto",
+  description: null,
+  setupCues: null,
+  techniqueUrl: null,
+  steps: null,
+  tags: ["pierna"],
+};
 
 const tplA = (): Template => ({
   id: 1,
   name: "A — Empuje",
   rotationIndex: 0,
   exercises: [
-    { id: 11, exerciseId: 7, position: 0, targetSets: 3, targetRepsMin: 8, targetRepsMax: 8, exerciseName: "Press banca" },
-    { id: 12, exerciseId: 8, position: 1, targetSets: null, targetRepsMin: null, targetRepsMax: null, exerciseName: "Remo" },
+    {
+      id: 11,
+      exerciseId: 7,
+      position: 0,
+      targetSets: 3,
+      targetRepsMin: 8,
+      targetRepsMax: 8,
+      exerciseName: "Press banca",
+    },
+    {
+      id: 12,
+      exerciseId: 8,
+      position: 1,
+      targetSets: null,
+      targetRepsMin: null,
+      targetRepsMax: null,
+      exerciseName: "Remo",
+    },
   ],
 });
 
@@ -52,8 +93,14 @@ describe("catalog", () => {
     // before the catalog mounts; the heading alone is the loading state).
     await screen.findByText("Press banca");
     const all = screen.getAllByRole("link");
-    const cards = all.filter((a) => a.getAttribute("href")?.startsWith("/ejercicios/"));
-    expect(cards.map((c) => c.getAttribute("href"))).toEqual(["/ejercicios/7", "/ejercicios/8", "/ejercicios/9"]);
+    const cards = all.filter((a) =>
+      a.getAttribute("href")?.startsWith("/ejercicios/"),
+    );
+    expect(cards.map((c) => c.getAttribute("href"))).toEqual([
+      "/ejercicios/7",
+      "/ejercicios/8",
+      "/ejercicios/9",
+    ]);
     expect(screen.getByText("pecho")).toBeDefined();
     expect(screen.getByText("tríceps")).toBeDefined();
   });
@@ -75,31 +122,50 @@ describe("catalog", () => {
     api = mockApi({ templates: [], exercises: [] });
     renderAt("/ejercicios");
     await screen.findByText(/primer ejercicio/i);
-    expect(screen.getByRole("button", { name: "+ Nuevo ejercicio" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "+ Nuevo ejercicio" }),
+    ).toBeDefined();
   });
 
   it("create flow: name required, ≥1 tag, valid save → POST 201 + detail shows data", async () => {
     renderAt("/ejercicios");
-    fireEvent.click(await screen.findByRole("button", { name: "+ Nuevo ejercicio" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "+ Nuevo ejercicio" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/nombre es obligatorio/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
 
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Hip thrust" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "Hip thrust" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/tag es obligatorio/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
 
-    fireEvent.change(screen.getByPlaceholderText(/añadir tag/i), { target: { value: "glúteo" } });
-    fireEvent.keyDown(screen.getByPlaceholderText(/añadir tag/i), { key: "Enter" });
-    fireEvent.change(screen.getByLabelText(/técnica/i), { target: { value: "https://youtu.be/ht" } });
-    fireEvent.change(screen.getByLabelText(/pasos de ejecución/i), { target: { value: "Paso uno\nPaso dos" } });
+    fireEvent.change(screen.getByPlaceholderText(/añadir tag/i), {
+      target: { value: "glúteo" },
+    });
+    fireEvent.keyDown(screen.getByPlaceholderText(/añadir tag/i), {
+      key: "Enter",
+    });
+    fireEvent.change(screen.getByLabelText(/técnica/i), {
+      target: { value: "https://youtu.be/ht" },
+    });
+    fireEvent.change(screen.getByLabelText(/pasos de ejecución/i), {
+      target: { value: "Paso uno\nPaso dos" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.exercises).toHaveLength(4));
     await screen.findByRole("heading", { name: "Hip thrust" });
     expect(screen.getByText("glúteo")).toBeDefined();
-    const post = api.calls.find((c) => c.method === "POST" && c.url === "/api/exercises")!;
-    expect((post.body as { steps: string[] | null }).steps).toEqual(["Paso uno", "Paso dos"]);
+    const post = api.calls.find(
+      (c) => c.method === "POST" && c.url === "/api/exercises",
+    )!;
+    expect((post.body as { steps: string[] | null }).steps).toEqual([
+      "Paso uno",
+      "Paso dos",
+    ]);
   });
 });
 
@@ -108,12 +174,18 @@ describe("detail", () => {
     renderAt("/ejercicios/7");
     await screen.findByRole("heading", { name: "Press banca" });
     expect(screen.getByText("Empuje horizontal con barra.")).toBeDefined();
-    expect(screen.getByText("Escápulas retraídas, arcos naturales.")).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Cómo se ejecuta" })).toBeDefined();
+    expect(
+      screen.getByText("Escápulas retraídas, arcos naturales."),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: "Cómo se ejecuta" }),
+    ).toBeDefined();
     expect(screen.getByText("Coloca la barra sobre el pecho.")).toBeDefined();
     expect(screen.getByText("Baja controlado y sube empujando.")).toBeDefined();
     const frame = screen.getByTitle(/vídeo de técnica de press banca/i);
-    expect(frame.getAttribute("src")).toBe("https://www.youtube.com/embed/dQw4w9WgXcQ");
+    expect(frame.getAttribute("src")).toBe(
+      "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    );
     const link = screen.getByRole("link", { name: /ver técnica/i });
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
@@ -122,7 +194,12 @@ describe("detail", () => {
 
   it("non-YouTube techniqueUrl → link only, no iframe", async () => {
     vi.unstubAllGlobals();
-    api = mockApi({ templates: [], exercises: [{ ...peso, techniqueUrl: "https://example.com/tec", steps: null }] });
+    api = mockApi({
+      templates: [],
+      exercises: [
+        { ...peso, techniqueUrl: "https://example.com/tec", steps: null },
+      ],
+    });
     renderAt("/ejercicios/9");
     await screen.findByRole("heading", { name: "Peso muerto" });
     expect(screen.queryByTitle(/vídeo de técnica/i)).toBeNull();
@@ -145,12 +222,19 @@ describe("detail", () => {
   it("add to template: PUT appends last, preserves entries + rotation; success, no nav", async () => {
     renderAt("/ejercicios/9");
     await screen.findByRole("heading", { name: "Peso muerto" });
-    fireEvent.click(screen.getByRole("button", { name: /añadir a plantilla/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /añadir a plantilla/i }),
+    );
     fireEvent.click(await screen.findByRole("button", { name: "A — Empuje" }));
-    await waitFor(() => expect(api.calls.some((c) => c.method === "PUT")).toBe(true));
+    await waitFor(() =>
+      expect(api.calls.some((c) => c.method === "PUT")).toBe(true),
+    );
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/templates/1");
-    const body = put.body as { exercises: { exerciseId: number }[]; rotationIndex: number };
+    const body = put.body as {
+      exercises: { exerciseId: number }[];
+      rotationIndex: number;
+    };
     expect(body.exercises.map((e) => e.exerciseId)).toEqual([7, 8, 9]);
     expect(body.rotationIndex).toBe(0);
     await screen.findByText(/añadido/i);
@@ -162,10 +246,14 @@ describe("detail", () => {
     api = mockApi({ templates: [], exercises: [peso] });
     renderAt("/ejercicios/9");
     await screen.findByRole("heading", { name: "Peso muerto" });
-    fireEvent.click(screen.getByRole("button", { name: /añadir a plantilla/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /añadir a plantilla/i }),
+    );
     const link = await screen.findByRole("link", { name: /ir a plan fuerza/i });
     expect(link.getAttribute("href")).toBe("/plan-fuerza");
-    expect(api.calls.some((c) => c.method === "PUT" || c.method === "POST")).toBe(false);
+    expect(
+      api.calls.some((c) => c.method === "PUT" || c.method === "POST"),
+    ).toBe(false);
   });
 
   it("edit flow: pre-filled PUT; server 400 on techniqueUrl shown inline, draft kept", async () => {
@@ -174,10 +262,14 @@ describe("detail", () => {
     fireEvent.click(screen.getByRole("button", { name: /editar/i }));
     const name = await screen.findByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("Remo");
-    fireEvent.change(screen.getByLabelText(/técnica/i), { target: { value: "no-es-url" } });
+    fireEvent.change(screen.getByLabelText(/técnica/i), {
+      target: { value: "no-es-url" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await screen.findByText(/valid url/i);
-    expect((screen.getByLabelText(/técnica/i) as HTMLInputElement).value).toBe("no-es-url");
+    expect((screen.getByLabelText(/técnica/i) as HTMLInputElement).value).toBe(
+      "no-es-url",
+    );
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/exercises/8");
   });

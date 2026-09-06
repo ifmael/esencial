@@ -16,7 +16,9 @@ const takeFlash = () => {
   return m;
 };
 export function Thumb({ recipe, big }: { recipe: Recipe; big?: boolean }) {
-  const box = big ? "h-20 w-20 shrink-0 rounded-lg md:h-40 md:w-full" : "h-20 w-20 shrink-0 rounded-lg";
+  const box = big
+    ? "h-20 w-20 shrink-0 rounded-lg md:h-40 md:w-full"
+    : "h-20 w-20 shrink-0 rounded-lg";
   return recipe.photo_path ? (
     <img src={recipe.photo_path} alt="" className={`${box} object-cover`} />
   ) : (
@@ -50,7 +52,13 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
   );
 }
 
-function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+function ErrorBanner({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
   return (
     <div className="card text-error" role="alert">
       <p>{message}</p>
@@ -73,7 +81,11 @@ export function RecetarioPage() {
     <>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Recetario</h1>
-        <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => setCreating(true)}
+        >
           + Nueva receta
         </button>
       </header>
@@ -86,7 +98,10 @@ export function RecetarioPage() {
         onChange={(e) => setQuery(e.target.value)}
       />
       {flash && (
-        <div className="mb-4 rounded-lg bg-done-bg p-3 text-done-text" role="status">
+        <div
+          className="mb-4 rounded-lg bg-done-bg p-3 text-done-text"
+          role="status"
+        >
           {flash}
         </div>
       )}
@@ -98,9 +113,13 @@ export function RecetarioPage() {
       ) : api.error ? (
         <ErrorBanner message={api.error} onRetry={api.retry} />
       ) : api.list.length === 0 ? (
-        <div className="card text-text-secondary">Aún no hay recetas. ¡Crea la primera!</div>
+        <div className="card text-text-secondary">
+          Aún no hay recetas. ¡Crea la primera!
+        </div>
       ) : visible.length === 0 ? (
-        <div className="card text-text-secondary">Ninguna receta coincide con la búsqueda.</div>
+        <div className="card text-text-secondary">
+          Ninguna receta coincide con la búsqueda.
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {visible.map((r) => (
@@ -170,17 +189,29 @@ export function RecetarioDetallePage() {
           >
             ✏️
           </button>
-          <button type="button" className="btn-secondary text-error" onClick={() => setConfirming(true)}>
+          <button
+            type="button"
+            className="btn-secondary text-error"
+            onClick={() => setConfirming(true)}
+          >
             Eliminar
           </button>
         </div>
       </header>
 
       {confirming && (
-        <div className="card mb-4 border-error" role="alertdialog" aria-label="Confirmar eliminación">
+        <div
+          className="card mb-4 border-error"
+          role="alertdialog"
+          aria-label="Confirmar eliminación"
+        >
           <p className="mb-2">¿Seguro que quieres eliminar «{recipe.name}»?</p>
           <div className="flex gap-2">
-            <button type="button" className="btn-secondary" onClick={() => setConfirming(false)}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setConfirming(false)}
+            >
               Cancelar
             </button>
             <button
@@ -196,7 +227,9 @@ export function RecetarioDetallePage() {
       )}
 
       <Thumb recipe={recipe} big />
-      {recipe.description && <p className="mt-4 text-text-secondary">{recipe.description}</p>}
+      {recipe.description && (
+        <p className="mt-4 text-text-secondary">{recipe.description}</p>
+      )}
       {recipe.servings !== null && (
         <p className="mt-2 font-medium">{recipe.servings} comensales</p>
       )}
@@ -206,7 +239,11 @@ export function RecetarioDetallePage() {
         <ul className="card flex flex-col gap-1">
           {recipe.ingredients.map((ing) => (
             <li key={ing.id} className="flex items-center gap-2">
-              <input type="checkbox" id={`ing-${ing.id}`} className="h-4 w-4 accent-primary" />
+              <input
+                type="checkbox"
+                id={`ing-${ing.id}`}
+                className="h-4 w-4 accent-primary"
+              />
               <label htmlFor={`ing-${ing.id}`}>
                 {ing.quantity !== null && `${ing.quantity} `}
                 {ing.unit && `${ing.unit} `}
@@ -233,7 +270,10 @@ export function RecetarioDetallePage() {
           <h2 className="mb-2 text-lg font-semibold">Materiales</h2>
           <ul className="flex flex-wrap gap-2">
             {recipe.materials.map((m) => (
-              <li key={m} className="rounded-full bg-surface-muted px-3 py-1 text-sm">
+              <li
+                key={m}
+                className="rounded-full bg-surface-muted px-3 py-1 text-sm"
+              >
                 {m}
               </li>
             ))}
@@ -251,7 +291,13 @@ export function RecetarioDetallePage() {
         </ul>
       )}
 
-      {editing && <RecipeEditor api={api} recipe={recipe} onClose={() => setEditing(false)} />}
+      {editing && (
+        <RecipeEditor
+          api={api}
+          recipe={recipe}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </>
   );
 }

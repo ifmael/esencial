@@ -15,7 +15,11 @@ async function makeRecipe(name: string): Promise<number> {
 
 const W36 = "2026-W36"; // lunes 2026-08-31 … domingo 2026-09-06
 
-type MealRow = { meal: string; recipeId: number | null; recipeName: string | null };
+type MealRow = {
+  meal: string;
+  recipeId: number | null;
+  recipeName: string | null;
+};
 type SessionBox = {
   id: number;
   templateId: number;
@@ -42,10 +46,15 @@ describe("GET /api/day/:date", () => {
         { day: 3, meal: "desayuno", recipeId: sopa },
       ],
     });
-    const bench = await post("/api/exercises", { name: "Press banca", tags: ["pecho"] });
+    const bench = await post("/api/exercises", {
+      name: "Press banca",
+      tags: ["pecho"],
+    });
     const template = await post("/api/templates", {
       name: "Empuje A",
-      exercises: [{ exerciseId: Number((await body(bench)).id), targetSets: 3 }],
+      exercises: [
+        { exerciseId: Number((await body(bench)).id), targetSets: 3 },
+      ],
     });
     const templateId = Number((await body(template)).id);
     await post("/api/plan-sessions", { date: "2026-09-02", templateId });
@@ -72,11 +81,20 @@ describe("GET /api/day/:date", () => {
   });
 
   it("planned session incluye exercises [{exerciseId, exerciseName, position}] ordenados por position", async () => {
-    const r1 = await post("/api/exercises", { name: "Press banca", tags: ["pecho"] });
-    const r2 = await post("/api/exercises", { name: "Fondos", tags: ["tríceps"] });
-    const r3 = await post("/api/exercises", { name: "Remo", tags: ["espalda"] });
-    const [e1, e2, e3] = await Promise.all([body(r1), body(r2), body(r3)]).then((rs) =>
-      rs.map((r) => Number(r.id)),
+    const r1 = await post("/api/exercises", {
+      name: "Press banca",
+      tags: ["pecho"],
+    });
+    const r2 = await post("/api/exercises", {
+      name: "Fondos",
+      tags: ["tríceps"],
+    });
+    const r3 = await post("/api/exercises", {
+      name: "Remo",
+      tags: ["espalda"],
+    });
+    const [e1, e2, e3] = await Promise.all([body(r1), body(r2), body(r3)]).then(
+      (rs) => rs.map((r) => Number(r.id)),
     );
     const template = await post("/api/templates", {
       name: "Empuje B",
@@ -98,7 +116,7 @@ describe("GET /api/day/:date", () => {
       { exerciseId: e1, exerciseName: "Press banca", position: 1 },
       { exerciseId: e2, exerciseName: "Fondos", position: 2 },
     ]);
-});
+  });
 
   it("día vacío: sin plan, sin sesión, sin nota → 200 con datos vacíos", async () => {
     const res = await get("/api/day/2026-09-02");
@@ -113,15 +131,25 @@ describe("GET /api/day/:date", () => {
 
   it("receta borrada → slot con recipeId/recipeName null, sigue 200", async () => {
     const id = await makeRecipe("Temporera");
-    await put(`/api/meal-plan/${W36}`, { slots: [{ day: 2, meal: "almuerzo", recipeId: id }] });
+    await put(`/api/meal-plan/${W36}`, {
+      slots: [{ day: 2, meal: "almuerzo", recipeId: id }],
+    });
     expect((await del(`/api/recipes/${id}`)).status).toBe(204);
     const day = await body(await get("/api/day/2026-09-02"));
-    expect(day.meals as MealRow[]).toEqual([{ meal: "almuerzo", recipeId: null, recipeName: null }]);
+    expect(day.meals as MealRow[]).toEqual([
+      { meal: "almuerzo", recipeId: null, recipeName: null },
+    ]);
   });
 
   it("sesión logged → summary { effort, exercises, sets } desde set_logs", async () => {
-    const bench = await post("/api/exercises", { name: "Press banca", tags: ["pecho"] });
-    const curl = await post("/api/exercises", { name: "Curl", tags: ["bíceps"] });
+    const bench = await post("/api/exercises", {
+      name: "Press banca",
+      tags: ["pecho"],
+    });
+    const curl = await post("/api/exercises", {
+      name: "Curl",
+      tags: ["bíceps"],
+    });
     const template = await post("/api/templates", {
       name: "Empuje B",
       exercises: [
@@ -139,11 +167,41 @@ describe("GET /api/day/:date", () => {
     const log = await post("/api/workout-logs/2026-09-02", {
       effort: 3,
       sets: [
-        { templateExerciseId: teBench, setIndex: 0, weightKg: 60, reps: 8, done: true },
-        { templateExerciseId: teBench, setIndex: 1, weightKg: 60, reps: 7, done: true },
-        { templateExerciseId: teBench, setIndex: 2, weightKg: 62, reps: 6, done: true },
-        { templateExerciseId: teCurl, setIndex: 0, weightKg: 10, reps: 12, done: true },
-        { templateExerciseId: teCurl, setIndex: 1, weightKg: 10, reps: 10, done: true },
+        {
+          templateExerciseId: teBench,
+          setIndex: 0,
+          weightKg: 60,
+          reps: 8,
+          done: true,
+        },
+        {
+          templateExerciseId: teBench,
+          setIndex: 1,
+          weightKg: 60,
+          reps: 7,
+          done: true,
+        },
+        {
+          templateExerciseId: teBench,
+          setIndex: 2,
+          weightKg: 62,
+          reps: 6,
+          done: true,
+        },
+        {
+          templateExerciseId: teCurl,
+          setIndex: 0,
+          weightKg: 10,
+          reps: 12,
+          done: true,
+        },
+        {
+          templateExerciseId: teCurl,
+          setIndex: 1,
+          weightKg: 10,
+          reps: 10,
+          done: true,
+        },
       ],
     });
     expect(log.status).toBe(201);
@@ -155,7 +213,9 @@ describe("GET /api/day/:date", () => {
 
   it("domingo mapea a la semana del lunes (edge ISO)", async () => {
     const id = await makeRecipe("Cena domingera");
-    await put(`/api/meal-plan/${W36}`, { slots: [{ day: 6, meal: "cena", recipeId: id }] });
+    await put(`/api/meal-plan/${W36}`, {
+      slots: [{ day: 6, meal: "cena", recipeId: id }],
+    });
     const day = await body(await get("/api/day/2026-09-06"));
     expect(day.isoWeek).toBe("2026-W36");
     expect(day.dayIndex).toBe(6);

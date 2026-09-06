@@ -20,7 +20,13 @@ export function addDays(date: Date, days: number): Date {
   return d;
 }
 
-export function DayHeader({ date, onChange }: { date: Date; onChange: (d: Date) => void }) {
+export function DayHeader({
+  date,
+  onChange,
+}: {
+  date: Date;
+  onChange: (d: Date) => void;
+}) {
   const isToday = toISODate(date) === toISODate(new Date());
   return (
     <header className="mb-6">
@@ -45,7 +51,11 @@ export function DayHeader({ date, onChange }: { date: Date; onChange: (d: Date) 
         </button>
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-        <button aria-label="Ir a hoy" className="btn-secondary" onClick={() => onChange(new Date())}>
+        <button
+          aria-label="Ir a hoy"
+          className="btn-secondary"
+          onClick={() => onChange(new Date())}
+        >
           Hoy
         </button>
         {/* ponytail: input nativo; un picker con librería si saltar fechas fine. */}
@@ -55,7 +65,8 @@ export function DayHeader({ date, onChange }: { date: Date; onChange: (d: Date) 
           className="min-h-11 rounded-lg border border-border bg-surface px-2"
           value={toISODate(date)}
           onChange={(e) => {
-            if (e.target.value) onChange(new Date(`${e.target.value}T00:00:00`));
+            if (e.target.value)
+              onChange(new Date(`${e.target.value}T00:00:00`));
           }}
         />
       </div>
@@ -67,7 +78,13 @@ export function DayHeader({ date, onChange }: { date: Date; onChange: (d: Date) 
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section>
       <h2 className="mb-2 text-lg font-semibold">{title}</h2>
@@ -84,7 +101,10 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
       <Section title="RECETA">
         <div className="card text-text-secondary">
           <p>Aún no has planificado comidas para este día</p>
-          <Link to="/plan-recetas" className="mt-2 inline-block font-semibold text-primary">
+          <Link
+            to="/plan-recetas"
+            className="mt-2 inline-block font-semibold text-primary"
+          >
             Ir al plan semanal
           </Link>
         </div>
@@ -109,7 +129,13 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
   );
 }
 
-function StrengthSection({ session, date }: { session: DaySession | null; date: string }) {
+function StrengthSection({
+  session,
+  date,
+}: {
+  session: DaySession | null;
+  date: string;
+}) {
   const navigate = useNavigate();
   const openWorkout = () => navigate(`/sesion/${date}`);
   return (
@@ -117,7 +143,10 @@ function StrengthSection({ session, date }: { session: DaySession | null; date: 
       {!session ? (
         <div className="card text-text-secondary">
           <p>Sin sesión asignada</p>
-          <Link to="/plan-fuerza" className="mt-2 inline-block font-semibold text-primary">
+          <Link
+            to="/plan-fuerza"
+            className="mt-2 inline-block font-semibold text-primary"
+          >
             Ver el plan de fuerza
           </Link>
         </div>
@@ -128,8 +157,8 @@ function StrengthSection({ session, date }: { session: DaySession | null; date: 
             <span className="font-semibold">{session.templateName}</span>
           </div>
           <p className="mt-1 text-sm text-done-text">
-            Sesión completada · {session.summary.exercises} ejercicios · {session.summary.sets} series ·
-            esfuerzo {session.summary.effort}/5
+            Sesión completada · {session.summary.exercises} ejercicios ·{" "}
+            {session.summary.sets} series · esfuerzo {session.summary.effort}/5
           </p>
         </button>
       ) : (
@@ -142,10 +171,13 @@ function StrengthSection({ session, date }: { session: DaySession | null; date: 
             <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
               {session.exercises.map((e) => (
                 <li key={e.exerciseId}>{e.exerciseName}</li>
-                ))}
+              ))}
             </ol>
           ) : null}
-          <button className="btn-primary mt-3 min-h-11 w-full" onClick={openWorkout}>
+          <button
+            className="btn-primary mt-3 min-h-11 w-full"
+            onClick={openWorkout}
+          >
             Registrar sesión
           </button>
         </div>
@@ -161,7 +193,13 @@ const AUTOSAVE_MS = 800;
 /** Editor de la nota del día. El padre lo monta con key={date}: al cambiar de
  * fecha, el desmontaje guarda lo pendiente contra la fecha vieja (closure de
  * `date`) y el editor nuevo arranca con la nota de la fecha nueva. */
-export function NoteEditor({ date, initial }: { date: string; initial: string }) {
+export function NoteEditor({
+  date,
+  initial,
+}: {
+  date: string;
+  initial: string;
+}) {
   const [text, setText] = useState(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -216,12 +254,17 @@ export function NoteEditor({ date, initial }: { date: string; initial: string })
         onChange={(e) => onChange(e.target.value)}
       />
       <div aria-live="polite" className="mt-1 flex items-center gap-2 text-sm">
-        {status === "saving" && <span className="text-text-secondary">Guardando…</span>}
+        {status === "saving" && (
+          <span className="text-text-secondary">Guardando…</span>
+        )}
         {status === "saved" && <span className="text-done-text">Guardado</span>}
         {status === "error" && (
           <>
             <span className="text-error">No guardado</span>
-            <button className="font-semibold text-primary" onClick={() => void save(text)}>
+            <button
+              className="font-semibold text-primary"
+              onClick={() => void save(text)}
+            >
               Reintentar guardar
             </button>
           </>
@@ -235,7 +278,11 @@ function Skeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true">
       {[0, 1, 2].map((i) => (
-        <div key={i} data-testid="skeleton" className="card h-24 animate-pulse bg-surface-muted" />
+        <div
+          key={i}
+          data-testid="skeleton"
+          className="card h-24 animate-pulse bg-surface-muted"
+        />
       ))}
     </div>
   );

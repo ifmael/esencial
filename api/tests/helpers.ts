@@ -17,10 +17,19 @@ let bootstrapped = false;
 async function bootstrap(): Promise<void> {
   if (bootstrapped) return;
   // batch() runs a multi-statement query when unbound: schema applies atomically.
-  await env.DB.batch([env.DB.prepare(schemaSql), env.DB.prepare(migrations0002)]);
+  await env.DB.batch([
+    env.DB.prepare(schemaSql),
+    env.DB.prepare(migrations0002),
+  ]);
   // Reproduce the wrangler runner's end state: each additive migration file
   // in filename order. E2 0002 + E3 0003 mirror _cf_D1_MIGRATIONS (once per worker).
-  for (const sql of [m0003Sql, m0005Sql]) await env.DB.batch(sql.split(";").filter((s) => s.trim()).map((s) => env.DB.prepare(s)));
+  for (const sql of [m0003Sql, m0005Sql])
+    await env.DB.batch(
+      sql
+        .split(";")
+        .filter((s) => s.trim())
+        .map((s) => env.DB.prepare(s)),
+    );
   bootstrapped = true;
 }
 
@@ -52,14 +61,26 @@ export async function freshDb(): Promise<void> {
 /** Direct D1 helpers for seeding/assertions (mirrors legacy getDb usage). */
 export const d1 = {
   async run(sql: string, ...args: unknown[]): Promise<number> {
-    const { meta } = await env.DB.prepare(sql).bind(...(args as never[])).run();
+    const { meta } = await env.DB.prepare(sql)
+      .bind(...(args as never[]))
+      .run();
     return Number(meta.last_row_id);
   },
-  async get<T = Record<string, unknown>>(sql: string, ...args: unknown[]): Promise<T | null> {
-    return await env.DB.prepare(sql).bind(...(args as never[])).first<T>();
+  async get<T = Record<string, unknown>>(
+    sql: string,
+    ...args: unknown[]
+  ): Promise<T | null> {
+    return await env.DB.prepare(sql)
+      .bind(...(args as never[]))
+      .first<T>();
   },
-  async all<T = Record<string, unknown>>(sql: string, ...args: unknown[]): Promise<T[]> {
-    const { results } = await env.DB.prepare(sql).bind(...(args as never[])).all<T>();
+  async all<T = Record<string, unknown>>(
+    sql: string,
+    ...args: unknown[]
+  ): Promise<T[]> {
+    const { results } = await env.DB.prepare(sql)
+      .bind(...(args as never[]))
+      .all<T>();
     return results ?? [];
   },
 };
@@ -91,7 +112,11 @@ function authCookieHeader(): Promise<Record<string, string>> {
 export async function anonGet(path: string): Promise<Response> {
   return await app.request(url(path), {}, env);
 }
-export async function anonSend(path: string, method: string, body: unknown): Promise<Response> {
+export async function anonSend(
+  path: string,
+  method: string,
+  body: unknown,
+): Promise<Response> {
   return await app.request(
     url(path),
     {
@@ -104,15 +129,26 @@ export async function anonSend(path: string, method: string, body: unknown): Pro
 }
 
 export async function get(path: string): Promise<Response> {
-  return await app.request(url(path), { headers: await authCookieHeader() }, env);
+  return await app.request(
+    url(path),
+    { headers: await authCookieHeader() },
+    env,
+  );
 }
 
-export async function send(path: string, method: string, body: unknown): Promise<Response> {
+export async function send(
+  path: string,
+  method: string,
+  body: unknown,
+): Promise<Response> {
   return await app.request(
     url(path),
     {
       method,
-      headers: { "content-type": "application/json", ...(await authCookieHeader()) },
+      headers: {
+        "content-type": "application/json",
+        ...(await authCookieHeader()),
+      },
       body: typeof body === "string" ? body : JSON.stringify(body),
     },
     env,
@@ -122,5 +158,9 @@ export async function send(path: string, method: string, body: unknown): Promise
 export const post = (path: string, body: unknown) => send(path, "POST", body);
 export const put = (path: string, body: unknown) => send(path, "PUT", body);
 export async function del(path: string): Promise<Response> {
-  return await app.request(url(path), { method: "DELETE", headers: await authCookieHeader() }, env);
+  return await app.request(
+    url(path),
+    { method: "DELETE", headers: await authCookieHeader() },
+    env,
+  );
 }

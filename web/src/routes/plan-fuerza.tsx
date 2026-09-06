@@ -17,7 +17,8 @@ import {
   type DraftEntry,
 } from "../lib/template-draft";
 
-const letterOf = (t: { rotationIndex: number }): string => String.fromCharCode(65 + t.rotationIndex);
+const letterOf = (t: { rotationIndex: number }): string =>
+  String.fromCharCode(65 + t.rotationIndex);
 
 const toDraft = (t: Template): Draft => ({
   name: t.name,
@@ -54,83 +55,143 @@ const GROUP_LABELS: Record<string, string> = {
 };
 
 const FRONT_REGIONS: MuscleRegion[] = [
-  { tag: "hombro", label: "Hombro", shapes: (
-    <>
-      <ellipse cx="58" cy="60" rx="15" ry="12" />
-      <ellipse cx="142" cy="60" rx="15" ry="12" />
-    </>
-  ) },
-  { tag: "pecho", label: "Pecho", shapes: <rect x="74" y="58" width="52" height="42" rx="8" /> },
-  { tag: "core", label: "Core", shapes: <rect x="74" y="104" width="52" height="46" rx="8" /> },
-  { tag: "bíceps", label: "Bíceps", shapes: (
-    <>
-      <rect x="40" y="62" width="20" height="36" rx="8" />
-      <rect x="140" y="62" width="20" height="36" rx="8" />
-    </>
-  ) },
-  { tag: "antebrazo", label: "Antebrazo", shapes: (
-    <>
-      <rect x="40" y="102" width="20" height="50" rx="8" />
-      <rect x="140" y="102" width="20" height="50" rx="8" />
-    </>
-  ) },
-  { tag: "pierna", label: "Pierna", shapes: (
-    <>
-      <rect x="76" y="164" width="20" height="76" rx="8" />
-      <rect x="104" y="164" width="20" height="76" rx="8" />
-    </>
-  ) },
-  { tag: "gemelo", label: "Gemelo", shapes: (
-    <>
-      <rect x="76" y="246" width="20" height="62" rx="8" />
-      <rect x="104" y="246" width="20" height="62" rx="8" />
-    </>
-  ) },
+  {
+    tag: "hombro",
+    label: "Hombro",
+    shapes: (
+      <>
+        <ellipse cx="58" cy="60" rx="15" ry="12" />
+        <ellipse cx="142" cy="60" rx="15" ry="12" />
+      </>
+    ),
+  },
+  {
+    tag: "pecho",
+    label: "Pecho",
+    shapes: <rect x="74" y="58" width="52" height="42" rx="8" />,
+  },
+  {
+    tag: "core",
+    label: "Core",
+    shapes: <rect x="74" y="104" width="52" height="46" rx="8" />,
+  },
+  {
+    tag: "bíceps",
+    label: "Bíceps",
+    shapes: (
+      <>
+        <rect x="40" y="62" width="20" height="36" rx="8" />
+        <rect x="140" y="62" width="20" height="36" rx="8" />
+      </>
+    ),
+  },
+  {
+    tag: "antebrazo",
+    label: "Antebrazo",
+    shapes: (
+      <>
+        <rect x="40" y="102" width="20" height="50" rx="8" />
+        <rect x="140" y="102" width="20" height="50" rx="8" />
+      </>
+    ),
+  },
+  {
+    tag: "pierna",
+    label: "Pierna",
+    shapes: (
+      <>
+        <rect x="76" y="164" width="20" height="76" rx="8" />
+        <rect x="104" y="164" width="20" height="76" rx="8" />
+      </>
+    ),
+  },
+  {
+    tag: "gemelo",
+    label: "Gemelo",
+    shapes: (
+      <>
+        <rect x="76" y="246" width="20" height="62" rx="8" />
+        <rect x="104" y="246" width="20" height="62" rx="8" />
+      </>
+    ),
+  },
 ];
 
 const BACK_REGIONS: MuscleRegion[] = [
-  { tag: "espalda", label: "Espalda", shapes: <rect x="74" y="56" width="52" height="86" rx="8" /> },
-  { tag: "hombro", label: "Hombro", shapes: (
-    <>
-      <ellipse cx="58" cy="60" rx="15" ry="12" />
-      <ellipse cx="142" cy="60" rx="15" ry="12" />
-    </>
-  ) },
-  { tag: "tríceps", label: "Tríceps", shapes: (
-    <>
-      <rect x="40" y="62" width="20" height="36" rx="8" />
-      <rect x="140" y="62" width="20" height="36" rx="8" />
-    </>
-  ) },
-  { tag: "antebrazo", label: "Antebrazo", shapes: (
-    <>
-      <rect x="40" y="102" width="20" height="50" rx="8" />
-      <rect x="140" y="102" width="20" height="50" rx="8" />
-    </>
-  ) },
-  { tag: "glúteo", label: "Glúteo", shapes: (
-    <>
-      <rect x="76" y="150" width="20" height="30" rx="8" />
-      <rect x="104" y="150" width="20" height="30" rx="8" />
-    </>
-  ) },
-  { tag: "pierna", label: "Pierna", shapes: (
-    <>
-      <rect x="76" y="184" width="20" height="60" rx="8" />
-      <rect x="104" y="184" width="20" height="60" rx="8" />
-    </>
-  ) },
-  { tag: "gemelo", label: "Gemelo", shapes: (
-    <>
-      <rect x="76" y="246" width="20" height="62" rx="8" />
-      <rect x="104" y="246" width="20" height="62" rx="8" />
-    </>
-  ) },
+  {
+    tag: "espalda",
+    label: "Espalda",
+    shapes: <rect x="74" y="56" width="52" height="86" rx="8" />,
+  },
+  {
+    tag: "hombro",
+    label: "Hombro",
+    shapes: (
+      <>
+        <ellipse cx="58" cy="60" rx="15" ry="12" />
+        <ellipse cx="142" cy="60" rx="15" ry="12" />
+      </>
+    ),
+  },
+  {
+    tag: "tríceps",
+    label: "Tríceps",
+    shapes: (
+      <>
+        <rect x="40" y="62" width="20" height="36" rx="8" />
+        <rect x="140" y="62" width="20" height="36" rx="8" />
+      </>
+    ),
+  },
+  {
+    tag: "antebrazo",
+    label: "Antebrazo",
+    shapes: (
+      <>
+        <rect x="40" y="102" width="20" height="50" rx="8" />
+        <rect x="140" y="102" width="20" height="50" rx="8" />
+      </>
+    ),
+  },
+  {
+    tag: "glúteo",
+    label: "Glúteo",
+    shapes: (
+      <>
+        <rect x="76" y="150" width="20" height="30" rx="8" />
+        <rect x="104" y="150" width="20" height="30" rx="8" />
+      </>
+    ),
+  },
+  {
+    tag: "pierna",
+    label: "Pierna",
+    shapes: (
+      <>
+        <rect x="76" y="184" width="20" height="60" rx="8" />
+        <rect x="104" y="184" width="20" height="60" rx="8" />
+      </>
+    ),
+  },
+  {
+    tag: "gemelo",
+    label: "Gemelo",
+    shapes: (
+      <>
+        <rect x="76" y="246" width="20" height="62" rx="8" />
+        <rect x="104" y="246" width="20" height="62" rx="8" />
+      </>
+    ),
+  },
 ];
 
 function BodySilhouette() {
   return (
-    <g fill="var(--color-surface-muted)" stroke="var(--color-border)" strokeWidth="1.5">
+    <g
+      fill="var(--color-surface-muted)"
+      stroke="var(--color-border)"
+      strokeWidth="1.5"
+    >
       <circle cx="100" cy="22" r="17" />
       <rect x="92" y="39" width="16" height="13" rx="3" />
       <path d="M72 52 L128 52 L132 160 L68 160 Z" />
@@ -167,8 +228,14 @@ function BodyMap({
           aria-label={r.label}
           aria-pressed={group === r.tag}
           className="cursor-pointer"
-          fill={group === r.tag ? "var(--color-primary)" : "var(--color-pending-bg)"}
-          stroke={group === r.tag ? "var(--color-primary-dark)" : "var(--color-pending)"}
+          fill={
+            group === r.tag ? "var(--color-primary)" : "var(--color-pending-bg)"
+          }
+          stroke={
+            group === r.tag
+              ? "var(--color-primary-dark)"
+              : "var(--color-pending)"
+          }
           strokeWidth="1.5"
           strokeDasharray={group === r.tag ? undefined : "4 3"}
           onClick={() => onSelect(r.tag)}
@@ -215,7 +282,13 @@ function ExercisePicker({
   const q = search.trim().toLowerCase();
   const picks = exercises.filter((e) => {
     if (group !== null && !e.tags.includes(group)) return false;
-    if (q && !(e.name.toLowerCase().includes(q) || e.tags.some((t) => t.toLowerCase().includes(q))))
+    if (
+      q &&
+      !(
+        e.name.toLowerCase().includes(q) ||
+        e.tags.some((t) => t.toLowerCase().includes(q))
+      )
+    )
       return false;
     return true;
   });
@@ -265,7 +338,10 @@ function ExercisePicker({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <button className={group == null ? "btn-primary" : "btn-secondary"} onClick={() => setGroup(null)}>
+          <button
+            className={group == null ? "btn-primary" : "btn-secondary"}
+            onClick={() => setGroup(null)}
+          >
             Todos
           </button>
           <span className="text-sm text-text-secondary">
@@ -380,7 +456,13 @@ function TemplateEditor({
             min={0}
             value={draft.rotationIndex}
             onChange={(e) =>
-              setDraft({ ...draft, rotationIndex: Math.max(0, Math.trunc(Number(e.target.value) || 0)) })
+              setDraft({
+                ...draft,
+                rotationIndex: Math.max(
+                  0,
+                  Math.trunc(Number(e.target.value) || 0),
+                ),
+              })
             }
           />
         </div>
@@ -396,7 +478,12 @@ function TemplateEditor({
               i < draft.entries.length - 1 ? "border-b border-border" : ""
             }`}
           >
-            <Link className="min-w-32 font-medium text-primary underline-offset-4 hover:underline" to={`/ejercicios/${entry.exerciseId}`}>{entry.exerciseName}</Link>
+            <Link
+              className="min-w-32 font-medium text-primary underline-offset-4 hover:underline"
+              to={`/ejercicios/${entry.exerciseId}`}
+            >
+              {entry.exerciseName}
+            </Link>
             <label className="text-sm">
               Series
               <input
@@ -405,7 +492,12 @@ function TemplateEditor({
                 min={1}
                 value={entry.targetSets ?? ""}
                 onChange={(e) =>
-                  setDraft(setTargets(draft, entry.key, { ...entry, targetSets: intAt(e.target.value) }))
+                  setDraft(
+                    setTargets(draft, entry.key, {
+                      ...entry,
+                      targetSets: intAt(e.target.value),
+                    }),
+                  )
                 }
               />
             </label>
@@ -417,7 +509,12 @@ function TemplateEditor({
                 min={1}
                 value={entry.targetRepsMin ?? ""}
                 onChange={(e) =>
-                  setDraft(setTargets(draft, entry.key, { ...entry, targetRepsMin: intAt(e.target.value) }))
+                  setDraft(
+                    setTargets(draft, entry.key, {
+                      ...entry,
+                      targetRepsMin: intAt(e.target.value),
+                    }),
+                  )
                 }
               />
             </label>
@@ -429,7 +526,12 @@ function TemplateEditor({
                 min={1}
                 value={entry.targetRepsMax ?? ""}
                 onChange={(e) =>
-                  setDraft(setTargets(draft, entry.key, { ...entry, targetRepsMax: intAt(e.target.value) }))
+                  setDraft(
+                    setTargets(draft, entry.key, {
+                      ...entry,
+                      targetRepsMax: intAt(e.target.value),
+                    }),
+                  )
                 }
               />
             </label>
@@ -449,14 +551,21 @@ function TemplateEditor({
             >
               ↓
             </button>
-            <button className="btn-secondary" aria-label="Quitar" onClick={() => setDraft(removeEntry(draft, entry.key))}>
+            <button
+              className="btn-secondary"
+              aria-label="Quitar"
+              onClick={() => setDraft(removeEntry(draft, entry.key))}
+            >
               Quitar
             </button>
           </li>
         ))}
       </ul>
 
-      <button className="btn-secondary self-start" onClick={() => setPickerOpen(true)}>
+      <button
+        className="btn-secondary self-start"
+        onClick={() => setPickerOpen(true)}
+      >
         + Añadir ejercicio
       </button>
 
@@ -525,12 +634,16 @@ function TemplateCard({
   const schedule = async () => {
     setScheduleError(null);
     try {
-      await apiSend("/api/plan-sessions", "POST", { date, templateId: template.id });
+      await apiSend("/api/plan-sessions", "POST", {
+        date,
+        templateId: template.id,
+      });
       setScheduled(date);
       setScheduling(false);
       setDate("");
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) setScheduleError("Ya hay una sesión ese día");
+      if (e instanceof ApiError && e.status === 409)
+        setScheduleError("Ya hay una sesión ese día");
       else if (e instanceof ApiError) setScheduleError(e.error);
       else setScheduleError("No se pudo conectar con el servidor");
     }
@@ -543,16 +656,24 @@ function TemplateCard({
       className={`card flex flex-col gap-3 ${expanded ? "xl:col-span-2" : ""}`}
     >
       <header className="flex items-center justify-between gap-2">
-        <button className="flex min-w-0 items-center gap-2 text-left" aria-label={template.name} onClick={onToggle}>
+        <button
+          className="flex min-w-0 items-center gap-2 text-left"
+          aria-label={template.name}
+          onClick={onToggle}
+        >
           <span
             aria-hidden
             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-              expanded ? "bg-primary-container text-on-primary" : "border border-border bg-surface-muted text-text-secondary"
+              expanded
+                ? "bg-primary-container text-on-primary"
+                : "border border-border bg-surface-muted text-text-secondary"
             }`}
           >
             {letterOf(template)}
           </span>
-          <span className="truncate text-lg font-semibold">{template.name}</span>
+          <span className="truncate text-lg font-semibold">
+            {template.name}
+          </span>
         </button>
         <button
           className="min-h-11 px-1 text-text-secondary"
@@ -569,7 +690,9 @@ function TemplateCard({
             <li
               key={e.id}
               className={`flex min-h-12 items-center gap-3 bg-surface px-3 ${
-                i < template.exercises.length - 1 ? "border-b border-border" : ""
+                i < template.exercises.length - 1
+                  ? "border-b border-border"
+                  : ""
               }`}
             >
               <button
@@ -586,7 +709,9 @@ function TemplateCard({
             </li>
           ))}
           {template.exercises.length === 0 && (
-            <li className="bg-surface p-3 text-text-secondary">Sin ejercicios todavía.</li>
+            <li className="bg-surface p-3 text-text-secondary">
+              Sin ejercicios todavía.
+            </li>
           )}
         </ul>
       ) : (
@@ -606,7 +731,9 @@ function TemplateCard({
           Eliminar
         </button>
         {scheduled ? (
-          <p className="text-sm font-semibold text-primary">Programada para {scheduled}</p>
+          <p className="text-sm font-semibold text-primary">
+            Programada para {scheduled}
+          </p>
         ) : (
           <button
             className="btn-secondary"
@@ -631,19 +758,31 @@ function TemplateCard({
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
-          <button className="btn-secondary" onClick={() => setScheduling(false)}>
+          <button
+            className="btn-secondary"
+            onClick={() => setScheduling(false)}
+          >
             Cancelar
           </button>
-          <button className="btn-primary" disabled={!date} onClick={() => void schedule()}>
+          <button
+            className="btn-primary"
+            disabled={!date}
+            onClick={() => void schedule()}
+          >
             Confirmar
           </button>
-          {scheduleError && <p className="text-sm text-error">{scheduleError}</p>}
+          {scheduleError && (
+            <p className="text-sm text-error">{scheduleError}</p>
+          )}
         </div>
       )}
       {confirming && (
         <div className="flex flex-wrap items-center gap-2">
           <span>¿Eliminar {template.name}?</span>
-          <button className="btn-secondary" onClick={() => setConfirming(false)}>
+          <button
+            className="btn-secondary"
+            onClick={() => setConfirming(false)}
+          >
             Cancelar
           </button>
           <button
@@ -668,15 +807,27 @@ function TemplateCard({
 // --- Page ------------------------------------------------------------------
 
 export function PlanFuerzaPage() {
-  const { templates, pending, error, reload, createTemplate, updateTemplate, deleteTemplate } = useTemplates();
+  const {
+    templates,
+    pending,
+    error,
+    reload,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+  } = useTemplates();
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [editing, setEditing] = useState<{ template: Template | null } | null>(null);
+  const [editing, setEditing] = useState<{ template: Template | null } | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const cards = useRef(new Map<number, HTMLElement>());
 
   const goTo = (t: Template) => {
     setExpanded((x) => ({ ...x, [t.id]: true }));
-    cards.current.get(t.id)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    cards.current
+      .get(t.id)
+      ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   };
 
   const save = async (draft: Draft) => {
@@ -717,7 +868,10 @@ export function PlanFuerzaPage() {
             {templates.map((t, i) => (
               <Fragment key={t.id}>
                 {i > 0 && (
-                  <span aria-hidden className="px-1 text-sm text-text-secondary">
+                  <span
+                    aria-hidden
+                    className="px-1 text-sm text-text-secondary"
+                  >
                     →
                   </span>
                 )}
@@ -747,7 +901,9 @@ export function PlanFuerzaPage() {
         </div>
       )}
 
-      {pending && templates.length === 0 && !error && <div className="card">Cargando plantillas…</div>}
+      {pending && templates.length === 0 && !error && (
+        <div className="card">Cargando plantillas…</div>
+      )}
 
       {!pending && templates.length === 0 && !error && (
         <div className="card mb-4 text-text-secondary">
@@ -759,7 +915,11 @@ export function PlanFuerzaPage() {
         {editing && (
           <div className="xl:col-span-2">
             <TemplateEditor
-              draft={editing.template ? toDraft(editing.template) : { name: "", rotationIndex: 0, entries: [] }}
+              draft={
+                editing.template
+                  ? toDraft(editing.template)
+                  : { name: "", rotationIndex: 0, entries: [] }
+              }
               submitting={submitting}
               onSave={save}
               onCancel={() => setEditing(null)}

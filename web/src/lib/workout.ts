@@ -7,8 +7,12 @@ export function defaultSetCount(targetSets?: number | null): number {
 
 /** "última: 57.5×8"; null when there is nothing displayable (never logged,
  * or the last row carries null weight/reps — the API echoes nullable columns). */
-export function formatLast(last: { weightKg: number | null; reps: number | null } | null): string | null {
-  return last && last.weightKg !== null && last.reps !== null ? `última: ${last.weightKg}×${last.reps}` : null;
+export function formatLast(
+  last: { weightKg: number | null; reps: number | null } | null,
+): string | null {
+  return last && last.weightKg !== null && last.reps !== null
+    ? `última: ${last.weightKg}×${last.reps}`
+    : null;
 }
 
 export function noteOrNull(note: string): string | null {
@@ -22,7 +26,11 @@ export function isValidDateStr(s: string): boolean {
   if (!m) return false;
   const [, y, mo, d] = m;
   const date = new Date(Number(y), Number(mo) - 1, Number(d));
-  return date.getFullYear() === Number(y) && date.getMonth() === Number(mo) - 1 && date.getDate() === Number(d);
+  return (
+    date.getFullYear() === Number(y) &&
+    date.getMonth() === Number(mo) - 1 &&
+    date.getDate() === Number(d)
+  );
 }
 
 /** Local-midnight Date for a validated YYYY-MM-DD string. */
@@ -39,7 +47,10 @@ export function numOrNull(value: string): number | null {
 }
 
 /** Text values in state B: "60×8" or "—" when either side is null. */
-export function formatSetText(set: { weightKg: number | null; reps: number | null }): string {
+export function formatSetText(set: {
+  weightKg: number | null;
+  reps: number | null;
+}): string {
   if (set.weightKg === null && set.reps === null) return "—";
   return `${set.weightKg ?? "—"}×${set.reps ?? "—"}`;
 }

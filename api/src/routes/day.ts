@@ -60,7 +60,11 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
         )
       : [];
 
-    const note = await row(db, "SELECT text FROM day_notes WHERE date = ?", date);
+    const note = await row(
+      db,
+      "SELECT text FROM day_notes WHERE date = ?",
+      date,
+    );
 
     return json({
       date,

@@ -8,7 +8,8 @@ import type { Env } from "./db";
 import { json } from "./http";
 import { readSessionToken, SESSION_COOKIE } from "./auth";
 
-const CSP = "default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'";
+const CSP =
+  "default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'";
 // 'unsafe-inline' style is needed today: Tailwind v4 injects <style> in dev and
 // the build can emit inline assets (design D4); revisit when removing.
 
@@ -23,11 +24,15 @@ export const securityHeaders = createMiddleware(async (c, next) => {
   h.set("Referrer-Policy", "strict-origin-when-cross-origin");
 });
 
-async function hasValidSession(c: Context<{ Bindings: Env }>): Promise<boolean> {
+async function hasValidSession(
+  c: Context<{ Bindings: Env }>,
+): Promise<boolean> {
   const secret = c.env.AUTH_SECRET;
   // Missing secret fails closed: no key ⇒ no verifiable cookie ever.
   if (!secret) return false;
-  return (await readSessionToken(secret, getCookie(c, SESSION_COOKIE))) !== null;
+  return (
+    (await readSessionToken(secret, getCookie(c, SESSION_COOKIE))) !== null
+  );
 }
 
 /**
@@ -35,15 +40,18 @@ async function hasValidSession(c: Context<{ Bindings: Env }>): Promise<boolean> 
  * GET /api/health (deploy probe) stay open. The gate runs BEFORE routing, so
  * unknown /api paths answer 401, not 404, when anonymous.
  */
-export const authGuard = createMiddleware<{ Bindings: Env }>(async (c, next) => {
-  const { pathname } = new URL(c.req.url);
-  const method = c.req.method;
-  if (!pathname.startsWith("/api/")) return next();
-  if (method === "GET" && pathname === "/api/health") return next();
-  if (pathname.startsWith("/api/auth/")) return next();
-  if (!(await hasValidSession(c))) return json({ error: "Unauthorized" }, 401);
-  return next();
-});
+export const authGuard = createMiddleware<{ Bindings: Env }>(
+  async (c, next) => {
+    const { pathname } = new URL(c.req.url);
+    const method = c.req.method;
+    if (!pathname.startsWith("/api/")) return next();
+    if (method === "GET" && pathname === "/api/health") return next();
+    if (pathname.startsWith("/api/auth/")) return next();
+    if (!(await hasValidSession(c)))
+      return json({ error: "Unauthorized" }, 401);
+    return next();
+  },
+);
 
 /**
  * Page guard (requires run_worker_first in wrangler.toml): non-API paths
@@ -51,11 +59,13 @@ export const authGuard = createMiddleware<{ Bindings: Env }>(async (c, next) => 
  * (dotted paths — the JS/CSS needed to render the login card) pass through.
  * Protecting the HTML is UX; the data boundary is authGuard (design D4).
  */
-export const pageGuard = createMiddleware<{ Bindings: Env }>(async (c, next) => {
-  const { pathname } = new URL(c.req.url);
-  if (pathname.startsWith("/api/")) return next();
-  if (pathname === "/login") return next();
-  if (/\.[a-z0-9]+$/i.test(pathname)) return next(); // hashed static assets
-  if (await hasValidSession(c)) return next();
-  return c.redirect(`/login?next=${encodeURIComponent(pathname)}`, 302);
-});
+export const pageGuard = createMiddleware<{ Bindings: Env }>(
+  async (c, next) => {
+    const { pathname } = new URL(c.req.url);
+    if (pathname.startsWith("/api/")) return next();
+    if (pathname === "/login") return next();
+    if (/\.[a-z0-9]+$/i.test(pathname)) return next(); // hashed static assets
+    if (await hasValidSession(c)) return next();
+    return c.redirect(`/login?next=${encodeURIComponent(pathname)}`, 302);
+  },
+);

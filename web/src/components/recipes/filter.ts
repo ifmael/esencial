@@ -5,6 +5,8 @@ export function filterRecipes(list: Recipe[], query: string): Recipe[] {
   const q = query.trim().toLowerCase();
   if (!q) return list;
   return list.filter(
-    (r) => r.name.toLowerCase().includes(q) || r.tags.some((t) => t.toLowerCase().includes(q)),
+    (r) =>
+      r.name.toLowerCase().includes(q) ||
+      r.tags.some((t) => t.toLowerCase().includes(q)),
   );
 }

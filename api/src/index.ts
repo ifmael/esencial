@@ -20,7 +20,7 @@ import { authRoutes } from "./routes/auth";
 
 export const api = new Hono<{ Bindings: Env }>()
   // TEMP debug: env presence probe (no value disclosure).
-.get("/health", (c) => json({ ok: true }))
+  .get("/health", (c) => json({ ok: true }))
   .route("/auth", authRoutes())
   .route("/recipes", recipes)
   .route("/exercises", exercises)
