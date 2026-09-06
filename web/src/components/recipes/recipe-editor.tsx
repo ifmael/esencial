@@ -73,6 +73,7 @@ export function RecipeEditor({
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
   const pendingFileRef = useRef<File | null>(null);
+  const saveCancelledRef = useRef(false);
   // Id de la selección activa: "Quitar" lo incrementa y las respuestas de
   // subidas anteriores (en vuelo o retenidas) se descartan.
   const uploadSessionRef = useRef(0);
@@ -187,12 +188,18 @@ export function RecipeEditor({
       return;
     }
     setNameError(null);
+    saveCancelledRef.current = false;
     const photo = await ensurePhotoUploaded();
-    if (!photo.ok) return;
+    if (!photo.ok || saveCancelledRef.current) return; // cerrado durante el reintento
     const ok = recipe
       ? await api.update(recipe.id, payload(photo.photoPath))
       : await api.create(payload(photo.photoPath));
     if (ok) onClose();
+  };
+
+  const cancel = () => {
+    saveCancelledRef.current = true;
+    onClose();
   };
 
   const serverNameError = api.fieldError?.field === "name" ? api.fieldError.message : null;
@@ -202,7 +209,7 @@ export function RecipeEditor({
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      onClick={onClose}
+      onClick={cancel}
     >
       <div
         role="dialog"
@@ -493,7 +500,7 @@ export function RecipeEditor({
           </section>
 
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn-secondary" onClick={cancel}>
               Cancelar
             </button>
             <button type="button" className="btn-primary" disabled={api.saving || uploading} onClick={save}>
