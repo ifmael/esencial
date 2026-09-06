@@ -38,14 +38,19 @@ test.describe("RECIPES — loop end to end", () => {
     const food = uniqueName("CompraE2E");
 
     // Self-contained data via API (same shape the UI posts)
-    const created = await apiRequest<{ id: number }>(page.request, "POST", "/api/recipes", {
-      name,
-      description: "e2e",
-      ingredients: [{ food, quantity: 3, unit: "ud" }],
-      steps: [],
-      materials: [],
-      tags: [],
-    });
+    const created = await apiRequest<{ id: number }>(
+      page.request,
+      "POST",
+      "/api/recipes",
+      {
+        name,
+        description: "e2e",
+        ingredients: [{ food, quantity: 3, unit: "ud" }],
+        steps: [],
+        materials: [],
+        tags: [],
+      },
+    );
     expect(created.id, "recipe created via API").toBeGreaterThan(0);
 
     await page.goto("/plan-recetas");
