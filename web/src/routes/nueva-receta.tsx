@@ -1,12 +1,12 @@
 // E8: página "Nueva receta" en /recetario/nueva. Misma mecánica de draft que el
 // modal recipe-editor (D2), pero como página: grid de dos columnas, dropzone
-// con subida a /api/uploads (contrato fail-closed: 201 {path}, 400 {error,
+// con subida a /api/uploads (contrato fail-closed: 200 {photo_path}, 400 {error,
 // field:"file"}) y preview por photo_path. description/servings salen null.
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useRecipes, type RecipeInput } from "../components/recipes/use-recipes";
 
-import { apiFetch, apiField } from "../lib/api";
+import { apiFetch, apiField, photoSrc } from "../lib/api";
 
 type IngRow = { food: string; quantity: string; unit: string };
 
@@ -70,8 +70,11 @@ export function NuevaRecetaPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const { path } = await apiFetch<{ path: string }>("/api/uploads", { method: "POST", body: fd });
-      set("photo_path", path);
+      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
+        method: "POST",
+        body: fd,
+      });
+      set("photo_path", photo_path);
     } catch (e) {
       setUploadError(
         apiField(e) === "file"
@@ -136,7 +139,7 @@ export function NuevaRecetaPage() {
           <h3 className="mb-2 font-semibold">Foto principal</h3>
           <div className="card">
             {draft.photo_path ? (
-              <img src={draft.photo_path} alt="Vista previa de la foto" className="h-40 w-full rounded-lg object-cover" />
+              <img src={photoSrc(draft.photo_path)} alt="Vista previa de la foto" className="h-40 w-full rounded-lg object-cover" />
             ) : (
               <div className="flex h-40 items-center justify-center rounded-lg bg-surface-muted text-sm text-text-secondary">
                 Sin foto

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useRecipes, type Recipe } from "../components/recipes/use-recipes";
 import { filterRecipes } from "../components/recipes/filter";
+import { photoSrc } from "../lib/api";
 import { RecipeEditor } from "../components/recipes/recipe-editor";
 
 let flashMessage: string | null = null;
@@ -18,7 +19,7 @@ const takeFlash = () => {
 export function Thumb({ recipe, big }: { recipe: Recipe; big?: boolean }) {
   const box = big ? "h-20 w-20 shrink-0 rounded-lg md:h-40 md:w-full" : "h-20 w-20 shrink-0 rounded-lg";
   return recipe.photo_path ? (
-    <img src={recipe.photo_path} alt="" className={`${box} object-cover`} />
+    <img src={photoSrc(recipe.photo_path)} alt="" className={`${box} object-cover`} />
   ) : (
     <div
       aria-hidden
