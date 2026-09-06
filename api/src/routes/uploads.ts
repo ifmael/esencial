@@ -44,7 +44,7 @@ export const uploads = new Hono<{ Bindings: Env }>()
     obj.writeHttpMetadata(headers);
     headers.set(
       "Cache-Control",
-      "public, max-age=31536000, immutable",
+      "private, max-age=31536000, immutable",
     );
     headers.set("etag", obj.httpEtag);
     return new Response(obj.body, { headers });

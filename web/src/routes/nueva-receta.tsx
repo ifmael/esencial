@@ -104,7 +104,7 @@ export function NuevaRecetaPage() {
   });
 
   const save = async () => {
-    if (api.saving) return;
+    if (api.saving || uploading) return;
     if (!draft.name.trim()) {
       setNameError("El nombre es obligatorio");
       return;
@@ -120,8 +120,8 @@ export function NuevaRecetaPage() {
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Nueva receta</h1>
-        <button type="button" className="btn-primary" disabled={api.saving} onClick={save}>
-          {api.saving ? "Guardando…" : "Guardar"}
+        <button type="button" className="btn-primary" disabled={api.saving || uploading} onClick={save}>
+          {api.saving || uploading ? "Guardando…" : "Guardar"}
         </button>
       </header>
 

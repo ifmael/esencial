@@ -9,7 +9,7 @@
 //   tamaño supera 5_000_000 bytes; 200 {photo_path:"recipe-<uuid>.<png|jpg|webp>"}
 //   (la key R2) con bytes guardados con httpMetadata.contentType.
 // - GET /api/uploads/:key → 200 bytes + Content-Type almacenado +
-//   Cache-Control public, max-age=31536000, immutable; 404 {error} si no existe.
+//   Cache-Control private, max-age=31536000, immutable; 404 {error} si no existe.
 import { beforeAll, describe, expect, it } from "vitest";
 import { freshDb, get, post, postForm, anonPostForm } from "./helpers";
 
@@ -87,7 +87,7 @@ describe("GET /api/uploads/:key", () => {
     const res = await get(`/api/uploads/${photo_path}`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/png");
-    expect(res.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(res.headers.get("cache-control")).toBe("private, max-age=31536000, immutable");
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect(bytes).toEqual(PNG);
   });
