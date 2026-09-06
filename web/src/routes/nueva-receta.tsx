@@ -51,6 +51,7 @@ export function NuevaRecetaPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const uploadingRef = useRef(false);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -65,6 +66,8 @@ export function NuevaRecetaPage() {
   };
 
   const onFile = async (file: File) => {
+    if (uploadingRef.current) return;
+    uploadingRef.current = true;
     setUploadError(null);
     setUploading(true);
     try {
@@ -82,6 +85,7 @@ export function NuevaRecetaPage() {
           : "No se pudo conectar con el servidor.",
       );
     } finally {
+      uploadingRef.current = false;
       setUploading(false);
     }
   };

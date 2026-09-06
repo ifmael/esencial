@@ -92,11 +92,12 @@ describe("GET /api/uploads/:key", () => {
     expect(bytes).toEqual(PNG);
   });
 
-  it("404 {error} para clave inexistente", async () => {
+  it("404 {error, field:'key'} para clave inexistente", async () => {
     const res = await get("/api/uploads/recipe-00000000-0000-4000-8000-000000000000.png");
     expect(res.status).toBe(404);
     const r = await body(res);
     expect(r.error).toBeTruthy();
+    expect(r.field).toBe("key");
   });
 });
 

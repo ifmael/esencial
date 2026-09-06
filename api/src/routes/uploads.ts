@@ -39,7 +39,7 @@ export const uploads = new Hono<{ Bindings: Env }>()
   .get("/:key", async (c) => {
     const key = c.req.param("key");
     const obj = await c.env.PHOTOS.get(key);
-    if (!obj) return fail("Not found", undefined, 404);
+    if (!obj) return fail("Not found", "key", 404);
     const headers = new Headers();
     obj.writeHttpMetadata(headers);
     headers.set(
