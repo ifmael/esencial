@@ -231,7 +231,7 @@ export function NuevaRecetaPage() {
               <input
                 ref={fileInput}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];

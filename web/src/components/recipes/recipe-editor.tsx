@@ -282,7 +282,7 @@ export function RecipeEditor({
                     id="recipe-photo"
                     aria-label="Foto"
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp"
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
