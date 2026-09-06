@@ -40,6 +40,11 @@ Opciones:
 
 Criterio: A por defecto. Enganchar a CI (job aparte o paso del workflow) y `pnpm format` / `pnpm lint` en scripts raíz.
 
+**HECHA (local, rama `ifmael/fase3-lint`):** `@biomejs/biome@2.5.12` en raíz,
+`biome.json` (comillas dobles, 2 espacios, `a11y: warn`, `project-site/` y
+`wireframes/` excluidos), scripts `lint` / `lint:fix` / `format`. El job de CI
+se añadirá al workflow de la Fase 1 cuando esa rama se integre.
+
 ## Fase 4 — Deploy automático
 
 Hoy: `npm run deploy` manual desde este PC.
