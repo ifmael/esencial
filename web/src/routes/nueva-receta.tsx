@@ -168,6 +168,7 @@ export function NuevaRecetaPage() {
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
+                  e.target.value = "";
                   if (f) onFile(f);
                 }}
               />
