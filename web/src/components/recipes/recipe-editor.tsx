@@ -135,7 +135,7 @@ export function RecipeEditor({
         body: fd,
       });
       if (session !== uploadSessionRef.current) {
-        return { ok: true, photoPath: draft.photo_path.trim() || null }; // invalidada: respetar la eliminación
+        return { ok: true, photoPath: null }; // invalidada: respetar la eliminación (sin leer draft stale)
       }
       set("photo_path", photo_path);
       pendingFileRef.current = null;
@@ -143,7 +143,7 @@ export function RecipeEditor({
       return { ok: true, photoPath: photo_path };
     } catch {
       if (session !== uploadSessionRef.current) {
-        return { ok: true, photoPath: draft.photo_path.trim() || null };
+        return { ok: true, photoPath: null }; // invalidada: respetar la eliminación
       }
       setUploadError("No se pudo subir el archivo. Guarda de nuevo para reintentarlo.");
       return { ok: false, photoPath: null };
