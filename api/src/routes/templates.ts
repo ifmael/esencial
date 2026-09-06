@@ -1,9 +1,9 @@
 // /api/templates — GET · POST · /:id GET/PUT/DELETE. PUT replaces ordered entries;
 // absent rotation_index preserves the stored value (COALESCE, E1 parity).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail, parseId } from "../http";
 import { templateSchema } from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json, parseId } from "../http";
 import { loadTemplate, row, rows } from "../repo";
 import { zBody } from "../validation";
 

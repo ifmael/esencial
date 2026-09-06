@@ -1,7 +1,12 @@
 // E7 task 1.1/1.3 RED→GREEN: PBKDF2 password digests + signed stateless session.
 import { describe, expect, it } from "vitest";
-import { hashPassword, verifyPassword, SESSION_MAX_AGE_S } from "../src/auth";
-import { createSessionToken, readSessionToken } from "../src/auth";
+import {
+  createSessionToken,
+  hashPassword,
+  readSessionToken,
+  SESSION_MAX_AGE_S,
+  verifyPassword,
+} from "../src/auth";
 
 const SECRET = "test-auth-secret-32-bytes-long-xx";
 

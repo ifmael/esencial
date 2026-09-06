@@ -1,8 +1,8 @@
 // /api/notes/:date — one editable note per day (PUT upserts, GET reads).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail } from "../http";
 import { dayNoteSchema } from "../api-validation";
+import type { Env } from "../db";
+import { fail, guard, json } from "../http";
 import { row } from "../repo";
 import { zBody } from "../validation";
 

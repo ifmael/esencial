@@ -1,6 +1,6 @@
 // E1 parity: template CRUD with ordered exercises + rotationIndex.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, d1, get, post, put, del } from "./helpers";
+import { d1, del, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -65,13 +65,11 @@ describe("/api/templates", () => {
     const list = (await res.json()) as {
       name: string;
       rotationIndex: number;
-      exercises: unknown[];
+      exercises: { exerciseId: number }[];
     }[];
     const b = list.find((t) => t.name === "B — Tirón");
     expect(b?.rotationIndex).toBe(1);
-    expect(
-      (b?.exercises as { exerciseId: number }[]).map((e) => e.exerciseId),
-    ).toEqual([benchId, squatId]);
+    expect(b?.exercises.map((e) => e.exerciseId)).toEqual([benchId, squatId]);
     expect(Number(created.id)).toBeGreaterThan(0);
   });
 

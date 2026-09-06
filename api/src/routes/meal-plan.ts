@@ -1,9 +1,9 @@
 // /api/meal-plan/:week — GET reads slots (deleted recipe → slot reads empty),
 // PUT replaces the whole week's slot set (clear + reinsert in one batch).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail } from "../http";
 import { ISO_WEEK, mealPlanSchema } from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json } from "../http";
 import { row, rows } from "../repo";
 import { zBody } from "../validation";
 

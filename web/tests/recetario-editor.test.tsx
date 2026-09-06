@@ -1,5 +1,5 @@
 // E2 task 4: editor create/edit flows, validation, dynamic rows, pending guard.
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import { makeRecipe, makeServer } from "./fixtures";
 
@@ -57,11 +58,15 @@ describe("editor: create", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     const post = server.calls.find((c) => c.method === "POST");
-    expect(post?.body?.name).toBe("Tortilla");
-    expect(
-      (post?.body?.ingredients as { food: string }[]).map((i) => i.food),
-    ).toEqual(["huevo", "patata"]);
-    expect(post?.body?.steps).toEqual(["Batir"]);
+    const postBody = post?.body as
+      | { name?: string; ingredients?: { food: string }[]; steps?: string[] }
+      | undefined;
+    expect(postBody?.name).toBe("Tortilla");
+    expect(postBody?.ingredients?.map((i) => i.food)).toEqual([
+      "huevo",
+      "patata",
+    ]);
+    expect(postBody?.steps).toEqual(["Batir"]);
     expect(await screen.findByText("Tortilla")).toBeDefined();
   });
 

@@ -1,6 +1,6 @@
 // E0 shell ported from legacy/next-app: desktop sidebar + mobile bottom tabs.
 // next/link → react-router Link; usePathname → useLocation. E7: logout button.
-import { useNavigate, Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 
 const NAV = [
   { href: "/", label: "Hoy" },

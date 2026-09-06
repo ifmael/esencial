@@ -1,6 +1,6 @@
 // Rejilla semanal E3: /plan-recetas renderiza 7 días × 3 comidas desde
 // GET /api/meal-plan/:week, con navegación de semana, picker y quita de slots.
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -9,6 +9,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 
 type Slot = {

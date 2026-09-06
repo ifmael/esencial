@@ -1,6 +1,6 @@
 // E7 web tests: login card, client session guard, logout button.
 // fetch is mocked per test (jsdom has no backend); App is the real router.
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -8,6 +8,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 
 afterEach(() => {

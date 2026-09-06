@@ -1,10 +1,11 @@
 // E7 task 3: the auth gate contract over every pre-E7 route, page redirects,
 // and security headers. Uses a fresh login per file via /api/auth/login.
-import { beforeAll, describe, expect, it } from "vitest";
+
 import { env } from "cloudflare:test";
+import { beforeAll, describe, expect, it } from "vitest";
+import { createSessionToken, SESSION_COOKIE } from "../src/auth";
 import app from "../src/index";
-import { freshDb, get, post, anonGet } from "./helpers";
-import { SESSION_COOKIE, createSessionToken } from "../src/auth";
+import { anonGet, freshDb, get, post } from "./helpers";
 
 let cookie = "";
 

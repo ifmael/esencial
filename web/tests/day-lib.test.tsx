@@ -1,8 +1,9 @@
 // E5 task 3.1: useDay — un fetch por fecha, descarte de respuestas superadas,
 // error + reload.
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useDay, type DayData } from "../src/lib/day";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { type DayData, useDay } from "../src/lib/day";
 
 afterEach(() => vi.unstubAllGlobals());
 

@@ -1,9 +1,9 @@
 // /api/exercises — GET (?tag=) · POST · /:id GET/PUT/DELETE · /:id/last GET.
 // last-values endpoint per E1 design D5.
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail, parseId } from "../http";
 import { exerciseSchema } from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json, parseId } from "../http";
 import { loadExercise, row, rows } from "../repo";
 import { zBody } from "../validation";
 

@@ -1,7 +1,7 @@
 // E7 auth primitives (design D2/D3): PBKDF2-SHA256 password digests and a
 // stateless HMAC-signed session token built on Hono's cookie signing helpers.
 // Zero dependencies beyond hono + Web Crypto.
-import { serializeSigned, parseSigned } from "hono/utils/cookie";
+import { parseSigned, serializeSigned } from "hono/utils/cookie";
 
 export const SESSION_COOKIE = "esencial_session";
 /** 30 days — personal app; renewal is a re-login (design D3). */

@@ -1,7 +1,7 @@
 // E1 parity: schedule sessions, close with workout log (409 double), read-only
 // after close, last-values per exercise.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, d1, get, post, put } from "./helpers";
+import { d1, freshDb, get, post } from "./helpers";
 
 beforeAll(freshDb);
 

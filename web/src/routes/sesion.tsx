@@ -3,7 +3,7 @@
 // GET /api/workout-logs/:date. Reads compose existing endpoints only (D2).
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { apiGet, apiSend, ApiError } from "../lib/api";
+import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
   defaultSetCount,
   formatLast,
@@ -465,7 +465,8 @@ export function SesionPage() {
             view.log.sets.reduce<
               Record<number, (SetLogItem & { exerciseName: string })[]>
             >((acc, s) => {
-              (acc[s.templateExerciseId] ??= []).push(s);
+              acc[s.templateExerciseId] ??= [];
+              acc[s.templateExerciseId].push(s);
               return acc;
             }, {}),
           ).map(([teId, sets]) => (

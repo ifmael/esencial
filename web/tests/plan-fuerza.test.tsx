@@ -1,5 +1,5 @@
 // /plan-fuerza screen + template editor (E4 tasks 2.1-2.4, 3.1-3.7, 6.1).
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -8,11 +8,12 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
-import { mockApi, type MockApi } from "./api-mock";
 import type { Exercise } from "../src/lib/exercises";
-import type { Template } from "../src/lib/templates";
 import type { TemplatePayload } from "../src/lib/template-draft";
+import type { Template } from "../src/lib/templates";
+import { type MockApi, mockApi } from "./api-mock";
 
 const press: Exercise = {
   id: 7,
@@ -473,7 +474,7 @@ describe("exercise picker modal", () => {
   });
 
   it("closing with Escape preserves the draft", async () => {
-    const dialog = await openPicker();
+    await openPicker();
     fireEvent.change(screen.getByLabelText("Nombre"), {
       target: { value: "A — Empuje 3" },
     });

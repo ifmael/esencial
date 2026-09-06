@@ -1,5 +1,5 @@
 // E2 tasks 2.1–2.3: /recetario cards, loading/empty/error+retry, client search.
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import { makeRecipe, makeServer } from "./fixtures";
 

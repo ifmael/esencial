@@ -1,7 +1,6 @@
 // E5 tasks 3.2/3.3/4.x: pantalla DÍA — header con "Hoy", navegación de fechas,
 // secciones RECETA/FUERZA/NOTAS con sus estados, autosave con debounce + flush.
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Mock } from "vitest";
+
 import {
   act,
   cleanup,
@@ -10,6 +9,8 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import type { Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
 
@@ -349,7 +350,7 @@ describe("sección NOTAS con autosave", () => {
   it("PUT fallido → indicador de error con reintento y texto preservado", async () => {
     renderAt("/");
     await settle();
-    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    fetchMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       if (init?.method === "PUT") return new Response("{}", { status: 500 });
       return Response.json(payload());
     });

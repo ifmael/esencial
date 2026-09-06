@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   addEntry,
   buildTemplatePayload,
+  type Draft,
+  type DraftEntry,
   moveItem,
   nextCopyName,
   removeEntry,
   setTargets,
-  type Draft,
-  type DraftEntry,
 } from "../src/lib/template-draft";
 
 const ex = (id: number, name: string): DraftEntry => ({

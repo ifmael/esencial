@@ -1,14 +1,6 @@
 // UI tests: shell navigation (active state, deep links) + Día empty states.
 // E7: App now checks /api/auth/status on mount — stub it as authenticated.
-import {
-  afterEach,
-  beforeEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -16,6 +8,15 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
 

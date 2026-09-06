@@ -1,21 +1,21 @@
 // /plan-fuerza — plantillas rotatorias expandibles + editor de borrador local.
 // Diseño E4: D2 (un PUT atómico), D3 (↑/↓ sin drag), D5 (chips = orden API).
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useTemplates, type Template } from "../lib/templates";
-import { useExercises, type Exercise } from "../lib/exercises";
-import { apiField, apiSend, ApiError } from "../lib/api";
+import { ApiError, apiField, apiSend } from "../lib/api";
+import { type Exercise, useExercises } from "../lib/exercises";
 import {
   addEntry,
   buildTemplatePayload,
+  type Draft,
+  type DraftEntry,
   moveEntry,
   newEntryKey,
   nextCopyName,
   removeEntry,
   setTargets,
-  type Draft,
-  type DraftEntry,
 } from "../lib/template-draft";
+import { type Template, useTemplates } from "../lib/templates";
 
 const letterOf = (t: { rotationIndex: number }): string =>
   String.fromCharCode(65 + t.rotationIndex);
@@ -297,7 +297,8 @@ function ExercisePicker({
   const groups: Record<string, Exercise[]> = {};
   for (const e of picks) {
     const tag = e.tags[0] ?? "otro";
-    (groups[tag] ??= []).push(e);
+    groups[tag] ??= [];
+    groups[tag].push(e);
   }
 
   return (

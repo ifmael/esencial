@@ -1,12 +1,13 @@
 // E7 middlewares (design D4): security headers on every response, the 401 gate
 // on /api/*, and the page guard that redirects unauthenticated HTML to /login.
 // Order at the app root: securityHeaders → authGuard → pageGuard.
-import { createMiddleware } from "hono/factory";
+
 import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
+import { createMiddleware } from "hono/factory";
+import { readSessionToken, SESSION_COOKIE } from "./auth";
 import type { Env } from "./db";
 import { json } from "./http";
-import { readSessionToken, SESSION_COOKIE } from "./auth";
 
 const CSP =
   "default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'";

@@ -1,7 +1,7 @@
 // E5 tasks 2.1-2.5: GET /api/day/:date aggregation, seeded through the public
 // endpoints so the join runs against real rows (design D7).
 import { beforeEach, describe, expect, it } from "vitest";
-import { freshDb, get, post, put, del } from "./helpers";
+import { del, freshDb, get, post, put } from "./helpers";
 
 async function body(res: Response): Promise<Record<string, unknown>> {
   return (await res.json()) as Record<string, unknown>;

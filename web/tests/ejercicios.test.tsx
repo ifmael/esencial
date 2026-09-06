@@ -1,5 +1,5 @@
 // /ejercicios catalog + detail + editor + add-to-template (E4 tasks 4.1-5.4, 6.2).
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -7,10 +7,11 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
-import { mockApi, type MockApi } from "./api-mock";
 import type { Exercise } from "../src/lib/exercises";
 import type { Template } from "../src/lib/templates";
+import { type MockApi, mockApi } from "./api-mock";
 
 const press: Exercise = {
   id: 7,

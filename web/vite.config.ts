@@ -1,6 +1,6 @@
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
 
 // `vite build` → dist/ (served by the Worker as SPA assets).
 // `vite dev` proxies /api to wrangler dev (8787) for hot reload (task 3.1).

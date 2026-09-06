@@ -1,10 +1,11 @@
 // API contract (E1): envelope helpers + healthcheck + idempotent schema.
-import { beforeAll, describe, expect, it } from "vitest";
+
 import { env } from "cloudflare:test";
-import { d1, freshDb, get } from "./helpers";
-import { dbFailure, guard } from "../src/http";
-import schemaSql from "../schema.sql?raw";
+import { beforeAll, describe, expect, it } from "vitest";
 import m0003 from "../migrations/0003_e3_shopping.sql?raw";
+import schemaSql from "../schema.sql?raw";
+import { dbFailure, guard } from "../src/http";
+import { d1, freshDb, get } from "./helpers";
 
 beforeAll(freshDb);
 

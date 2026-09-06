@@ -4,7 +4,7 @@
 // cambiar de fecha vía desmontaje del editor keyed por fecha).
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useDay, toISODate, type DayData, type DaySession } from "../lib/day";
+import { type DayData, type DaySession, toISODate, useDay } from "../lib/day";
 
 export function formatDateEs(date: Date): string {
   return new Intl.DateTimeFormat("es-ES", {

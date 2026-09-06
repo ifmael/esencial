@@ -1,8 +1,8 @@
 // /api/plan-sessions — schedule a template on a date (one session per date).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail } from "../http";
 import { planSessionSchema } from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json } from "../http";
 import { row, rows } from "../repo";
 import { zBody } from "../validation";
 

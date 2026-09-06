@@ -4,9 +4,9 @@
 // el detalle y el libro son rutas distintas sin estado compartido.
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { useRecipes, type Recipe } from "../components/recipes/use-recipes";
 import { filterRecipes } from "../components/recipes/filter";
 import { RecipeEditor } from "../components/recipes/recipe-editor";
+import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
 
 let flashMessage: string | null = null;
 const setFlash = (m: string) => (flashMessage = m);
@@ -72,7 +72,7 @@ function ErrorBanner({
 export function RecetarioPage() {
   const api = useRecipes();
   const [query, setQuery] = useState("");
-  const [flash, setFlashState] = useState(takeFlash);
+  const [flash] = useState(takeFlash);
   const [editing, setEditing] = useState<Recipe | null>(null);
   const [creating, setCreating] = useState(false);
   const visible = filterRecipes(api.list, query);

@@ -119,8 +119,7 @@ export function mockApi(seed: Seed = {}): MockApi {
         tags?: string[];
         techniqueUrl?: string | null;
       }) => {
-        if (!b.name || !b.name.trim())
-          return err("Exercise name is required", "name");
+        if (!b.name?.trim()) return err("Exercise name is required", "name");
         if (!b.tags || b.tags.length < 1)
           return err("At least one tag is required", "tags");
         if (b.techniqueUrl && !/^https?:\/\/\S+$/.test(b.techniqueUrl))

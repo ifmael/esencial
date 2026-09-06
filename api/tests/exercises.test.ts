@@ -1,6 +1,6 @@
 // E1 parity: exercises CRUD + tags; ?tag= filter (unknown tag → [] not error).
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, get, post, put, del } from "./helpers";
+import { del, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 

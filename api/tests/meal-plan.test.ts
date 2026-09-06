@@ -1,6 +1,6 @@
 // E1 parity: meal-plan week PUT/GET; slot referencing deleted recipe reads empty.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, get, post, put, del } from "./helpers";
+import { del, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 

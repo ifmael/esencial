@@ -3,11 +3,11 @@
 // E7: get/post/put/del carry a session cookie obtained once per worker via a
 // real /api/auth/login; anon* builders exercise the 401 gate.
 import { env } from "cloudflare:test";
-import app from "../src/index";
 import migrations0002 from "../migrations/0002_e2_recipes_photo_tags.sql?raw";
-import schemaSql from "../schema.sql?raw";
 import m0003Sql from "../migrations/0003_e3_shopping.sql?raw";
 import m0005Sql from "../migrations/0005_exercise_steps.sql?raw";
+import schemaSql from "../schema.sql?raw";
+import app from "../src/index";
 
 let bootstrapped = false;
 

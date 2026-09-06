@@ -1,7 +1,7 @@
 // E1 parity: recipes CRUD with ordered ingredients/steps/materials, 400 without
 // name (nothing written), PUT child replacement, DELETE cascade + slot clearing.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, get, post, put, del } from "./helpers";
+import { del, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 

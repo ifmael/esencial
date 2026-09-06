@@ -13,9 +13,9 @@ import {
 } from "react-router";
 import { Shell } from "./components/shell";
 import { DiaPage } from "./routes/dia";
-import { PlanRecetasPage } from "./routes/plan-recetas";
-import { PlanFuerzaPage } from "./routes/plan-fuerza";
 import { LoginPage } from "./routes/login";
+import { PlanFuerzaPage } from "./routes/plan-fuerza";
+import { PlanRecetasPage } from "./routes/plan-recetas";
 
 /** Layout route: one status check for the whole session, then Shell + page. */
 function GuardedShell() {
@@ -52,8 +52,8 @@ function GuardedShell() {
   );
 }
 
-import { RecetarioPage, RecetarioDetallePage } from "./routes/recetario";
-import { EjerciciosPage, EjercicioDetailPage } from "./routes/ejercicios";
+import { EjercicioDetailPage, EjerciciosPage } from "./routes/ejercicios";
+import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
 
 import { SesionPage } from "./routes/sesion";
 

@@ -1,6 +1,6 @@
 // Hoja "Lista de la compra" E3: secciones agrupadas con cantidades, checkbox
 // solo en ítems manuales (PATCH), fila "+ añadir artículo" por sección (PUT).
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -9,6 +9,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 
 type Item = {

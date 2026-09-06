@@ -4,14 +4,14 @@
 // PATCH .../items/:id updates one. Aggregation lines cannot drift from the
 // plan: deleting a recipe removes its ingredients on the next read.
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail, parseId } from "../http";
 import {
   ISO_WEEK,
-  shoppingItemsSchema,
   shoppingItemPatchSchema,
+  shoppingItemsSchema,
 } from "../api-validation";
-import { row, rows, type Row } from "../repo";
+import { type Env, getDb } from "../db";
+import { fail, guard, json, parseId } from "../http";
+import { type Row, row, rows } from "../repo";
 import { zBody } from "../validation";
 
 // Keyword default map (design D3): only consulted when the ingredient row has

@@ -1,11 +1,12 @@
 // E7 tasks 2.1–2.5: login/logout/status endpoints + in-memory rate limit.
-import { describe, expect, it, vi } from "vitest";
+
 import { env } from "cloudflare:test";
 import { Hono } from "hono";
-import app from "../src/index";
-import { authRoutes } from "../src/routes/auth";
-import { createLoginLimiter } from "../src/rate-limit";
+import { describe, expect, it, vi } from "vitest";
 import { SESSION_COOKIE, verifyPassword } from "../src/auth";
+import app from "../src/index";
+import { createLoginLimiter } from "../src/rate-limit";
+import { authRoutes } from "../src/routes/auth";
 
 const PASSWORD = "test-password-123";
 

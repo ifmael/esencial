@@ -1,9 +1,9 @@
 // /api/recipes — GET list · POST create (nested children) · /:id GET/PUT/DELETE.
 // PUT replaces children wholesale; DELETE clears meal_slots then cascades (E1 parity).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail, parseId } from "../http";
 import { recipeSchema } from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json, parseId } from "../http";
 import { loadRecipe, row, rows } from "../repo";
 import { zBody } from "../validation";
 

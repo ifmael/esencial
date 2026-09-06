@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { type APIRequestContext, expect, test } from "@playwright/test";
 import { apiRequest, uniqueName } from "./helpers";
 
 test.describe("STRENGTH — template, schedule and session loop", () => {

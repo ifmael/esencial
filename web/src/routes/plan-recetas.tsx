@@ -4,8 +4,8 @@
 // y el estado local se reemplaza con la respuesta del servidor.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
+import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
 export const DAYS = [
   "Lunes",
@@ -67,7 +67,7 @@ export function useMealPlan(isoWeek: string) {
           })),
         }),
       }).catch(() => null);
-      if (!res || !res.ok) {
+      if (!res?.ok) {
         const err: { error?: string } = res
           ? await res.json().catch(() => ({}))
           : {};

@@ -2,16 +2,16 @@
 // Diseño D4: "Ver técnica" acepta cualquier URL; los enlaces de YouTube se empotran (E8).
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import {
-  useExercises,
-  type Exercise,
-  type ExerciseInput,
-} from "../lib/exercises";
 import { apiField } from "../lib/api";
 import {
-  useTemplates,
+  type Exercise,
+  type ExerciseInput,
+  useExercises,
+} from "../lib/exercises";
+import {
   type Template,
   type TemplatesState,
+  useTemplates,
 } from "../lib/templates";
 
 const errorMessage = (e: unknown): string =>

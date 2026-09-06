@@ -1,7 +1,8 @@
 // useExercises / useTemplates hooks (E4 tasks 1.1 + 1.2) against mocked fetch.
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Mock } from "vitest";
+
 import { act, renderHook, waitFor } from "@testing-library/react";
+import type { Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useExercises } from "../src/lib/exercises";
 import { useTemplates } from "../src/lib/templates";
 
@@ -44,7 +45,7 @@ describe("useExercises", () => {
   });
 
   it("creates via POST then refetches", async () => {
-    const fetchMock = mockFetch((url, init) =>
+    const fetchMock = mockFetch((_url, init) =>
       init?.method === "POST"
         ? jsonResponse({ id: 2 }, 201)
         : jsonResponse([{ id: 1 }]),
@@ -85,7 +86,7 @@ describe("useExercises", () => {
   });
 
   it("updates via PUT and deletes via DELETE with a refetch after", async () => {
-    const fetchMock = mockFetch((url, init) =>
+    const fetchMock = mockFetch((_url, init) =>
       init?.method === "DELETE"
         ? new Response(null, { status: 204 })
         : jsonResponse({ id: 1 }),
@@ -136,7 +137,7 @@ describe("useTemplates", () => {
   });
 
   it("create/update/delete hit the right verbs and refetch", async () => {
-    const fetchMock = mockFetch((url, init) =>
+    const fetchMock = mockFetch((_url, init) =>
       init?.method === "POST"
         ? jsonResponse({ id: 3 }, 201)
         : init?.method === "DELETE"

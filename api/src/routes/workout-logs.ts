@@ -2,9 +2,9 @@
 // flips the plan session to logged in one batch. A logged day is read-only:
 // a second POST gets 409 (E1 parity).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail } from "../http";
 import { workoutLogSchema } from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json } from "../http";
 import { loadTemplate, row, rows } from "../repo";
 import { zBody } from "../validation";
 

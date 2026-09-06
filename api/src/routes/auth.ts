@@ -3,15 +3,15 @@
 // envelope everywhere else). Handlers sit behind a factory so tests inject
 // limiter/clock/verify (DI seam).
 import { Hono } from "hono";
-import { setSignedCookie, getCookie, deleteCookie } from "hono/cookie";
-import type { Env } from "../db";
-import { json, fail } from "../http";
+import { deleteCookie, getCookie, setSignedCookie } from "hono/cookie";
 import {
-  verifyPassword,
   readSessionToken,
   SESSION_COOKIE,
   SESSION_MAX_AGE_S,
+  verifyPassword,
 } from "../auth";
+import type { Env } from "../db";
+import { fail, json } from "../http";
 import { createLoginLimiter, type LoginLimiter } from "../rate-limit";
 
 // Flags required by the spec: HttpOnly; Secure; SameSite=Lax; Path=/.

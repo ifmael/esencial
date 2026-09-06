@@ -1,7 +1,7 @@
 // E6 tasks 3.x + 4.1: /sesion/:date screen (state A editable, state B read-only).
 // jsdom + mocked fetch: the fake router below serves the exact shapes the real
 // API emits (camelCase after the E6 wire normalization).
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import {
   cleanup,
   fireEvent,
@@ -9,6 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 
 afterEach(() => {
@@ -166,15 +167,6 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
-const PLANNED = [
-  {
-    id: 1,
-    date: "2026-09-02",
-    status: "planned",
-    templateId: 5,
-    templateName: "Empuje A",
-  },
-];
 const LOGGED = [
   {
     id: 1,
