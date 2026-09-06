@@ -17,3 +17,7 @@ binding = "DB"
 database_name = "esencial"
 database_id = "989acff9-fbad-4ef7-a001-695d4966d264"
 migrations_dir = "api/migrations"
+
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "esencial-photos"

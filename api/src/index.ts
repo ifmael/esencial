@@ -17,6 +17,7 @@ import { notes } from "./routes/notes";
 import { shoppingList } from "./routes/shopping-list";
 import { day } from "./routes/day";
 import { authRoutes } from "./routes/auth";
+import { uploads } from "./routes/uploads";
 
 export const api = new Hono<{ Bindings: Env }>()
   // TEMP debug: env presence probe (no value disclosure).
@@ -30,7 +31,8 @@ export const api = new Hono<{ Bindings: Env }>()
   .route("/workout-logs", workoutLogs)
   .route("/notes", notes)
   .route("/shopping-list", shoppingList)
-  .route("/day", day);
+  .route("/day", day)
+  .route("/uploads", uploads);
 
 const app = new Hono<{ Bindings: Env }>()
   .use(securityHeaders)

@@ -10,6 +10,16 @@ import { zBody } from "../validation";
 // Name is UNIQUE, so children can resolve the parent id inside one atomic batch.
 const RECIPE_ID = "(SELECT id FROM recipes WHERE name = ?)";
 
+// Fail-closed (spec UPLOAD/RECIPE_CREATE): solo photo_path devueltos por
+// POST /api/uploads (key R2 recipe-<uuid>.<ext> existente en PHOTOS).
+const PHOTO_KEY = /^recipe-[0-9a-f-]{36}\.(png|jpe?g|webp)$/;
+
+async function validPhoto(env: Env, photo_path: string | null | undefined): Promise<boolean> {
+  if (!photo_path) return true; // ausente/null es válido (receta sin foto)
+  if (!PHOTO_KEY.test(photo_path)) return false;
+  return (await env.PHOTOS.head(photo_path)) !== null;
+}
+
 function childStatements(name: string, input: {
   ingredients: { food: string; quantity?: number | null; unit?: string | null; section?: string | null }[];
   steps: string[];
@@ -47,6 +57,8 @@ export const recipes = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const input = c.get("validated");
       if (!input.name.trim()) return fail("Recipe name is required", "name");
+      if (!(await validPhoto(c.env, input.photo_path)))
+        return fail("photo_path no corresponde a una foto subida", "photo_path");
       const db = getDb(c.env);
       const name = input.name.trim();
       const results = await db.batch([
@@ -68,9 +80,11 @@ export const recipes = new Hono<{ Bindings: Env }>()
   .put("/:id", zBody(recipeSchema), (c) =>
     guard(async () => {
       const id = parseId(c.req.param("id"));
-      if (id === null) return fail("id must be a positive integer", "id");
       const input = c.get("validated");
+      if (id === null) return fail("id must be a positive integer", "id");
       if (!input.name.trim()) return fail("Recipe name is required", "name");
+      if (!(await validPhoto(c.env, input.photo_path)))
+        return fail("photo_path no corresponde a una foto subida", "photo_path");
       const db = getDb(c.env);
       if (!(await row(db, "SELECT id FROM recipes WHERE id = ?", id)))
         return fail("Not found", undefined, 404);
