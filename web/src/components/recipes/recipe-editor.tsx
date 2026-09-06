@@ -1,7 +1,7 @@
 // E2 editor (D2): create/edit recipe as a modal overlay. Cancel = close, no API
 // call; save POSTs/PUTs the whole draft; field errors render beside the field.
 import { useRef, useState } from "react";
-import { apiField, photoSrc, apiFetch } from "../../lib/api";
+import { ApiError, photoSrc, apiFetch } from "../../lib/api";
 import type { Recipe, RecipeInput, RecipesApi } from "./use-recipes";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -72,6 +72,7 @@ export function RecipeEditor({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
+  const pendingFileRef = useRef<File | null>(null);
   const title = recipe ? "Editar receta" : "Nueva receta";
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
@@ -96,23 +97,57 @@ export function RecipeEditor({
         body: fd,
       });
       set("photo_path", photo_path);
+      // Una selección resuelta invalida cualquier reintento pendiente.
+      pendingFileRef.current = null;
     } catch (e) {
-      setUploadError(
-        apiField(e) === "file"
-          ? "No se pudo subir el archivo. Inténtalo de nuevo."
-          : "No se pudo conectar con el servidor.",
-      );
+      // 400 (tipo) y 413 (tamaño) son rechazos deterministas del server:
+      // reintentar no los cura. Cualquier otro fallo (red/5xx) es transitorio.
+      const status = e instanceof ApiError ? e.status : 0;
+      if (status === 400 || status === 413) {
+        pendingFileRef.current = null;
+        setUploadError("Archivo no válido (tipo o tamaño). Elige otra imagen.");
+      } else {
+        pendingFileRef.current = file;
+        setUploadError("No se pudo conectar con el servidor. Se reintentará al guardar.");
+      }
     } finally {
       uploadingRef.current = false;
       setUploading(false);
     }
   };
 
-  const payload = (): RecipeInput => ({
+  /** Reintenta la subida pendiente; sin pendiente devuelve el path actual
+   *  (posiblemente null/"" — la receta puede quedarse sin foto a propósito). */
+  const ensurePhotoUploaded = async (): Promise<{ ok: boolean; photoPath: string | null }> => {
+    const file = pendingFileRef.current;
+    if (!file) return { ok: true, photoPath: draft.photo_path.trim() || null };
+    uploadingRef.current = true;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
+        method: "POST",
+        body: fd,
+      });
+      set("photo_path", photo_path);
+      pendingFileRef.current = null;
+      setUploadError(null);
+      return { ok: true, photoPath: photo_path };
+    } catch {
+      setUploadError("No se pudo subir el archivo. Guarda de nuevo para reintentarlo.");
+      return { ok: false, photoPath: null };
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
+  };
+
+  const payload = (photoPath: string): RecipeInput => ({
     name: draft.name.trim(),
     description: draft.description.trim() || null,
     servings: draft.servings.trim() ? Number(draft.servings) : null,
-    photo_path: draft.photo_path.trim() || null,
+    photo_path: photoPath || null,
     ingredients: draft.ingredients
       .filter((i) => i.food.trim())
       .map((i) => ({
@@ -132,7 +167,11 @@ export function RecipeEditor({
       return;
     }
     setNameError(null);
-    const ok = recipe ? await api.update(recipe.id, payload()) : await api.create(payload());
+    const photo = await ensurePhotoUploaded();
+    if (!photo.ok) return;
+    const ok = recipe
+      ? await api.update(recipe.id, payload(photo.photoPath))
+      : await api.create(payload(photo.photoPath));
     if (ok) onClose();
   };
 
