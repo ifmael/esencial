@@ -15,6 +15,10 @@ Opciones:
 
 Criterio: empezar por B; si los minutos de Actions o flakiness de e2e molestan, degradar a A.
 
+**HECHA (opción B):** workflow `.github/workflows/ci.yml` con unit + e2e en
+GitHub Actions, verificado en run verde (PR #2). Typecheck/lint quedan para
+Fases 2-3.
+
 ## Fase 2 — Typecheck
 
 `vite build` transpila sin verificar tipos: errores de TS llegan a producción.
@@ -51,3 +55,7 @@ Opciones:
 - **C (híbrido):** CI en Actions valida, y el deploy se sigue haciendo manual. Útil si se prefiere no dar permisos de escritura a GitHub.
 
 Criterio: A por simplicidad; B si se quiere deploy condicionado a CI verde o desde tags. Las migraciones D1 (`db:migrate:remote`) siguen siendo paso manual o paso extra del pipeline.
+
+**PENDIENTE (elegida opción A, paso manual):** conectar el repo en el dashboard
+de Cloudflare (Workers → Settings → Build → `ifmael/esencial`, branch `main`).
+Las migraciones D1 remotas siguen manuales (`pnpm db:migrate:remote`).
