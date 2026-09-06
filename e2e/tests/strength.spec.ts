@@ -85,7 +85,7 @@ test.describe("STRENGTH — template, schedule and session loop", () => {
     expect(tpl.id).toBeGreaterThan(0);
 
     // Schedule via API (UI for scheduling lives on the Día/session flow)
-    const scheduled = await apiRequest(
+    const scheduled = await apiRequest<{ status: string }>(
       page.request,
       "POST",
       "/api/plan-sessions",
