@@ -41,6 +41,13 @@ const label = "mb-1 block text-sm font-medium text-text-secondary";
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
   rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
 
+const move = (items: string[], from: number, to: number): string[] => {
+  const next = [...items];
+  const [x] = next.splice(from, 1);
+  next.splice(to, 0, x);
+  return next;
+};
+
 export function NuevaRecetaPage() {
   const api = useRecipes();
   const navigate = useNavigate();
@@ -143,7 +150,16 @@ export function NuevaRecetaPage() {
           <h3 className="mb-2 font-semibold">Foto principal</h3>
           <div className="card">
             {draft.photo_path ? (
-              <img src={photoSrc(draft.photo_path)} alt="Vista previa de la foto" className="h-40 w-full rounded-lg object-cover" />
+              <>
+                <img src={photoSrc(draft.photo_path)} alt="Vista previa de la foto" className="h-40 w-full rounded-lg object-cover" />
+                <button
+                  type="button"
+                  className="btn-secondary mt-2"
+                  onClick={() => set("photo_path", "")}
+                >
+                  Quitar foto
+                </button>
+              </>
             ) : (
               <div className="flex h-40 items-center justify-center rounded-lg bg-surface-muted text-sm text-text-secondary">
                 Sin foto
@@ -309,6 +325,26 @@ export function NuevaRecetaPage() {
                   value={text}
                   onChange={(e) => set("steps", draft.steps.map((s, j) => (j === i ? e.target.value : s)))}
                 />
+                {i > 0 && (
+                  <button
+                    type="button"
+                    aria-label={`Subir paso ${i + 1}`}
+                    className={small}
+                    onClick={() => set("steps", move(draft.steps, i, i - 1))}
+                  >
+                    ↑
+                  </button>
+                )}
+                {i < draft.steps.length - 1 && (
+                  <button
+                    type="button"
+                    aria-label={`Bajar paso ${i + 1}`}
+                    className={small}
+                    onClick={() => set("steps", move(draft.steps, i, i + 1))}
+                  >
+                    ↓
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label={`Quitar paso ${i + 1}`}
