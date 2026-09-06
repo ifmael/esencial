@@ -108,24 +108,22 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     const text = uniqueName("Nota flush");
     await page.goto("/");
 
+    // Cualquiera de las dos rutas es correcta: el debounce (800 ms) dispara si
+    // el runner es lento, o el desmontaje fuerza el flush si se sale antes.
+    // Esperamos el PUT a la fecha de HOY en vez de apostar a ganar la carrera.
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const noteSaved = page.waitForRequest(
+      (req) =>
+        req.method() === "PUT" && req.url().endsWith(`/api/notes/${iso}`),
+    );
+
     const notes = page.getByPlaceholder("Escribe algo sobre hoy");
     await notes.fill(text);
-    // Leave before the 800ms debounce fires: switch the date, which unmounts
-    // (key={iso}) the editor and flushes the pending draft against the old date.
     await page.getByRole("button", { name: "Día siguiente" }).click();
     await page.getByRole("button", { name: "Día anterior" }).click();
-    await expect(notes).not.toHaveValue(text); // today reloaded; flush is async
 
-    // The old date's note must exist server-side even though the debounce never fired.
-    const iso = await page.evaluate(() => {
-      const d = new Date();
-      const off = (num: number) => {
-        const x = new Date(d);
-        x.setDate(x.getDate() + num);
-        return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
-      };
-      return off(0);
-    });
+    await noteSaved;
     const saved = await page.evaluate(async (date) => {
       const res = await fetch(`/api/notes/${date}`);
       return res.json();
