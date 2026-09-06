@@ -131,13 +131,13 @@ export function NuevaRecetaPage() {
         method: "POST",
         body: fd,
       });
-      if (session !== uploadSessionRef.current) return draft.photo_path; // invalidada
+      if (session !== uploadSessionRef.current) return ""; // invalidada: la foto fue quitada
       set("photo_path", photo_path);
       pendingFileRef.current = null;
       setUploadError(null);
       return photo_path;
     } catch {
-      if (session !== uploadSessionRef.current) return draft.photo_path;
+      if (session !== uploadSessionRef.current) return ""; // invalidada: la foto fue quitada
       setUploadError("No se pudo subir el archivo. Inténtalo de nuevo.");
       return null;
     } finally {
