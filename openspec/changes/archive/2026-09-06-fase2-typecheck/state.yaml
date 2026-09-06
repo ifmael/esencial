@@ -1,19 +1,19 @@
 change: fase2-typecheck
-phase: proposed
+phase: archived
 artifact_store: hybrid
 artifacts:
   proposal: true
   specs: true
   design: true
   tasks: true
-  verify_report: false
-  archive: false
+  verify_report: true
+  archive: true
 tasks_progress:
-  completed: []
-  pending:
+  completed:
     - t1 scripts + DaySession type (RED→GREEN)
     - t2 build gate in web
     - t3 verify (verify-report.md)
     - t4 archive + promote spec
+  pending: []
 delivery_strategy: direct-commits
-last_updated: 2026-09-06
+last_updated: 2026-09-06 (archived; spec promoted to openspec/specs/typecheck/spec.md)
