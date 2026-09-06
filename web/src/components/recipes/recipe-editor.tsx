@@ -73,7 +73,17 @@ export function RecipeEditor({
   const [uploading, setUploading] = useState(false);
   const uploadingRef = useRef(false);
   const pendingFileRef = useRef<File | null>(null);
+  // Id de la selección activa: "Quitar" lo incrementa y las respuestas de
+  // subidas anteriores (en vuelo o retenidas) se descartan.
+  const uploadSessionRef = useRef(0);
   const title = recipe ? "Editar receta" : "Nueva receta";
+
+  const removePhoto = () => {
+    uploadSessionRef.current += 1;
+    pendingFileRef.current = null;
+    setUploadError(null);
+    set("photo_path", "");
+  };
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -86,6 +96,7 @@ export function RecipeEditor({
 
   const onFile = async (file: File) => {
     if (uploadingRef.current) return;
+    const session = ++uploadSessionRef.current;
     uploadingRef.current = true;
     setUploadError(null);
     setUploading(true);
@@ -96,10 +107,12 @@ export function RecipeEditor({
         method: "POST",
         body: fd,
       });
+      if (session !== uploadSessionRef.current) return; // la foto fue quitada mientras subía
       set("photo_path", photo_path);
       // Una selección resuelta invalida cualquier reintento pendiente.
       pendingFileRef.current = null;
     } catch (e) {
+      if (session !== uploadSessionRef.current) return;
       // 400 (tipo) y 413 (tamaño) son rechazos deterministas del server:
       // reintentar no los cura. Cualquier otro fallo (red/5xx) es transitorio.
       const status = e instanceof ApiError ? e.status : 0;
@@ -121,6 +134,7 @@ export function RecipeEditor({
   const ensurePhotoUploaded = async (): Promise<{ ok: boolean; photoPath: string | null }> => {
     const file = pendingFileRef.current;
     if (!file) return { ok: true, photoPath: draft.photo_path.trim() || null };
+    const session = uploadSessionRef.current;
     uploadingRef.current = true;
     setUploading(true);
     try {
@@ -130,11 +144,17 @@ export function RecipeEditor({
         method: "POST",
         body: fd,
       });
+      if (session !== uploadSessionRef.current) {
+        return { ok: true, photoPath: draft.photo_path.trim() || null }; // invalidada: respetar la eliminación
+      }
       set("photo_path", photo_path);
       pendingFileRef.current = null;
       setUploadError(null);
       return { ok: true, photoPath: photo_path };
     } catch {
+      if (session !== uploadSessionRef.current) {
+        return { ok: true, photoPath: draft.photo_path.trim() || null };
+      }
       setUploadError("No se pudo subir el archivo. Guarda de nuevo para reintentarlo.");
       return { ok: false, photoPath: null };
     } finally {
@@ -143,7 +163,7 @@ export function RecipeEditor({
     }
   };
 
-  const payload = (photoPath: string): RecipeInput => ({
+  const payload = (photoPath: string | null): RecipeInput => ({
     name: draft.name.trim(),
     description: draft.description.trim() || null,
     servings: draft.servings.trim() ? Number(draft.servings) : null,

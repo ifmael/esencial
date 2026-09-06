@@ -60,6 +60,16 @@ export function NuevaRecetaPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadingRef = useRef(false);
   const pendingFileRef = useRef<File | null>(null);
+  // Id de la selección activa: "Quitar foto" lo incrementa y las respuestas
+  // de subidas anteriores (en vuelo o retenidas) se descartan.
+  const uploadSessionRef = useRef(0);
+
+  const removePhoto = () => {
+    uploadSessionRef.current += 1;
+    pendingFileRef.current = null;
+    setUploadError(null);
+    set("photo_path", "");
+  };
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -75,6 +85,7 @@ export function NuevaRecetaPage() {
 
   const onFile = async (file: File) => {
     if (uploadingRef.current) return;
+    const session = ++uploadSessionRef.current;
     uploadingRef.current = true;
     setUploadError(null);
     setUploading(true);
@@ -85,10 +96,12 @@ export function NuevaRecetaPage() {
         method: "POST",
         body: fd,
       });
+      if (session !== uploadSessionRef.current) return; // la foto fue quitada mientras subía
       set("photo_path", photo_path);
       // Una selección resuelta invalida cualquier reintento pendiente.
       pendingFileRef.current = null;
     } catch (e) {
+      if (session !== uploadSessionRef.current) return;
       // 400 (tipo) y 413 (tamaño) son rechazos deterministas del server:
       // reintentar no los cura. Cualquier otro fallo (red/5xx) es transitorio.
       const status = e instanceof ApiError ? e.status : 0;
@@ -108,6 +121,7 @@ export function NuevaRecetaPage() {
   const ensurePhotoUploaded = async (): Promise<string | null> => {
     const file = pendingFileRef.current;
     if (!file) return draft.photo_path;
+    const session = uploadSessionRef.current;
     uploadingRef.current = true;
     setUploading(true);
     try {
@@ -117,11 +131,13 @@ export function NuevaRecetaPage() {
         method: "POST",
         body: fd,
       });
+      if (session !== uploadSessionRef.current) return draft.photo_path; // invalidada
       set("photo_path", photo_path);
       pendingFileRef.current = null;
       setUploadError(null);
       return photo_path;
     } catch {
+      if (session !== uploadSessionRef.current) return draft.photo_path;
       setUploadError("No se pudo subir el archivo. Inténtalo de nuevo.");
       return null;
     } finally {
@@ -190,7 +206,7 @@ export function NuevaRecetaPage() {
                 <button
                   type="button"
                   className="btn-secondary mt-2"
-                  onClick={() => set("photo_path", "")}
+                  onClick={removePhoto}
                 >
                   Quitar foto
                 </button>
