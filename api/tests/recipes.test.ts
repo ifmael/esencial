@@ -210,3 +210,22 @@ describe("E2: recipe photo_path + tags", () => {
     expect(again.tags).toEqual([]);
   });
 });
+
+describe("photo_path vacío (re-review 13)", () => {
+  it("POST con photo_path \"\" persiste NULL, no string vacío", async () => {
+    const { post } = await import("./helpers");
+    const res = await post("/api/recipes", {
+      name: "Sin foto vacía",
+      photo_path: "",
+      ingredients: [],
+      steps: ["paso"],
+      materials: [],
+      tags: [],
+    });
+    expect(res.status).toBe(201);
+    const { id } = (await res.json()) as { id: number };
+    const detail = await get(`/api/recipes/${id}`);
+    const body = (await detail.json()) as { photo_path: string | null };
+    expect(body.photo_path).toBeNull();
+  });
+});
