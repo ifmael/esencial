@@ -1,6 +1,6 @@
 // E1 parity: meal-plan week PUT/GET; slot referencing deleted recipe reads empty.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, get, post, put, del } from "./helpers";
+import { del, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -25,7 +25,12 @@ describe("/api/meal-plan/:week", () => {
     });
     expect(res.status).toBe(200);
     const got = await body(await get("/api/meal-plan/2026-W36"));
-    const slots = got.slots as { day: number; meal: string; recipeId: number; recipeName: string }[];
+    const slots = got.slots as {
+      day: number;
+      meal: string;
+      recipeId: number;
+      recipeName: string;
+    }[];
     expect(slots.length).toBe(2);
     const cena = slots.find((s) => s.day === 4 && s.meal === "cena");
     expect(cena?.recipeName).toBe("Ceviche");
@@ -56,7 +61,12 @@ describe("/api/meal-plan/:week", () => {
     const delRes = await del(`/api/recipes/${id}`);
     expect(delRes.status).toBe(204);
     const got = await body(await get("/api/meal-plan/2026-W38"));
-    const slots = got.slots as { day: number; meal: string; recipeId: number | null; recipeName: string | null }[];
+    const slots = got.slots as {
+      day: number;
+      meal: string;
+      recipeId: number | null;
+      recipeName: string | null;
+    }[];
     expect(slots.length).toBe(1);
     expect(slots[0].day).toBe(3);
     expect(slots[0].recipeId).toBeNull();

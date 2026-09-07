@@ -4,30 +4,51 @@
 // PATCH .../items/:id updates one. Aggregation lines cannot drift from the
 // plan: deleting a recipe removes its ingredients on the next read.
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail, parseId } from "../http";
-import { ISO_WEEK, shoppingItemsSchema, shoppingItemPatchSchema } from "../api-validation";
-import { row, rows, type Row } from "../repo";
+import {
+  ISO_WEEK,
+  shoppingItemPatchSchema,
+  shoppingItemsSchema,
+} from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json, parseId } from "../http";
+import { type Row, row, rows } from "../repo";
 import { zBody } from "../validation";
 
 // Keyword default map (design D3): only consulted when the ingredient row has
 // no explicit section. Spanish nouns; first match wins on the lowercased food.
-const DEFAULT_SECTION_ORDER = ["Frutas y verduras", "Carnes", "Lácteos", "Despensa"];
+const DEFAULT_SECTION_ORDER = [
+  "Frutas y verduras",
+  "Carnes",
+  "Lácteos",
+  "Despensa",
+];
 const KEYWORD_SECTIONS: [RegExp, string][] = [
-  [/tomate|lechuga|pimiento|cebolla|ajo|zanahoria|calabac|espinaca|manzana|pera|plátano|platano|naranja|fresa|limón|limon|uvas?|aguacate|brócoli|brocoli|patata|judía|judia|guisante|champiñón|champinon|pepino|berenjena|piña|pina|sandía|sandia|melón|melon/i, "Frutas y verduras"],
-  [/pollo|carne|cerdo|ternera|cordero|pavo|jamón|jamon|tocino|salchich|pescado|merluza|salmón|salmon|atún|atun|sardina|marisco|gamba|mejillón|mejillon|calamar|huevo|huevos|filete|costilla|chuleta|chorizo|salami|butifarra/i, "Carnes"],
-  [/leche|queso|yogur|mató|mato|nata|mantequilla|requesón|requeson|helado/i, "Lácteos"],
+  [
+    /tomate|lechuga|pimiento|cebolla|ajo|zanahoria|calabac|espinaca|manzana|pera|plátano|platano|naranja|fresa|limón|limon|uvas?|aguacate|brócoli|brocoli|patata|judía|judia|guisante|champiñón|champinon|pepino|berenjena|piña|pina|sandía|sandia|melón|melon/i,
+    "Frutas y verduras",
+  ],
+  [
+    /pollo|carne|cerdo|ternera|cordero|pavo|jamón|jamon|tocino|salchich|pescado|merluza|salmón|salmon|atún|atun|sardina|marisco|gamba|mejillón|mejillon|calamar|huevo|huevos|filete|costilla|chuleta|chorizo|salami|butifarra/i,
+    "Carnes",
+  ],
+  [
+    /leche|queso|yogur|mató|mato|nata|mantequilla|requesón|requeson|helado/i,
+    "Lácteos",
+  ],
 ];
 
 function defaultSection(food: string): string {
-  for (const [re, section] of KEYWORD_SECTIONS) if (re.test(food)) return section;
+  for (const [re, section] of KEYWORD_SECTIONS)
+    if (re.test(food)) return section;
   return "Despensa";
 }
 
 // Fixed buckets first, unknown sections after, alphabetically (case-insensitive).
 function orderSections(keys: string[]): string[] {
   const known = DEFAULT_SECTION_ORDER.filter((s) => keys.includes(s));
-  const rest = keys.filter((s) => !DEFAULT_SECTION_ORDER.includes(s)).sort((a, b) => a.localeCompare(b, "es"));
+  const rest = keys
+    .filter((s) => !DEFAULT_SECTION_ORDER.includes(s))
+    .sort((a, b) => a.localeCompare(b, "es"));
   return [...known, ...rest];
 }
 
@@ -54,7 +75,9 @@ async function serializeItems(db: D1Database, week: string): Promise<Response> {
 }
 
 /** Group items ({section?, food, ...}) into ordered section buckets. */
-function groupSections<T extends { food: string; section?: string | null }>(items: T[]) {
+function groupSections<T extends { food: string; section?: string | null }>(
+  items: T[],
+) {
   const buckets = new Map<string, T[]>();
   for (const it of items) {
     const key = it.section?.trim() || defaultSection(it.food);
@@ -62,11 +85,16 @@ function groupSections<T extends { food: string; section?: string | null }>(item
     if (bucket) bucket.push(it);
     else buckets.set(key, [it]);
   }
-  return orderSections([...buckets.keys()]).map((section) => ({ section, items: buckets.get(section)! }));
+  return orderSections([...buckets.keys()]).map((section) => ({
+    section,
+    items: buckets.get(section)!,
+  }));
 }
 
 function validWeek(week: string): Response | null {
-  return ISO_WEEK.test(week) ? null : fail("week must match YYYY-Www (ISO)", "week");
+  return ISO_WEEK.test(week)
+    ? null
+    : fail("week must match YYYY-Www (ISO)", "week");
 }
 
 export const shoppingList = new Hono<{ Bindings: Env }>()
@@ -76,7 +104,11 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
       const bad = validWeek(week);
       if (bad) return bad;
       const db = getDb(c.env);
-      const plan = await row(db, "SELECT id FROM week_plans WHERE iso_week = ?", week);
+      const plan = await row(
+        db,
+        "SELECT id FROM week_plans WHERE iso_week = ?",
+        week,
+      );
       if (!plan) return json({ isoWeek: week, sections: [] });
       const weekPlanId = Number(plan.id);
       // One join query; aggregation in JS so slot count becomes the multiplier
@@ -88,7 +120,17 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
          WHERE ms.week_plan_id = ? ORDER BY ri.id`,
         weekPlanId,
       );
-      const agg = new Map<string, { food: string; quantity: number | null; unit: string | null; section: string | null; recipeIds: Set<number>; slots: number }>();
+      const agg = new Map<
+        string,
+        {
+          food: string;
+          quantity: number | null;
+          unit: string | null;
+          section: string | null;
+          recipeIds: Set<number>;
+          slots: number;
+        }
+      >();
       for (const r of ingredientRows) {
         const food = String(r.food);
         const unit = r.unit === null ? null : String(r.unit);
@@ -96,7 +138,14 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
         const q = r.quantity === null ? null : Number(r.quantity);
         let line = agg.get(key);
         if (!line) {
-          line = { food, quantity: 0, unit, section: r.section === null ? null : String(r.section), recipeIds: new Set(), slots: 0 };
+          line = {
+            food,
+            quantity: 0,
+            unit,
+            section: r.section === null ? null : String(r.section),
+            recipeIds: new Set(),
+            slots: 0,
+          };
           agg.set(key, line);
         }
         line.slots += 1;
@@ -154,12 +203,28 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
       const input = c.get("validated");
       const db = getDb(c.env);
       await db.batch([
-        db.prepare("INSERT OR IGNORE INTO week_plans (iso_week) VALUES (?)").bind(week),
-        db.prepare(`DELETE FROM shopping_items WHERE week_plan_id = ${WEEK_PLAN_ID}`).bind(week),
+        db
+          .prepare("INSERT OR IGNORE INTO week_plans (iso_week) VALUES (?)")
+          .bind(week),
+        db
+          .prepare(
+            `DELETE FROM shopping_items WHERE week_plan_id = ${WEEK_PLAN_ID}`,
+          )
+          .bind(week),
         ...input.items.map((i, pos) =>
           db
-            .prepare(`INSERT INTO shopping_items (week_plan_id, position, food, quantity, unit, section, checked) VALUES (${WEEK_PLAN_ID}, ?, ?, ?, ?, ?, ?)`)
-            .bind(week, pos, i.food, i.quantity ?? null, i.unit ?? null, i.section ?? null, i.checked ? 1 : 0),
+            .prepare(
+              `INSERT INTO shopping_items (week_plan_id, position, food, quantity, unit, section, checked) VALUES (${WEEK_PLAN_ID}, ?, ?, ?, ?, ?, ?)`,
+            )
+            .bind(
+              week,
+              pos,
+              i.food,
+              i.quantity ?? null,
+              i.unit ?? null,
+              i.section ?? null,
+              i.checked ? 1 : 0,
+            ),
         ),
       ]);
       return serializeItems(db, week);
@@ -184,13 +249,24 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
       // Only the given columns are updated; `checked` arrives as boolean.
       const cols: string[] = [];
       const vals: unknown[] = [];
-      for (const key of ["food", "quantity", "unit", "section", "checked"] as const) {
+      for (const key of [
+        "food",
+        "quantity",
+        "unit",
+        "section",
+        "checked",
+      ] as const) {
         if (input[key] !== undefined) {
           cols.push(`${key} = ?`);
-          vals.push(key === "checked" ? (input.checked ? 1 : 0) : input[key] ?? null);
+          vals.push(
+            key === "checked" ? (input.checked ? 1 : 0) : (input[key] ?? null),
+          );
         }
       }
-      await db.prepare(`UPDATE shopping_items SET ${cols.join(", ")} WHERE id = ?`).bind(...(vals as never[]), id).run();
+      await db
+        .prepare(`UPDATE shopping_items SET ${cols.join(", ")} WHERE id = ?`)
+        .bind(...(vals as never[]), id)
+        .run();
       const updated = await row(
         db,
         `SELECT id, position, food, quantity, unit, section, checked FROM shopping_items WHERE id = ?`,

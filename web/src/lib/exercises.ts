@@ -92,5 +92,13 @@ export function useExercises(): ExercisesState {
     [reload],
   );
 
-  return { exercises, pending, error, reload, createExercise, updateExercise, deleteExercise };
+  return {
+    exercises,
+    pending,
+    error,
+    reload,
+    createExercise,
+    updateExercise,
+    deleteExercise,
+  };
 }

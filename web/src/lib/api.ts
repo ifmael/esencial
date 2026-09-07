@@ -27,7 +27,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const env = (body ?? {}) as { error?: string; field?: string };
-    throw new ApiError(env.error ?? `HTTP ${res.status}`, env.field, res.status);
+    throw new ApiError(
+      env.error ?? `HTTP ${res.status}`,
+      env.field,
+      res.status,
+    );
   }
   return body as T;
 }
@@ -52,7 +56,8 @@ export const apiSend = <T>(path: string, method: string, body: unknown) =>
 /** The failing field of an ApiError envelope, narrowed at runtime (E4 compat). */
 export function apiField(e: unknown): string | undefined {
   if (e instanceof ApiError) return e.field;
-  if (e && typeof e === "object" && "field" in e && typeof e.field === "string") return e.field;
+  if (e && typeof e === "object" && "field" in e && typeof e.field === "string")
+    return e.field;
   return undefined;
 }
 

@@ -1,7 +1,8 @@
 // E2 task 1.2: useRecipes — list on mount, mutate + refresh, saving flag,
 // {error, field} captured.
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRecipes } from "../src/components/recipes/use-recipes";
 import { makeRecipe, makeServer } from "./fixtures";
 
@@ -35,14 +36,21 @@ describe("useRecipes", () => {
     await act(async () => {
       ok = await result.current.create({ name: "Existente" });
     });
-    expect(result.current.fieldError).toEqual({ field: "name", message: "Ya existe" });
-    expect(server.calls.some((c) => c.method === "POST" && c.url === "/api/recipes")).toBe(true);
+    expect(result.current.fieldError).toEqual({
+      field: "name",
+      message: "Ya existe",
+    });
+    expect(
+      server.calls.some((c) => c.method === "POST" && c.url === "/api/recipes"),
+    ).toBe(true);
 
     await act(async () => {
       ok = await result.current.create({ name: "Nuevo", tags: ["x"] });
     });
     expect(ok).toBe(true);
-    await waitFor(() => expect(result.current.list.map((r) => r.name)).toEqual(["Nuevo"]));
+    await waitFor(() =>
+      expect(result.current.list.map((r) => r.name)).toEqual(["Nuevo"]),
+    );
   });
 
   it("update puts by id; remove deletes and refreshes", async () => {
@@ -55,12 +63,20 @@ describe("useRecipes", () => {
     await act(async () => {
       await result.current.update(7, { name: "Nuevo nombre" });
     });
-    expect(server.calls.some((c) => c.method === "PUT" && c.url === "/api/recipes/7")).toBe(true);
+    expect(
+      server.calls.some(
+        (c) => c.method === "PUT" && c.url === "/api/recipes/7",
+      ),
+    ).toBe(true);
 
     await act(async () => {
       await result.current.remove(7);
     });
-    expect(server.calls.some((c) => c.method === "DELETE" && c.url === "/api/recipes/7")).toBe(true);
+    expect(
+      server.calls.some(
+        (c) => c.method === "DELETE" && c.url === "/api/recipes/7",
+      ),
+    ).toBe(true);
     await waitFor(() => expect(result.current.list).toEqual([]));
   });
 

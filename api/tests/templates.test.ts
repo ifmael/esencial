@@ -1,6 +1,6 @@
 // E1 parity: template CRUD with ordered exercises + rotationIndex.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, d1, get, post, put, del } from "./helpers";
+import { d1, del, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -34,39 +34,66 @@ describe("/api/templates", () => {
       rotationIndex: 0,
       exercises: [
         ...payload("x").exercises,
-        { exerciseId: rowId, targetSets: 3, targetRepsMin: 10, targetRepsMax: null },
+        {
+          exerciseId: rowId,
+          targetSets: 3,
+          targetRepsMin: 10,
+          targetRepsMax: null,
+        },
       ],
     });
     expect(res.status).toBe(201);
     const t = await body(res);
-    const exs = t.exercises as { exerciseId: number; targetSets: number; position: number }[];
+    const exs = t.exercises as {
+      exerciseId: number;
+      targetSets: number;
+      position: number;
+    }[];
     expect(exs.map((e) => e.exerciseId)).toEqual([benchId, squatId, rowId]);
     expect(exs[0].targetSets).toBe(4);
   });
 
   it("GET list preserves order and rotationIndex", async () => {
-    const created = await body(await post("/api/templates", {
-      ...payload("B — Tirón"),
-      rotationIndex: 1,
-    }));
+    const created = await body(
+      await post("/api/templates", {
+        ...payload("B — Tirón"),
+        rotationIndex: 1,
+      }),
+    );
     const res = await get("/api/templates");
     expect(res.status).toBe(200);
-    const list = (await res.json()) as { name: string; rotationIndex: number; exercises: unknown[] }[];
+    const list = (await res.json()) as {
+      name: string;
+      rotationIndex: number;
+      exercises: { exerciseId: number }[];
+    }[];
     const b = list.find((t) => t.name === "B — Tirón");
     expect(b?.rotationIndex).toBe(1);
-    expect((b?.exercises as { exerciseId: number }[]).map((e) => e.exerciseId)).toEqual([benchId, squatId]);
+    expect(b?.exercises.map((e) => e.exerciseId)).toEqual([benchId, squatId]);
     expect(Number(created.id)).toBeGreaterThan(0);
   });
 
   it("PUT reorders exercises; order preserved on later GET", async () => {
-    const created = await body(await post("/api/templates", payload("C — Pierna")));
+    const created = await body(
+      await post("/api/templates", payload("C — Pierna")),
+    );
     const id = Number(created.id);
     const res = await put(`/api/templates/${id}`, {
       name: "C — Pierna",
       rotationIndex: created.rotationIndex ?? 2,
       exercises: [
-        { exerciseId: squatId, targetSets: 5, targetRepsMin: 5, targetRepsMax: 5 },
-        { exerciseId: benchId, targetSets: 2, targetRepsMin: 15, targetRepsMax: 20 },
+        {
+          exerciseId: squatId,
+          targetSets: 5,
+          targetRepsMin: 5,
+          targetRepsMax: 5,
+        },
+        {
+          exerciseId: benchId,
+          targetSets: 2,
+          targetRepsMin: 15,
+          targetRepsMax: 20,
+        },
       ],
     });
     expect(res.status).toBe(200);
@@ -77,10 +104,12 @@ describe("/api/templates", () => {
   });
 
   it("PUT without rotationIndex preserves the stored value", async () => {
-    const created = await body(await post("/api/templates", {
-      ...payload("D — Full"),
-      rotationIndex: 3,
-    }));
+    const created = await body(
+      await post("/api/templates", {
+        ...payload("D — Full"),
+        rotationIndex: 3,
+      }),
+    );
     const id = Number(created.id);
     await put(`/api/templates/${id}`, {
       name: "D — Full v2",
@@ -106,7 +135,9 @@ describe("/api/templates", () => {
   });
 
   it("DELETE removes template (children cascade)", async () => {
-    const created = await body(await post("/api/templates", payload("E — Borradiza")));
+    const created = await body(
+      await post("/api/templates", payload("E — Borradiza")),
+    );
     const id = Number(created.id);
     expect((await del(`/api/templates/${id}`)).status).toBe(204);
     expect((await get(`/api/templates/${id}`)).status).toBe(404);

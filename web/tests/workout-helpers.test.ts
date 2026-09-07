@@ -47,6 +47,8 @@ describe("isValidDateStr / parseDateEs", () => {
   });
   it("acepta fecha real y la parsea local", () => {
     expect(isValidDateStr("2026-09-02")).toBe(true);
-    expect(parseDateEs("2026-09-02").getTime()).toBe(new Date(2026, 8, 2).getTime());
+    expect(parseDateEs("2026-09-02").getTime()).toBe(
+      new Date(2026, 8, 2).getTime(),
+    );
   });
 });

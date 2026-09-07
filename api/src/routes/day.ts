@@ -3,9 +3,9 @@
 // summary triple), and the day note. Missing data is empty data, not errors;
 // only a malformed :date fails (400 { error, field: "date" }, notes parity).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail } from "../http";
 import { dayIndexOf, isoWeekOf } from "../dates";
+import { type Env, getDb } from "../db";
+import { fail, guard, json } from "../http";
 import { row, rows } from "../repo";
 
 // `:date{.*}` so the trailing-slash case (`/api/day/`) reaches validation too:
@@ -60,7 +60,11 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
         )
       : [];
 
-    const note = await row(db, "SELECT text FROM day_notes WHERE date = ?", date);
+    const note = await row(
+      db,
+      "SELECT text FROM day_notes WHERE date = ?",
+      date,
+    );
 
     return json({
       date,

@@ -39,7 +39,10 @@ export function makeServer(initial: Recipe[] = []) {
       headers: { "content-type": "application/json" },
     });
 
-  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const fetchMock = async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = String(input);
     const method = (init?.method ?? "GET").toUpperCase();
     const raw = init?.body;
@@ -68,7 +71,8 @@ export function makeServer(initial: Recipe[] = []) {
     if (m) {
       const id = Number(m[1]);
       const i = recipes.findIndex((r) => r.id === id);
-      if (method === "GET") return i >= 0 ? json(recipes[i]) : json({ error: "Not found" }, 404);
+      if (method === "GET")
+        return i >= 0 ? json(recipes[i]) : json({ error: "Not found" }, 404);
       if (method === "PUT") {
         if (i < 0) return json({ error: "Not found" }, 404);
         recipes[i] = { ...recipes[i], ...(body as object), id } as Recipe;

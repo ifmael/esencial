@@ -84,7 +84,11 @@ export function RecipeEditor({
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  const addChip = (key: "materials" | "tags", value: string, clear: () => void) => {
+  const addChip = (
+    key: "materials" | "tags",
+    value: string,
+    clear: () => void,
+  ) => {
     const v = value.trim();
     if (v && !draft[key].includes(v)) set(key, [...draft[key], v]);
     clear();
@@ -197,7 +201,9 @@ export function RecipeEditor({
 
   const serverNameError = api.fieldError?.field === "name" ? api.fieldError.message : null;
   const otherFieldError =
-    api.fieldError && api.fieldError.field !== "name" ? api.fieldError.message : null;
+    api.fieldError && api.fieldError.field !== "name"
+      ? api.fieldError.message
+      : null;
 
   return (
     <div
@@ -213,9 +219,16 @@ export function RecipeEditor({
         <h2 className="mb-4 text-xl font-bold">{title}</h2>
 
         {(otherFieldError || api.error) && (
-          <div className="mb-4 rounded-lg bg-error/10 p-3 text-error" role="alert">
+          <div
+            className="mb-4 rounded-lg bg-error/10 p-3 text-error"
+            role="alert"
+          >
             {otherFieldError ?? api.error}{" "}
-            <button type="button" className="font-semibold underline" onClick={save}>
+            <button
+              type="button"
+              className="font-semibold underline"
+              onClick={save}
+            >
               Reintentar
             </button>
           </div>
@@ -234,7 +247,9 @@ export function RecipeEditor({
               onChange={(e) => set("name", e.target.value)}
             />
             {(nameError ?? serverNameError) && (
-              <p className="mt-1 text-sm text-error">{nameError ?? serverNameError}</p>
+              <p className="mt-1 text-sm text-error">
+                {nameError ?? serverNameError}
+              </p>
             )}
           </div>
 
@@ -320,7 +335,9 @@ export function RecipeEditor({
                     onChange={(e) =>
                       set(
                         "ingredients",
-                        draft.ingredients.map((r, j) => (j === i ? { ...r, food: e.target.value } : r)),
+                        draft.ingredients.map((r, j) =>
+                          j === i ? { ...r, food: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -347,7 +364,9 @@ export function RecipeEditor({
                     onChange={(e) =>
                       set(
                         "ingredients",
-                        draft.ingredients.map((r, j) => (j === i ? { ...r, unit: e.target.value } : r)),
+                        draft.ingredients.map((r, j) =>
+                          j === i ? { ...r, unit: e.target.value } : r,
+                        ),
                       )
                     }
                   />
@@ -370,7 +389,12 @@ export function RecipeEditor({
             <button
               type="button"
               className="btn-secondary mt-2"
-              onClick={() => set("ingredients", [...draft.ingredients, { food: "", quantity: "", unit: "" }])}
+              onClick={() =>
+                set("ingredients", [
+                  ...draft.ingredients,
+                  { food: "", quantity: "", unit: "" },
+                ])
+              }
             >
               Añadir ingrediente
             </button>
@@ -381,7 +405,9 @@ export function RecipeEditor({
             <ol className="flex flex-col gap-2">
               {draft.steps.map((text, i) => (
                 <li key={i} className="flex gap-2">
-                  <span className="pt-2 font-semibold text-text-secondary">{i + 1}.</span>
+                  <span className="pt-2 font-semibold text-text-secondary">
+                    {i + 1}.
+                  </span>
                   <input
                     aria-label={`Paso ${i + 1}`}
                     className={`${field} flex-1`}
@@ -389,7 +415,9 @@ export function RecipeEditor({
                     onChange={(e) =>
                       set(
                         "steps",
-                        draft.steps.map((s, j) => (j === i ? e.target.value : s)),
+                        draft.steps.map((s, j) =>
+                          j === i ? e.target.value : s,
+                        ),
                       )
                     }
                   />
@@ -417,7 +445,12 @@ export function RecipeEditor({
                     type="button"
                     aria-label={`Quitar paso ${i + 1}`}
                     className={small}
-                    onClick={() => set("steps", draft.steps.filter((_, j) => j !== i))}
+                    onClick={() =>
+                      set(
+                        "steps",
+                        draft.steps.filter((_, j) => j !== i),
+                      )
+                    }
                   >
                     ✕
                   </button>
@@ -437,12 +470,20 @@ export function RecipeEditor({
             <h3 className="mb-2 font-semibold">Materiales</h3>
             <ul className="mb-2 flex flex-wrap gap-2">
               {draft.materials.map((m) => (
-                <li key={m} className="flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1">
+                <li
+                  key={m}
+                  className="flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1"
+                >
                   {m}
                   <button
                     type="button"
                     aria-label={`Quitar material ${m}`}
-                    onClick={() => set("materials", draft.materials.filter((x) => x !== m))}
+                    onClick={() =>
+                      set(
+                        "materials",
+                        draft.materials.filter((x) => x !== m),
+                      )
+                    }
                   >
                     ✕
                   </button>
@@ -459,7 +500,9 @@ export function RecipeEditor({
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => addChip("materials", material, () => setMaterial(""))}
+                onClick={() =>
+                  addChip("materials", material, () => setMaterial(""))
+                }
               >
                 Añadir material
               </button>
@@ -470,12 +513,20 @@ export function RecipeEditor({
             <h3 className="mb-2 font-semibold">Etiquetas</h3>
             <ul className="mb-2 flex flex-wrap gap-2">
               {draft.tags.map((t) => (
-                <li key={t} className="flex items-center gap-1 rounded-full bg-done-bg px-3 py-1 text-done-text">
+                <li
+                  key={t}
+                  className="flex items-center gap-1 rounded-full bg-done-bg px-3 py-1 text-done-text"
+                >
                   {t}
                   <button
                     type="button"
                     aria-label={`Quitar etiqueta ${t}`}
-                    onClick={() => set("tags", draft.tags.filter((x) => x !== t))}
+                    onClick={() =>
+                      set(
+                        "tags",
+                        draft.tags.filter((x) => x !== t),
+                      )
+                    }
                   >
                     ✕
                   </button>

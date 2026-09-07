@@ -1,8 +1,8 @@
 // /api/notes/:date — one editable note per day (PUT upserts, GET reads).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail } from "../http";
 import { dayNoteSchema } from "../api-validation";
+import type { Env } from "../db";
+import { fail, guard, json } from "../http";
 import { row } from "../repo";
 import { zBody } from "../validation";
 
@@ -13,8 +13,15 @@ export const notes = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const date = c.req.param("date");
       if (!DATE.test(date)) return fail("date must be YYYY-MM-DD", "date");
-      const note = await row(c.env.DB, "SELECT text FROM day_notes WHERE date = ?", date);
-      const text = note && typeof note === "object" && "text" in note ? String(note.text ?? "") : "";
+      const note = await row(
+        c.env.DB,
+        "SELECT text FROM day_notes WHERE date = ?",
+        date,
+      );
+      const text =
+        note && typeof note === "object" && "text" in note
+          ? String(note.text ?? "")
+          : "";
       return json({ date, text });
     }),
   )

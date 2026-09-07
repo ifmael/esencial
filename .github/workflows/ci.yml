@@ -38,3 +38,20 @@ jobs:
       - run: pnpm --filter @esencial/e2e exec playwright install --with-deps chromium
 
       - run: pnpm e2e
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6 # lee packageManager de package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint

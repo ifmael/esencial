@@ -2,14 +2,25 @@
 // Diseño D4: "Ver técnica" acepta cualquier URL; los enlaces de YouTube se empotran (E8).
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { useExercises, type Exercise, type ExerciseInput } from "../lib/exercises";
 import { apiField } from "../lib/api";
-import { useTemplates, type Template, type TemplatesState } from "../lib/templates";
+import {
+  type Exercise,
+  type ExerciseInput,
+  useExercises,
+} from "../lib/exercises";
+import {
+  type Template,
+  type TemplatesState,
+  useTemplates,
+} from "../lib/templates";
 
-const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : "Error inesperado");
+const errorMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : "Error inesperado";
 
 const ytEmbedId = (url: string): string | null =>
-  url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/)?.[1] ?? null;
+  url.match(
+    /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/,
+  )?.[1] ?? null;
 
 const TagChips = ({ tags }: { tags: string[] }) => (
   <ul className="flex flex-wrap gap-1" aria-label="tags">
@@ -23,9 +34,23 @@ const TagChips = ({ tags }: { tags: string[] }) => (
 
 // --- Editor (create + edit) --------------------------------------------------
 
-type Draft = { name: string; description: string; setupCues: string; techniqueUrl: string; steps: string; tags: string[] };
+type Draft = {
+  name: string;
+  description: string;
+  setupCues: string;
+  techniqueUrl: string;
+  steps: string;
+  tags: string[];
+};
 
-const emptyDraft = (): Draft => ({ name: "", description: "", setupCues: "", techniqueUrl: "", steps: "", tags: [] });
+const emptyDraft = (): Draft => ({
+  name: "",
+  description: "",
+  setupCues: "",
+  techniqueUrl: "",
+  steps: "",
+  tags: [],
+});
 
 const toDraft = (x: Exercise): Draft => ({
   name: x.name,
@@ -37,7 +62,10 @@ const toDraft = (x: Exercise): Draft => ({
 });
 
 const toInput = (d: Draft): ExerciseInput => {
-  const steps = d.steps.split("\n").map((x) => x.trim()).filter((x) => x.length > 0);
+  const steps = d.steps
+    .split("\n")
+    .map((x) => x.trim())
+    .filter((x) => x.length > 0);
   return {
     name: d.name.trim(),
     description: d.description || null,
@@ -66,7 +94,8 @@ function ExerciseEditor({
 
   const addTag = () => {
     const t = tagText.trim();
-    if (t && !draft.tags.includes(t)) setDraft({ ...draft, tags: [...draft.tags, t] });
+    if (t && !draft.tags.includes(t))
+      setDraft({ ...draft, tags: [...draft.tags, t] });
     setTagText("");
   };
 
@@ -84,7 +113,9 @@ function ExerciseEditor({
       // Envelope-driven (D6): el mensaje del servidor va junto al campo que falló.
       const field = apiField(e);
       setErrors(
-        field === "techniqueUrl" || field === "name" || field === "tags" ? { [field]: errorMessage(e) } : {},
+        field === "techniqueUrl" || field === "name" || field === "tags"
+          ? { [field]: errorMessage(e) }
+          : {},
       );
       setSubmitting(false);
     }
@@ -100,7 +131,9 @@ function ExerciseEditor({
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
         />
-        {errors.name && <span className="text-sm text-error">{errors.name}</span>}
+        {errors.name && (
+          <span className="text-sm text-error">{errors.name}</span>
+        )}
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-desc">Descripción</label>
@@ -139,11 +172,15 @@ function ExerciseEditor({
           value={draft.techniqueUrl}
           onChange={(e) => setDraft({ ...draft, techniqueUrl: e.target.value })}
         />
-        {errors.techniqueUrl && <span className="text-sm text-error">{errors.techniqueUrl}</span>}
+        {errors.techniqueUrl && (
+          <span className="text-sm text-error">{errors.techniqueUrl}</span>
+        )}
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <span id="ex-tags-label">Tags</span>
-        {errors.tags && <span className="text-sm text-error">{errors.tags}</span>}
+        {errors.tags && (
+          <span className="text-sm text-error">{errors.tags}</span>
+        )}
         <TagChips tags={draft.tags} />
         <div className="flex gap-2">
           <input
@@ -159,7 +196,11 @@ function ExerciseEditor({
               }
             }}
           />
-          <button className="btn-secondary" aria-label="Añadir tag" onClick={addTag}>
+          <button
+            className="btn-secondary"
+            aria-label="Añadir tag"
+            onClick={addTag}
+          >
             +
           </button>
         </div>
@@ -167,7 +208,9 @@ function ExerciseEditor({
           <button
             key={t}
             className="text-left text-xs text-text-secondary"
-            onClick={() => setDraft({ ...draft, tags: draft.tags.filter((x) => x !== t) })}
+            onClick={() =>
+              setDraft({ ...draft, tags: draft.tags.filter((x) => x !== t) })
+            }
           >
             Quitar tag {t}
           </button>
@@ -195,7 +238,11 @@ export function EjerciciosPage() {
 
   const q = search.trim().toLowerCase();
   const shown = q
-    ? exercises.filter((e) => e.name.toLowerCase().includes(q) || e.tags.some((t) => t.toLowerCase().includes(q)))
+    ? exercises.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.tags.some((t) => t.toLowerCase().includes(q)),
+      )
     : exercises;
 
   return (
@@ -226,13 +273,21 @@ export function EjerciciosPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          {pending && exercises.length === 0 && <div className="card">Cargando ejercicios…</div>}
+          {pending && exercises.length === 0 && (
+            <div className="card">Cargando ejercicios…</div>
+          )}
           {!pending && shown.length === 0 && (
-            <div className="card mb-4 text-text-secondary">Aún no hay ejercicios. Crea tu primer ejercicio.</div>
+            <div className="card mb-4 text-text-secondary">
+              Aún no hay ejercicios. Crea tu primer ejercicio.
+            </div>
           )}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {shown.map((e) => (
-              <Link key={e.id} to={`/ejercicios/${e.id}`} className="card flex flex-col gap-2">
+              <Link
+                key={e.id}
+                to={`/ejercicios/${e.id}`}
+                className="card flex flex-col gap-2"
+              >
                 <span className="text-lg font-semibold">{e.name}</span>
                 <TagChips tags={e.tags} />
               </Link>
@@ -251,7 +306,13 @@ export function EjerciciosPage() {
 
 // --- Add to template -----------------------------------------------------------
 
-function AddToTemplate({ exercise, state }: { exercise: Exercise; state: TemplatesState }) {
+function AddToTemplate({
+  exercise,
+  state,
+}: {
+  exercise: Exercise;
+  state: TemplatesState;
+}) {
   const { templates, pending, updateTemplate } = state;
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
@@ -274,7 +335,12 @@ function AddToTemplate({ exercise, state }: { exercise: Exercise; state: Templat
             targetRepsMin: e.targetRepsMin,
             targetRepsMax: e.targetRepsMax,
           })),
-          { exerciseId: exercise.id, targetSets: null, targetRepsMin: null, targetRepsMax: null },
+          {
+            exerciseId: exercise.id,
+            targetSets: null,
+            targetRepsMin: null,
+            targetRepsMax: null,
+          },
         ],
       });
       setDone(true);
@@ -313,7 +379,11 @@ function AddToTemplate({ exercise, state }: { exercise: Exercise; state: Templat
           ))}
         </div>
       )}
-      {done && <p className="text-sm text-primary">Añadido al final de la plantilla.</p>}
+      {done && (
+        <p className="text-sm text-primary">
+          Añadido al final de la plantilla.
+        </p>
+      )}
       {failed && <p className="text-sm text-error">{failed}</p>}
     </div>
   );
@@ -324,7 +394,8 @@ function AddToTemplate({ exercise, state }: { exercise: Exercise; state: Templat
 export function EjercicioDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { exercises, pending, error, reload, updateExercise, deleteExercise } = useExercises();
+  const { exercises, pending, error, reload, updateExercise, deleteExercise } =
+    useExercises();
   const templates = useTemplates();
 
   const [editing, setEditing] = useState(false);
@@ -342,7 +413,8 @@ export function EjercicioDetailPage() {
         </button>
       </div>
     );
-  if (pending && exercises.length === 0) return <div className="card">Cargando ejercicio…</div>;
+  if (pending && exercises.length === 0)
+    return <div className="card">Cargando ejercicio…</div>;
   if (!exercise)
     return (
       <div className="card flex flex-col gap-2">
@@ -401,7 +473,12 @@ export function EjercicioDetailPage() {
           />
         )}
         {exercise.techniqueUrl && (
-          <a className="btn-secondary" href={exercise.techniqueUrl} target="_blank" rel="noopener noreferrer">
+          <a
+            className="btn-secondary"
+            href={exercise.techniqueUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Ver técnica
           </a>
         )}
@@ -417,7 +494,10 @@ export function EjercicioDetailPage() {
         {confirming && (
           <div className="flex flex-wrap items-center gap-2">
             <span>¿Eliminar {exercise.name}?</span>
-            <button className="btn-secondary" onClick={() => setConfirming(false)}>
+            <button
+              className="btn-secondary"
+              onClick={() => setConfirming(false)}
+            >
               Cancelar
             </button>
             <button

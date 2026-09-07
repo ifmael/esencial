@@ -1,7 +1,7 @@
 // E7 auth primitives (design D2/D3): PBKDF2-SHA256 password digests and a
 // stateless HMAC-signed session token built on Hono's cookie signing helpers.
 // Zero dependencies beyond hono + Web Crypto.
-import { serializeSigned, parseSigned } from "hono/utils/cookie";
+import { parseSigned, serializeSigned } from "hono/utils/cookie";
 
 export const SESSION_COOKIE = "esencial_session";
 /** 30 days — personal app; renewal is a re-login (design D3). */
@@ -21,12 +21,25 @@ const unb64 = (s: string): Uint8Array => {
   return out;
 };
 
-async function derive(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, [
-    "deriveBits",
-  ]);
+async function derive(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: salt as unknown as BufferSource, iterations, hash: "SHA-256" },
+    {
+      name: "PBKDF2",
+      salt: salt as unknown as BufferSource,
+      iterations,
+      hash: "SHA-256",
+    },
     key,
     HASH_BYTES * 8,
   );
@@ -45,7 +58,10 @@ export async function hashPassword(password: string): Promise<string> {
  * crypto.subtle.verify (HMAC over the derived digests), which is constant-time
  * — the plaintext never reaches a `===`. Malformed digests fail closed.
  */
-export async function verifyPassword(digest: string, password: string): Promise<boolean> {
+export async function verifyPassword(
+  digest: string,
+  password: string,
+): Promise<boolean> {
   const parts = digest.split("$");
   if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
   const iterations = Number(parts[1]);
@@ -67,13 +83,29 @@ export async function verifyPassword(digest: string, password: string): Promise<
     false,
     ["sign", "verify"],
   );
-  const sig = await crypto.subtle.sign("HMAC", key, actual as unknown as BufferSource);
-  return crypto.subtle.verify("HMAC", key, sig, expected as unknown as BufferSource);
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    actual as unknown as BufferSource,
+  );
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    sig,
+    expected as unknown as BufferSource,
+  );
 }
 
 /** `<exp_epoch>.<hmac_sha256(secret, exp_epoch)>` — the signed cookie value. */
-export async function createSessionToken(secret: string, expEpochSec: number): Promise<string> {
-  const signed = await serializeSigned(SESSION_COOKIE, String(expEpochSec), secret);
+export async function createSessionToken(
+  secret: string,
+  expEpochSec: number,
+): Promise<string> {
+  const signed = await serializeSigned(
+    SESSION_COOKIE,
+    String(expEpochSec),
+    secret,
+  );
   // serializeSigned returns `name=<encoded>`; return the decoded value so
   // callers (setCookie) encode exactly once.
   return decodeURIComponent(signed.slice(signed.indexOf("=") + 1));
@@ -85,7 +117,11 @@ export async function readSessionToken(
   raw: string | undefined | false,
 ): Promise<{ exp: number } | null> {
   if (!raw) return null; // false = signature mismatch, undefined/"" = missing
-  const parsed = await parseSigned(`${SESSION_COOKIE}=${raw}`, secret, SESSION_COOKIE);
+  const parsed = await parseSigned(
+    `${SESSION_COOKIE}=${raw}`,
+    secret,
+    SESSION_COOKIE,
+  );
   const value = parsed[SESSION_COOKIE];
   if (value === false || value === undefined) return null; // tampered / malformed
   const exp = Number(value);

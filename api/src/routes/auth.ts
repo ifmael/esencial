@@ -3,10 +3,15 @@
 // envelope everywhere else). Handlers sit behind a factory so tests inject
 // limiter/clock/verify (DI seam).
 import { Hono } from "hono";
-import { setSignedCookie, getCookie, deleteCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setSignedCookie } from "hono/cookie";
+import {
+  readSessionToken,
+  SESSION_COOKIE,
+  SESSION_MAX_AGE_S,
+  verifyPassword,
+} from "../auth";
 import type { Env } from "../db";
-import { json, fail } from "../http";
-import { verifyPassword, readSessionToken, SESSION_COOKIE, SESSION_MAX_AGE_S } from "../auth";
+import { fail, json } from "../http";
 import { createLoginLimiter, type LoginLimiter } from "../rate-limit";
 
 // Flags required by the spec: HttpOnly; Secure; SameSite=Lax; Path=/.
@@ -47,10 +52,14 @@ export function authRoutes(deps: AuthDeps = {}) {
         return fail("Invalid JSON body", "body");
       }
       const password =
-        raw !== null && typeof raw === "object" && "password" in raw && typeof raw.password === "string"
+        raw !== null &&
+        typeof raw === "object" &&
+        "password" in raw &&
+        typeof raw.password === "string"
           ? raw.password
           : undefined;
-      if (password === undefined || password.length === 0) return fail("Password is required", "password");
+      if (password === undefined || password.length === 0)
+        return fail("Password is required", "password");
 
       const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
       if (limiter.blocked(ip)) return fail("Too many attempts", "login", 429);
@@ -69,11 +78,21 @@ export function authRoutes(deps: AuthDeps = {}) {
       limiter.recordSuccess(ip);
 
       const exp = Math.floor(now() / 1000) + SESSION_MAX_AGE_S;
-      await setSignedCookie(c, SESSION_COOKIE, String(exp), secret, cookieOpts(new URL(c.req.url).protocol === "https:"));
+      await setSignedCookie(
+        c,
+        SESSION_COOKIE,
+        String(exp),
+        secret,
+        cookieOpts(new URL(c.req.url).protocol === "https:"),
+      );
       return c.json({ ok: true });
     })
     .post("/logout", (c) => {
-      deleteCookie(c, SESSION_COOKIE, { path: "/", secure: true, sameSite: "Lax" });
+      deleteCookie(c, SESSION_COOKIE, {
+        path: "/",
+        secure: true,
+        sameSite: "Lax",
+      });
       return c.json({ ok: true });
     })
     .get("/status", async (c) => {

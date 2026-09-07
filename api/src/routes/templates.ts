@@ -1,9 +1,9 @@
 // /api/templates — GET · POST · /:id GET/PUT/DELETE. PUT replaces ordered entries;
 // absent rotation_index preserves the stored value (COALESCE, E1 parity).
 import { Hono } from "hono";
-import { getDb, type Env } from "../db";
-import { guard, json, fail, parseId } from "../http";
 import { templateSchema } from "../api-validation";
+import { type Env, getDb } from "../db";
+import { fail, guard, json, parseId } from "../http";
 import { loadTemplate, row, rows } from "../repo";
 import { zBody } from "../validation";
 
@@ -22,18 +22,36 @@ function entriesForNewTemplate(name: string, entries: Entry[], db: D1Database) {
         `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max)
          VALUES ((SELECT id FROM session_templates WHERE name = ?), ?, ?, ?, ?, ?)`,
       )
-      .bind(name, e.exerciseId, pos, e.targetSets ?? null, e.targetRepsMin ?? null, e.targetRepsMax ?? null),
+      .bind(
+        name,
+        e.exerciseId,
+        pos,
+        e.targetSets ?? null,
+        e.targetRepsMin ?? null,
+        e.targetRepsMax ?? null,
+      ),
   );
 }
 
-function entriesForTemplate(templateId: number, entries: Entry[], db: D1Database) {
+function entriesForTemplate(
+  templateId: number,
+  entries: Entry[],
+  db: D1Database,
+) {
   return entries.map((e, pos) =>
     db
       .prepare(
         `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .bind(templateId, e.exerciseId, pos, e.targetSets ?? null, e.targetRepsMin ?? null, e.targetRepsMax ?? null),
+      .bind(
+        templateId,
+        e.exerciseId,
+        pos,
+        e.targetSets ?? null,
+        e.targetRepsMin ?? null,
+        e.targetRepsMax ?? null,
+      ),
   );
 }
 
@@ -45,7 +63,9 @@ export const templates = new Hono<{ Bindings: Env }>()
         db,
         "SELECT id FROM session_templates ORDER BY rotation_index, name COLLATE NOCASE",
       );
-      return json(await Promise.all(ids.map((r) => loadTemplate(db, Number(r.id)))));
+      return json(
+        await Promise.all(ids.map((r) => loadTemplate(db, Number(r.id)))),
+      );
     }),
   )
   .post("/", zBody(templateSchema), (c) =>
@@ -54,10 +74,17 @@ export const templates = new Hono<{ Bindings: Env }>()
       const db = getDb(c.env);
       const name = input.name.trim();
       const results = await db.batch([
-        db.prepare("INSERT INTO session_templates (name, rotation_index) VALUES (?, ?)").bind(name, input.rotationIndex ?? 0),
+        db
+          .prepare(
+            "INSERT INTO session_templates (name, rotation_index) VALUES (?, ?)",
+          )
+          .bind(name, input.rotationIndex ?? 0),
         ...entriesForNewTemplate(name, input.exercises, db),
       ]);
-      return json(await loadTemplate(db, Number(results[0].meta.last_row_id)), 201);
+      return json(
+        await loadTemplate(db, Number(results[0].meta.last_row_id)),
+        201,
+      );
     }),
   )
   .get("/:id", (c) =>
@@ -78,9 +105,13 @@ export const templates = new Hono<{ Bindings: Env }>()
         return fail("Not found", undefined, 404);
       await db.batch([
         db
-          .prepare("UPDATE session_templates SET name = ?, rotation_index = COALESCE(?, rotation_index) WHERE id = ?")
+          .prepare(
+            "UPDATE session_templates SET name = ?, rotation_index = COALESCE(?, rotation_index) WHERE id = ?",
+          )
           .bind(input.name.trim(), input.rotationIndex ?? null, id),
-        db.prepare("DELETE FROM template_exercises WHERE template_id = ?").bind(id),
+        db
+          .prepare("DELETE FROM template_exercises WHERE template_id = ?")
+          .bind(id),
         ...entriesForTemplate(id, input.exercises, db),
       ]);
       return json(await loadTemplate(db, id));
@@ -90,7 +121,13 @@ export const templates = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const id = parseId(c.req.param("id"));
       if (id === null) return fail("id must be a positive integer", "id");
-      const { meta } = await c.env.DB.prepare("DELETE FROM session_templates WHERE id=?").bind(id).run();
-      return Number(meta.changes) > 0 ? new Response(null, { status: 204 }) : fail("Not found", undefined, 404);
+      const { meta } = await c.env.DB.prepare(
+        "DELETE FROM session_templates WHERE id=?",
+      )
+        .bind(id)
+        .run();
+      return Number(meta.changes) > 0
+        ? new Response(null, { status: 204 })
+        : fail("Not found", undefined, 404);
     }),
   );
