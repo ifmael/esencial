@@ -24,7 +24,7 @@ function renderAt(path: string) {
 const three = [
   makeRecipe({ id: 1, name: "Arroz con pollo", tags: ["almuerzo"] }),
   makeRecipe({ id: 2, name: "Ensalada", tags: ["cena"] }),
-  makeRecipe({ id: 3, name: "Gazpacho", photo_path: "/fotos/g.png", tags: [] }),
+  makeRecipe({ id: 3, name: "Gazpacho", photo_path: "recipe-g.png", tags: [] }),
 ];
 
 describe("/recetario book", () => {
@@ -53,6 +53,10 @@ describe("/recetario book", () => {
     expect(screen.getByText("almuerzo")).toBeDefined();
     // placeholder only for the recipe without a photo
     expect(screen.getAllByText("Sin foto").length).toBe(2);
+    // DEF-6: photo_path llega como key cruda; el src debe llevar el prefijo /api/uploads/
+    expect(document.querySelector("img")?.getAttribute("src")).toBe(
+      "/api/uploads/recipe-g.png",
+    );
   });
 
   it("empty state invites creating the first recipe", async () => {

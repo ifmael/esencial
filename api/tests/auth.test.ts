@@ -85,7 +85,7 @@ describe("POST /api/auth/login", () => {
   });
 
   it("401 { error, field } + no cookie on wrong password", async () => {
-    const res = await loginAt("/api/auth/login", "wrong-" + Math.random());
+    const res = await loginAt("/api/auth/login", `wrong-${Math.random()}`);
     expect(res.status).toBe(401);
     expect(res.headers.get("set-cookie")).toBeNull();
     expect(await body(res)).toEqual({

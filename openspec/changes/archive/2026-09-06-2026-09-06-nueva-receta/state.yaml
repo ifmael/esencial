@@ -1,0 +1,15 @@
+change: 2026-09-06-nueva-receta
+phase: archived
+artifact_store: hybrid
+artifacts:
+  proposal: true
+  specs: true
+  design: true
+  tasks: true
+  verify_report: true
+  archive: true
+tasks_progress:
+  completed: [phase1 api uploads, phase2 pagina web, phase3 e2e + verificacion]
+  pending: []
+next: none
+last_updated: 2026-09-06

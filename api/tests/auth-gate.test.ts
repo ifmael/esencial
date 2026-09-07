@@ -217,7 +217,7 @@ describe("security headers on every response", () => {
     [
       "login failure",
       {},
-      () => post("/api/auth/login", { password: "nope-" + Math.random() }),
+      () => post("/api/auth/login", { password: `nope-${Math.random()}` }),
     ],
   ];
   for (const [label, , make] of cases) {

@@ -9,6 +9,9 @@ binding = "DB"
 database_name = "esencial"
 database_id = "test-local"
 
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "esencial-photos"
 # E7: test credentials (NEVER real ones). PASSWORD_HASH is the PBKDF2 digest of
 # "test-password-123" produced by src/auth.ts (rotate both together if the
 # test password changes). AUTH_SECRET is a fixed 32-char signing key.

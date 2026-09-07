@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { filterRecipes } from "../components/recipes/filter";
 import { RecipeEditor } from "../components/recipes/recipe-editor";
 import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
+import { photoSrc } from "../lib/api";
 
 let flashMessage: string | null = null;
 const setFlash = (m: string) => (flashMessage = m);
@@ -20,7 +21,11 @@ export function Thumb({ recipe, big }: { recipe: Recipe; big?: boolean }) {
     ? "h-20 w-20 shrink-0 rounded-lg md:h-40 md:w-full"
     : "h-20 w-20 shrink-0 rounded-lg";
   return recipe.photo_path ? (
-    <img src={recipe.photo_path} alt="" className={`${box} object-cover`} />
+    <img
+      src={photoSrc(recipe.photo_path)}
+      alt=""
+      className={`${box} object-cover`}
+    />
   ) : (
     <div
       aria-hidden
@@ -71,10 +76,10 @@ function ErrorBanner({
 
 export function RecetarioPage() {
   const api = useRecipes();
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [flash] = useState(takeFlash);
   const [editing, setEditing] = useState<Recipe | null>(null);
-  const [creating, setCreating] = useState(false);
   const visible = filterRecipes(api.list, query);
 
   return (
@@ -84,7 +89,7 @@ export function RecetarioPage() {
         <button
           type="button"
           className="btn-primary"
-          onClick={() => setCreating(true)}
+          onClick={() => navigate("/recetario/nueva")}
         >
           + Nueva receta
         </button>
@@ -128,14 +133,11 @@ export function RecetarioPage() {
         </div>
       )}
 
-      {(creating || editing) && (
+      {editing && (
         <RecipeEditor
           api={api}
           recipe={editing}
-          onClose={() => {
-            setCreating(false);
-            setEditing(null);
-          }}
+          onClose={() => setEditing(null)}
         />
       )}
     </>

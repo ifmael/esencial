@@ -38,10 +38,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // E4 compat: fetch-style helper that always sends JSON and surfaces ApiError.
 export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const headers = {
-    "content-type": "application/json",
-    ...(init?.headers ?? {}),
-  };
+  const body = init?.body;
+  // FormData: let the runtime set multipart/form-data with its boundary.
+  const headers =
+    body instanceof FormData
+      ? init?.headers
+      : { "content-type": "application/json", ...(init?.headers ?? {}) };
   return request<T>(url, { ...init, headers });
 }
 
@@ -61,3 +63,10 @@ export function apiField(e: unknown): string | undefined {
     return e.field;
   return undefined;
 }
+
+/** DEF-6: uploads se persisten como key `recipe-<uuid>.<ext>`; el <img> necesita
+ *  la URL servida. Idempotente: ya-prefijado pasa tal cual. */
+export const photoSrc = (photoPath: string) =>
+  photoPath.startsWith("/api/uploads/")
+    ? photoPath
+    : `/api/uploads/${photoPath}`;

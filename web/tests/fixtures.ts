@@ -29,11 +29,12 @@ export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
 export type ServerCall = {
   method: string;
   url: string;
-  body?: Record<string, unknown>;
+  body?: Record<string, unknown> | FormData;
 };
 
 export function makeServer(initial: Recipe[] = []) {
   const recipes = [...initial];
+  const server = { nextUploadFails: false, nextUploadStatus: 500 };
   const calls: ServerCall[] = [];
   let nextId = 100;
   const json = (data: unknown, status = 200) =>
@@ -48,15 +49,20 @@ export function makeServer(initial: Recipe[] = []) {
   ): Promise<Response> => {
     const url = String(input);
     const method = (init?.method ?? "GET").toUpperCase();
-    const body = init?.body
-      ? (JSON.parse(String(init.body)) as Record<string, unknown>)
-      : undefined;
-    calls.push({ method, url, body });
-
+    const raw = init?.body;
+    const body =
+      typeof raw === "string"
+        ? (JSON.parse(raw) as Record<string, unknown>)
+        : (raw as FormData | undefined);
+    calls.push({
+      method,
+      url,
+      body: body as Record<string, unknown> | undefined,
+    });
     if (url === "/api/recipes" && method === "GET")
       return json(recipes.map((r) => ({ ...r })));
     if (url === "/api/recipes" && method === "POST") {
-      if (body?.name === "Existente")
+      if ((body as Record<string, unknown>)?.name === "Existente")
         return json({ error: "Ya existe", field: "name" }, 400);
       const created = {
         ingredients: [],
@@ -89,8 +95,16 @@ export function makeServer(initial: Recipe[] = []) {
         return new Response(null, { status: 204 });
       }
     }
+    if (url === "/api/uploads" && method === "POST") {
+      if (server.nextUploadFails)
+        return json(
+          { error: "No se pudo subir el archivo" },
+          server.nextUploadStatus,
+        );
+      return json({ photo_path: `recipe-${nextId++}.png` }, 200);
+    }
     return json({ error: "Not found" }, 404);
   };
 
-  return { fetchMock, calls, recipes };
+  return { fetchMock, calls, recipes, server };
 }

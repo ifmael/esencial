@@ -137,27 +137,51 @@ describe("/api/recipes/:id PUT/DELETE", () => {
 
 // --- E2 delta: photo_path + tags round-trip (openspec e2-recetario D4) -------
 describe("E2: recipe photo_path + tags", () => {
-  it("POST with photo_path and tags round-trips verbatim on create, by id, and list", async () => {
+  it("POST with tags round-trips on create, by id, and list", async () => {
     const res = await post("/api/recipes", {
       name: "Arroz con pollo",
-      photo_path: "/photos/arroz.png",
       tags: ["almuerzo", "batch"],
     });
     expect(res.status).toBe(201);
     const r = await body(res);
-    expect(r.photo_path).toBe("/photos/arroz.png");
+    expect(r.photo_path).toBeNull();
     expect(r.tags).toEqual(["almuerzo", "batch"]);
     const id = Number(r.id);
     const got = await body(await get(`/api/recipes/${id}`));
-    expect(got.photo_path).toBe("/photos/arroz.png");
+    expect(got.photo_path).toBeNull();
     expect(got.tags).toEqual(["almuerzo", "batch"]);
     const list = (await (await get("/api/recipes")).json()) as Record<
       string,
       unknown
     >[];
     const row = list.find((x) => Number(x.id) === id)!;
-    expect(row.photo_path).toBe("/photos/arroz.png");
+    expect(row.photo_path).toBeNull();
     expect(row.tags).toEqual(["almuerzo", "batch"]);
+  });
+
+  it("400 {error, field:'photo_path'} for a path not returned by an upload (fail closed)", async () => {
+    const res = await post("/api/recipes", {
+      name: "QA invalida",
+      photo_path: "evil.png",
+    });
+    expect(res.status).toBe(400);
+    const r = await body(res);
+    expect(r.field).toBe("photo_path");
+    const list = (await (await get("/api/recipes")).json()) as Record<
+      string,
+      unknown
+    >[];
+    expect(list.find((x) => x.name === "QA invalida")).toBeUndefined();
+  });
+
+  it("400 {error, field:'photo_path'} for a well-formed key absent in PHOTOS", async () => {
+    const res = await post("/api/recipes", {
+      name: "QA fantasma",
+      photo_path: "recipe-11111111-2222-4333-8444-555555555555.png",
+    });
+    expect(res.status).toBe(400);
+    const r = await body(res);
+    expect(r.field).toBe("photo_path");
   });
 
   it("E1 payloads without photo_path/tags keep working: null + []", async () => {
@@ -196,5 +220,24 @@ describe("E2: recipe photo_path + tags", () => {
     expect((await del(`/api/recipes/${Number(created.id)}`)).status).toBe(204);
     const again = await body(await post("/api/recipes", { name: "Sopa" }));
     expect(again.tags).toEqual([]);
+  });
+});
+
+describe("photo_path vacío (re-review 13)", () => {
+  it('POST con photo_path "" persiste NULL, no string vacío', async () => {
+    const { post } = await import("./helpers");
+    const res = await post("/api/recipes", {
+      name: "Sin foto vacía",
+      photo_path: "",
+      ingredients: [],
+      steps: ["paso"],
+      materials: [],
+      tags: [],
+    });
+    expect(res.status).toBe(201);
+    const { id } = (await res.json()) as { id: number };
+    const detail = await get(`/api/recipes/${id}`);
+    const body = (await detail.json()) as { photo_path: string | null };
+    expect(body.photo_path).toBeNull();
   });
 });

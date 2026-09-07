@@ -4,21 +4,32 @@ import { apiRequest, uniqueName } from "./helpers";
 test.describe("RECIPES — loop end to end", () => {
   test.use({ storageState: ".auth/state.json" });
 
-  test("create recipe → listed in /recetario → detail shows name and ingredients", async ({
+  test("create recipe via page with photo → listed → detail shows ingredient", async ({
     page,
   }) => {
     const name = uniqueName("Receta E2E");
     const food = uniqueName("IngredienteE2E");
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
 
     await page.goto("/recetario");
     await page.getByRole("button", { name: "+ Nueva receta" }).click();
+    await expect(page).toHaveURL(/\/recetario\/nueva$/);
 
-    const dialog = page.getByRole("dialog", { name: "Nueva receta" });
-    await dialog.getByLabel("Nombre").fill(name);
-    await dialog.getByLabel("Ingrediente 1 alimento").fill(food);
-    await dialog.getByLabel("Ingrediente 1 cantidad").fill("2");
-    await dialog.getByLabel("Ingrediente 1 unidad").fill("tazas");
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await page.getByLabel("Nombre").fill(name);
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "foto.png",
+      mimeType: "image/png",
+      buffer: png,
+    });
+    await expect(page.getByAltText("Vista previa de la foto")).toBeVisible();
+
+    await page.getByLabel("Ingrediente 1 alimento").fill(food);
+    await page.getByLabel("Ingrediente 1 cantidad").fill("2");
+    await page.getByLabel("Ingrediente 1 unidad").selectOption("ud");
+    await page.getByRole("button", { name: "Guardar" }).click();
 
     // Listed in the book
     await page.getByLabel("Buscar recetas").fill(name);
@@ -29,6 +40,18 @@ test.describe("RECIPES — loop end to end", () => {
     await card.click();
     await expect(page.getByRole("heading", { name })).toBeVisible();
     await expect(page.getByText(food, { exact: false }).first()).toBeVisible();
+  });
+
+  test("empty name shows validation error and does not navigate", async ({
+    page,
+  }) => {
+    await page.goto("/recetario");
+    await page.getByRole("button", { name: "+ Nueva receta" }).click();
+    await expect(page).toHaveURL(/\/recetario\/nueva$/);
+
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await expect(page.getByText("El nombre es obligatorio")).toBeVisible();
+    await expect(page).toHaveURL(/\/recetario\/nueva$/);
   });
 
   test("plan week + shopping sheet opens with recipe ingredients", async ({

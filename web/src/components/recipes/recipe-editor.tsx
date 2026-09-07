@@ -1,6 +1,7 @@
 // E2 editor (D2): create/edit recipe as a modal overlay. Cancel = close, no API
 // call; save POSTs/PUTs the whole draft; field errors render beside the field.
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { ApiError, apiFetch, photoSrc } from "../../lib/api";
 import type { Recipe, RecipeInput, RecipesApi } from "./use-recipes";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -15,17 +16,6 @@ type Draft = {
   materials: string[];
   tags: string[];
 };
-
-const blank = (): Draft => ({
-  name: "",
-  description: "",
-  servings: "",
-  photo_path: "",
-  ingredients: [{ food: "", quantity: "", unit: "" }],
-  steps: [""],
-  materials: [],
-  tags: [],
-});
 
 const fromRecipe = (r: Recipe): Draft => ({
   name: r.name,
@@ -61,16 +51,37 @@ export function RecipeEditor({
   onClose,
 }: {
   api: RecipesApi;
-  recipe: Recipe | null;
+  recipe: Recipe;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState<Draft>(() =>
-    recipe ? fromRecipe(recipe) : blank(),
-  );
+  const [draft, setDraft] = useState<Draft>(() => fromRecipe(recipe));
+  const draftRef = useRef(draft);
+  draftRef.current = draft; // lectura fresca tras cualquier await
   const [nameError, setNameError] = useState<string | null>(null);
   const [material, setMaterial] = useState("");
   const [tag, setTag] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const uploadingRef = useRef(false);
+  const pendingFileRef = useRef<File | null>(null);
+  const saveCancelledRef = useRef(false);
+  // Id de la selección activa: "Quitar" lo incrementa y las respuestas de
+  // subidas anteriores (en vuelo o retenidas) se descartan.
+  const uploadSessionRef = useRef(0);
   const title = recipe ? "Editar receta" : "Nueva receta";
+
+  const removePhoto = () => {
+    uploadSessionRef.current += 1;
+    pendingFileRef.current = null;
+    setUploadError(null);
+    set("photo_path", "");
+  };
+
+  const discardPendingUpload = () => {
+    uploadSessionRef.current += 1;
+    pendingFileRef.current = null;
+    setUploadError(null);
+  };
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -85,34 +96,124 @@ export function RecipeEditor({
     clear();
   };
 
-  const payload = (): RecipeInput => ({
-    name: draft.name.trim(),
-    description: draft.description.trim() || null,
-    servings: draft.servings.trim() ? Number(draft.servings) : null,
-    photo_path: draft.photo_path.trim() || null,
-    ingredients: draft.ingredients
+  const onFile = async (file: File) => {
+    if (uploadingRef.current) return;
+    const session = ++uploadSessionRef.current;
+    uploadingRef.current = true;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { photo_path } = await apiFetch<{ photo_path: string }>(
+        "/api/uploads",
+        {
+          method: "POST",
+          body: fd,
+        },
+      );
+      if (session !== uploadSessionRef.current) return; // la foto fue quitada mientras subía
+      set("photo_path", photo_path);
+      // Una selección resuelta invalida cualquier reintento pendiente.
+      pendingFileRef.current = null;
+    } catch (e) {
+      if (session !== uploadSessionRef.current) return;
+      // 400 (tipo) y 413 (tamaño) son rechazos deterministas del server:
+      // reintentar no los cura. Cualquier otro fallo (red/5xx) es transitorio.
+      const status = e instanceof ApiError ? e.status : 0;
+      if (status === 400 || status === 413) {
+        pendingFileRef.current = null;
+        setUploadError("Archivo no válido (tipo o tamaño). Elige otra imagen.");
+      } else {
+        pendingFileRef.current = file;
+        setUploadError(
+          "No se pudo conectar con el servidor. Se reintentará al guardar.",
+        );
+      }
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
+  };
+
+  /** Reintenta la subida pendiente; sin pendiente devuelve el path actual
+   *  (posiblemente null/"" — la receta puede quedarse sin foto a propósito). */
+  const ensurePhotoUploaded = async (): Promise<{
+    ok: boolean;
+    photoPath: string | null;
+  }> => {
+    const file = pendingFileRef.current;
+    if (!file) return { ok: true, photoPath: draft.photo_path.trim() || null };
+    const session = uploadSessionRef.current;
+    uploadingRef.current = true;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { photo_path } = await apiFetch<{ photo_path: string }>(
+        "/api/uploads",
+        {
+          method: "POST",
+          body: fd,
+        },
+      );
+      if (session !== uploadSessionRef.current) {
+        return { ok: true, photoPath: null }; // invalidada: respetar la eliminación (sin leer draft stale)
+      }
+      set("photo_path", photo_path);
+      pendingFileRef.current = null;
+      setUploadError(null);
+      return { ok: true, photoPath: photo_path };
+    } catch {
+      if (session !== uploadSessionRef.current) {
+        return { ok: true, photoPath: null }; // invalidada: respetar la eliminación
+      }
+      setUploadError(
+        "No se pudo subir el archivo. Guarda de nuevo para reintentarlo.",
+      );
+      return { ok: false, photoPath: null };
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
+  };
+
+  const payload = (photoPath: string | null): RecipeInput => ({
+    name: draftRef.current.name.trim(),
+    description: draftRef.current.description.trim() || null,
+    servings: draftRef.current.servings.trim()
+      ? Number(draftRef.current.servings)
+      : null,
+    photo_path: photoPath || null,
+    ingredients: draftRef.current.ingredients
       .filter((i) => i.food.trim())
       .map((i) => ({
         food: i.food.trim(),
         quantity: i.quantity.trim() ? Number(i.quantity) : null,
         unit: i.unit.trim() || null,
       })),
-    steps: draft.steps.map((s) => s.trim()).filter(Boolean),
-    materials: draft.materials,
-    tags: draft.tags,
+    steps: draftRef.current.steps.map((s) => s.trim()).filter(Boolean),
+    materials: draftRef.current.materials,
+    tags: draftRef.current.tags,
   });
 
   const save = async () => {
-    if (api.saving) return;
+    if (api.saving || uploading) return;
     if (!draft.name.trim()) {
       setNameError("El nombre es obligatorio");
       return;
     }
     setNameError(null);
-    const ok = recipe
-      ? await api.update(recipe.id, payload())
-      : await api.create(payload());
+    saveCancelledRef.current = false;
+    const photo = await ensurePhotoUploaded();
+    if (!photo.ok || saveCancelledRef.current) return; // cerrado durante el reintento
+    const ok = await api.update(recipe.id, payload(photo.photoPath));
     if (ok) onClose();
+  };
+
+  const cancel = () => {
+    saveCancelledRef.current = true;
+    onClose();
   };
 
   const serverNameError =
@@ -125,7 +226,7 @@ export function RecipeEditor({
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      onClick={onClose}
+      onClick={cancel}
     >
       <div
         role="dialog"
@@ -199,16 +300,56 @@ export function RecipeEditor({
               />
             </div>
             <div className="flex-[2]">
-              <label className={label} htmlFor="recipe-photo">
-                Foto (URL o ruta)
-              </label>
-              <input
-                id="recipe-photo"
-                aria-label="Foto"
-                className={field}
-                value={draft.photo_path}
-                onChange={(e) => set("photo_path", e.target.value)}
-              />
+              <span className={label}>Foto</span>
+              {draft.photo_path ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={photoSrc(draft.photo_path)}
+                    alt="Foto actual"
+                    className="h-12 w-12 rounded-lg object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => set("photo_path", "")}
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ) : (
+                <label
+                  className={`btn-secondary inline-block cursor-pointer ${
+                    uploading ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
+                  Subir foto
+                  <input
+                    id="recipe-photo"
+                    aria-label="Foto"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void onFile(f);
+                    }}
+                  />
+                </label>
+              )}
+              {uploadError && (
+                <div className="mt-2 flex items-center gap-3" role="alert">
+                  <p className="text-sm text-error">{uploadError}</p>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={discardPendingUpload}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -441,16 +582,16 @@ export function RecipeEditor({
           </section>
 
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn-secondary" onClick={onClose}>
+            <button type="button" className="btn-secondary" onClick={cancel}>
               Cancelar
             </button>
             <button
               type="button"
               className="btn-primary"
-              disabled={api.saving}
+              disabled={api.saving || uploading}
               onClick={save}
             >
-              {api.saving ? "Guardando…" : "Guardar"}
+              {api.saving || uploading ? "Guardando…" : "Guardar"}
             </button>
           </div>
         </div>

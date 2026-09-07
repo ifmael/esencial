@@ -90,3 +90,12 @@ Todos los vídeos del catálogo son en **español** (auditado con yt-dlp en e8;
 faltantes/reemplazos viven en `0007` y `0008`).
 Los pasos solo faltan en ejercicios creados a mano — rellenarlos desde el
 editor (textarea "Pasos de ejecución", un paso por línea).
+
+## Fotos de recetas (R2)
+
+- Upload: `POST /api/uploads` (multipart `file`, png/jpeg/webp ≤ 5 MB) → `200 {photo_path}`
+  con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras authGuard, `Cache-Control: immutable`.
+- Binding R2 `PHOTOS` → bucket **`esencial-photos`** (`wrangler.toml` y `api/wrangler.test.toml`);
+  `photo_path` se valida fail-closed (regex + `PHOTOS.head`) en `POST/PUT /api/recipes`.
+- El render usa `photoSrc()` (`web/src/lib/api.ts`): la key pelada + prefijo `/api/uploads/`.
+- e2e y login dev usan la password `hola` (`ESENCIAL_DEV_PASSWORD=hola pnpm dev`).

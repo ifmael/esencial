@@ -17,7 +17,17 @@ npx wrangler d1 create esencial
 Copia el `database_id` que imprime y pégalo en `api/wrangler.toml`
 (reemplaza el placeholder `REPLACE_WITH_DATABASE_ID`).
 
-## 3. Aplicar migraciones (cada vez que cambie el esquema)
+
+## 3. Crear el bucket R2 de fotos (una vez)
+
+```bash
+npx wrangler r2 bucket create esencial-photos
+```
+
+El binding `PHOTOS` de `wrangler.toml` lo requiere; sin este paso el
+deploy falla (el bucket no se crea automáticamente).
+
+## 4. Aplicar migraciones (cada vez que cambie el esquema)
 
 ```bash
 
@@ -28,7 +38,7 @@ Copia el `database_id` que imprime y pégalo en `api/wrangler.toml`
 pnpm db:migrate:remote
 ```
 
-## 4. Secretos de acceso (E7 — una vez, y al rotar la contraseña)
+## 5. Secretos de acceso (E7 — una vez, y al rotar la contraseña)
 
 ```bash
 # Clave de firma de sesión (cualquier string ≥32 aleatorios):
@@ -44,7 +54,7 @@ mismos valores. IMPORTANTE: wrangler lee `.dev.vars` desde la raíz, no desde
 `api/`; si lo pones en `api/` el Worker no ve los secretos y login da 500.
 Sin secretos, el Worker falla cerrado (500 en login, 401 en todo lo protegido).
 
-## 5. Deploy
+## 6. Deploy
 
 ```bash
 npm run deploy              # build del SPA + wrangler deploy
@@ -53,7 +63,7 @@ npm run deploy              # build del SPA + wrangler deploy
 La primera vez crea el Worker `esencial` y publica: SPA + API en la misma URL
 (https://esencial.<tu-subdominio>.workers.dev — la imprime el propio comando).
 
-## 6. Verificación post-deploy (2 min)
+## 7. Verificación post-deploy (2 min)
 
 1. `curl -i https://esencial.<sub>.workers.dev/` sin sesión → **302** a `/login?next=%2F`.
 2. `curl https://esencial.<sub>.workers.dev/api/health` → **200** `{ ok: true }` (abierto).

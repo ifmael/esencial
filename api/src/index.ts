@@ -16,6 +16,7 @@ import { planSessions } from "./routes/plan-sessions";
 import { recipes } from "./routes/recipes";
 import { shoppingList } from "./routes/shopping-list";
 import { templates } from "./routes/templates";
+import { uploads } from "./routes/uploads";
 import { workoutLogs } from "./routes/workout-logs";
 
 export const api = new Hono<{ Bindings: Env }>()
@@ -30,7 +31,8 @@ export const api = new Hono<{ Bindings: Env }>()
   .route("/workout-logs", workoutLogs)
   .route("/notes", notes)
   .route("/shopping-list", shoppingList)
-  .route("/day", day);
+  .route("/day", day)
+  .route("/uploads", uploads);
 
 const app = new Hono<{ Bindings: Env }>()
   .use(securityHeaders)

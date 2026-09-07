@@ -21,7 +21,7 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
-const recipe = makeRecipe({ id: 7 });
+const recipe = makeRecipe({ id: 7, photo_path: "recipe-7.png" });
 
 describe("/recetario/:id", () => {
   it("renders description, servings, ordered ingredient checklist, numbered steps, materials, tags", async () => {
@@ -52,6 +52,8 @@ describe("/recetario/:id", () => {
     ]);
     expect(screen.getByText("olla")).toBeDefined();
     expect(screen.getByText("almuerzo")).toBeDefined();
+    const thumb = document.querySelector("img");
+    expect(thumb?.getAttribute("src")).toBe("/api/uploads/recipe-7.png");
   });
 
   it("unknown id shows not-found with a way back", async () => {

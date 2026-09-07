@@ -2,6 +2,7 @@
 export type Env = {
   DB: D1Database;
   ASSETS: Fetcher;
+  PHOTOS: R2Bucket;
   // E7 secrets (wrangler secret put / .dev.vars); optional so a missing one
   // fails requests closed (500/401) instead of type-breaking local dev.
   AUTH_SECRET?: string;
