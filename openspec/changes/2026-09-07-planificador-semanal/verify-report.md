@@ -89,3 +89,23 @@ PASS — RED→GREEN evidenciado (fallo reproducido en 8490277, 404 vs 200/409;
 verde tras las dos implementaciones). 349 tests unitarios verdes, typecheck
 limpio en 3 workspaces, build verde. Cero dead code del bloque Programar;
 patrones del repo respetados.
+
+### E2E (ronda 2, 2026-09-07)
+
+Nuevo describe `PLANIFICADOR SEMANAL` en `e2e/tests/strength.spec.ts`
+(describe preexistente `STRENGTH — …` intacto), 5 tests:
+
+| Test | Cubre |
+|------|-------|
+| añadir plantilla a un día desde la rejilla | Celda vacía → picker "Elegir plantilla" → badge "Pendiente" + ✕ |
+| desprogramar con la ✕ (confirmación inline) | ✕ → "Confirmar desprogramar" → celda vuelve a "+ añadir" |
+| error 409 visible al ocupar un día ocupado | POST interceptado 409 → `role="alert"` "Ya hay una sesión ese día", celda intacta |
+| badge Hecho tras registrar una sesión | Flujo `/sesion` → rejilla muestra "Hecho", sin ✕ en logged |
+| navegación de semanas | ‹ › actualiza heading y `?week=` en URL, ida y vuelta |
+
+Command: `ESENCIAL_DEV_PASSWORD=hola npx playwright test tests/strength.spec.ts`
+(desde `e2e/`, webServer auto con `pnpm dev`). Resultado: **10 passed**
+(5 preexistentes de STRENGTH + 5 nuevos), 2 corridas consecutivas limpias
+tras estabilizar (limpieza de leftovers con `clearDate`, asserts acotados a la
+celda del día en vez de conteos globales de la rejilla, payload de plantilla
+reutilizado del patrón existente `exercises/targetSets/targetRepsMin/Max`).
