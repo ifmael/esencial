@@ -180,8 +180,10 @@ export function RecipeEditor({
 
   const payload = (photoPath: string | null): RecipeInput => ({
     name: draftRef.current.name.trim(),
-    description: draft.description.trim() || null,
-    servings: draft.servings.trim() ? Number(draft.servings) : null,
+    description: draftRef.current.description.trim() || null,
+    servings: draftRef.current.servings.trim()
+      ? Number(draftRef.current.servings)
+      : null,
     photo_path: photoPath || null,
     ingredients: draftRef.current.ingredients
       .filter((i) => i.food.trim())
