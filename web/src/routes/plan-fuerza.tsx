@@ -1,9 +1,11 @@
 // /plan-fuerza — plantillas rotatorias expandibles + editor de borrador local.
 // Diseño E4: D2 (un PUT atómico), D3 (↑/↓ sin drag), D5 (chips = orden API).
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { ApiError, apiField, apiSend } from "../lib/api";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import { WeekGrid } from "../components/week-grid";
+import { apiField } from "../lib/api";
 import { type Exercise, useExercises } from "../lib/exercises";
+import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 import {
   addEntry,
   buildTemplatePayload,
@@ -602,8 +604,6 @@ function TemplateEditor({
   );
 }
 
-// --- Card ------------------------------------------------------------------
-
 function TemplateCard({
   template,
   expanded,
@@ -624,31 +624,8 @@ function TemplateCard({
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Programar (EP9 D3): estado local colapsable; POST único y mensajes inline.
-  const [scheduling, setScheduling] = useState(false);
-  const [date, setDate] = useState("");
-  const [scheduled, setScheduled] = useState<string | null>(null);
-  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   const count = template.exercises.length;
-
-  const schedule = async () => {
-    setScheduleError(null);
-    try {
-      await apiSend("/api/plan-sessions", "POST", {
-        date,
-        templateId: template.id,
-      });
-      setScheduled(date);
-      setScheduling(false);
-      setDate("");
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 409)
-        setScheduleError("Ya hay una sesión ese día");
-      else if (e instanceof ApiError) setScheduleError(e.error);
-      else setScheduleError("No se pudo conectar con el servidor");
-    }
-  };
 
   return (
     <section
@@ -731,52 +708,7 @@ function TemplateCard({
         <button className="btn-secondary" onClick={() => setConfirming(true)}>
           Eliminar
         </button>
-        {scheduled ? (
-          <p className="text-sm font-semibold text-primary">
-            Programada para {scheduled}
-          </p>
-        ) : (
-          <button
-            className="btn-secondary"
-            onClick={() => {
-              setScheduled(null);
-              setScheduling((s) => !s);
-            }}
-          >
-            Programar
-          </button>
-        )}
       </div>
-      {scheduling && (
-        <div className="flex flex-wrap items-center gap-2">
-          <label htmlFor={`fecha-${template.id}`} className="sr-only">
-            Fecha
-          </label>
-          <input
-            id={`fecha-${template.id}`}
-            type="date"
-            className="min-h-11 rounded-lg border border-border bg-surface px-2"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-          <button
-            className="btn-secondary"
-            onClick={() => setScheduling(false)}
-          >
-            Cancelar
-          </button>
-          <button
-            className="btn-primary"
-            disabled={!date}
-            onClick={() => void schedule()}
-          >
-            Confirmar
-          </button>
-          {scheduleError && (
-            <p className="text-sm text-error">{scheduleError}</p>
-          )}
-        </div>
-      )}
       {confirming && (
         <div className="flex flex-wrap items-center gap-2">
           <span>¿Eliminar {template.name}?</span>
@@ -856,6 +788,9 @@ export function PlanFuerzaPage() {
       }),
     );
   };
+  const [params, setParams] = useSearchParams();
+  const isoWeek = params.get("week") ?? currentIsoWeek();
+  const gotoWeek = (week: string) => setParams({ week });
 
   return (
     <div>
@@ -892,6 +827,11 @@ export function PlanFuerzaPage() {
           </div>
         )}
       </section>
+
+      <WeekGrid
+        isoWeek={isoWeek}
+        onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
+      />
 
       {error && (
         <div className="card mb-4 flex items-center justify-between">

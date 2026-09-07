@@ -10,10 +10,26 @@ export type Call = {
   body: Record<string, unknown> | undefined;
 };
 
-export type Seed = { templates?: Template[]; exercises?: Exercise[] };
+export type PlanSessionRow = {
+  id: number;
+  date: string;
+  status: "planned" | "logged";
+  templateId: number;
+  templateName: string;
+};
+
+export type Seed = {
+  templates?: Template[];
+  exercises?: Exercise[];
+  sessions?: PlanSessionRow[];
+};
 
 export type MockApi = {
-  state: { templates: Template[]; exercises: Exercise[] };
+  state: {
+    templates: Template[];
+    exercises: Exercise[];
+    sessions: PlanSessionRow[];
+  };
   calls: Call[];
   hang: boolean;
 };
@@ -32,6 +48,7 @@ export function mockApi(seed: Seed = {}): MockApi {
     state: {
       templates: structuredClone(seed.templates ?? []),
       exercises: structuredClone(seed.exercises ?? []),
+      sessions: structuredClone(seed.sessions ?? []),
     },
     calls: [],
     hang: false,
@@ -39,6 +56,7 @@ export function mockApi(seed: Seed = {}): MockApi {
   let nextExerciseId = Math.max(0, ...api.state.exercises.map((e) => e.id)) + 1;
   let nextTemplateId = Math.max(0, ...api.state.templates.map((t) => t.id)) + 1;
   let nextRowId = 100;
+  let nextSessionId = 1000;
 
   const impl = async (
     input: RequestInfo | URL,
@@ -179,6 +197,24 @@ export function mockApi(seed: Seed = {}): MockApi {
           api.state.exercises = api.state.exercises.filter((x) => x.id !== id);
           return new Response(null, { status: 204 });
         }
+      }
+    }
+    if (url === "/api/plan-sessions") {
+      if (method === "GET") return json(api.state.sessions);
+      if (method === "POST") {
+        const b = body as { date: string; templateId: number };
+        if (api.state.sessions.some((s) => s.date === b.date))
+          return err("Ya hay una sesión ese día", undefined, 409);
+        const tpl = api.state.templates.find((t) => t.id === b.templateId);
+        if (!tpl) return err("Not found", undefined, 404);
+        api.state.sessions.push({
+          id: nextSessionId++,
+          date: b.date,
+          status: "planned",
+          templateId: tpl.id,
+          templateName: tpl.name,
+        });
+        return json({ id: nextSessionId - 1 }, 201);
       }
     }
     return err("Not found", undefined, 404);
