@@ -1,0 +1,20 @@
+change: planificador-semanal
+phase: executing
+artifact_store: hybrid
+artifacts:
+  proposal: true
+  specs: true
+  design: true
+  tasks: true
+  verify_report: false
+  archive: false
+tasks_progress:
+  completed: []
+  pending:
+    - t1 tests RED (DELETE + hook)
+    - t2 backend DELETE plan-sessions
+    - t3 frontend rejilla semanal
+    - t4 QA verify-report
+    - t5 E2E + cierre
+delivery_strategy: direct-commits
+last_updated: 2026-09-07 (change creado en main antes del worktree)
