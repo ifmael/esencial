@@ -2,7 +2,7 @@
 import { Hono } from "hono";
 import { planSessionSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
-import { fail, guard, json } from "../http";
+import { fail, guard, json, parseId } from "../http";
 import { row, rows } from "../repo";
 import { zBody } from "../validation";
 
@@ -42,5 +42,22 @@ export const planSessions = new Hono<{ Bindings: Env }>()
         { id: Number(meta.last_row_id), date, templateId, status: "planned" },
         201,
       );
+    }),
+  )
+  .delete("/:id", (c) =>
+    guard(async () => {
+      const id = parseId(c.req.param("id"));
+      if (!id) return fail("Not found", undefined, 404);
+      const db = getDb(c.env);
+      const session = await row(
+        db,
+        "SELECT id, status FROM plan_sessions WHERE id = ?",
+        id,
+      );
+      if (!session) return fail("Not found", undefined, 404);
+      if (session.status === "logged")
+        return fail("Sesión ya registrada", undefined, 409);
+      await db.prepare("DELETE FROM plan_sessions WHERE id = ?").bind(id).run();
+      return json({});
     }),
   );
