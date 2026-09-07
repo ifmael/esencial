@@ -54,7 +54,9 @@ describe("/recetario book", () => {
     // placeholder only for the recipe without a photo
     expect(screen.getAllByText("Sin foto").length).toBe(2);
     // DEF-6: photo_path llega como key cruda; el src debe llevar el prefijo /api/uploads/
-    expect(document.querySelector("img")?.getAttribute("src")).toBe("/api/uploads/recipe-g.png");
+    expect(document.querySelector("img")?.getAttribute("src")).toBe(
+      "/api/uploads/recipe-g.png",
+    );
   });
 
   it("empty state invites creating the first recipe", async () => {

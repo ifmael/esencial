@@ -1,7 +1,14 @@
 // E8 nueva-receta: página propia para crear recetas. Upload con contrato
 // fail-closed: POST /api/uploads -> 200 {photo_path}; 400 {error, field:"file"}.
+
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { App } from "../src/app";
 import { makeRecipe, makeServer } from "./fixtures";
 
@@ -20,7 +27,8 @@ async function openPage() {
   await screen.findByRole("heading", { name: "Nueva receta" });
 }
 
-const fileOf = (name: string, type = "image/png") => new File(["foto"], name, { type });
+const fileOf = (name: string, type = "image/png") =>
+  new File(["foto"], name, { type });
 
 describe("nueva-receta: render", () => {
   it("renderiza secciones y chips base", async () => {
@@ -28,7 +36,14 @@ describe("nueva-receta: render", () => {
     await openPage();
 
     expect(screen.getByRole("heading", { name: "Nueva receta" })).toBeDefined();
-    for (const s of ["Foto principal", "Nombre", "Categorías", "Materiales", "Ingredientes", "Pasos"]) {
+    for (const s of [
+      "Foto principal",
+      "Nombre",
+      "Categorías",
+      "Materiales",
+      "Ingredientes",
+      "Pasos",
+    ]) {
       expect(screen.getByText(s)).toBeDefined();
     }
     for (const c of ["Desayuno", "Almuerzo", "Cena", "Snack"]) {
@@ -44,14 +59,22 @@ describe("nueva-receta: categorías", () => {
     await openPage();
 
     fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
-    expect(screen.getByRole("button", { name: "Desayuno" }).className).toContain("bg-primary-container");
+    expect(
+      screen.getByRole("button", { name: "Desayuno" }).className,
+    ).toContain("bg-primary-container");
 
     fireEvent.change(screen.getByRole("textbox", { name: "Nueva categoría" }), {
       target: { value: "batch" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Añadir categoría" }));
     expect(screen.getByRole("button", { name: "batch" })).toBeDefined();
-    expect((screen.getByRole("textbox", { name: "Nueva categoría" }) as HTMLInputElement).value).toBe("");
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: "Nueva categoría",
+        }) as HTMLInputElement
+      ).value,
+    ).toBe("");
   });
 });
 
@@ -61,19 +84,37 @@ describe("nueva-receta: filas", () => {
     await openPage();
 
     fireEvent.click(screen.getByRole("button", { name: "Añadir ingrediente" }));
-    expect(screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ }).length).toBe(2);
-    fireEvent.click(screen.getByRole("button", { name: "Quitar ingrediente 2" }));
-    expect(screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ }).length).toBe(1);
+    expect(
+      screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ })
+        .length,
+    ).toBe(2);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Quitar ingrediente 2" }),
+    );
+    expect(
+      screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ })
+        .length,
+    ).toBe(1);
 
     // cantidad number y unidad select gr|ml|ud
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Ingrediente 1 cantidad" }), {
-      target: { value: "300" },
-    });
-    fireEvent.change(screen.getByRole("combobox", { name: "Ingrediente 1 unidad" }), {
-      target: { value: "gr" },
-    });
+    fireEvent.change(
+      screen.getByRole("spinbutton", { name: "Ingrediente 1 cantidad" }),
+      {
+        target: { value: "300" },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Ingrediente 1 unidad" }),
+      {
+        target: { value: "gr" },
+      },
+    );
     expect(
-      (screen.getByRole("combobox", { name: "Ingrediente 1 unidad" }) as HTMLSelectElement).value,
+      (
+        screen.getByRole("combobox", {
+          name: "Ingrediente 1 unidad",
+        }) as HTMLSelectElement
+      ).value,
     ).toBe("gr");
   });
 
@@ -81,11 +122,17 @@ describe("nueva-receta: filas", () => {
     vi.stubGlobal("fetch", makeServer([]).fetchMock);
     await openPage();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), { target: { value: "Batir" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
+      target: { value: "Batir" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Añadir paso" }));
-    expect(screen.getAllByRole("textbox", { name: /^Paso \d+$/ }).length).toBe(2);
+    expect(screen.getAllByRole("textbox", { name: /^Paso \d+$/ }).length).toBe(
+      2,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Quitar paso 2" }));
-    expect(screen.getAllByRole("textbox", { name: /^Paso \d+$/ }).length).toBe(1);
+    expect(screen.getAllByRole("textbox", { name: /^Paso \d+$/ }).length).toBe(
+      1,
+    );
   });
 
   it("materiales: añadir/eliminar chip", async () => {
@@ -97,7 +144,9 @@ describe("nueva-receta: filas", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Añadir material" }));
     expect(screen.getByText("olla")).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "Quitar material olla" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Quitar material olla" }),
+    );
     expect(screen.queryByText("olla")).toBeNull();
   });
 });
@@ -118,18 +167,31 @@ describe("nueva-receta: guardado", () => {
     vi.stubGlobal("fetch", server.fetchMock);
     await openPage();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), { target: { value: "Tortilla" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
+      target: { value: "Tortilla" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Ingrediente 1 alimento" }), {
-      target: { value: "huevo" },
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Ingrediente 1 alimento" }),
+      {
+        target: { value: "huevo" },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole("spinbutton", { name: "Ingrediente 1 cantidad" }),
+      {
+        target: { value: "3" },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Ingrediente 1 unidad" }),
+      {
+        target: { value: "ud" },
+      },
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
+      target: { value: "Batir" },
     });
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Ingrediente 1 cantidad" }), {
-      target: { value: "3" },
-    });
-    fireEvent.change(screen.getByRole("combobox", { name: "Ingrediente 1 unidad" }), {
-      target: { value: "ud" },
-    });
-    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), { target: { value: "Batir" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Nuevo material" }), {
       target: { value: "sartén" },
     });
@@ -137,9 +199,17 @@ describe("nueva-receta: guardado", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
-    await waitFor(() => expect(server.calls.some((c) => c.method === "POST" && c.url === "/api/recipes")).toBe(true));
+    await waitFor(() =>
+      expect(
+        server.calls.some(
+          (c) => c.method === "POST" && c.url === "/api/recipes",
+        ),
+      ).toBe(true),
+    );
     await screen.findByRole("heading", { name: "Recetario" });
-    const post = server.calls.find((c) => c.method === "POST" && c.url === "/api/recipes");
+    const post = server.calls.find(
+      (c) => c.method === "POST" && c.url === "/api/recipes",
+    );
     expect(post?.body).toMatchObject({
       name: "Tortilla",
       description: null,
@@ -159,16 +229,23 @@ describe("nueva-receta: subida de foto", () => {
     vi.stubGlobal("fetch", server.fetchMock);
     await openPage();
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
     expect(input).not.toBeNull();
     fireEvent.change(input, { target: { files: [fileOf("foto.png")] } });
 
     await waitFor(() =>
-      expect(server.calls.some((c) => c.method === "POST" && c.url === "/api/uploads")).toBe(true),
+      expect(
+        server.calls.some(
+          (c) => c.method === "POST" && c.url === "/api/uploads",
+        ),
+      ).toBe(true),
     );
     const call = server.calls.find((c) => c.url === "/api/uploads");
-    expect(call?.body).toBeInstanceOf(FormData);
-    expect(await (call?.body as FormData).get("file")).toBeInstanceOf(File);
+    const fd = call?.body;
+    expect(fd).toBeInstanceOf(FormData);
+    expect(await (fd as FormData).get("file")).toBeInstanceOf(File);
     const img = await screen.findByAltText("Vista previa de la foto");
     expect(img.getAttribute("src")).toBe("/api/uploads/recipe-100.png");
   });
@@ -179,11 +256,15 @@ describe("nueva-receta: subida de foto", () => {
     await openPage();
 
     stubbed.server.nextUploadFails = true;
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
     fireEvent.change(input, { target: { files: [fileOf("grande.png")] } });
 
     expect(await screen.findByRole("alert")).toBeDefined();
-    expect(screen.queryByRole("img", { name: "Vista previa de la foto" })).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: "Vista previa de la foto" }),
+    ).toBeNull();
   });
 
   it("tras fallo transitorio de subida, Guardar reintenta la subida antes de crear (re-review 6)", async () => {
@@ -193,7 +274,9 @@ describe("nueva-receta: subida de foto", () => {
 
     stubbed.server.nextUploadFails = true;
     stubbed.server.nextUploadStatus = 500;
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
     fireEvent.change(input, { target: { files: [fileOf("reintento.png")] } });
     await screen.findByRole("alert");
 
@@ -206,8 +289,12 @@ describe("nueva-receta: subida de foto", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
     const up = stubbed.calls.filter((c) => c.url === "/api/uploads");
     expect(up.length).toBe(2);
-    const create = stubbed.calls.find((c) => c.method === "POST" && c.url === "/api/recipes");
-    expect(String((create?.body as Record<string, unknown>)?.photo_path)).toMatch(/^recipe-/);
+    const create = stubbed.calls.find(
+      (c) => c.method === "POST" && c.url === "/api/recipes",
+    );
+    expect(
+      String((create?.body as Record<string, unknown>)?.photo_path),
+    ).toMatch(/^recipe-/);
   });
 
   it("rechazo determinista (400) no se retiene: Guardar crea sin reintentar (re-review 7)", async () => {
@@ -217,8 +304,12 @@ describe("nueva-receta: subida de foto", () => {
 
     stubbed.server.nextUploadFails = true;
     stubbed.server.nextUploadStatus = 400;
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    fireEvent.change(input, { target: { files: [fileOf("animacion.gif", "image/gif")] } });
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [fileOf("animacion.gif", "image/gif")] },
+    });
     await screen.findByRole("alert");
 
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
@@ -229,13 +320,17 @@ describe("nueva-receta: subida de foto", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
     const up = stubbed.calls.filter((c) => c.url === "/api/uploads");
     expect(up.length).toBe(1);
-    const create = stubbed.calls.find((c) => c.method === "POST" && c.url === "/api/recipes");
+    const create = stubbed.calls.find(
+      (c) => c.method === "POST" && c.url === "/api/recipes",
+    );
     expect((create?.body as Record<string, unknown>)?.photo_path).toBeNull();
   });
 
   it("la subida FormData no fuerza content-type application/json (DEF-3)", async () => {
     const server = makeServer([]);
-    const seen: { contentType: string | null | undefined } = { contentType: undefined };
+    const seen: { contentType: string | null | undefined } = {
+      contentType: undefined,
+    };
     const orig = server.fetchMock;
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
       seen.contentType = new Headers(init?.headers).get("content-type");
@@ -243,7 +338,9 @@ describe("nueva-receta: subida de foto", () => {
     });
     await openPage();
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
     fireEvent.change(input, { target: { files: [fileOf("foto.png")] } });
 
     await waitFor(() => expect(seen.contentType).not.toBeUndefined());

@@ -11,7 +11,7 @@
 // - GET /api/uploads/:key → 200 bytes + Content-Type almacenado +
 //   Cache-Control private, max-age=31536000, immutable; 404 {error} si no existe.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, get, post, postForm, anonPostForm } from "./helpers";
+import { anonPostForm, freshDb, get, post, postForm } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -46,9 +46,10 @@ describe("POST /api/uploads", () => {
     const res = await postForm("/api/uploads", pngForm());
     expect(res.status).toBe(200);
     const r = await body(res);
-    const m = /^recipe-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.png$/.exec(
-      String(r.photo_path),
-    );
+    const m =
+      /^recipe-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.png$/.exec(
+        String(r.photo_path),
+      );
     expect(m).not.toBeNull();
   });
 
@@ -63,7 +64,10 @@ describe("POST /api/uploads", () => {
   });
 
   it("400 {error, field:'file'} con tipo no permitido (texto)", async () => {
-    const form = formWith("file", new File(["hola"], "nota.txt", { type: "text/plain" }));
+    const form = formWith(
+      "file",
+      new File(["hola"], "nota.txt", { type: "text/plain" }),
+    );
     const res = await postForm("/api/uploads", form);
     expect(res.status).toBe(400);
     const r = await body(res);
@@ -71,7 +75,9 @@ describe("POST /api/uploads", () => {
   });
 
   it("413 {error, field:'file'} con tamaño > 5_000_000 bytes", async () => {
-    const big = new File([new Uint8Array(5_000_001)], "grande.png", { type: "image/png" });
+    const big = new File([new Uint8Array(5_000_001)], "grande.png", {
+      type: "image/png",
+    });
     const res = await postForm("/api/uploads", formWith("file", big));
     expect(res.status).toBe(413);
     const r = await body(res);
@@ -87,13 +93,17 @@ describe("GET /api/uploads/:key", () => {
     const res = await get(`/api/uploads/${photo_path}`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/png");
-    expect(res.headers.get("cache-control")).toBe("private, max-age=31536000, immutable");
+    expect(res.headers.get("cache-control")).toBe(
+      "private, max-age=31536000, immutable",
+    );
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect(bytes).toEqual(PNG);
   });
 
   it("404 {error, field:'key'} para clave inexistente", async () => {
-    const res = await get("/api/uploads/recipe-00000000-0000-4000-8000-000000000000.png");
+    const res = await get(
+      "/api/uploads/recipe-00000000-0000-4000-8000-000000000000.png",
+    );
     expect(res.status).toBe(404);
     const r = await body(res);
     expect(r.error).toBeTruthy();
@@ -109,7 +119,10 @@ describe("E8 round-trip upload → recipe", () => {
     expect(up.status).toBe(200);
     const { photo_path } = (await up.json()) as { photo_path: string };
 
-    const createdRes = await post("/api/recipes", { name: "Tortilla", photo_path });
+    const createdRes = await post("/api/recipes", {
+      name: "Tortilla",
+      photo_path,
+    });
     expect(createdRes.status).toBe(201);
     const created = (await createdRes.json()) as Record<string, unknown>;
     const id = Number(created.id);

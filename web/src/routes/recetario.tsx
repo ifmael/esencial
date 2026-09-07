@@ -5,9 +5,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { filterRecipes } from "../components/recipes/filter";
-import { photoSrc } from "../lib/api";
 import { RecipeEditor } from "../components/recipes/recipe-editor";
 import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
+import { photoSrc } from "../lib/api";
 
 let flashMessage: string | null = null;
 const setFlash = (m: string) => (flashMessage = m);
@@ -21,7 +21,11 @@ export function Thumb({ recipe, big }: { recipe: Recipe; big?: boolean }) {
     ? "h-20 w-20 shrink-0 rounded-lg md:h-40 md:w-full"
     : "h-20 w-20 shrink-0 rounded-lg";
   return recipe.photo_path ? (
-    <img src={photoSrc(recipe.photo_path)} alt="" className={`${box} object-cover`} />
+    <img
+      src={photoSrc(recipe.photo_path)}
+      alt=""
+      className={`${box} object-cover`}
+    />
   ) : (
     <div
       aria-hidden
@@ -82,7 +86,11 @@ export function RecetarioPage() {
     <>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Recetario</h1>
-        <button type="button" className="btn-primary" onClick={() => navigate("/recetario/nueva")}>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => navigate("/recetario/nueva")}
+        >
           + Nueva receta
         </button>
       </header>

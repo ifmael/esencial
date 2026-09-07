@@ -1,7 +1,7 @@
 // E2 editor (D2): create/edit recipe as a modal overlay. Cancel = close, no API
 // call; save POSTs/PUTs the whole draft; field errors render beside the field.
 import { useRef, useState } from "react";
-import { ApiError, photoSrc, apiFetch } from "../../lib/api";
+import { ApiError, apiFetch, photoSrc } from "../../lib/api";
 import type { Recipe, RecipeInput, RecipesApi } from "./use-recipes";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -103,10 +103,13 @@ export function RecipeEditor({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
-        method: "POST",
-        body: fd,
-      });
+      const { photo_path } = await apiFetch<{ photo_path: string }>(
+        "/api/uploads",
+        {
+          method: "POST",
+          body: fd,
+        },
+      );
       if (session !== uploadSessionRef.current) return; // la foto fue quitada mientras subía
       set("photo_path", photo_path);
       // Una selección resuelta invalida cualquier reintento pendiente.
@@ -121,7 +124,9 @@ export function RecipeEditor({
         setUploadError("Archivo no válido (tipo o tamaño). Elige otra imagen.");
       } else {
         pendingFileRef.current = file;
-        setUploadError("No se pudo conectar con el servidor. Se reintentará al guardar.");
+        setUploadError(
+          "No se pudo conectar con el servidor. Se reintentará al guardar.",
+        );
       }
     } finally {
       uploadingRef.current = false;
@@ -131,7 +136,10 @@ export function RecipeEditor({
 
   /** Reintenta la subida pendiente; sin pendiente devuelve el path actual
    *  (posiblemente null/"" — la receta puede quedarse sin foto a propósito). */
-  const ensurePhotoUploaded = async (): Promise<{ ok: boolean; photoPath: string | null }> => {
+  const ensurePhotoUploaded = async (): Promise<{
+    ok: boolean;
+    photoPath: string | null;
+  }> => {
     const file = pendingFileRef.current;
     if (!file) return { ok: true, photoPath: draft.photo_path.trim() || null };
     const session = uploadSessionRef.current;
@@ -140,10 +148,13 @@ export function RecipeEditor({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
-        method: "POST",
-        body: fd,
-      });
+      const { photo_path } = await apiFetch<{ photo_path: string }>(
+        "/api/uploads",
+        {
+          method: "POST",
+          body: fd,
+        },
+      );
       if (session !== uploadSessionRef.current) {
         return { ok: true, photoPath: null }; // invalidada: respetar la eliminación (sin leer draft stale)
       }
@@ -155,7 +166,9 @@ export function RecipeEditor({
       if (session !== uploadSessionRef.current) {
         return { ok: true, photoPath: null }; // invalidada: respetar la eliminación
       }
-      setUploadError("No se pudo subir el archivo. Guarda de nuevo para reintentarlo.");
+      setUploadError(
+        "No se pudo subir el archivo. Guarda de nuevo para reintentarlo.",
+      );
       return { ok: false, photoPath: null };
     } finally {
       uploadingRef.current = false;
@@ -199,7 +212,8 @@ export function RecipeEditor({
     onClose();
   };
 
-  const serverNameError = api.fieldError?.field === "name" ? api.fieldError.message : null;
+  const serverNameError =
+    api.fieldError?.field === "name" ? api.fieldError.message : null;
   const otherFieldError =
     api.fieldError && api.fieldError.field !== "name"
       ? api.fieldError.message
@@ -285,8 +299,16 @@ export function RecipeEditor({
               <span className={label}>Foto</span>
               {draft.photo_path ? (
                 <div className="flex items-center gap-3">
-                  <img src={photoSrc(draft.photo_path)} alt="Foto actual" className="h-12 w-12 rounded-lg object-cover" />
-                  <button type="button" className="btn-secondary" onClick={() => set("photo_path", "")}>
+                  <img
+                    src={photoSrc(draft.photo_path)}
+                    alt="Foto actual"
+                    className="h-12 w-12 rounded-lg object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => set("photo_path", "")}
+                  >
                     Quitar
                   </button>
                 </div>
@@ -554,7 +576,12 @@ export function RecipeEditor({
             <button type="button" className="btn-secondary" onClick={cancel}>
               Cancelar
             </button>
-            <button type="button" className="btn-primary" disabled={api.saving || uploading} onClick={save}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={api.saving || uploading}
+              onClick={save}
+            >
               {api.saving || uploading ? "Guardando…" : "Guardar"}
             </button>
           </div>

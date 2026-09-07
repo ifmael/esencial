@@ -26,7 +26,11 @@ export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
   };
 }
 
-export type ServerCall = { method: string; url: string; body?: Record<string, unknown> | FormData };
+export type ServerCall = {
+  method: string;
+  url: string;
+  body?: Record<string, unknown> | FormData;
+};
 
 export function makeServer(initial: Recipe[] = []) {
   const recipes = [...initial];
@@ -47,9 +51,16 @@ export function makeServer(initial: Recipe[] = []) {
     const method = (init?.method ?? "GET").toUpperCase();
     const raw = init?.body;
     const body =
-      typeof raw === "string" ? (JSON.parse(raw) as Record<string, unknown>) : (raw as FormData | undefined);
-    calls.push({ method, url, body: body as Record<string, unknown> | undefined });
-    if (url === "/api/recipes" && method === "GET") return json(recipes.map((r) => ({ ...r })));
+      typeof raw === "string"
+        ? (JSON.parse(raw) as Record<string, unknown>)
+        : (raw as FormData | undefined);
+    calls.push({
+      method,
+      url,
+      body: body as Record<string, unknown> | undefined,
+    });
+    if (url === "/api/recipes" && method === "GET")
+      return json(recipes.map((r) => ({ ...r })));
     if (url === "/api/recipes" && method === "POST") {
       if ((body as Record<string, unknown>)?.name === "Existente")
         return json({ error: "Ya existe", field: "name" }, 400);
@@ -86,7 +97,10 @@ export function makeServer(initial: Recipe[] = []) {
     }
     if (url === "/api/uploads" && method === "POST") {
       if (server.nextUploadFails)
-        return json({ error: "No se pudo subir el archivo" }, server.nextUploadStatus);
+        return json(
+          { error: "No se pudo subir el archivo" },
+          server.nextUploadStatus,
+        );
       return json({ photo_path: `recipe-${nextId++}.png` }, 200);
     }
     return json({ error: "Not found" }, 404);

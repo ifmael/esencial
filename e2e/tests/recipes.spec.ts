@@ -4,7 +4,9 @@ import { apiRequest, uniqueName } from "./helpers";
 test.describe("RECIPES — loop end to end", () => {
   test.use({ storageState: ".auth/state.json" });
 
-  test("create recipe via page with photo → listed → detail shows ingredient", async ({ page }) => {
+  test("create recipe via page with photo → listed → detail shows ingredient", async ({
+    page,
+  }) => {
     const name = uniqueName("Receta E2E");
     const food = uniqueName("IngredienteE2E");
     const png = Buffer.from(
@@ -40,7 +42,9 @@ test.describe("RECIPES — loop end to end", () => {
     await expect(page.getByText(food, { exact: false }).first()).toBeVisible();
   });
 
-  test("empty name shows validation error and does not navigate", async ({ page }) => {
+  test("empty name shows validation error and does not navigate", async ({
+    page,
+  }) => {
     await page.goto("/recetario");
     await page.getByRole("button", { name: "+ Nueva receta" }).click();
     await expect(page).toHaveURL(/\/recetario\/nueva$/);
@@ -50,7 +54,9 @@ test.describe("RECIPES — loop end to end", () => {
     await expect(page).toHaveURL(/\/recetario\/nueva$/);
   });
 
-  test("plan week + shopping sheet opens with recipe ingredients", async ({ page }) => {
+  test("plan week + shopping sheet opens with recipe ingredients", async ({
+    page,
+  }) => {
     const name = uniqueName("Plan E2E");
     const food = uniqueName("CompraE2E");
 

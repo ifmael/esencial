@@ -8,7 +8,6 @@ import type { Env } from "./db";
 import { dbFailure, json } from "./http";
 import { authGuard, pageGuard, securityHeaders } from "./middleware";
 import { authRoutes } from "./routes/auth";
-import { uploads } from "./routes/uploads";
 import { day } from "./routes/day";
 import { exercises } from "./routes/exercises";
 import { mealPlan } from "./routes/meal-plan";
@@ -17,6 +16,7 @@ import { planSessions } from "./routes/plan-sessions";
 import { recipes } from "./routes/recipes";
 import { shoppingList } from "./routes/shopping-list";
 import { templates } from "./routes/templates";
+import { uploads } from "./routes/uploads";
 import { workoutLogs } from "./routes/workout-logs";
 
 export const api = new Hono<{ Bindings: Env }>()

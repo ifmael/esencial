@@ -104,7 +104,7 @@ function authCookieHeader(): Promise<Record<string, string>> {
       },
       env,
     );
-    if (res.status !== 200) throw new Error("test login failed: " + res.status);
+    if (res.status !== 200) throw new Error(`test login failed: ${res.status}`);
     return { cookie: (res.headers.get("set-cookie") ?? "").split(";")[0] };
   })();
   return session;
@@ -169,10 +169,20 @@ export async function del(path: string): Promise<Response> {
 
 /** E8: multipart POST with the session cookie; body stays FormData so fetch
  *  generates the multipart boundary. */
-export async function postForm(path: string, form: FormData): Promise<Response> {
-  return await app.request(url(path), { method: "POST", body: form, headers: await authCookieHeader() }, env);
+export async function postForm(
+  path: string,
+  form: FormData,
+): Promise<Response> {
+  return await app.request(
+    url(path),
+    { method: "POST", body: form, headers: await authCookieHeader() },
+    env,
+  );
 }
 /** E8: multipart POST WITHOUT a session (gate contract). */
-export async function anonPostForm(path: string, form: FormData): Promise<Response> {
+export async function anonPostForm(
+  path: string,
+  form: FormData,
+): Promise<Response> {
   return await app.request(url(path), { method: "POST", body: form }, env);
 }

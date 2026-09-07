@@ -22,11 +22,12 @@ export const uploads = new Hono<{ Bindings: Env }>()
     } catch {
       return fail("Invalid multipart body", "file");
     }
-    const file = body["file"];
+    const file = body.file;
     if (!(file instanceof File)) return fail("Missing file", "file");
     const ext = MIME_TO_EXT[file.type];
     if (!ext) return fail("Tipo no permitido (png, jpeg o webp)", "file");
-    if (file.size > MAX_BYTES) return fail("El archivo supera los 5 MB", "file", 413);
+    if (file.size > MAX_BYTES)
+      return fail("El archivo supera los 5 MB", "file", 413);
 
     const key = `recipe-${crypto.randomUUID()}.${ext}`;
     const bytes = await file.arrayBuffer();
@@ -42,10 +43,7 @@ export const uploads = new Hono<{ Bindings: Env }>()
     if (!obj) return fail("Not found", "key", 404);
     const headers = new Headers();
     obj.writeHttpMetadata(headers);
-    headers.set(
-      "Cache-Control",
-      "private, max-age=31536000, immutable",
-    );
+    headers.set("Cache-Control", "private, max-age=31536000, immutable");
     headers.set("etag", obj.httpEtag);
     return new Response(obj.body, { headers });
   });

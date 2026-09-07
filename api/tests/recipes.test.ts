@@ -167,7 +167,10 @@ describe("E2: recipe photo_path + tags", () => {
     expect(res.status).toBe(400);
     const r = await body(res);
     expect(r.field).toBe("photo_path");
-    const list = (await (await get("/api/recipes")).json()) as Record<string, unknown>[];
+    const list = (await (await get("/api/recipes")).json()) as Record<
+      string,
+      unknown
+    >[];
     expect(list.find((x) => x.name === "QA invalida")).toBeUndefined();
   });
 
@@ -221,7 +224,7 @@ describe("E2: recipe photo_path + tags", () => {
 });
 
 describe("photo_path vacío (re-review 13)", () => {
-  it("POST con photo_path \"\" persiste NULL, no string vacío", async () => {
+  it('POST con photo_path "" persiste NULL, no string vacío', async () => {
     const { post } = await import("./helpers");
     const res = await post("/api/recipes", {
       name: "Sin foto vacía",

@@ -4,7 +4,10 @@
 // field:"file"}) y preview por photo_path. description/servings salen null.
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { useRecipes, type RecipeInput } from "../components/recipes/use-recipes";
+import {
+  type RecipeInput,
+  useRecipes,
+} from "../components/recipes/use-recipes";
 
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
 
@@ -81,9 +84,18 @@ export function NuevaRecetaPage() {
     setDraft((d) => ({ ...d, [key]: value }));
 
   const toggleTag = (t: string) =>
-    set("tags", draft.tags.includes(t) ? draft.tags.filter((x) => x !== t) : [...draft.tags, t]);
+    set(
+      "tags",
+      draft.tags.includes(t)
+        ? draft.tags.filter((x) => x !== t)
+        : [...draft.tags, t],
+    );
 
-  const addChip = (key: "materials" | "tags", value: string, clear: () => void) => {
+  const addChip = (
+    key: "materials" | "tags",
+    value: string,
+    clear: () => void,
+  ) => {
     const v = value.trim();
     if (v && !draft[key].includes(v)) set(key, [...draft[key], v]);
     clear();
@@ -98,10 +110,13 @@ export function NuevaRecetaPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
-        method: "POST",
-        body: fd,
-      });
+      const { photo_path } = await apiFetch<{ photo_path: string }>(
+        "/api/uploads",
+        {
+          method: "POST",
+          body: fd,
+        },
+      );
       if (session !== uploadSessionRef.current) return; // la foto fue quitada mientras subía
       set("photo_path", photo_path);
       // Una selección resuelta invalida cualquier reintento pendiente.
@@ -116,7 +131,9 @@ export function NuevaRecetaPage() {
         setUploadError("Archivo no válido (tipo o tamaño). Elige otra imagen.");
       } else {
         pendingFileRef.current = file;
-        setUploadError("No se pudo conectar con el servidor. Se reintentará al guardar.");
+        setUploadError(
+          "No se pudo conectar con el servidor. Se reintentará al guardar.",
+        );
       }
     } finally {
       uploadingRef.current = false;
@@ -133,10 +150,13 @@ export function NuevaRecetaPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const { photo_path } = await apiFetch<{ photo_path: string }>("/api/uploads", {
-        method: "POST",
-        body: fd,
-      });
+      const { photo_path } = await apiFetch<{ photo_path: string }>(
+        "/api/uploads",
+        {
+          method: "POST",
+          body: fd,
+        },
+      );
       if (session !== uploadSessionRef.current) return ""; // invalidada: la foto fue quitada
       set("photo_path", photo_path);
       pendingFileRef.current = null;
@@ -182,21 +202,34 @@ export function NuevaRecetaPage() {
     if (ok) navigate("/recetario");
   };
 
-  const serverNameError = api.fieldError?.field === "name" ? api.fieldError.message : null;
+  const serverNameError =
+    api.fieldError?.field === "name" ? api.fieldError.message : null;
 
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Nueva receta</h1>
-        <button type="button" className="btn-primary" disabled={api.saving || uploading} onClick={save}>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={api.saving || uploading}
+          onClick={save}
+        >
           {api.saving || uploading ? "Guardando…" : "Guardar"}
         </button>
       </header>
 
       {api.fieldError && api.fieldError.field !== "name" && (
-        <div className="mb-4 rounded-lg bg-error/10 p-3 text-error" role="alert">
+        <div
+          className="mb-4 rounded-lg bg-error/10 p-3 text-error"
+          role="alert"
+        >
           {api.fieldError.message}{" "}
-          <button type="button" className="font-semibold underline" onClick={save}>
+          <button
+            type="button"
+            className="font-semibold underline"
+            onClick={save}
+          >
             Reintentar
           </button>
         </div>
@@ -208,7 +241,11 @@ export function NuevaRecetaPage() {
           <div className="card">
             {draft.photo_path ? (
               <>
-                <img src={photoSrc(draft.photo_path)} alt="Vista previa de la foto" className="h-40 w-full rounded-lg object-cover" />
+                <img
+                  src={photoSrc(draft.photo_path)}
+                  alt="Vista previa de la foto"
+                  className="h-40 w-full rounded-lg object-cover"
+                />
                 <button
                   type="button"
                   className="btn-secondary mt-2"
@@ -265,7 +302,9 @@ export function NuevaRecetaPage() {
             onChange={(e) => set("name", e.target.value)}
           />
           {(nameError ?? serverNameError) && (
-            <p className="mt-1 text-sm text-error">{nameError ?? serverNameError}</p>
+            <p className="mt-1 text-sm text-error">
+              {nameError ?? serverNameError}
+            </p>
           )}
         </section>
 
@@ -274,7 +313,11 @@ export function NuevaRecetaPage() {
           <ul className="flex flex-wrap gap-2">
             {BASE_TAGS.map((t) => (
               <li key={t}>
-                <button type="button" className={chip(draft.tags.includes(t))} onClick={() => toggleTag(t)}>
+                <button
+                  type="button"
+                  className={chip(draft.tags.includes(t))}
+                  onClick={() => toggleTag(t)}
+                >
                   {t}
                 </button>
               </li>
@@ -283,7 +326,11 @@ export function NuevaRecetaPage() {
               .filter((t) => !BASE_TAGS.includes(t))
               .map((t) => (
                 <li key={t}>
-                  <button type="button" className={chip(true)} onClick={() => toggleTag(t)}>
+                  <button
+                    type="button"
+                    className={chip(true)}
+                    onClick={() => toggleTag(t)}
+                  >
                     {t}
                   </button>
                 </li>
@@ -310,17 +357,40 @@ export function NuevaRecetaPage() {
           <h3 className="mb-2 font-semibold">Materiales</h3>
           <ul className="mb-2 flex flex-wrap gap-2">
             {draft.materials.map((m) => (
-              <li key={m} className="flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1">
+              <li
+                key={m}
+                className="flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1"
+              >
                 {m}
-                <button type="button" aria-label={`Quitar material ${m}`} onClick={() => set("materials", draft.materials.filter((x) => x !== m))}>
+                <button
+                  type="button"
+                  aria-label={`Quitar material ${m}`}
+                  onClick={() =>
+                    set(
+                      "materials",
+                      draft.materials.filter((x) => x !== m),
+                    )
+                  }
+                >
                   ✕
                 </button>
               </li>
             ))}
           </ul>
           <div className="flex gap-2">
-            <input aria-label="Nuevo material" className={field} value={material} onChange={(e) => setMaterial(e.target.value)} />
-            <button type="button" className="btn-secondary" onClick={() => addChip("materials", material, () => setMaterial(""))}>
+            <input
+              aria-label="Nuevo material"
+              className={field}
+              value={material}
+              onChange={(e) => setMaterial(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() =>
+                addChip("materials", material, () => setMaterial(""))
+              }
+            >
               Añadir material
             </button>
           </div>
@@ -336,7 +406,12 @@ export function NuevaRecetaPage() {
                   className={`${field} flex-1`}
                   placeholder="alimento"
                   value={row.food}
-                  onChange={(e) => set("ingredients", setRow(draft.ingredients, i, { food: e.target.value }))}
+                  onChange={(e) =>
+                    set(
+                      "ingredients",
+                      setRow(draft.ingredients, i, { food: e.target.value }),
+                    )
+                  }
                 />
                 <input
                   aria-label={`Ingrediente ${i + 1} cantidad`}
@@ -344,13 +419,25 @@ export function NuevaRecetaPage() {
                   type="number"
                   placeholder="cant."
                   value={row.quantity}
-                  onChange={(e) => set("ingredients", setRow(draft.ingredients, i, { quantity: e.target.value }))}
+                  onChange={(e) =>
+                    set(
+                      "ingredients",
+                      setRow(draft.ingredients, i, {
+                        quantity: e.target.value,
+                      }),
+                    )
+                  }
                 />
                 <select
                   aria-label={`Ingrediente ${i + 1} unidad`}
                   className={small}
                   value={row.unit}
-                  onChange={(e) => set("ingredients", setRow(draft.ingredients, i, { unit: e.target.value }))}
+                  onChange={(e) =>
+                    set(
+                      "ingredients",
+                      setRow(draft.ingredients, i, { unit: e.target.value }),
+                    )
+                  }
                 >
                   <option value="">—</option>
                   <option value="gr">gr</option>
@@ -361,7 +448,12 @@ export function NuevaRecetaPage() {
                   type="button"
                   aria-label={`Quitar ingrediente ${i + 1}`}
                   className={small}
-                  onClick={() => set("ingredients", draft.ingredients.filter((_, j) => j !== i))}
+                  onClick={() =>
+                    set(
+                      "ingredients",
+                      draft.ingredients.filter((_, j) => j !== i),
+                    )
+                  }
                 >
                   ✕
                 </button>
@@ -371,7 +463,12 @@ export function NuevaRecetaPage() {
           <button
             type="button"
             className="btn-secondary mt-2"
-            onClick={() => set("ingredients", [...draft.ingredients, { food: "", quantity: "", unit: "" }])}
+            onClick={() =>
+              set("ingredients", [
+                ...draft.ingredients,
+                { food: "", quantity: "", unit: "" },
+              ])
+            }
           >
             Añadir ingrediente
           </button>
@@ -382,12 +479,19 @@ export function NuevaRecetaPage() {
           <ol className="flex flex-col gap-2">
             {draft.steps.map((text, i) => (
               <li key={i} className="flex gap-2">
-                <span className="pt-2 font-semibold text-text-secondary">{i + 1}.</span>
+                <span className="pt-2 font-semibold text-text-secondary">
+                  {i + 1}.
+                </span>
                 <input
                   aria-label={`Paso ${i + 1}`}
                   className={`${field} flex-1`}
                   value={text}
-                  onChange={(e) => set("steps", draft.steps.map((s, j) => (j === i ? e.target.value : s)))}
+                  onChange={(e) =>
+                    set(
+                      "steps",
+                      draft.steps.map((s, j) => (j === i ? e.target.value : s)),
+                    )
+                  }
                 />
                 {i > 0 && (
                   <button
@@ -413,14 +517,23 @@ export function NuevaRecetaPage() {
                   type="button"
                   aria-label={`Quitar paso ${i + 1}`}
                   className={small}
-                  onClick={() => set("steps", draft.steps.filter((_, j) => j !== i))}
+                  onClick={() =>
+                    set(
+                      "steps",
+                      draft.steps.filter((_, j) => j !== i),
+                    )
+                  }
                 >
                   ✕
                 </button>
               </li>
             ))}
           </ol>
-          <button type="button" className="btn-secondary mt-2" onClick={() => set("steps", [...draft.steps, ""])}>
+          <button
+            type="button"
+            className="btn-secondary mt-2"
+            onClick={() => set("steps", [...draft.steps, ""])}
+          >
             Añadir paso
           </button>
         </section>

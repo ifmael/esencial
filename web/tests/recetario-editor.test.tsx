@@ -21,7 +21,6 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
-
 describe("editor: edit mode", () => {
   it("PUT replaces on save; cancel discards with zero writes", async () => {
     const recipe = makeRecipe({ id: 7 });
@@ -60,15 +59,21 @@ describe("editor: photo upload", () => {
     const server = makeServer([recipe]);
     vi.stubGlobal("fetch", server.fetchMock);
     renderAt("/recetario/7");
-    fireEvent.click(await screen.findByRole("button", { name: "Editar receta" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Editar receta" }),
+    );
     await screen.findByRole("dialog", { name: "Editar receta" });
 
     const input = document.getElementById("recipe-photo") as HTMLInputElement;
     expect(input).toBeDefined();
-    const png = new File([new Uint8Array([137, 80, 78, 71])], "f.png", { type: "image/png" });
+    const png = new File([new Uint8Array([137, 80, 78, 71])], "f.png", {
+      type: "image/png",
+    });
     fireEvent.change(input, { target: { files: [png] } });
 
-    await waitFor(() => expect(screen.getByAltText("Foto actual")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByAltText("Foto actual")).toBeDefined(),
+    );
     const up = server.calls.find((c) => c.url === "/api/uploads");
     expect(up?.method).toBe("POST");
 

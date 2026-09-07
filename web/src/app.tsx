@@ -52,9 +52,9 @@ function GuardedShell() {
   );
 }
 
-import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
-import { NuevaRecetaPage } from "./routes/nueva-receta";
 import { EjercicioDetailPage, EjerciciosPage } from "./routes/ejercicios";
+import { NuevaRecetaPage } from "./routes/nueva-receta";
+import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
 
 import { SesionPage } from "./routes/sesion";
 
