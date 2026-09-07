@@ -75,6 +75,12 @@ export function RecipeEditor({
     set("photo_path", "");
   };
 
+  const discardPendingUpload = () => {
+    uploadSessionRef.current += 1;
+    pendingFileRef.current = null;
+    setUploadError(null);
+  };
+
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
@@ -287,9 +293,16 @@ export function RecipeEditor({
                 </label>
               )}
               {uploadError && (
-                <p className="mt-2 text-sm text-error" role="alert">
-                  {uploadError}
-                </p>
+                <div className="mt-2 flex items-center gap-3" role="alert">
+                  <p className="text-sm text-error">{uploadError}</p>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={discardPendingUpload}
+                  >
+                    Descartar
+                  </button>
+                </div>
               )}
             </div>
           </div>
