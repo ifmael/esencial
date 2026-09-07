@@ -63,13 +63,17 @@ export function NuevaRecetaPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadingRef = useRef(false);
   const pendingFileRef = useRef<File | null>(null);
-  // Id de la selección activa: "Quitar foto" lo incrementa y las respuestas
-  // de subidas anteriores (en vuelo o retenidas) se descartan.
+  // Id de la selección activa: cualquier invalidación lo incrementa y las
+  // respuestas de subidas anteriores (en vuelo o retenidas) se descartan.
   const uploadSessionRef = useRef(0);
+  // Distingue la ELIMINACIÓN explícita (Quitar foto) del mero descarte del
+  // reintento: solo la primera vacía la foto.
+  const photoRemovedRef = useRef(false);
 
   const removePhoto = () => {
     uploadSessionRef.current += 1;
     pendingFileRef.current = null;
+    photoRemovedRef.current = true;
     setUploadError(null);
     set("photo_path", "");
   };
@@ -104,6 +108,7 @@ export function NuevaRecetaPage() {
   const onFile = async (file: File) => {
     if (uploadingRef.current) return;
     const session = ++uploadSessionRef.current;
+    photoRemovedRef.current = false; // nueva selección: la eliminación previa ya no aplica
     uploadingRef.current = true;
     setUploadError(null);
     setUploading(true);
@@ -157,13 +162,19 @@ export function NuevaRecetaPage() {
           body: fd,
         },
       );
-      if (session !== uploadSessionRef.current) return ""; // invalidada: la foto fue quitada
+      if (session !== uploadSessionRef.current) {
+        // Invalidada. Si fue ELIMINACIÓN explícita, "" (sin foto).
+        // Si solo se descartó el reintento, conservar la foto actual.
+        return photoRemovedRef.current ? "" : draft.photo_path;
+      }
       set("photo_path", photo_path);
       pendingFileRef.current = null;
       setUploadError(null);
       return photo_path;
     } catch {
-      if (session !== uploadSessionRef.current) return ""; // invalidada: la foto fue quitada
+      if (session !== uploadSessionRef.current) {
+        return photoRemovedRef.current ? "" : draft.photo_path;
+      }
       setUploadError("No se pudo subir el archivo. Inténtalo de nuevo.");
       return null;
     } finally {
