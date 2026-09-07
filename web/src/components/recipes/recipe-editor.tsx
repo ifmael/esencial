@@ -55,6 +55,8 @@ export function RecipeEditor({
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() => fromRecipe(recipe));
+  const draftRef = useRef(draft);
+  draftRef.current = draft; // lectura fresca tras cualquier await
   const [nameError, setNameError] = useState<string | null>(null);
   const [material, setMaterial] = useState("");
   const [tag, setTag] = useState("");
@@ -177,20 +179,20 @@ export function RecipeEditor({
   };
 
   const payload = (photoPath: string | null): RecipeInput => ({
-    name: draft.name.trim(),
+    name: draftRef.current.name.trim(),
     description: draft.description.trim() || null,
     servings: draft.servings.trim() ? Number(draft.servings) : null,
     photo_path: photoPath || null,
-    ingredients: draft.ingredients
+    ingredients: draftRef.current.ingredients
       .filter((i) => i.food.trim())
       .map((i) => ({
         food: i.food.trim(),
         quantity: i.quantity.trim() ? Number(i.quantity) : null,
         unit: i.unit.trim() || null,
       })),
-    steps: draft.steps.map((s) => s.trim()).filter(Boolean),
-    materials: draft.materials,
-    tags: draft.tags,
+    steps: draftRef.current.steps.map((s) => s.trim()).filter(Boolean),
+    materials: draftRef.current.materials,
+    tags: draftRef.current.tags,
   });
 
   const save = async () => {
@@ -313,7 +315,11 @@ export function RecipeEditor({
                   </button>
                 </div>
               ) : (
-                <label className="btn-secondary inline-block cursor-pointer">
+                <label
+                  className={`btn-secondary inline-block cursor-pointer ${
+                    uploading ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
                   Subir foto
                   <input
                     id="recipe-photo"
@@ -321,6 +327,7 @@ export function RecipeEditor({
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     className="hidden"
+                    disabled={uploading}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       e.target.value = "";
