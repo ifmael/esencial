@@ -7,7 +7,10 @@ import { useNavigate, useSearchParams } from "react-router";
 export function LoginPage() {
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<{ field?: string; message: string } | null>(null);
+  const [error, setError] = useState<{
+    field?: string;
+    message: string;
+  } | null>(null);
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
@@ -28,11 +31,17 @@ export function LoginPage() {
       }
       setError(
         res.status === 429
-          ? { field: "login", message: "Demasiados intentos. Espera un momento." }
+          ? {
+              field: "login",
+              message: "Demasiados intentos. Espera un momento.",
+            }
           : { field: "password", message: "Contraseña incorrecta" },
       );
     } catch {
-      setError({ field: "login", message: "No se pudo conectar. Inténtalo otra vez." });
+      setError({
+        field: "login",
+        message: "No se pudo conectar. Inténtalo otra vez.",
+      });
     } finally {
       setPending(false);
     }

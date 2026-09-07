@@ -10,7 +10,11 @@ export function json(data: unknown, status = 200): Response {
 }
 
 /** `json` plus a Set-Cookie header (Hono's setCookie is lost on returned Responses). */
-export function jsonWithCookie(data: unknown, cookie: string, status = 200): Response {
+export function jsonWithCookie(
+  data: unknown,
+  cookie: string,
+  status = 200,
+): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "content-type": "application/json", "set-cookie": cookie },
@@ -24,7 +28,10 @@ export function fail(error: string, field?: string, status = 400): Response {
 export type Validated<T> = { ok: true; data: T } | { ok: false; res: Response };
 
 /** Read + Zod-parse a JSON request body; fail closed with {error, field}. */
-export async function readValidated<T>(req: Request, schema: ZodType<T>): Promise<Validated<T>> {
+export async function readValidated<T>(
+  req: Request,
+  schema: ZodType<T>,
+): Promise<Validated<T>> {
   let raw: unknown;
   try {
     raw = await req.json();
@@ -34,8 +41,14 @@ export async function readValidated<T>(req: Request, schema: ZodType<T>): Promis
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    const field = issue && issue.path.length > 0 ? issue.path.map(String).join(".") : undefined;
-    return { ok: false, res: fail(issue ? issue.message : "Invalid input", field) };
+    const field =
+      issue && issue.path.length > 0
+        ? issue.path.map(String).join(".")
+        : undefined;
+    return {
+      ok: false,
+      res: fail(issue ? issue.message : "Invalid input", field),
+    };
   }
   return { ok: true, data: parsed.data };
 }

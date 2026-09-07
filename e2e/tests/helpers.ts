@@ -1,4 +1,4 @@
-import { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext } from "@playwright/test";
 
 /** POST /api/auth/login with dev password; returns raw response. */
 export function login(request: APIRequestContext, password: string) {

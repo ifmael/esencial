@@ -15,7 +15,8 @@ export function isoWeekOf(date: Date): string {
   const thu = new Date(date.getTime());
   thu.setUTCDate(thu.getUTCDate() - ((thu.getUTCDay() + 6) % 7) + 3);
   const year = thu.getUTCFullYear();
-  const week = Math.floor((thu.getTime() - firstIsoMonday(year).getTime()) / WEEK_MS) + 1;
+  const week =
+    Math.floor((thu.getTime() - firstIsoMonday(year).getTime()) / WEEK_MS) + 1;
   return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
@@ -26,6 +27,8 @@ export function currentIsoWeek(): string {
 /** shiftIsoWeek("2026-W53", 1) === "2027-W01"; year boundaries handled. */
 export function shiftIsoWeek(isoWeek: string, delta: number): string {
   const [year, week] = isoWeek.split("-W").map(Number);
-  const monday = new Date(firstIsoMonday(year).getTime() + (week - 1 + delta) * WEEK_MS);
+  const monday = new Date(
+    firstIsoMonday(year).getTime() + (week - 1 + delta) * WEEK_MS,
+  );
   return isoWeekOf(monday);
 }

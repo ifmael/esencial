@@ -5,22 +5,22 @@
 // /login (run_worker_first makes the Worker see asset requests too).
 import { Hono } from "hono";
 import type { Env } from "./db";
-import { json, dbFailure } from "./http";
-import { securityHeaders, authGuard, pageGuard } from "./middleware";
-import { recipes } from "./routes/recipes";
-import { exercises } from "./routes/exercises";
-import { templates } from "./routes/templates";
-import { mealPlan } from "./routes/meal-plan";
-import { planSessions } from "./routes/plan-sessions";
-import { workoutLogs } from "./routes/workout-logs";
-import { notes } from "./routes/notes";
-import { shoppingList } from "./routes/shopping-list";
-import { day } from "./routes/day";
+import { dbFailure, json } from "./http";
+import { authGuard, pageGuard, securityHeaders } from "./middleware";
 import { authRoutes } from "./routes/auth";
+import { day } from "./routes/day";
+import { exercises } from "./routes/exercises";
+import { mealPlan } from "./routes/meal-plan";
+import { notes } from "./routes/notes";
+import { planSessions } from "./routes/plan-sessions";
+import { recipes } from "./routes/recipes";
+import { shoppingList } from "./routes/shopping-list";
+import { templates } from "./routes/templates";
+import { workoutLogs } from "./routes/workout-logs";
 
 export const api = new Hono<{ Bindings: Env }>()
   // TEMP debug: env presence probe (no value disclosure).
-.get("/health", (c) => json({ ok: true }))
+  .get("/health", () => json({ ok: true }))
   .route("/auth", authRoutes())
   .route("/recipes", recipes)
   .route("/exercises", exercises)
@@ -44,6 +44,6 @@ const app = new Hono<{ Bindings: Env }>()
     const asset = await c.env.ASSETS.fetch(c.req.raw);
     return new Response(asset.body, asset);
   })
-  .onError((err, c) => dbFailure(err));
+  .onError((err) => dbFailure(err));
 
 export default app;

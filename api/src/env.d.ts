@@ -8,4 +8,3 @@ declare namespace Cloudflare {
     PASSWORD_HASH?: string;
   }
 }
-

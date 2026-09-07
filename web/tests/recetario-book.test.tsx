@@ -1,6 +1,13 @@
 // E2 tasks 2.1–2.3: /recetario cards, loading/empty/error+retry, client search.
+
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { App } from "../src/app";
 import { makeRecipe, makeServer } from "./fixtures";
 
@@ -27,7 +34,11 @@ describe("/recetario book", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (String(url).includes("/api/auth/status")) return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers: { "content-type": "application/json" } });
+        if (String(url).includes("/api/auth/status"))
+          return new Response(JSON.stringify({ authenticated: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
         return pending;
       }),
     );
@@ -47,7 +58,9 @@ describe("/recetario book", () => {
   it("empty state invites creating the first recipe", async () => {
     vi.stubGlobal("fetch", makeServer([]).fetchMock);
     renderAt("/recetario");
-    expect(await screen.findByText("Aún no hay recetas. ¡Crea la primera!")).toBeDefined();
+    expect(
+      await screen.findByText("Aún no hay recetas. ¡Crea la primera!"),
+    ).toBeDefined();
   });
 
   it("API error shows an error card with working retry", async () => {
@@ -68,15 +81,21 @@ describe("/recetario book", () => {
     await screen.findByText("Arroz con pollo");
     const gets = server.calls.filter((c) => c.method === "GET").length;
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar recetas" }), {
-      target: { value: "arroz" },
-    });
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Buscar recetas" }),
+      {
+        target: { value: "arroz" },
+      },
+    );
     expect(screen.queryByText("Ensalada")).toBeNull();
     expect(screen.getByText("Arroz con pollo")).toBeDefined();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar recetas" }), {
-      target: { value: "" },
-    });
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Buscar recetas" }),
+      {
+        target: { value: "" },
+      },
+    );
     expect(screen.getByText("Ensalada")).toBeDefined();
     expect(server.calls.filter((c) => c.method === "GET").length).toBe(gets);
   });
@@ -85,9 +104,12 @@ describe("/recetario book", () => {
     vi.stubGlobal("fetch", makeServer(three).fetchMock);
     renderAt("/recetario");
     await screen.findByText("Arroz con pollo");
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar recetas" }), {
-      target: { value: "cena" },
-    });
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Buscar recetas" }),
+      {
+        target: { value: "cena" },
+      },
+    );
     expect(screen.getByText("Ensalada")).toBeDefined();
     expect(screen.queryByText("Gazpacho")).toBeNull();
   });

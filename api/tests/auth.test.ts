@@ -1,11 +1,12 @@
 // E7 tasks 2.1–2.5: login/logout/status endpoints + in-memory rate limit.
-import { describe, expect, it, vi } from "vitest";
+
 import { env } from "cloudflare:test";
 import { Hono } from "hono";
-import app from "../src/index";
-import { authRoutes } from "../src/routes/auth";
-import { createLoginLimiter } from "../src/rate-limit";
+import { describe, expect, it, vi } from "vitest";
 import { SESSION_COOKIE, verifyPassword } from "../src/auth";
+import app from "../src/index";
+import { createLoginLimiter } from "../src/rate-limit";
+import { authRoutes } from "../src/routes/auth";
 
 const PASSWORD = "test-password-123";
 
@@ -30,14 +31,21 @@ function loginAt(path: string, password: unknown, ip?: string) {
 
 /** App with injected limiter/clock (and optional verify spy) for DI tests. */
 function isolated(opts: Parameters<typeof authRoutes>[0] = {}) {
-  return new Hono<{ Bindings: typeof env }>().route("/api/auth", authRoutes(opts));
+  return new Hono<{ Bindings: typeof env }>().route(
+    "/api/auth",
+    authRoutes(opts),
+  );
 }
 
 describe("POST /api/auth/login", () => {
   it("200 + HttpOnly/Secure/SameSite=Lax/Path=/ session cookie on correct password", async () => {
     const res = await app.request(
       "https://esencial.test/api/auth/login",
-      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: PASSWORD }) },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: PASSWORD }),
+      },
       env,
     );
     expect(res.status).toBe(200);
@@ -60,7 +68,11 @@ describe("POST /api/auth/login", () => {
     const loginVia = (origin: string) =>
       app.request(
         `${origin}/api/auth/login`,
-        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: PASSWORD }) },
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ password: PASSWORD }),
+        },
         env,
       );
     const http = await loginVia("http://127.0.0.1:8787");
@@ -76,13 +88,20 @@ describe("POST /api/auth/login", () => {
     const res = await loginAt("/api/auth/login", "wrong-" + Math.random());
     expect(res.status).toBe(401);
     expect(res.headers.get("set-cookie")).toBeNull();
-    expect(await body(res)).toEqual({ error: "Invalid credentials", field: "password" });
+    expect(await body(res)).toEqual({
+      error: "Invalid credentials",
+      field: "password",
+    });
   });
 
   it("400 { error, field } on unparseable or schema-invalid body — hash never called", async () => {
     const bad = await app.request(
       "http://localhost/api/auth/login",
-      { method: "POST", headers: { "content-type": "application/json" }, body: "{" },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      },
       env,
     );
     expect(bad.status).toBe(400);
@@ -90,7 +109,11 @@ describe("POST /api/auth/login", () => {
 
     const noPassword = await app.request(
       "http://localhost/api/auth/login",
-      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}) },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      },
       env,
     );
     expect(noPassword.status).toBe(400);
@@ -99,7 +122,11 @@ describe("POST /api/auth/login", () => {
     const routes = isolated({ verify });
     const res = await routes.request(
       "http://localhost/api/auth/login",
-      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nope: 1 }) },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ nope: 1 }),
+      },
       env,
     );
     expect(res.status).toBe(400);
@@ -129,13 +156,20 @@ describe("POST /api/auth/logout + GET /api/auth/status", () => {
 
     const login = await loginAt("/api/auth/login", PASSWORD);
     const cookie = (login.headers.get("set-cookie") as string).split(";")[0];
-    const yes = await app.request("http://localhost/api/auth/status", { headers: { cookie } }, env);
+    const yes = await app.request(
+      "http://localhost/api/auth/status",
+      { headers: { cookie } },
+      env,
+    );
     expect(yes.status).toBe(200);
     expect(await body(yes)).toEqual({ authenticated: true });
 
     // flip one character inside the signed value
     const i = cookie.indexOf(".") + 1;
-    const tamperedCookie = cookie.slice(0, i) + (cookie[i] === "1" ? "2" : "1") + cookie.slice(i + 1);
+    const tamperedCookie =
+      cookie.slice(0, i) +
+      (cookie[i] === "1" ? "2" : "1") +
+      cookie.slice(i + 1);
     const tampered = await app.request(
       "http://localhost/api/auth/status",
       { headers: { cookie: tamperedCookie } },
@@ -160,12 +194,19 @@ describe("POST /api/auth/logout + GET /api/auth/status", () => {
 });
 
 describe("login rate limit (5 failures / 15 min per IP)", () => {
-  function fromIp(a: ReturnType<typeof isolated>, password: string, ip?: string) {
+  function fromIp(
+    a: ReturnType<typeof isolated>,
+    password: string,
+    ip?: string,
+  ) {
     return a.request(
       "http://localhost/api/auth/login",
       {
         method: "POST",
-        headers: { "content-type": "application/json", ...(ip ? { "CF-Connecting-IP": ip } : {}) },
+        headers: {
+          "content-type": "application/json",
+          ...(ip ? { "CF-Connecting-IP": ip } : {}),
+        },
         body: JSON.stringify({ password }),
       },
       env,
@@ -174,13 +215,20 @@ describe("login rate limit (5 failures / 15 min per IP)", () => {
 
   it("6th attempt is 429 even with the correct password; success resets; window reopens", async () => {
     let now = 1_000_000;
-    const a = isolated({ now: () => now, limiter: createLoginLimiter(() => now) });
-    for (let i = 0; i < 5; i++) expect((await fromIp(a, "nope", "1.2.3.4")).status).toBe(401);
+    const a = isolated({
+      now: () => now,
+      limiter: createLoginLimiter(() => now),
+    });
+    for (let i = 0; i < 5; i++)
+      expect((await fromIp(a, "nope", "1.2.3.4")).status).toBe(401);
 
     const blocked = await fromIp(a, PASSWORD, "1.2.3.4");
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get("set-cookie")).toBeNull();
-    expect(await body(blocked)).toEqual({ error: "Too many attempts", field: "login" });
+    expect(await body(blocked)).toEqual({
+      error: "Too many attempts",
+      field: "login",
+    });
 
     // A different IP is unaffected.
     expect((await fromIp(a, PASSWORD, "9.9.9.9")).status).toBe(200);
@@ -190,11 +238,16 @@ describe("login rate limit (5 failures / 15 min per IP)", () => {
     expect((await fromIp(a, "nope", "1.2.3.4")).status).toBe(401);
 
     // 4 failures + correct attempt → success (threshold is EXCEEDED failures).
-    const b = isolated({ now: () => now, limiter: createLoginLimiter(() => now) });
-    for (let i = 0; i < 4; i++) expect((await fromIp(b, "nope", "5.5.5.5")).status).toBe(401);
+    const b = isolated({
+      now: () => now,
+      limiter: createLoginLimiter(() => now),
+    });
+    for (let i = 0; i < 4; i++)
+      expect((await fromIp(b, "nope", "5.5.5.5")).status).toBe(401);
     expect((await fromIp(b, PASSWORD, "5.5.5.5")).status).toBe(200);
     // The success reset the counter: 4 more failures still pass.
-    for (let i = 0; i < 4; i++) expect((await fromIp(b, "nope", "5.5.5.5")).status).toBe(401);
+    for (let i = 0; i < 4; i++)
+      expect((await fromIp(b, "nope", "5.5.5.5")).status).toBe(401);
     expect((await fromIp(b, PASSWORD, "5.5.5.5")).status).toBe(200);
   });
 
@@ -225,5 +278,7 @@ describe("createLoginLimiter unit", () => {
 // Wiring sanity: the digest shipped in wrangler.test.toml really verifies the
 // password these tests log in with.
 it("test env PASSWORD_HASH matches test-password-123", async () => {
-  expect(await verifyPassword(env.PASSWORD_HASH as string, PASSWORD)).toBe(true);
+  expect(await verifyPassword(env.PASSWORD_HASH as string, PASSWORD)).toBe(
+    true,
+  );
 });

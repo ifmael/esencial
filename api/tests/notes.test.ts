@@ -14,7 +14,10 @@ describe("/api/notes/:date", () => {
     expect(res.status).toBe(200);
     const got = await get("/api/notes/2026-09-02");
     expect(got.status).toBe(200);
-    expect(await got.json()).toEqual({ date: "2026-09-02", text: "dormí bien" });
+    expect(await got.json()).toEqual({
+      date: "2026-09-02",
+      text: "dormí bien",
+    });
   });
 
   it("re-saving replaces the text (one note per day)", async () => {

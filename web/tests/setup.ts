@@ -24,4 +24,7 @@ function withAuthProbe(mock: unknown): unknown {
 
 const origStubGlobal = vi.stubGlobal;
 vi.stubGlobal = ((key: string, value: unknown) =>
-  origStubGlobal(key, key === "fetch" ? withAuthProbe(value) : value)) as typeof vi.stubGlobal;
+  origStubGlobal(
+    key,
+    key === "fetch" ? withAuthProbe(value) : value,
+  )) as typeof vi.stubGlobal;

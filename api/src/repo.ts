@@ -3,17 +3,31 @@
 
 export type Row = Record<string, unknown>;
 
-export async function rows(db: D1Database, sql: string, ...args: unknown[]): Promise<Row[]> {
-  const { results } = await db.prepare(sql).bind(...(args as never[])).all<Row>();
+export async function rows(
+  db: D1Database,
+  sql: string,
+  ...args: unknown[]
+): Promise<Row[]> {
+  const { results } = await db
+    .prepare(sql)
+    .bind(...(args as never[]))
+    .all<Row>();
   return results ?? [];
 }
 
-export async function row(db: D1Database, sql: string, ...args: unknown[]): Promise<Row | undefined> {
+export async function row(
+  db: D1Database,
+  sql: string,
+  ...args: unknown[]
+): Promise<Row | undefined> {
   return (await rows(db, sql, ...args))[0];
 }
 
 /** Load one recipe with ordered ingredients, 1..N numbered steps, material names. */
-export async function loadRecipe(db: D1Database, id: number): Promise<Row | null> {
+export async function loadRecipe(
+  db: D1Database,
+  id: number,
+): Promise<Row | null> {
   const head = await row(
     db,
     "SELECT id, name, description, servings, photo_path FROM recipes WHERE id = ?",
@@ -33,15 +47,26 @@ export async function loadRecipe(db: D1Database, id: number): Promise<Row | null
     )
   ).map((s, i) => ({ ...s, step: i + 1 }));
   head.materials = (
-    await rows(db, "SELECT name FROM recipe_materials WHERE recipe_id = ? ORDER BY id", id)
+    await rows(
+      db,
+      "SELECT name FROM recipe_materials WHERE recipe_id = ? ORDER BY id",
+      id,
+    )
   ).map((m) => String(m.name));
   head.tags = (
-    await rows(db, "SELECT tag FROM recipe_tags WHERE recipe_id = ? ORDER BY tag", id)
+    await rows(
+      db,
+      "SELECT tag FROM recipe_tags WHERE recipe_id = ? ORDER BY tag",
+      id,
+    )
   ).map((t) => String(t.tag));
   return head;
 }
 
-export async function loadExercise(db: D1Database, id: number): Promise<Row | null> {
+export async function loadExercise(
+  db: D1Database,
+  id: number,
+): Promise<Row | null> {
   const head = await row(
     db,
     "SELECT id, name, description, setup_cues AS setupCues, technique_url AS techniqueUrl, steps FROM exercises WHERE id = ?",
@@ -50,12 +75,19 @@ export async function loadExercise(db: D1Database, id: number): Promise<Row | nu
   if (!head) return null;
   if (head.steps != null) head.steps = JSON.parse(String(head.steps));
   head.tags = (
-    await rows(db, "SELECT tag FROM exercise_tags WHERE exercise_id = ? ORDER BY tag", id)
+    await rows(
+      db,
+      "SELECT tag FROM exercise_tags WHERE exercise_id = ? ORDER BY tag",
+      id,
+    )
   ).map((t) => String(t.tag));
   return head;
 }
 
-export async function loadTemplate(db: D1Database, id: number): Promise<Row | null> {
+export async function loadTemplate(
+  db: D1Database,
+  id: number,
+): Promise<Row | null> {
   const head = await row(
     db,
     "SELECT id, name, rotation_index AS rotationIndex FROM session_templates WHERE id = ?",

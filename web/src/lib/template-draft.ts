@@ -16,13 +16,22 @@ export type Draft = {
   entries: DraftEntry[];
 };
 
-export type Targets = Pick<DraftEntry, "targetSets" | "targetRepsMin" | "targetRepsMax">;
+export type Targets = Pick<
+  DraftEntry,
+  "targetSets" | "targetRepsMin" | "targetRepsMax"
+>;
 
 let keySeq = 0;
 export const newEntryKey = (): string => `d${++keySeq}`;
 
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
-  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length)
+  if (
+    from === to ||
+    from < 0 ||
+    to < 0 ||
+    from >= list.length ||
+    to >= list.length
+  )
     return [...list];
   const out = [...list];
   const [item] = out.splice(from, 1);
@@ -40,7 +49,11 @@ export const removeEntry = (draft: Draft, key: string): Draft => ({
   entries: draft.entries.filter((e) => e.key !== key),
 });
 
-export const setTargets = (draft: Draft, key: string, targets: Targets): Draft => ({
+export const setTargets = (
+  draft: Draft,
+  key: string,
+  targets: Targets,
+): Draft => ({
   ...draft,
   entries: draft.entries.map((e) => (e.key === key ? { ...e, ...targets } : e)),
 });
@@ -80,7 +93,10 @@ export function buildTemplatePayload(draft: Draft): TemplatePayload {
 }
 
 /** "B — Tirón" → "B — Tirón (copia)", then "(copia 2)", "(copia 3)"… */
-export function nextCopyName(source: string, existing: readonly string[]): string {
+export function nextCopyName(
+  source: string,
+  existing: readonly string[],
+): string {
   const base = `${source} (copia)`;
   if (!existing.includes(base)) return base;
   let n = 2;

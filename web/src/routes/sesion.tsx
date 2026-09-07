@@ -3,7 +3,7 @@
 // GET /api/workout-logs/:date. Reads compose existing endpoints only (D2).
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { apiGet, apiSend, ApiError } from "../lib/api";
+import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
   defaultSetCount,
   formatLast,
@@ -102,24 +102,33 @@ export function useWorkoutDay(date: string) {
       const template = await apiGet<{ exercises: TemplateExercise[] }>(
         `/api/templates/${session.templateId}`,
       );
-      const exercises = template.exercises.sort((a, b) => a.position - b.position);
+      const exercises = template.exercises.sort(
+        (a, b) => a.position - b.position,
+      );
       let historyFailed = false;
       const drafts: DraftExercise[] = await Promise.all(
         exercises.map(async (te) => {
           let last: LastValue | null = null;
           try {
-            last = (await apiGet<{ last: LastValue | null }>(`/api/exercises/${te.exerciseId}/last`)).last;
+            last = (
+              await apiGet<{ last: LastValue | null }>(
+                `/api/exercises/${te.exerciseId}/last`,
+              )
+            ).last;
           } catch {
             historyFailed = true;
           }
           return {
             te,
             last,
-            sets: Array.from({ length: defaultSetCount(te.targetSets) }, () => ({
-              weightKg: last?.weightKg ?? null,
-              reps: last?.reps ?? null,
-              done: false,
-            })),
+            sets: Array.from(
+              { length: defaultSetCount(te.targetSets) },
+              () => ({
+                weightKg: last?.weightKg ?? null,
+                reps: last?.reps ?? null,
+                done: false,
+              }),
+            ),
           };
         }),
       );
@@ -134,7 +143,8 @@ export function useWorkoutDay(date: string) {
         submitError: null,
       });
     } catch (err) {
-      const message = err instanceof ApiError ? err.error : "No se pudo cargar el día";
+      const message =
+        err instanceof ApiError ? err.error : "No se pudo cargar el día";
       setView({ kind: "error", message });
     }
   }, [date]);
@@ -143,8 +153,11 @@ export function useWorkoutDay(date: string) {
     void load();
   }, [load]);
 
-  const patchDraft = (patch: (v: Extract<View, { kind: "draft" }>) => Partial<Extract<View, { kind: "draft" }>>) =>
-    setView((v) => (v.kind === "draft" ? { ...v, ...patch(v) } : v));
+  const patchDraft = (
+    patch: (
+      v: Extract<View, { kind: "draft" }>,
+    ) => Partial<Extract<View, { kind: "draft" }>>,
+  ) => setView((v) => (v.kind === "draft" ? { ...v, ...patch(v) } : v));
 
   const mutateSet = (
     teId: number,
@@ -155,14 +168,26 @@ export function useWorkoutDay(date: string) {
       exercises: v.exercises.map((ex) =>
         ex.te.id !== teId
           ? ex
-          : { ...ex, sets: ex.sets.map((s, i) => (i === setIdx ? patch(s) : s)) },
+          : {
+              ...ex,
+              sets: ex.sets.map((s, i) => (i === setIdx ? patch(s) : s)),
+            },
       ),
     }));
 
-  const setDraftValue = (teId: number, setIdx: number, field: "weightKg" | "reps", value: string) =>
-    mutateSet(teId, setIdx, (s) => ({ ...s, [field]: numOrNull(value) }));
+  const setDraftValue = (
+    teId: number,
+    setIdx: number,
+    field: "weightKg" | "reps",
+    value: string,
+  ) => mutateSet(teId, setIdx, (s) => ({ ...s, [field]: numOrNull(value) }));
 
-  const stepValue = (teId: number, setIdx: number, field: "weightKg" | "reps", delta: number) =>
+  const stepValue = (
+    teId: number,
+    setIdx: number,
+    field: "weightKg" | "reps",
+    delta: number,
+  ) =>
     mutateSet(teId, setIdx, (s) => ({
       ...s,
       [field]: Math.max(0, (s[field] ?? 0) + delta),
@@ -173,7 +198,8 @@ export function useWorkoutDay(date: string) {
 
   const setEffort = (effort: number) => patchDraft(() => ({ effort }));
   const setNote = (note: string) => patchDraft(() => ({ note }));
-  const toggleExpand = (teId: number) => setExpanded((m) => ({ ...m, [teId]: !m[teId] }));
+  const toggleExpand = (teId: number) =>
+    setExpanded((m) => ({ ...m, [teId]: !m[teId] }));
 
   /** Cerrar sesión: single in-flight POST; 201→B, 409→refetch into B, 400→banner + draft. */
   const close = () => {
@@ -184,17 +210,23 @@ export function useWorkoutDay(date: string) {
           effort: v.effort,
           note: noteOrNull(v.note),
           sets: v.exercises.flatMap((ex) =>
-            ex.sets.map((s, i): SetLogItem => ({
-              templateExerciseId: ex.te.id,
-              setIndex: i,
-              weightKg: s.weightKg,
-              reps: s.reps,
-              done: s.done,
-            })),
+            ex.sets.map(
+              (s, i): SetLogItem => ({
+                templateExerciseId: ex.te.id,
+                setIndex: i,
+                weightKg: s.weightKg,
+                reps: s.reps,
+                done: s.done,
+              }),
+            ),
           ),
         };
         try {
-          const log = await apiSend<LoggedDay>(`/api/workout-logs/${date}`, "POST", payload);
+          const log = await apiSend<LoggedDay>(
+            `/api/workout-logs/${date}`,
+            "POST",
+            payload,
+          );
           setView({ kind: "logged", session: v.session, log });
         } catch (err) {
           if (err instanceof ApiError && err.status === 409) {
@@ -206,28 +238,58 @@ export function useWorkoutDay(date: string) {
               /* fall through to the error banner below */
             }
           }
-          const field = err instanceof ApiError && err.field ? ` (${err.field})` : "";
-          const message = err instanceof ApiError ? err.error : "No se pudo cerrar la sesión";
-          patchDraft(() => ({ pending: false, submitError: `${message}${field}` }));
+          const field =
+            err instanceof ApiError && err.field ? ` (${err.field})` : "";
+          const message =
+            err instanceof ApiError ? err.error : "No se pudo cerrar la sesión";
+          patchDraft(() => ({
+            pending: false,
+            submitError: `${message}${field}`,
+          }));
         }
       })();
       return { ...v, pending: true, submitError: null };
     });
   };
 
-  return { view, expanded, setEffort, setNote, setDraftValue, stepValue, toggleDone, toggleExpand, close, reload: load };
+  return {
+    view,
+    expanded,
+    setEffort,
+    setNote,
+    setDraftValue,
+    stepValue,
+    toggleDone,
+    toggleExpand,
+    close,
+    reload: load,
+  };
 }
 
 // --- Small presentational pieces --------------------------------------------
 
-function Header({ date, templateName, logged }: { date: string; templateName: string; logged: boolean }) {
+function Header({
+  date,
+  templateName,
+  logged,
+}: {
+  date: string;
+  templateName: string;
+  logged: boolean;
+}) {
   return (
     <header className="mb-6">
       <div className="mb-2 flex items-center gap-3">
-        <Link to="/" aria-label="Volver al día" className="btn-secondary min-h-11 min-w-11">
+        <Link
+          to="/"
+          aria-label="Volver al día"
+          className="btn-secondary min-h-11 min-w-11"
+        >
           ←
         </Link>
-        <h1 className="text-2xl font-bold capitalize">{formatDateEs(parseDateEs(date))}</h1>
+        <h1 className="text-2xl font-bold capitalize">
+          {formatDateEs(parseDateEs(date))}
+        </h1>
       </div>
       <div className="flex items-center gap-2">
         <span className="font-semibold">{templateName}</span>
@@ -288,18 +350,27 @@ function EffortDots({
   onSelect?: (v: number) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label="Esfuerzo percibido" className="flex justify-between gap-2">
+    <div
+      role="radiogroup"
+      aria-label="Esfuerzo percibido"
+      className="flex justify-between gap-2"
+    >
       {EFFORT_LABELS.map((label, i) => {
         const value = i + 1;
         const filled = effort !== null && effort >= value;
         return (
-          <label key={value} className="flex min-h-11 flex-1 cursor-pointer flex-col items-center gap-1">
+          <label
+            key={value}
+            className="flex min-h-11 flex-1 cursor-pointer flex-col items-center gap-1"
+          >
             <span
               data-testid="effort-dot"
               data-filled={String(filled)}
               className={`min-h-11 min-w-11 rounded-full border-2 ${filled ? "border-primary bg-primary" : "border-border bg-surface"}`}
             />
-            <span className="text-[10px] leading-tight text-text-secondary">{label}</span>
+            <span className="text-[10px] leading-tight text-text-secondary">
+              {label}
+            </span>
             {onSelect && (
               <input
                 type="radio"
@@ -343,7 +414,9 @@ export function SesionPage() {
         <h1 className="text-2xl font-bold capitalize">
           {isValidDateStr(date) ? formatDateEs(parseDateEs(date)) : "Día"}
         </h1>
-        <div className="card text-text-secondary">Sin sesión asignada para este día.</div>
+        <div className="card text-text-secondary">
+          Sin sesión asignada para este día.
+        </div>
         <Link to="/plan-fuerza" className="btn-primary self-start">
           Planificar en Plan fuerza
         </Link>
@@ -360,7 +433,11 @@ export function SesionPage() {
         <div role="alert" className="card text-error">
           {view.message}
         </div>
-        <button type="button" className="btn-secondary self-start" onClick={() => void day.reload()}>
+        <button
+          type="button"
+          className="btn-secondary self-start"
+          onClick={() => void day.reload()}
+        >
           Reintentar
         </button>
       </div>
@@ -376,11 +453,20 @@ export function SesionPage() {
   if (view.kind === "logged")
     return (
       <div>
-        <Header date={date} templateName={view.log.template?.name ?? view.session?.templateName ?? ""} logged />
+        <Header
+          date={date}
+          templateName={
+            view.log.template?.name ?? view.session?.templateName ?? ""
+          }
+          logged
+        />
         <div className="flex flex-col gap-3">
           {Object.entries(
-            view.log.sets.reduce<Record<number, (SetLogItem & { exerciseName: string })[]>>((acc, s) => {
-              (acc[s.templateExerciseId] ??= []).push(s);
+            view.log.sets.reduce<
+              Record<number, (SetLogItem & { exerciseName: string })[]>
+            >((acc, s) => {
+              acc[s.templateExerciseId] ??= [];
+              acc[s.templateExerciseId].push(s);
               return acc;
             }, {}),
           ).map(([teId, sets]) => (
@@ -389,10 +475,17 @@ export function SesionPage() {
               <ul className="flex flex-col gap-1">
                 {sets.map((s) => (
                   <li key={s.setIndex} className="flex items-center gap-3">
-                    <span aria-hidden="true" className={s.done ? "text-primary" : "text-text-secondary"}>
+                    <span
+                      aria-hidden="true"
+                      className={
+                        s.done ? "text-primary" : "text-text-secondary"
+                      }
+                    >
                       {s.done ? "✓" : "○"}
                     </span>
-                    <span className="text-text-secondary">Serie {s.setIndex + 1}</span>
+                    <span className="text-text-secondary">
+                      Serie {s.setIndex + 1}
+                    </span>
                     <span className="font-medium">{formatSetText(s)}</span>
                   </li>
                 ))}
@@ -402,7 +495,9 @@ export function SesionPage() {
           <section className="card flex flex-col gap-3">
             <h2 className="font-semibold">Esfuerzo percibido</h2>
             <EffortDots effort={view.log.effort} />
-            {view.log.note && <p className="text-text-secondary">{view.log.note}</p>}
+            {view.log.note && (
+              <p className="text-text-secondary">{view.log.note}</p>
+            )}
           </section>
         </div>
       </div>
@@ -412,10 +507,15 @@ export function SesionPage() {
   const v = view;
   return (
     <div>
-      <Header date={date} templateName={v.session.templateName} logged={false} />
+      <Header
+        date={date}
+        templateName={v.session.templateName}
+        logged={false}
+      />
       {v.historyFailed && (
         <div role="status" className="card mb-3 text-pending-text">
-          No se pudo cargar el histórico de últimos pesos; puedes registrarlo igualmente a mano.
+          No se pudo cargar el histórico de últimos pesos; puedes registrarlo
+          igualmente a mano.
         </div>
       )}
       {v.submitError && (
@@ -431,7 +531,10 @@ export function SesionPage() {
             <section key={ex.te.id} className="card">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Link to={`/ejercicios/${ex.te.exerciseId}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link
+                    to={`/ejercicios/${ex.te.exerciseId}`}
+                    className="font-semibold text-primary underline-offset-4 hover:underline"
+                  >
                     {ex.te.exerciseName}
                   </Link>
                   <button
@@ -442,7 +545,11 @@ export function SesionPage() {
                   >
                     {open ? "Ocultar" : "Registrar series"}
                   </button>
-                  {helper && <span className="text-sm text-text-secondary">{helper}</span>}
+                  {helper && (
+                    <span className="text-sm text-text-secondary">
+                      {helper}
+                    </span>
+                  )}
                 </div>
                 {!open && (
                   <div className="flex gap-2">
@@ -470,19 +577,27 @@ export function SesionPage() {
                         checked={s.done}
                         onChange={() => day.toggleDone(ex.te.id, i)}
                       />
-                      <span className="w-16 text-text-secondary">Serie {i + 1}</span>
+                      <span className="w-16 text-text-secondary">
+                        Serie {i + 1}
+                      </span>
                       <Stepper
                         label={`${ex.te.exerciseName} serie ${i + 1} (kg)`}
                         value={s.weightKg}
                         step={2.5}
-                        onValue={(val) => day.setDraftValue(ex.te.id, i, "weightKg", val)}
-                        onStep={(d) => day.stepValue(ex.te.id, i, "weightKg", d)}
+                        onValue={(val) =>
+                          day.setDraftValue(ex.te.id, i, "weightKg", val)
+                        }
+                        onStep={(d) =>
+                          day.stepValue(ex.te.id, i, "weightKg", d)
+                        }
                       />
                       <Stepper
                         label={`${ex.te.exerciseName} serie ${i + 1} (reps)`}
                         value={s.reps}
                         step={1}
-                        onValue={(val) => day.setDraftValue(ex.te.id, i, "reps", val)}
+                        onValue={(val) =>
+                          day.setDraftValue(ex.te.id, i, "reps", val)
+                        }
                         onStep={(d) => day.stepValue(ex.te.id, i, "reps", d)}
                       />
                     </li>

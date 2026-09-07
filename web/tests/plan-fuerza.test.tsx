@@ -1,27 +1,85 @@
 // /plan-fuerza screen + template editor (E4 tasks 2.1-2.4, 3.1-3.7, 6.1).
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { App } from "../src/app";
-import { mockApi, type MockApi } from "./api-mock";
-import type { Exercise } from "../src/lib/exercises";
-import type { Template } from "../src/lib/templates";
-import type { TemplatePayload } from "../src/lib/template-draft";
 
-const press: Exercise = { id: 7, name: "Press banca", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["pecho"] };
-const remo: Exercise = { id: 8, name: "Remo", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["espalda"] };
-const sent: Exercise = { id: 9, name: "Sentadilla", description: null, setupCues: null, techniqueUrl: null, steps: null, tags: ["pierna"] };
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { App } from "../src/app";
+import type { Exercise } from "../src/lib/exercises";
+import type { TemplatePayload } from "../src/lib/template-draft";
+import type { Template } from "../src/lib/templates";
+import { type MockApi, mockApi } from "./api-mock";
+
+const press: Exercise = {
+  id: 7,
+  name: "Press banca",
+  description: null,
+  setupCues: null,
+  techniqueUrl: null,
+  steps: null,
+  tags: ["pecho"],
+};
+const remo: Exercise = {
+  id: 8,
+  name: "Remo",
+  description: null,
+  setupCues: null,
+  techniqueUrl: null,
+  steps: null,
+  tags: ["espalda"],
+};
+const sent: Exercise = {
+  id: 9,
+  name: "Sentadilla",
+  description: null,
+  setupCues: null,
+  techniqueUrl: null,
+  steps: null,
+  tags: ["pierna"],
+};
 
 const tplA = (): Template => ({
   id: 1,
   name: "A — Empuje",
   rotationIndex: 0,
   exercises: [
-    { id: 11, exerciseId: 7, position: 0, targetSets: 3, targetRepsMin: 8, targetRepsMax: 8, exerciseName: "Press banca" },
-    { id: 12, exerciseId: 8, position: 1, targetSets: null, targetRepsMin: null, targetRepsMax: null, exerciseName: "Remo" },
+    {
+      id: 11,
+      exerciseId: 7,
+      position: 0,
+      targetSets: 3,
+      targetRepsMin: 8,
+      targetRepsMax: 8,
+      exerciseName: "Press banca",
+    },
+    {
+      id: 12,
+      exerciseId: 8,
+      position: 1,
+      targetSets: null,
+      targetRepsMin: null,
+      targetRepsMax: null,
+      exerciseName: "Remo",
+    },
   ],
 });
-const tplB = (): Template => ({ id: 2, name: "B — Tirón", rotationIndex: 1, exercises: [] });
-const tplC = (): Template => ({ id: 3, name: "C — Piernas", rotationIndex: 2, exercises: [] });
+const tplB = (): Template => ({
+  id: 2,
+  name: "B — Tirón",
+  rotationIndex: 1,
+  exercises: [],
+});
+const tplC = (): Template => ({
+  id: 3,
+  name: "C — Piernas",
+  rotationIndex: 2,
+  exercises: [],
+});
 
 let api: MockApi;
 
@@ -41,7 +99,10 @@ function cardOf(name: string): HTMLElement {
 }
 
 beforeEach(() => {
-  api = mockApi({ templates: [tplA(), tplB(), tplC()], exercises: [press, remo, sent] });
+  api = mockApi({
+    templates: [tplA(), tplB(), tplC()],
+    exercises: [press, remo, sent],
+  });
 });
 afterEach(() => {
   cleanup();
@@ -68,7 +129,9 @@ describe("plan screen", () => {
     api = mockApi({ templates: [], exercises: [] });
     renderAt("/plan-fuerza");
     await screen.findByText(/primera plantilla/i);
-    expect(screen.getByRole("button", { name: "+ Nueva plantilla" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "+ Nueva plantilla" }),
+    ).toBeDefined();
   });
 
   it("API error shows a retry card; retry reloads", async () => {
@@ -78,12 +141,19 @@ describe("plan screen", () => {
       "fetch",
       vi.fn(async (url: string) => {
         // Guard probe must succeed so the page mounts; only /api/templates fails.
-        if (String(url).includes("/api/auth/status")) return new Response(JSON.stringify({ authenticated: true }), { status: 200, headers: { "content-type": "application/json" } });
+        if (String(url).includes("/api/auth/status"))
+          return new Response(JSON.stringify({ authenticated: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
         if (fail && String(url).includes("/api/templates")) {
           fail = false;
           throw new TypeError("Network error");
         }
-        return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
       }),
     );
     renderAt("/plan-fuerza");
@@ -96,11 +166,18 @@ describe("plan screen", () => {
     await openPlan();
     expect(screen.queryByText("3 series")).toBeNull();
     const before = api.calls.length;
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }),
+    );
     await waitFor(() => expect(screen.getByText("3 series")).toBeDefined());
     expect(api.calls.length).toBe(before);
-    expect(within(cardOf("A — Empuje")).getByText("Remo").closest("button")?.textContent).toBe("Remo");
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }));
+    expect(
+      within(cardOf("A — Empuje")).getByText("Remo").closest("button")
+        ?.textContent,
+    ).toBe("Remo");
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }),
+    );
     expect(screen.queryByText("3 series")).toBeNull();
   });
 
@@ -112,7 +189,9 @@ describe("plan screen", () => {
 
   it("row tap navigates to /ejercicios/:id", async () => {
     await openPlan();
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }),
+    );
     await screen.findByText("3 series");
     fireEvent.click(screen.getByRole("button", { name: /^Press banca/ }));
     expect(window.location.pathname).toBe("/ejercicios/7");
@@ -128,11 +207,15 @@ describe("template editor", () => {
 
   it("create: valid save → single POST 201, card appears, editor closes", async () => {
     await openEditor();
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "D — Movilidad" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "D — Movilidad" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
     const dialog = await screen.findByRole("dialog");
     const dlg = within(dialog);
-    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), { target: { value: "sent" } });
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
+      target: { value: "sent" },
+    });
     expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull(); // client-side filter
     expect(api.calls.filter((c) => c.url === "/api/exercises").length).toBe(1); // search hit no network
     fireEvent.click(dlg.getByRole("button", { name: /^Sentadilla$/ }));
@@ -141,7 +224,12 @@ describe("template editor", () => {
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
     expect(payloadAt(0).exercises).toEqual([
-      { exerciseId: 9, targetSets: null, targetRepsMin: null, targetRepsMax: null },
+      {
+        exerciseId: 9,
+        targetSets: null,
+        targetRepsMin: null,
+        targetRepsMax: null,
+      },
     ]);
     await screen.findByText("D — Movilidad");
     expect(screen.queryByLabelText("Nombre")).toBeNull();
@@ -161,10 +249,14 @@ describe("template editor", () => {
     expect(dlg.queryByRole("button", { name: /^Sentadilla$/ })).toBeNull();
 
     // search refines within the selected group
-    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), { target: { value: "zzz" } });
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
+      target: { value: "zzz" },
+    });
     expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
     expect(dlg.getByText(/sin ejercicios/i)).toBeDefined();
-    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), { target: { value: "" } });
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
+      target: { value: "" },
+    });
 
     fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
     expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
@@ -175,14 +267,20 @@ describe("template editor", () => {
 
   it("edit: pre-filled; rename + reorder + targets → single PUT", async () => {
     await openPlan();
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
+    );
     const name = await screen.findByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("A — Empuje");
     fireEvent.change(name, { target: { value: "A — Empuje y núcleo" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Bajar" })[0]); // Press moves down
-    fireEvent.change(screen.getAllByLabelText("Series")[1], { target: { value: "4" } }); // Press row
+    fireEvent.change(screen.getAllByLabelText("Series")[1], {
+      target: { value: "4" },
+    }); // Press row
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    await waitFor(() => expect(mutations().some((c) => c.method === "PUT")).toBe(true));
+    await waitFor(() =>
+      expect(mutations().some((c) => c.method === "PUT")).toBe(true),
+    );
     expect(api.calls.filter((c) => c.method === "PUT")).toHaveLength(1);
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/templates/1");
@@ -197,8 +295,12 @@ describe("template editor", () => {
   it("cancel discards the draft with zero mutation calls", async () => {
     await openPlan();
     const before = mutations().length;
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }));
-    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "basura" } });
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
+    );
+    fireEvent.change(await screen.findByLabelText("Nombre"), {
+      target: { value: "basura" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     await screen.findByText("A — Empuje");
     expect(mutations().length).toBe(before);
@@ -214,38 +316,63 @@ describe("template editor", () => {
 
   it("server duplicate name: 400 shown inline, draft preserved", async () => {
     await openEditor();
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "B — Tirón" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "B — Tirón" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await screen.findByText("Already exists");
-    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe("B — Tirón");
+    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe(
+      "B — Tirón",
+    );
   });
 
   it("target editors: sets/min/max land in the PUT payload and card", async () => {
     await openPlan();
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
+    );
     await screen.findByLabelText("Nombre");
-    fireEvent.change(screen.getAllByLabelText("Series")[0], { target: { value: "4" } });
-    fireEvent.change(screen.getAllByLabelText("Reps mín")[0], { target: { value: "6" } });
-    fireEvent.change(screen.getAllByLabelText("Reps máx")[0], { target: { value: "8" } });
+    fireEvent.change(screen.getAllByLabelText("Series")[0], {
+      target: { value: "4" },
+    });
+    fireEvent.change(screen.getAllByLabelText("Reps mín")[0], {
+      target: { value: "6" },
+    });
+    fireEvent.change(screen.getAllByLabelText("Reps máx")[0], {
+      target: { value: "8" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    await waitFor(() => expect(mutations().some((c) => c.method === "PUT")).toBe(true));
-    expect(payloadAt(0).exercises[0]).toEqual({ exerciseId: 7, targetSets: 4, targetRepsMin: 6, targetRepsMax: 8 });
+    await waitFor(() =>
+      expect(mutations().some((c) => c.method === "PUT")).toBe(true),
+    );
+    expect(payloadAt(0).exercises[0]).toEqual({
+      exerciseId: 7,
+      targetSets: 4,
+      targetRepsMin: 6,
+      targetRepsMax: 8,
+    });
     await screen.findByText("4 series");
   });
 
   it("remove entry from draft", async () => {
     await openPlan();
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
+    );
     await screen.findByLabelText("Nombre");
     fireEvent.click(screen.getAllByRole("button", { name: "Quitar" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    await waitFor(() => expect(mutations().some((c) => c.method === "PUT")).toBe(true));
+    await waitFor(() =>
+      expect(mutations().some((c) => c.method === "PUT")).toBe(true),
+    );
     expect(payloadAt(0).exercises.map((e) => e.exerciseId)).toEqual([8]);
   });
 
   it("duplicate: POST with source entries and (copia) name", async () => {
     await openPlan();
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Duplicar" }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Duplicar" }),
+    );
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     const copy = api.state.templates[3];
     expect(copy.name).toBe("A — Empuje (copia)");
@@ -257,18 +384,28 @@ describe("template editor", () => {
 
   it("delete with confirmation; cancel changes nothing", async () => {
     await openPlan();
-    fireEvent.click(within(cardOf("B — Tirón")).getByRole("button", { name: "Eliminar" }));
+    fireEvent.click(
+      within(cardOf("B — Tirón")).getByRole("button", { name: "Eliminar" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(screen.getByText("B — Tirón")).toBeDefined();
-    fireEvent.click(within(cardOf("B — Tirón")).getByRole("button", { name: "Eliminar" }));
+    fireEvent.click(
+      within(cardOf("B — Tirón")).getByRole("button", { name: "Eliminar" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
     await waitFor(() => expect(screen.queryByText("B — Tirón")).toBeNull());
-    expect(api.calls.some((c) => c.method === "DELETE" && c.url === "/api/templates/2")).toBe(true);
+    expect(
+      api.calls.some(
+        (c) => c.method === "DELETE" && c.url === "/api/templates/2",
+      ),
+    ).toBe(true);
   });
 
   it("pending contract: save in flight disables button, second click ignored", async () => {
     await openEditor();
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "X" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "X" },
+    });
     api.hang = true;
     const save = screen.getByRole("button", { name: "Guardar" });
     fireEvent.click(save);
@@ -281,7 +418,9 @@ describe("template editor", () => {
 describe("exercise picker modal", () => {
   async function openPicker() {
     await openPlan();
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
+    );
     await screen.findByLabelText("Nombre");
     fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
     return screen.findByRole("dialog");
@@ -324,18 +463,26 @@ describe("exercise picker modal", () => {
 
   it("closing with Cerrar preserves the draft", async () => {
     const dialog = await openPicker();
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "A — Empuje 2" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "A — Empuje 2" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Cerrar" }));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe("A — Empuje 2");
+    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe(
+      "A — Empuje 2",
+    );
   });
 
   it("closing with Escape preserves the draft", async () => {
-    const dialog = await openPicker();
-    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "A — Empuje 3" } });
+    await openPicker();
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "A — Empuje 3" },
+    });
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe("A — Empuje 3");
+    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe(
+      "A — Empuje 3",
+    );
   });
 });
 
@@ -345,12 +492,20 @@ describe("programar (schedule from template card)", () => {
   // mockApi no conoce /api/plan-sessions; stub directo como en "API error...".
   async function openWithSessions(postReply: () => Response) {
     vi.unstubAllGlobals();
-    const base = mockApi({ templates: [tplA()], exercises: [press, remo, sent] });
-    api = base;
-    const fetchMock = vi.fn(async (url: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(url).includes("/api/plan-sessions")) return postReply();
-      return new Response(JSON.stringify(base.state.templates), { status: 200, headers: { "content-type": "application/json" } });
+    const base = mockApi({
+      templates: [tplA()],
+      exercises: [press, remo, sent],
     });
+    api = base;
+    const fetchMock = vi.fn(
+      async (url: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(url).includes("/api/plan-sessions")) return postReply();
+        return new Response(JSON.stringify(base.state.templates), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    );
     vi.stubGlobal("fetch", fetchMock);
     renderAt("/plan-fuerza");
     await screen.findByText("A — Empuje");
@@ -360,34 +515,60 @@ describe("programar (schedule from template card)", () => {
 
   it("TemplateCard shows a Programar button", async () => {
     await openPlan();
-    expect(within(cardOf("A — Empuje")).getByRole("button", { name: "Programar" })).toBeDefined();
+    expect(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Programar" }),
+    ).toBeDefined();
   });
 
   it("Programar opens a native date input", async () => {
     await openPlan();
-    fireEvent.click(within(cardOf("A — Empuje")).getByRole("button", { name: "Programar" }));
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Programar" }),
+    );
     const input = await screen.findByLabelText(/fecha/i);
     expect(input.getAttribute("type")).toBe("date");
   });
 
   it("posting /api/plan-sessions {date, templateId}; 201 shows Programada para <fecha>", async () => {
-    const fetchMock = await openWithSessions(() => new Response(JSON.stringify({ id: 1 }), { status: 201 }));
-    fireEvent.change(screen.getByLabelText(/fecha/i), { target: { value: DAY } });
-    fireEvent.click(screen.getByRole("button", { name: /agendar|confirmar|guardar/i }));
+    const fetchMock = await openWithSessions(
+      () => new Response(JSON.stringify({ id: 1 }), { status: 201 }),
+    );
+    fireEvent.change(screen.getByLabelText(/fecha/i), {
+      target: { value: DAY },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /agendar|confirmar|guardar/i }),
+    );
     const post = await waitFor(() => {
-      const call = fetchMock.mock.calls.find(([u, i]) => (i as RequestInit | undefined)?.method === "POST" && String(u).includes("/api/plan-sessions"));
+      const call = fetchMock.mock.calls.find(
+        ([u, i]) =>
+          (i as RequestInit | undefined)?.method === "POST" &&
+          String(u).includes("/api/plan-sessions"),
+      );
       expect(call).toBeDefined();
       return call!;
     });
     expect(String(post[0])).toBe("/api/plan-sessions");
-    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ date: DAY, templateId: 1 });
+    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({
+      date: DAY,
+      templateId: 1,
+    });
     await screen.findByText(`Programada para ${DAY}`);
   });
 
   it("409 shows Ya hay una sesión ese día", async () => {
-    await openWithSessions(() => new Response(JSON.stringify({ error: "Session exists" }), { status: 409 }));
-    fireEvent.change(screen.getByLabelText(/fecha/i), { target: { value: DAY } });
-    fireEvent.click(screen.getByRole("button", { name: /agendar|confirmar|guardar/i }));
+    await openWithSessions(
+      () =>
+        new Response(JSON.stringify({ error: "Session exists" }), {
+          status: 409,
+        }),
+    );
+    fireEvent.change(screen.getByLabelText(/fecha/i), {
+      target: { value: DAY },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /agendar|confirmar|guardar/i }),
+    );
     await screen.findByText("Ya hay una sesión ese día");
   });
 });

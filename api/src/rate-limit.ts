@@ -50,7 +50,8 @@ export function createLoginLimiter(
         for (const [k, v] of hits) {
           if (v.resetAt <= at) hits.delete(k);
         }
-        while (hits.size > MAX_ENTRIES) hits.delete(hits.keys().next().value as string);
+        while (hits.size > MAX_ENTRIES)
+          hits.delete(hits.keys().next().value as string);
       }
     },
     recordSuccess(ip) {

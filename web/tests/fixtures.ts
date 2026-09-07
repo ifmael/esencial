@@ -26,7 +26,11 @@ export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
   };
 }
 
-export type ServerCall = { method: string; url: string; body?: Record<string, unknown> };
+export type ServerCall = {
+  method: string;
+  url: string;
+  body?: Record<string, unknown>;
+};
 
 export function makeServer(initial: Recipe[] = []) {
   const recipes = [...initial];
@@ -38,15 +42,22 @@ export function makeServer(initial: Recipe[] = []) {
       headers: { "content-type": "application/json" },
     });
 
-  const fetchMock = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const fetchMock = async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
     const url = String(input);
     const method = (init?.method ?? "GET").toUpperCase();
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
+    const body = init?.body
+      ? (JSON.parse(String(init.body)) as Record<string, unknown>)
+      : undefined;
     calls.push({ method, url, body });
 
-    if (url === "/api/recipes" && method === "GET") return json(recipes.map((r) => ({ ...r })));
+    if (url === "/api/recipes" && method === "GET")
+      return json(recipes.map((r) => ({ ...r })));
     if (url === "/api/recipes" && method === "POST") {
-      if (body?.name === "Existente") return json({ error: "Ya existe", field: "name" }, 400);
+      if (body?.name === "Existente")
+        return json({ error: "Ya existe", field: "name" }, 400);
       const created = {
         ingredients: [],
         steps: [],
@@ -65,7 +76,8 @@ export function makeServer(initial: Recipe[] = []) {
     if (m) {
       const id = Number(m[1]);
       const i = recipes.findIndex((r) => r.id === id);
-      if (method === "GET") return i >= 0 ? json(recipes[i]) : json({ error: "Not found" }, 404);
+      if (method === "GET")
+        return i >= 0 ? json(recipes[i]) : json({ error: "Not found" }, 404);
       if (method === "PUT") {
         if (i < 0) return json({ error: "Not found" }, 404);
         recipes[i] = { ...recipes[i], ...(body as object), id } as Recipe;

@@ -1,6 +1,6 @@
 // E0 shell ported from legacy/next-app: desktop sidebar + mobile bottom tabs.
 // next/link → react-router Link; usePathname → useLocation. E7: logout button.
-import { useNavigate, Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 
 const NAV = [
   { href: "/", label: "Hoy" },
@@ -12,7 +12,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const nav = NAV.map((item) => {
-    const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+    const active =
+      item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
     return (
       <Link
         key={item.href}

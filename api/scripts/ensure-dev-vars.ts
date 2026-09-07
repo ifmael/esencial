@@ -12,7 +12,8 @@ const VARS = join(ROOT, ".dev.vars");
 const ENV_PASSWORD = process.env.ESENCIAL_DEV_PASSWORD;
 
 const b64 = (buf: Uint8Array): string => Buffer.from(buf).toString("base64");
-const randomPassword = (): string => b64(crypto.getRandomValues(new Uint8Array(18)));
+const randomPassword = (): string =>
+  b64(crypto.getRandomValues(new Uint8Array(18)));
 
 function existingSecret(text: string | undefined): string | null {
   return text?.match(/^AUTH_SECRET="([^"]+)"/m)?.[1] ?? null;
@@ -35,15 +36,21 @@ async function main(): Promise<void> {
   if (ENV_PASSWORD) {
     // La variable de entorno manda: regenerar con la clave indicada, reutilizando
     // AUTH_SECRET si ya existe (las sesiones previas siguen siendo válidas).
-    const secret = existingSecret(existing ?? undefined) ?? b64(crypto.getRandomValues(new Uint8Array(32)));
+    const secret =
+      existingSecret(existing ?? undefined) ??
+      b64(crypto.getRandomValues(new Uint8Array(32)));
     await writeVars(ENV_PASSWORD, secret);
-    console.log(`DEV LOGIN: password "${ENV_PASSWORD}" (desde ESENCIAL_DEV_PASSWORD)`);
+    console.log(
+      `DEV LOGIN: password "${ENV_PASSWORD}" (desde ESENCIAL_DEV_PASSWORD)`,
+    );
     return;
   }
 
   if (existing) {
     const m = existing.match(/^# DEV PASSWORD: (.+)$/m);
-    console.log(`DEV LOGIN: password "${m ? m[1] : "(ver .dev.vars)"}" (${VARS} ya existe)`);
+    console.log(
+      `DEV LOGIN: password "${m ? m[1] : "(ver .dev.vars)"}" (${VARS} ya existe)`,
+    );
     return;
   }
 
@@ -51,7 +58,9 @@ async function main(): Promise<void> {
   const secret = b64(crypto.getRandomValues(new Uint8Array(32)));
   await writeVars(password, secret);
   console.log(`DEV LOGIN: creado ${VARS}; password "${password}"`);
-  console.log(`  (para una clave fija: export ESENCIAL_DEV_PASSWORD='tu clave' y reinicia pnpm dev)`);
+  console.log(
+    `  (para una clave fija: export ESENCIAL_DEV_PASSWORD='tu clave' y reinicia pnpm dev)`,
+  );
 }
 
 await main();

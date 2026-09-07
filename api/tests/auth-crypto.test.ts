@@ -1,14 +1,21 @@
 // E7 task 1.1/1.3 RED→GREEN: PBKDF2 password digests + signed stateless session.
 import { describe, expect, it } from "vitest";
-import { hashPassword, verifyPassword, SESSION_MAX_AGE_S } from "../src/auth";
-import { createSessionToken, readSessionToken } from "../src/auth";
+import {
+  createSessionToken,
+  hashPassword,
+  readSessionToken,
+  SESSION_MAX_AGE_S,
+  verifyPassword,
+} from "../src/auth";
 
 const SECRET = "test-auth-secret-32-bytes-long-xx";
 
 describe("hashPassword / verifyPassword (PBKDF2-SHA256)", () => {
   it("round-trips: digest verifies against the same password", async () => {
     const digest = await hashPassword("correct horse battery staple");
-    expect(await verifyPassword(digest, "correct horse battery staple")).toBe(true);
+    expect(await verifyPassword(digest, "correct horse battery staple")).toBe(
+      true,
+    );
   });
 
   it("rejects a different password", async () => {
@@ -44,7 +51,9 @@ describe("hashPassword / verifyPassword (PBKDF2-SHA256)", () => {
     const digest = await hashPassword("passw0rd");
     const [scheme, iter, salt, hash] = digest.split("$");
     const flipped = hash.slice(0, -1) + (hash.endsWith("A") ? "B" : "A");
-    expect(await verifyPassword([scheme, iter, salt, flipped].join("$"), "passw0rd")).toBe(false);
+    expect(
+      await verifyPassword([scheme, iter, salt, flipped].join("$"), "passw0rd"),
+    ).toBe(false);
     expect(await verifyPassword("garbage", "passw0rd")).toBe(false);
   });
 
@@ -76,13 +85,17 @@ describe("signed session token", () => {
     const last = token.lastIndexOf(".");
     const sig = token.slice(last + 1);
     const flipped = sig.slice(0, -1) + (sig.endsWith("A") ? "B" : "A");
-    expect(await readSessionToken(SECRET, `${token.slice(0, last + 1)}${flipped}`)).toBeNull();
+    expect(
+      await readSessionToken(SECRET, `${token.slice(0, last + 1)}${flipped}`),
+    ).toBeNull();
   });
 
   it("fails closed on a wrong signing secret", async () => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const token = await createSessionToken(SECRET, exp);
-    expect(await readSessionToken("another-secret-32-bytes-long-xxx", token)).toBeNull();
+    expect(
+      await readSessionToken("another-secret-32-bytes-long-xxx", token),
+    ).toBeNull();
   });
 
   it("fails closed on expired and on garbage tokens", async () => {

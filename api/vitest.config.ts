@@ -1,7 +1,8 @@
 // vitest-pool-workers 0.22 API: cloudflareTest is a Vite plugin carrying the
 // pool options (see codemods/vitest-v3-to-v4 in the package).
-import { defineConfig } from "vitest/config";
+
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [

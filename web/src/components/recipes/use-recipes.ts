@@ -2,7 +2,12 @@
 // GET list returns fully hydrated recipes, so detail reads from `list`.
 import { useCallback, useEffect, useState } from "react";
 
-export type Ingredient = { id: number; food: string; quantity: number | null; unit: string | null };
+export type Ingredient = {
+  id: number;
+  food: string;
+  quantity: number | null;
+  unit: string | null;
+};
 export type Step = { id: number; position: number; step: number; text: string };
 
 export type Recipe = {
@@ -24,7 +29,11 @@ export type RecipeInput = {
   description?: string | null;
   servings?: number | null;
   photo_path?: string | null;
-  ingredients?: { food: string; quantity?: number | null; unit?: string | null }[];
+  ingredients?: {
+    food: string;
+    quantity?: number | null;
+    unit?: string | null;
+  }[];
   steps?: string[];
   materials?: string[];
   tags?: string[];
@@ -83,9 +92,14 @@ export function useRecipes() {
           refresh();
           return true;
         }
-        const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-        const message = typeof body.error === "string" ? body.error : "No se pudo guardar.";
-        if (typeof body.field === "string") setFieldError({ field: body.field, message });
+        const body = (await res.json().catch(() => ({}))) as Record<
+          string,
+          unknown
+        >;
+        const message =
+          typeof body.error === "string" ? body.error : "No se pudo guardar.";
+        if (typeof body.field === "string")
+          setFieldError({ field: body.field, message });
         else setError(message);
         return false;
       } catch {
@@ -107,12 +121,23 @@ export function useRecipes() {
     retry: refresh,
     clearFieldError: () => setFieldError(null),
     create: (input: RecipeInput) =>
-      mutate(() => fetch("/api/recipes", { method: "POST", headers: jsonHeaders, body: JSON.stringify(input) })),
+      mutate(() =>
+        fetch("/api/recipes", {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify(input),
+        }),
+      ),
     update: (id: number, input: RecipeInput) =>
       mutate(() =>
-        fetch(`/api/recipes/${id}`, { method: "PUT", headers: jsonHeaders, body: JSON.stringify(input) }),
+        fetch(`/api/recipes/${id}`, {
+          method: "PUT",
+          headers: jsonHeaders,
+          body: JSON.stringify(input),
+        }),
       ),
-    remove: (id: number) => mutate(() => fetch(`/api/recipes/${id}`, { method: "DELETE" })),
+    remove: (id: number) =>
+      mutate(() => fetch(`/api/recipes/${id}`, { method: "DELETE" })),
   };
 }
 

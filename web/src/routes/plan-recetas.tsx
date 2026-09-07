@@ -4,13 +4,26 @@
 // y el estado local se reemplaza con la respuesta del servidor.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
+import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
-export const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] as const;
+export const DAYS = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+] as const;
 export const MEALS = ["desayuno", "almuerzo", "cena"] as const;
 
-export type Slot = { day: number; meal: string; recipeId: number | null; recipeName: string | null };
+export type Slot = {
+  day: number;
+  meal: string;
+  recipeId: number | null;
+  recipeName: string | null;
+};
 export type RecipeSummary = { id: number; name: string };
 
 const slotKey = (day: number, meal: string) => `${day}|${meal}`;
@@ -46,11 +59,23 @@ export function useMealPlan(isoWeek: string) {
       const res = await fetch(`/api/meal-plan/${isoWeek}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slots: next.map((s) => ({ day: s.day, meal: s.meal, recipeId: s.recipeId })) }),
+        body: JSON.stringify({
+          slots: next.map((s) => ({
+            day: s.day,
+            meal: s.meal,
+            recipeId: s.recipeId,
+          })),
+        }),
       }).catch(() => null);
-      if (!res || !res.ok) {
-        const err: { error?: string } = res ? await res.json().catch(() => ({})) : {};
-        setError(err.error ? `No se pudo guardar: ${err.error}` : "No se pudo guardar el plan.");
+      if (!res?.ok) {
+        const err: { error?: string } = res
+          ? await res.json().catch(() => ({}))
+          : {};
+        setError(
+          err.error
+            ? `No se pudo guardar: ${err.error}`
+            : "No se pudo guardar el plan.",
+        );
         setAttempt((a) => a + 1); // recarga server state: la rejilla refleja la verdad
         return false;
       }
@@ -65,7 +90,13 @@ export function useMealPlan(isoWeek: string) {
   return { slots, error, save, retry: () => setAttempt((a) => a + 1) };
 }
 
-function RecipePicker({ onPick, onClose }: { onPick: (r: RecipeSummary) => void; onClose: () => void }) {
+function RecipePicker({
+  onPick,
+  onClose,
+}: {
+  onPick: (r: RecipeSummary) => void;
+  onClose: () => void;
+}) {
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
   const [query, setQuery] = useState("");
 
@@ -80,10 +111,17 @@ function RecipePicker({ onPick, onClose }: { onPick: (r: RecipeSummary) => void;
   }, []);
 
   const needle = query.trim().toLowerCase();
-  const shown = recipes ? (needle ? recipes.filter((r) => r.name.toLowerCase().includes(needle)) : recipes) : [];
+  const shown = recipes
+    ? needle
+      ? recipes.filter((r) => r.name.toLowerCase().includes(needle))
+      : recipes
+    : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
+      onClick={onClose}
+    >
       <div
         role="dialog"
         aria-label="Elegir receta"
@@ -100,15 +138,22 @@ function RecipePicker({ onPick, onClose }: { onPick: (r: RecipeSummary) => void;
           className="min-h-11 rounded-lg border border-border px-3"
         />
         <ul className="flex flex-col gap-1 overflow-y-auto">
-          {recipes === null ? <li className="text-text-secondary">Cargando…</li> : null}
+          {recipes === null ? (
+            <li className="text-text-secondary">Cargando…</li>
+          ) : null}
           {shown.map((r) => (
             <li key={r.id}>
-              <button className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted" onClick={() => onPick(r)}>
+              <button
+                className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted"
+                onClick={() => onPick(r)}
+              >
                 {r.name}
               </button>
             </li>
           ))}
-          {recipes !== null && shown.length === 0 ? <li className="px-3 text-text-secondary">Sin resultados.</li> : null}
+          {recipes !== null && shown.length === 0 ? (
+            <li className="px-3 text-text-secondary">Sin resultados.</li>
+          ) : null}
         </ul>
         <button className="btn-secondary" onClick={onClose}>
           Cerrar
@@ -118,7 +163,15 @@ function RecipePicker({ onPick, onClose }: { onPick: (r: RecipeSummary) => void;
   );
 }
 
-function SlotCell({ slot, onAdd, onRemove }: { slot: Slot | undefined; onAdd: () => void; onRemove: () => void }) {
+function SlotCell({
+  slot,
+  onAdd,
+  onRemove,
+}: {
+  slot: Slot | undefined;
+  onAdd: () => void;
+  onRemove: () => void;
+}) {
   const [confirming, setConfirming] = useState(false);
   if (!slot?.recipeId) {
     return (
@@ -133,8 +186,14 @@ function SlotCell({ slot, onAdd, onRemove }: { slot: Slot | undefined; onAdd: ()
   return (
     <div className="flex min-h-11 flex-1 flex-col gap-1 rounded-lg border border-border bg-surface p-2">
       <div className="flex items-center gap-2">
-        <span aria-hidden className="size-8 shrink-0 rounded bg-surface-muted" />
-        <Link to={`/recetario/${slot.recipeId}`} className="min-h-11 flex-1 truncate text-left text-sm font-semibold text-primary">
+        <span
+          aria-hidden
+          className="size-8 shrink-0 rounded bg-surface-muted"
+        />
+        <Link
+          to={`/recetario/${slot.recipeId}`}
+          className="min-h-11 flex-1 truncate text-left text-sm font-semibold text-primary"
+        >
           {slot.recipeName ?? "Receta"}
         </Link>
         <button
@@ -164,11 +223,17 @@ export function PlanRecetasPage() {
   const [params, setParams] = useSearchParams();
   const isoWeek = params.get("week") ?? currentIsoWeek();
   const { slots, error, save, retry } = useMealPlan(isoWeek);
-  const [picker, setPicker] = useState<{ day: number; meal: string } | null>(null);
+  const [picker, setPicker] = useState<{ day: number; meal: string } | null>(
+    null,
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const gotoWeek = (week: string) => setParams({ week });
-  const bySlot = new Map((slots ?? []).filter((s) => s.recipeId !== null).map((s) => [slotKey(s.day, s.meal), s]));
+  const bySlot = new Map(
+    (slots ?? [])
+      .filter((s) => s.recipeId !== null)
+      .map((s) => [slotKey(s.day, s.meal), s]),
+  );
 
   const write = (day: number, meal: string, recipeId: number | null) =>
     save([
@@ -179,11 +244,19 @@ export function PlanRecetasPage() {
   return (
     <div className="flex flex-col gap-4">
       <header className="flex items-center justify-between gap-2">
-        <button aria-label="Semana anterior" className="btn-secondary" onClick={() => gotoWeek(shiftIsoWeek(isoWeek, -1))}>
+        <button
+          aria-label="Semana anterior"
+          className="btn-secondary"
+          onClick={() => gotoWeek(shiftIsoWeek(isoWeek, -1))}
+        >
           ‹
         </button>
         <h1 className="text-2xl font-bold">{isoWeek}</h1>
-        <button aria-label="Semana siguiente" className="btn-secondary" onClick={() => gotoWeek(shiftIsoWeek(isoWeek, 1))}>
+        <button
+          aria-label="Semana siguiente"
+          className="btn-secondary"
+          onClick={() => gotoWeek(shiftIsoWeek(isoWeek, 1))}
+        >
           ›
         </button>
       </header>
@@ -206,7 +279,9 @@ export function PlanRecetasPage() {
               <h2 className="font-semibold">{day}</h2>
               {MEALS.map((meal) => (
                 <div key={meal} className="flex flex-col gap-1">
-                  <span className="text-xs uppercase tracking-wide text-text-secondary">{meal}</span>
+                  <span className="text-xs uppercase tracking-wide text-text-secondary">
+                    {meal}
+                  </span>
                   <SlotCell
                     slot={bySlot.get(slotKey(di, meal))}
                     onAdd={() => setPicker({ day: di, meal })}
@@ -219,7 +294,10 @@ export function PlanRecetasPage() {
         </div>
       )}
 
-      <button className="btn-primary sticky bottom-4 self-start md:self-end" onClick={() => setSheetOpen(true)}>
+      <button
+        className="btn-primary sticky bottom-4 self-start md:self-end"
+        onClick={() => setSheetOpen(true)}
+      >
         Lista de la compra
       </button>
 
@@ -227,12 +305,18 @@ export function PlanRecetasPage() {
         <RecipePicker
           onClose={() => setPicker(null)}
           onPick={(recipe) => {
-            void write(picker.day, picker.meal, recipe.id).then(() => setPicker(null));
+            void write(picker.day, picker.meal, recipe.id).then(() =>
+              setPicker(null),
+            );
           }}
         />
       ) : null}
 
-      <ShoppingListSheet isoWeek={isoWeek} open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      <ShoppingListSheet
+        isoWeek={isoWeek}
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+      />
     </div>
   );
 }
