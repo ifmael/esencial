@@ -56,6 +56,13 @@ Sin secretos, el Worker falla cerrado (500 en login, 401 en todo lo protegido).
 
 ## 6. Deploy
 
+Con Workers Builds conectado (repo `ifmael/esencial`, branch `main`): **todo push
+a `main` despliega automáticamente** (build + `npx wrangler deploy` en el runner
+de Cloudflare). El build y su log se ven en Deployments → View build history.
+Rollback: botón "Rollback" del deployment, o `npx wrangler rollback`.
+
+Deploy manual sigue disponible si desconectas Builds:
+
 ```bash
 npm run deploy              # build del SPA + wrangler deploy
 ```
