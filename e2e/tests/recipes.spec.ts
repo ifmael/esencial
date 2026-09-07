@@ -55,7 +55,7 @@ test.describe("RECIPES — loop end to end", () => {
     const food = uniqueName("CompraE2E");
 
     // Self-contained data via API (same shape the UI posts)
-    const created = await apiRequest(page.request, "POST", "/api/recipes", {
+    const created = await apiRequest<{ id: number }>(page.request, "POST", "/api/recipes", {
       name,
       description: "e2e",
       ingredients: [{ food, quantity: 3, unit: "ud" }],

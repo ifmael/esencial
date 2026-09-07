@@ -10,6 +10,7 @@ export type DaySession = {
   templateName: string;
   status: "planned" | "logged";
   exercises?: { exerciseId: number; exerciseName: string; position: number }[];
+  summary?: { effort: number; exercises: number; sets: number } | null;
 };
 
 export type DayData = {

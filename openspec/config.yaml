@@ -30,6 +30,9 @@ rules:
   apply:
     guidelines:
       - Follow existing code patterns
+    tdd: true
+    test_command: "pnpm test"
+  verify:
     test_command: "pnpm test"
     build_command: "pnpm build"
     coverage_threshold: 0
