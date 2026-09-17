@@ -23,7 +23,7 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
     // (deleted recipe) readable as { recipeId: null, recipeName: null }.
     const meals = await rows(
       db,
-      `SELECT ms.meal, ms.recipe_id AS recipeId, r.name AS recipeName
+      `SELECT ms.meal, ms.recipe_id AS recipeId, r.name AS recipeName, r.photo_path AS recipePhoto
        FROM meal_slots ms
        JOIN week_plans wp ON wp.id = ms.week_plan_id
        LEFT JOIN recipes r ON r.id = ms.recipe_id

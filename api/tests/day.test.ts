@@ -1,7 +1,7 @@
 // E5 tasks 2.1-2.5: GET /api/day/:date aggregation, seeded through the public
 // endpoints so the join runs against real rows (design D7).
 import { beforeEach, describe, expect, it } from "vitest";
-import { del, freshDb, get, post, put } from "./helpers";
+import { del, freshDb, get, post, postForm, put } from "./helpers";
 
 async function body(res: Response): Promise<Record<string, unknown>> {
   return (await res.json()) as Record<string, unknown>;
@@ -19,7 +19,25 @@ type MealRow = {
   meal: string;
   recipeId: number | null;
   recipeName: string | null;
+  recipePhoto: string | null;
 };
+
+// 1x1 PNG real (firma válida) — mismo contrato que api/tests/uploads.test.ts.
+const PNG = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+]);
+
+function pngForm(): FormData {
+  const form = new FormData();
+  form.append("file", new File([PNG], "foto.png", { type: "image/png" }));
+  return form;
+}
+
+async function uploadPhoto(): Promise<string> {
+  const res = await postForm("/api/uploads", pngForm());
+  expect(res.status).toBe(200);
+  return String((await body(res)).photo_path);
+}
 type SessionBox = {
   id: number;
   templateId: number;
@@ -67,9 +85,24 @@ describe("GET /api/day/:date", () => {
     expect(day.isoWeek).toBe(W36);
     expect(day.dayIndex).toBe(2);
     expect(day.meals as MealRow[]).toEqual([
-      { meal: "desayuno", recipeId: tortilla, recipeName: "Tortilla" },
-      { meal: "almuerzo", recipeId: sopa, recipeName: "Sopa" },
-      { meal: "cena", recipeId: ensalada, recipeName: "Ensalada" },
+      {
+        meal: "desayuno",
+        recipeId: tortilla,
+        recipeName: "Tortilla",
+        recipePhoto: null,
+      },
+      {
+        meal: "almuerzo",
+        recipeId: sopa,
+        recipeName: "Sopa",
+        recipePhoto: null,
+      },
+      {
+        meal: "cena",
+        recipeId: ensalada,
+        recipeName: "Ensalada",
+        recipePhoto: null,
+      },
     ]);
     expect(day.session as SessionBox).toMatchObject({
       templateId,
@@ -137,7 +170,29 @@ describe("GET /api/day/:date", () => {
     expect((await del(`/api/recipes/${id}`)).status).toBe(204);
     const day = await body(await get("/api/day/2026-09-02"));
     expect(day.meals as MealRow[]).toEqual([
-      { meal: "almuerzo", recipeId: null, recipeName: null },
+      { meal: "almuerzo", recipeId: null, recipeName: null, recipePhoto: null },
+    ]);
+  });
+
+  it("slot con receta con foto → recipePhoto es la key R2", async () => {
+    const photo = await uploadPhoto();
+    const res = await post("/api/recipes", {
+      name: "Con foto",
+      photo_path: photo,
+    });
+    expect(res.status).toBe(201);
+    const recipeId = Number((await body(res)).id);
+    await put(`/api/meal-plan/${W36}`, {
+      slots: [{ day: 2, meal: "almuerzo", recipeId }],
+    });
+    const day = await body(await get("/api/day/2026-09-02"));
+    expect(day.meals as MealRow[]).toEqual([
+      {
+        meal: "almuerzo",
+        recipeId,
+        recipeName: "Con foto",
+        recipePhoto: photo,
+      },
     ]);
   });
 

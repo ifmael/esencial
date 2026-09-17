@@ -14,7 +14,7 @@ async function serializeSlots(
 ): Promise<Response> {
   const slots = await rows(
     db,
-    `SELECT ms.day, ms.meal, ms.recipe_id AS recipeId, r.name AS recipeName
+    `SELECT ms.day, ms.meal, ms.recipe_id AS recipeId, r.name AS recipeName, r.photo_path AS recipePhoto
      FROM meal_slots ms LEFT JOIN recipes r ON r.id = ms.recipe_id
      WHERE ms.week_plan_id = ? ORDER BY ms.day, CASE ms.meal
        WHEN 'desayuno' THEN 0 WHEN 'almuerzo' THEN 1 ELSE 2 END`,

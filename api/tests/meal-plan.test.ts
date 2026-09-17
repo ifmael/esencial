@@ -1,8 +1,19 @@
 // E1 parity: meal-plan week PUT/GET; slot referencing deleted recipe reads empty.
 import { beforeAll, describe, expect, it } from "vitest";
-import { del, freshDb, get, post, put } from "./helpers";
+import { del, freshDb, get, post, postForm, put } from "./helpers";
 
 beforeAll(freshDb);
+
+// 1x1 PNG real (firma válida) — mismo contrato que api/tests/uploads.test.ts.
+const PNG = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+]);
+
+function pngForm(): FormData {
+  const form = new FormData();
+  form.append("file", new File([PNG], "foto.png", { type: "image/png" }));
+  return form;
+}
 
 async function body(res: Response): Promise<Record<string, unknown>> {
   return (await res.json()) as Record<string, unknown>;
@@ -30,10 +41,30 @@ describe("/api/meal-plan/:week", () => {
       meal: string;
       recipeId: number;
       recipeName: string;
+      recipePhoto: string | null;
     }[];
     expect(slots.length).toBe(2);
     const cena = slots.find((s) => s.day === 4 && s.meal === "cena");
     expect(cena?.recipeName).toBe("Ceviche");
+    expect(cena?.recipePhoto).toBeNull();
+  });
+
+  it("GET devuelve recipePhoto de la receta asignada", async () => {
+    const uploaded = await postForm("/api/uploads", pngForm());
+    expect(uploaded.status).toBe(200);
+    const photo = String((await body(uploaded)).photo_path);
+    const created = await post("/api/recipes", {
+      name: "Con foto",
+      photo_path: photo,
+    });
+    expect(created.status).toBe(201);
+    const recipeId = Number((await body(created)).id);
+    await put("/api/meal-plan/2026-W39", {
+      slots: [{ day: 1, meal: "almuerzo", recipeId }],
+    });
+    const got = await body(await get("/api/meal-plan/2026-W39"));
+    const slots = got.slots as { recipePhoto: string | null }[];
+    expect(slots[0].recipePhoto).toBe(photo);
   });
 
   it("PUT replaces the week: omitted slots disappear", async () => {
