@@ -136,9 +136,9 @@ function SessionCell({
 
   const badge =
     session.status === "logged" ? (
-      <span className="text-xs font-bold text-primary">Hecho</span>
+      <span className="badge-done self-start">Hecho</span>
     ) : (
-      <span className="text-xs font-medium text-text-secondary">Pendiente</span>
+      <span className="badge-pending self-start">Pendiente</span>
     );
 
   return (

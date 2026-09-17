@@ -17,12 +17,13 @@ type Slot = {
   meal: string;
   recipeId: number | null;
   recipeName: string | null;
+  recipePhoto: string | null;
 };
 
 const RECIPES = [
-  { id: 7, name: "Pollo al horno" },
-  { id: 3, name: "Lentejas" },
-  { id: 8, name: "Tarta de polen" },
+  { id: 7, name: "Pollo al horno", photo: null },
+  { id: 3, name: "Lentejas", photo: "recipe-3.png" },
+  { id: 8, name: "Tarta de polen", photo: null },
 ];
 
 let slots: Slot[] = [];
@@ -75,6 +76,10 @@ beforeEach(() => {
                 ? (slots.find((old) => old.day === s.day && old.meal === s.meal)
                     ?.recipeName ?? null)
                 : (RECIPES.find((r) => r.id === s.recipeId)?.name ?? null),
+            recipePhoto:
+              s.recipeId === null
+                ? null
+                : (RECIPES.find((r) => r.id === s.recipeId)?.photo ?? null),
           }));
         }
         return jsonResponse({ isoWeek: week, slots });
@@ -118,7 +123,13 @@ describe("rejilla 7×3", () => {
 
   it("slots guardados muestran el nombre de la receta en su celda", async () => {
     slots = [
-      { day: 0, meal: "desayuno", recipeId: 7, recipeName: "Pollo al horno" },
+      {
+        day: 0,
+        meal: "desayuno",
+        recipeId: 7,
+        recipeName: "Pollo al horno",
+        recipePhoto: null,
+      },
     ];
     renderAt("/plan-recetas?week=2026-W36");
     expect(await screen.findByText("Pollo al horno")).toBeDefined();
@@ -180,7 +191,15 @@ describe("picker de recetas", () => {
   });
 
   it("PUT 400: la rejilla conserva el estado del servidor y muestra el error", async () => {
-    slots = [{ day: 0, meal: "desayuno", recipeId: 3, recipeName: "Lentejas" }];
+    slots = [
+      {
+        day: 0,
+        meal: "desayuno",
+        recipeId: 3,
+        recipeName: "Lentejas",
+        recipePhoto: null,
+      },
+    ];
     failNextPut = true;
     renderAt("/plan-recetas?week=2026-W36");
     await screen.findByText("Lentejas");
@@ -198,14 +217,54 @@ describe("picker de recetas", () => {
 
 describe("celda rellena", () => {
   it("el nombre navega a /recetario/{id}", async () => {
-    slots = [{ day: 5, meal: "cena", recipeId: 3, recipeName: "Lentejas" }];
+    slots = [
+      {
+        day: 5,
+        meal: "cena",
+        recipeId: 3,
+        recipeName: "Lentejas",
+        recipePhoto: null,
+      },
+    ];
     renderAt("/plan-recetas?week=2026-W36");
     fireEvent.click(await screen.findByText("Lentejas"));
     await waitFor(() => expect(window.location.pathname).toBe("/recetario/3"));
   });
 
+  it("la celda rellena muestra la miniatura de la receta; sin foto no pinta img", async () => {
+    slots = [
+      {
+        day: 5,
+        meal: "cena",
+        recipeId: 3,
+        recipeName: "Lentejas",
+        recipePhoto: "recipe-3.png",
+      },
+      {
+        day: 0,
+        meal: "desayuno",
+        recipeId: 7,
+        recipeName: "Pollo al horno",
+        recipePhoto: null,
+      },
+    ];
+    renderAt("/plan-recetas?week=2026-W36");
+    await screen.findByText("Lentejas");
+    const imgs = document.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0].getAttribute("src")).toBe("/api/uploads/recipe-3.png");
+  });
+
   it("quitar pide confirmación y PUT la semana sin ese slot", async () => {
-    slots = [{ day: 5, meal: "cena", recipeId: 3, recipeName: "Lentejas" }];
+    slots = [
+      {
+        day: 5,
+        meal: "cena",
+        recipeId: 3,
+        recipeName: "Lentejas",
+        recipePhoto: null,
+      },
+    ];
     renderAt("/plan-recetas?week=2026-W36");
     await screen.findByText("Lentejas");
     fireEvent.click(screen.getByRole("button", { name: "Quitar Lentejas" }));
@@ -227,5 +286,13 @@ describe("acceso a la lista de la compra", () => {
     expect(
       await screen.findByRole("heading", { name: "Lista de la compra" }),
     ).toBeDefined();
+  });
+});
+
+describe("acceso al recetario", () => {
+  it("enlace 'Recetario' abre el libro de recetas", async () => {
+    renderAt("/plan-recetas?week=2026-W36");
+    const link = await screen.findByRole("link", { name: "Recetario" });
+    expect(link.getAttribute("href")).toBe("/recetario");
   });
 });

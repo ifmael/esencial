@@ -125,6 +125,43 @@ describe("plan screen", () => {
     expect(api.calls.some((c) => c.url === "/api/templates")).toBe(true);
   });
 
+  it("enlace 'Ejercicios' abre el catálogo", async () => {
+    await openPlan();
+    const link = screen.getByRole("link", { name: "Ejercicios" });
+    expect(link.getAttribute("href")).toBe("/ejercicios");
+  });
+
+  it("la rejilla semanal usa los badges del sistema (Pendiente/Hecho)", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      templates: [tplA()],
+      exercises: [press],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          status: "planned",
+          templateId: 1,
+          templateName: "A — Empuje",
+        },
+        {
+          id: 2,
+          date: "2026-09-01",
+          status: "logged",
+          templateId: 1,
+          templateName: "A — Empuje",
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    await waitFor(() =>
+      expect(screen.getByText("Pendiente").className).toContain(
+        "badge-pending",
+      ),
+    );
+    expect(screen.getByText("Hecho").className).toContain("badge-done");
+  });
+
   it("empty state invites creating the first template", async () => {
     vi.unstubAllGlobals();
     api = mockApi({ templates: [], exercises: [] });

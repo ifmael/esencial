@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
+import { photoSrc } from "../lib/api";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
 export const DAYS = [
@@ -23,6 +24,7 @@ export type Slot = {
   meal: string;
   recipeId: number | null;
   recipeName: string | null;
+  recipePhoto: string | null;
 };
 export type RecipeSummary = { id: number; name: string };
 
@@ -186,10 +188,18 @@ function SlotCell({
   return (
     <div className="flex min-h-11 flex-1 flex-col gap-1 rounded-lg border border-border bg-surface p-2">
       <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className="size-8 shrink-0 rounded bg-surface-muted"
-        />
+        {slot.recipePhoto ? (
+          <img
+            src={photoSrc(slot.recipePhoto)}
+            alt=""
+            className="size-8 shrink-0 rounded object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="size-8 shrink-0 rounded bg-surface-muted"
+          />
+        )}
         <Link
           to={`/recetario/${slot.recipeId}`}
           className="min-h-11 flex-1 truncate text-left text-sm font-semibold text-primary"
@@ -238,28 +248,35 @@ export function PlanRecetasPage() {
   const write = (day: number, meal: string, recipeId: number | null) =>
     save([
       ...(slots ?? []).filter((s) => !(s.day === day && s.meal === meal)),
-      ...(recipeId ? [{ day, meal, recipeId, recipeName: null }] : []),
+      ...(recipeId
+        ? [{ day, meal, recipeId, recipeName: null, recipePhoto: null }]
+        : []),
     ]);
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex items-center justify-between gap-2">
-        <button
-          aria-label="Semana anterior"
-          className="btn-secondary"
-          onClick={() => gotoWeek(shiftIsoWeek(isoWeek, -1))}
-        >
-          ‹
-        </button>
-        <h1 className="text-2xl font-bold">{isoWeek}</h1>
-        <button
-          aria-label="Semana siguiente"
-          className="btn-secondary"
-          onClick={() => gotoWeek(shiftIsoWeek(isoWeek, 1))}
-        >
-          ›
-        </button>
-      </header>
+      <div className="flex flex-col gap-3">
+        <header className="flex items-center justify-between gap-2">
+          <button
+            aria-label="Semana anterior"
+            className="btn-secondary"
+            onClick={() => gotoWeek(shiftIsoWeek(isoWeek, -1))}
+          >
+            ‹
+          </button>
+          <h1 className="text-2xl font-bold">{isoWeek}</h1>
+          <button
+            aria-label="Semana siguiente"
+            className="btn-secondary"
+            onClick={() => gotoWeek(shiftIsoWeek(isoWeek, 1))}
+          >
+            ›
+          </button>
+        </header>
+        <Link to="/recetario" className="btn-secondary self-start">
+          Recetario
+        </Link>
+      </div>
 
       {error ? (
         <div role="alert" className="card border-error/40 text-error">

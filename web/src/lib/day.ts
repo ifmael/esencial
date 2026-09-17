@@ -6,6 +6,7 @@ export type DayMeal = {
   meal: string;
   recipeId: number | null;
   recipeName: string | null;
+  recipePhoto: string | null;
 };
 
 export type DaySession = {

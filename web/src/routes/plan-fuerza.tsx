@@ -795,7 +795,12 @@ export function PlanFuerzaPage() {
   return (
     <div>
       <section className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-2xl font-bold">Plan fuerza</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Plan fuerza</h1>
+          <Link to="/ejercicios" className="btn-secondary">
+            Ejercicios
+          </Link>
+        </div>
         {templates.length > 0 && (
           <div
             className="flex items-center gap-1 self-start rounded-full border border-border bg-surface-muted p-1.5 md:self-auto"

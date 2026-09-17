@@ -54,6 +54,19 @@ describe("/recetario/:id", () => {
     expect(screen.getByText("almuerzo")).toBeDefined();
     const thumb = document.querySelector("img");
     expect(thumb?.getAttribute("src")).toBe("/api/uploads/recipe-7.png");
+
+    // pantalla 2: volver al recetario, sección "Elaboración" (antes "Pasos")
+    expect(
+      screen
+        .getByRole("link", { name: "Volver al recetario" })
+        .getAttribute("href"),
+    ).toBe("/recetario");
+    expect(screen.getByRole("heading", { name: "Elaboración" })).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Pasos" })).toBeNull();
+    // los pasos siguen siendo la lista ordenada numerada
+    expect(screen.getAllByRole("listitem", { name: /^paso \d/i })).toHaveLength(
+      4,
+    );
   });
 
   it("unknown id shows not-found with a way back", async () => {

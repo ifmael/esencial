@@ -152,8 +152,18 @@ describe("sección RECETA", () => {
       Response.json(
         payload({
           meals: [
-            { meal: "desayuno", recipeId: null, recipeName: null },
-            { meal: "cena", recipeId: 9, recipeName: "Ensalada" },
+            {
+              meal: "desayuno",
+              recipeId: null,
+              recipeName: null,
+              recipePhoto: null,
+            },
+            {
+              meal: "cena",
+              recipeId: 9,
+              recipeName: "Ensalada",
+              recipePhoto: "recipe-9.png",
+            },
           ],
         }),
       ),
@@ -162,7 +172,35 @@ describe("sección RECETA", () => {
     await settle();
     expect(screen.queryByText("desayuno")).toBeNull();
     fireEvent.click(screen.getByText("Ensalada"));
-    expect(window.location.pathname).toBe("/plan-recetas/9");
+    expect(window.location.pathname).toBe("/recetario/9");
+  });
+
+  it("miniatura de la foto en la tarjeta; slot sin foto no pinta img", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        payload({
+          meals: [
+            {
+              meal: "desayuno",
+              recipeId: 8,
+              recipeName: "Tortilla",
+              recipePhoto: null,
+            },
+            {
+              meal: "cena",
+              recipeId: 9,
+              recipeName: "Ensalada",
+              recipePhoto: "recipe-9.png",
+            },
+          ],
+        }),
+      ),
+    );
+    renderAt("/");
+    await settle();
+    const imgs = document.querySelectorAll("img");
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0].getAttribute("src")).toBe("/api/uploads/recipe-9.png");
   });
 
   it("sin comidas → empty state con CTA a /plan-recetas", async () => {

@@ -180,55 +180,40 @@ export function RecetarioDetallePage() {
 
   return (
     <>
-      <header className="mb-4 flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">{recipe.name}</h1>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label="Editar receta"
-            className="btn-secondary"
-            onClick={() => setEditing(true)}
-          >
-            ✏️
-          </button>
-          <button
-            type="button"
-            className="btn-secondary text-error"
-            onClick={() => setConfirming(true)}
-          >
-            Eliminar
-          </button>
-        </div>
-      </header>
+      <Link
+        to="/recetario"
+        aria-label="Volver al recetario"
+        className="btn-secondary mb-3 inline-flex min-h-11 min-w-11 items-center justify-center"
+      >
+        ←
+      </Link>
 
-      {confirming && (
-        <div
-          className="card mb-4 border-error"
-          role="alertdialog"
-          aria-label="Confirmar eliminación"
-        >
-          <p className="mb-2">¿Seguro que quieres eliminar «{recipe.name}»?</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setConfirming(false)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="btn-primary bg-error"
-              disabled={api.saving}
-              onClick={remove}
-            >
-              {api.saving ? "Eliminando…" : "Eliminar receta"}
-            </button>
+      <div className="relative overflow-hidden rounded-xl">
+        {recipe.photo_path ? (
+          <img
+            src={photoSrc(recipe.photo_path)}
+            alt=""
+            className="h-56 w-full object-cover md:h-72"
+          />
+        ) : (
+          <div className="flex h-56 items-center justify-center bg-surface-muted text-text-secondary md:h-72">
+            Sin foto
           </div>
-        </div>
-      )}
+        )}
+        <button
+          type="button"
+          aria-label="Editar receta"
+          className="btn-secondary absolute right-3 top-3 min-h-11 min-w-11 bg-surface/90"
+          onClick={() => setEditing(true)}
+        >
+          ✏️
+        </button>
+        {/* Un solo <h1>: superpuesto a la foto en móvil, bajo ella en desktop. */}
+        <h1 className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 text-2xl font-bold text-white md:static md:mt-4 md:bg-none md:p-0 md:text-text">
+          {recipe.name}
+        </h1>
+      </div>
 
-      <Thumb recipe={recipe} big />
       {recipe.description && (
         <p className="mt-4 text-text-secondary">{recipe.description}</p>
       )}
@@ -236,52 +221,56 @@ export function RecetarioDetallePage() {
         <p className="mt-2 font-medium">{recipe.servings} comensales</p>
       )}
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">Ingredientes</h2>
-        <ul className="card flex flex-col gap-1">
-          {recipe.ingredients.map((ing) => (
-            <li key={ing.id} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id={`ing-${ing.id}`}
-                className="h-4 w-4 accent-primary"
-              />
-              <label htmlFor={`ing-${ing.id}`}>
-                {ing.quantity !== null && `${ing.quantity} `}
-                {ing.unit && `${ing.unit} `}
-                {ing.food}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className="flex flex-col gap-6">
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Ingredientes</h2>
+            <ul className="card flex flex-col gap-1">
+              {recipe.ingredients.map((ing) => (
+                <li key={ing.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={`ing-${ing.id}`}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  <label htmlFor={`ing-${ing.id}`}>
+                    {ing.quantity !== null && `${ing.quantity} `}
+                    {ing.unit && `${ing.unit} `}
+                    {ing.food}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">Pasos</h2>
-        <ol className="card flex flex-col gap-2">
-          {recipe.steps.map((s) => (
-            <li key={s.id} aria-label={`paso ${s.step}`}>
-              {s.step}. {s.text}
-            </li>
-          ))}
-        </ol>
-      </section>
+          {recipe.materials.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-lg font-semibold">Materiales</h2>
+              <ul className="flex flex-wrap gap-2">
+                {recipe.materials.map((m) => (
+                  <li
+                    key={m}
+                    className="rounded-full bg-surface-muted px-3 py-1 text-sm"
+                  >
+                    {m}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
 
-      {recipe.materials.length > 0 && (
-        <section className="mt-6">
-          <h2 className="mb-2 text-lg font-semibold">Materiales</h2>
-          <ul className="flex flex-wrap gap-2">
-            {recipe.materials.map((m) => (
-              <li
-                key={m}
-                className="rounded-full bg-surface-muted px-3 py-1 text-sm"
-              >
-                {m}
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Elaboración</h2>
+          <ol className="card flex flex-col gap-2">
+            {recipe.steps.map((s) => (
+              <li key={s.id} aria-label={`paso ${s.step}`}>
+                {s.step}. {s.text}
               </li>
             ))}
-          </ul>
+          </ol>
         </section>
-      )}
+      </div>
 
       {recipe.tags.length > 0 && (
         <ul className="mt-6 flex flex-wrap gap-2">
@@ -292,6 +281,44 @@ export function RecetarioDetallePage() {
           ))}
         </ul>
       )}
+
+      <div className="mt-8 border-t border-border pt-4">
+        <button
+          type="button"
+          className="btn-secondary text-error"
+          onClick={() => setConfirming(true)}
+        >
+          Eliminar
+        </button>
+        {confirming && (
+          <div
+            className="card mt-3 border-error"
+            role="alertdialog"
+            aria-label="Confirmar eliminación"
+          >
+            <p className="mb-2">
+              ¿Seguro que quieres eliminar «{recipe.name}»?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setConfirming(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-primary bg-error"
+                disabled={api.saving}
+                onClick={remove}
+              >
+                {api.saving ? "Eliminando…" : "Eliminar receta"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {editing && (
         <RecipeEditor

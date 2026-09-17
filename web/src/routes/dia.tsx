@@ -4,6 +4,7 @@
 // cambiar de fecha vía desmontaje del editor keyed por fecha).
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { photoSrc } from "../lib/api";
 import { type DayData, type DaySession, toISODate, useDay } from "../lib/day";
 
 export function formatDateEs(date: Date): string {
@@ -117,10 +118,24 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
         {planned.map((m) => (
           <button
             key={m.meal}
-            className="card flex min-h-11 items-baseline justify-between gap-2 text-left"
-            onClick={() => navigate(`/plan-recetas/${m.recipeId}`)}
+            className="card flex min-h-11 items-center gap-3 text-left"
+            onClick={() => navigate(`/recetario/${m.recipeId}`)}
           >
-            <span className="font-semibold">{m.recipeName}</span>
+            {m.recipePhoto ? (
+              <img
+                src={photoSrc(m.recipePhoto)}
+                alt=""
+                className="size-12 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="size-12 shrink-0 rounded-lg bg-surface-muted"
+              />
+            )}
+            <span className="min-w-0 flex-1 truncate font-semibold">
+              {m.recipeName}
+            </span>
             <span className="text-sm text-text-secondary">{m.meal}</span>
           </button>
         ))}
