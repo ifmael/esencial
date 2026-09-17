@@ -2,8 +2,9 @@ Design a mobile weekly meal planner screen for the same app (also used on deskto
 the mobile version). A 7-day grid: rows = days of the week (L-D), columns = desayuno /
 almuerzo / cena; empty slots show a dashed "+ añadir" that opens the recipe picker from
 the recipe book; filled slots show recipe name + small thumbnail and TAP NAVIGATES to the
-recipe detail screen (with a small edit/remove affordance). Sticky button "Lista de la
-compra" that opens the generated shopping list: items grouped by supermarket section
+recipe detail screen (with a small edit/remove affordance). A secondary link "Recetario"
+under the week header opens the recipe book. Sticky button "Lista de la compra" that
+opens the generated shopping list: items grouped by supermarket section
 (Frutas y verduras, Carnes, Lácteos, Despensa...) with quantities aggregated from the
 recipes, checkbox per item, and a free-entry row "+ añadir artículo" at each section end.
 
@@ -21,7 +22,8 @@ Design a DESKTOP web version of the same weekly meal planner. Left sidebar navig
 (Esencial: Hoy, Plan recetas, Plan fuerza). Main: full-width grid, columns = days L-D,
 rows = desayuno / almuerzo / cena; empty slots dashed "+ añadir" (opens recipe picker),
 filled slots show recipe name + thumbnail, click navigates to recipe detail, with
-edit/remove affordance. Right panel or bottom bar: generated shopping list grouped by
+edit/remove affordance. A secondary link "Recetario" under the week header opens the
+recipe book. Right panel or bottom bar: generated shopping list grouped by
 supermarket section (Frutas y verduras, Carnes, Lácteos, Despensa...) with quantities,
 checkboxes and free-entry "+ añadir artículo" rows. Same visual style, desktop density —
 the whole week visible at a glance.

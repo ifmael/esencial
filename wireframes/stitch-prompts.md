@@ -74,8 +74,9 @@ Design a mobile weekly meal planner screen for the same app (also used on deskto
 the mobile version). A 7-day grid: rows = days of the week (L-D), columns = desayuno /
 almuerzo / cena; empty slots show a dashed "+ añadir" that opens the recipe picker from
 the recipe book; filled slots show recipe name + small thumbnail and TAP NAVIGATES to the
-recipe detail screen (with a small edit/remove affordance). Sticky button "Lista de la
-compra" that opens the generated shopping list: items grouped by supermarket section
+recipe detail screen (with a small edit/remove affordance). A secondary link "Recetario"
+under the week header opens the recipe book. Sticky button "Lista de la compra" that
+opens the generated shopping list: items grouped by supermarket section
 (Frutas y verduras, Carnes, Lácteos, Despensa...) with quantities aggregated from the
 recipes, checkbox per item, and a free-entry row "+ añadir artículo" at each section end.
 ```
@@ -106,11 +107,18 @@ templates (Empuje A, Tirón B...). Keep the same style system.
 ## Pantalla 7 — PLAN FUERZA (plantillas rotatorias)
 
 ```
-Design a mobile strength plan screen for the same app. Header "Plan fuerza". List of
+Design a mobile strength plan screen for the same app. Header "Plan fuerza". Below the
+rotation chips, a card "Semana" with ‹ › week navigation (ISO week label, e.g.
+"2026-W37"): seven day columns Lunes…Domingo (stacked on mobile), each with one slot —
+empty slot dashed "+ añadir" opening a template picker with search; planned slot shows
+template name, amber "Pendiente" badge and an ✕ that asks inline confirmation "Confirmar
+desprogramar"; logged slot shows green "Hecho" badge. Today's column is outlined in green
+with a small "Hoy" label. A secondary link "Ejercicios" next to the title opens the
+exercise catalogue. List of
 session templates as expandable cards: "A — Empuje", "B — Tirón", "C — Piernas"... each
 showing its exercise list (rows with exercise name + target series), tap on an exercise
 opens the exercise detail. Each template card has an edit mode: add exercise (opens
-exercise picker with search), remove, reorder (drag handle), duplicate template; a
+exercise picker with search), remove, reorder (↑/↓ buttons), duplicate template; a
 primary button "+ Nueva plantilla" at the bottom. Small hint of rotation order (A→B→C)
 as chips at the top. Keep the same style system.
 ```
