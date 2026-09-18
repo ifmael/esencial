@@ -55,9 +55,9 @@
 
 ## Phase 5: Verificación y limpieza
 
-- [ ] 5.1 `pnpm e2e:check` en verde con la suite completa: conteos D1 y R2
-      idénticos antes/después. El caso reducido (`auth-dia recipes`, y `auth-dia`
-      con el alias de la raíz) ya pasó, con y sin `pnpm dev` levantado.
+- [x] 5.1 `pnpm e2e:check` en verde con la suite completa: **24 passed (1.3m)**
+      con conteos D1 y R2 idénticos antes/después, en el worktree y de nuevo en
+      `main` tras el merge, con y sin `pnpm dev` levantado.
 - [x] 5.2 Dos corridas consecutivas de `pnpm e2e` verdes sin borrar nada entre
       ellas: `isolation-check auth-dia` dos veces, 4 passed cada una, con la base
       rederivada en cada arranque.
@@ -110,7 +110,8 @@
       (plantilla y sesión apuntando otra vez al ejercicio 94). Si el usuario
       prefiere ese estado, se revierte; la limpieza del resto es independiente y
       se mantiene.
-- [ ] 5.6 Al archivar: actualizar la línea `Purpose` de
-      `openspec/specs/e2e-flujos-criticos/spec.md` (dice `pnpm dev` en 8787;
-      pasa a la cadena propia en 8788).
-- [ ] 5.7 `verify-report.md` en el change; commit `chore(openspec)`.
+- [x] 5.6 `openspec/specs/e2e-flujos-criticos/spec.md`: `Purpose` actualizado
+      (8788 y `e2e/.state`) e INFRA reescrito + requisito DATA añadido.
+- [x] 5.7 `verify-report.md` en el change; archivado a
+      `openspec/changes/archive/2026-09-17-e2e-db-aislada/` y commiteado
+      (`chore(openspec)`).
