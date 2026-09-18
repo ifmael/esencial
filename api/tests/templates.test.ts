@@ -1,4 +1,5 @@
-// E1 parity: template CRUD with ordered exercises + rotationIndex.
+// CRUD de plantillas: agrupaciones semánticas de ejercicios (fuerza y cardio)
+// con series/tiempos por defecto. Sin rotación; sin ejercicios duplicados.
 import { beforeAll, describe, expect, it } from "vitest";
 import { d1, del, freshDb, get, post, put } from "./helpers";
 
@@ -7,6 +8,7 @@ beforeAll(freshDb);
 let benchId = 0;
 let squatId = 0;
 let rowId = 0;
+let runId = 0;
 
 async function body(res: Response): Promise<Record<string, unknown>> {
   return (await res.json()) as Record<string, unknown>;
@@ -16,11 +18,13 @@ beforeAll(async () => {
   benchId = await d1.run("INSERT INTO exercises (name) VALUES ('Press banca')");
   squatId = await d1.run("INSERT INTO exercises (name) VALUES ('Sentadilla')");
   rowId = await d1.run("INSERT INTO exercises (name) VALUES ('Remo')");
+  runId = await d1.run(
+    "INSERT INTO exercises (name, kind) VALUES ('Running', 'running')",
+  );
 });
 
 const payload = (name: string) => ({
   name,
-  rotationIndex: 0,
   exercises: [
     { exerciseId: benchId, targetSets: 4, targetRepsMin: 6, targetRepsMax: 8 },
     { exerciseId: squatId, targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 },
@@ -31,7 +35,6 @@ describe("/api/templates", () => {
   it("creates template with ordered exercises", async () => {
     const res = await post("/api/templates", {
       ...payload("A — Empuje"),
-      rotationIndex: 0,
       exercises: [
         ...payload("x").exercises,
         {
@@ -53,34 +56,57 @@ describe("/api/templates", () => {
     expect(exs[0].targetSets).toBe(4);
   });
 
-  it("GET list preserves order and rotationIndex", async () => {
+  it("guarda cardio con distancia y tiempo en la plantilla", async () => {
+    const res = await post("/api/templates", {
+      name: "B — Empuje + cardio",
+      exercises: [
+        { exerciseId: benchId, targetSets: 4 },
+        { exerciseId: runId, targetDistanceKm: 10, targetDurationMin: 45 },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const got = await body(
+      await get(`/api/templates/${Number((await body(res)).id)}`),
+    );
+    const exs = got.exercises as {
+      exerciseId: number;
+      kind: string;
+      targetDistanceKm: number | null;
+      targetDurationMin: number | null;
+    }[];
+    expect(exs[1]).toMatchObject({
+      exerciseId: runId,
+      kind: "running",
+      targetDistanceKm: 10,
+      targetDurationMin: 45,
+    });
+    expect(exs[0].kind).toBe("strength");
+  });
+
+  it("GET list ordered by name", async () => {
     const created = await body(
-      await post("/api/templates", {
-        ...payload("B — Tirón"),
-        rotationIndex: 1,
-      }),
+      await post("/api/templates", payload("C — Tirón")),
     );
     const res = await get("/api/templates");
     expect(res.status).toBe(200);
     const list = (await res.json()) as {
       name: string;
-      rotationIndex: number;
       exercises: { exerciseId: number }[];
     }[];
-    const b = list.find((t) => t.name === "B — Tirón");
-    expect(b?.rotationIndex).toBe(1);
-    expect(b?.exercises.map((e) => e.exerciseId)).toEqual([benchId, squatId]);
+    const c = list.find((t) => t.name === "C — Tirón");
+    expect(c?.exercises.map((e) => e.exerciseId)).toEqual([benchId, squatId]);
     expect(Number(created.id)).toBeGreaterThan(0);
+    const names = list.map((t) => t.name);
+    expect([...names].sort()).toEqual(names);
   });
 
   it("PUT reorders exercises; order preserved on later GET", async () => {
     const created = await body(
-      await post("/api/templates", payload("C — Pierna")),
+      await post("/api/templates", payload("D — Pierna")),
     );
     const id = Number(created.id);
     const res = await put(`/api/templates/${id}`, {
-      name: "C — Pierna",
-      rotationIndex: created.rotationIndex ?? 2,
+      name: "D — Pierna",
       exercises: [
         {
           exerciseId: squatId,
@@ -103,27 +129,46 @@ describe("/api/templates", () => {
     expect(exs[0].targetSets).toBe(5);
   });
 
-  it("PUT without rotationIndex preserves the stored value", async () => {
+  it("PUT conserva los campos de cardio", async () => {
     const created = await body(
       await post("/api/templates", {
-        ...payload("D — Full"),
-        rotationIndex: 3,
+        name: "E — Cardio v1",
+        exercises: [{ exerciseId: runId, targetDistanceKm: 5 }],
       }),
     );
     const id = Number(created.id);
     await put(`/api/templates/${id}`, {
-      name: "D — Full v2",
-      exercises: [{ exerciseId: benchId, targetSets: 3 }],
+      name: "E — Cardio v2",
+      exercises: [
+        { exerciseId: runId, targetDistanceKm: 12, targetDurationMin: 50 },
+      ],
     });
     const got = await body(await get(`/api/templates/${id}`));
-    expect(got.rotationIndex).toBe(3);
-    expect(got.name).toBe("D — Full v2");
+    const exs = got.exercises as {
+      targetDistanceKm: number | null;
+      targetDurationMin: number | null;
+    }[];
+    expect(got.name).toBe("E — Cardio v2");
+    expect(exs[0].targetDistanceKm).toBe(12);
+    expect(exs[0].targetDurationMin).toBe(50);
   });
 
-  it("400 without name", async () => {
+  it("400 sin nombre", async () => {
     const res = await post("/api/templates", { exercises: [] });
     expect(res.status).toBe(400);
     expect((await body(res)).field).toBe("name");
+  });
+
+  it("400 con un ejercicio repetido (field exercises)", async () => {
+    const res = await post("/api/templates", {
+      name: "Repetida",
+      exercises: [
+        { exerciseId: benchId, targetSets: 3 },
+        { exerciseId: benchId, targetSets: 4 },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("exercises");
   });
 
   it("400 when referencing an unknown exercise", async () => {
@@ -136,7 +181,7 @@ describe("/api/templates", () => {
 
   it("DELETE removes template (children cascade)", async () => {
     const created = await body(
-      await post("/api/templates", payload("E — Borradiza")),
+      await post("/api/templates", payload("F — Borradiza")),
     );
     const id = Number(created.id);
     expect((await del(`/api/templates/${id}`)).status).toBe(204);
@@ -144,7 +189,7 @@ describe("/api/templates", () => {
   });
 
   it("deleting a still-referenced exercise is blocked (FK RESTRICT → 400)", async () => {
-    await post("/api/templates", payload("F — Referencia"));
+    await post("/api/templates", payload("G — Referencia"));
     const res = await del(`/api/exercises/${benchId}`);
     expect(res.status).toBe(400);
   });

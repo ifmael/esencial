@@ -1,11 +1,24 @@
-// /plan-fuerza — plantillas rotatorias expandibles + editor de borrador local.
-// Diseño E4: D2 (un PUT atómico), D3 (↑/↓ sin drag), D5 (chips = orden API).
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+// /plan-fuerza — rejilla semanal + editor del día. Cada día es una sesión con
+// nombre, compuesta de ejercicios copiados desde plantillas (que se expanden y
+// desaparecen) y/o sueltos, sin duplicados. Las plantillas de abajo son
+// agrupaciones semánticas (CRUD), ya sin rotación.
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { WeekGrid } from "../components/week-grid";
-import { apiField } from "../lib/api";
-import { type Exercise, useExercises } from "../lib/exercises";
+import { ApiError, apiField, apiGet, apiSend } from "../lib/api";
+import {
+  type Exercise,
+  type ExerciseKind,
+  KIND_LABELS,
+  useExercises,
+} from "../lib/exercises";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
+import {
+  type SessionDetail,
+  type SessionItem,
+  type SessionPayload,
+  usePlanWeek,
+} from "../lib/plan-week";
 import {
   addEntry,
   buildTemplatePayload,
@@ -19,24 +32,29 @@ import {
 } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 
-const letterOf = (t: { rotationIndex: number }): string =>
-  String.fromCharCode(65 + t.rotationIndex);
-
 const toDraft = (t: Template): Draft => ({
   name: t.name,
-  rotationIndex: t.rotationIndex,
   entries: t.exercises.map((e) => ({
     key: `s${e.id}`,
     exerciseId: e.exerciseId,
     exerciseName: e.exerciseName,
+    kind: e.kind,
     targetSets: e.targetSets,
     targetRepsMin: e.targetRepsMin,
     targetRepsMax: e.targetRepsMax,
+    targetDistanceKm: e.targetDistanceKm,
+    targetDurationMin: e.targetDurationMin,
   })),
 });
 
 const intAt = (raw: string): number | null =>
   raw === "" ? null : Math.max(1, Math.trunc(Number(raw) || 1));
+
+const numAt = (raw: string): number | null => {
+  if (raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
 
 // --- Mapa corporal ---------------------------------------------------------
 
@@ -379,6 +397,9 @@ function ExercisePicker({
                       }}
                     >
                       {e.name}
+                      {e.kind === "strength"
+                        ? null
+                        : ` · ${KIND_LABELS[e.kind]}`}
                     </button>
                   </li>
                 ))}
@@ -434,12 +455,6 @@ function TemplateEditor({
   return (
     <div className="card flex flex-col gap-3">
       <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-        <span
-          aria-hidden
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-container text-xs font-bold text-on-primary"
-        >
-          {letterOf({ rotationIndex: draft.rotationIndex })}
-        </span>
         <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
           <label htmlFor="tpl-name">Nombre</label>
           <input
@@ -449,25 +464,6 @@ function TemplateEditor({
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           />
           {nameError && <span className="text-sm text-error">{nameError}</span>}
-        </div>
-        <div className="flex flex-col gap-1 text-sm">
-          <label htmlFor="tpl-rot">Rotación</label>
-          <input
-            id="tpl-rot"
-            className="input w-20"
-            type="number"
-            min={0}
-            value={draft.rotationIndex}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                rotationIndex: Math.max(
-                  0,
-                  Math.trunc(Number(e.target.value) || 0),
-                ),
-              })
-            }
-          />
         </div>
       </header>
 
@@ -487,57 +483,95 @@ function TemplateEditor({
             >
               {entry.exerciseName}
             </Link>
-            <label className="text-sm">
-              Series
-              <input
-                className="input w-16"
-                type="number"
-                min={1}
-                value={entry.targetSets ?? ""}
-                onChange={(e) =>
-                  setDraft(
-                    setTargets(draft, entry.key, {
-                      ...entry,
-                      targetSets: intAt(e.target.value),
-                    }),
-                  )
-                }
-              />
-            </label>
-            <label className="text-sm">
-              Reps mín
-              <input
-                className="input w-16"
-                type="number"
-                min={1}
-                value={entry.targetRepsMin ?? ""}
-                onChange={(e) =>
-                  setDraft(
-                    setTargets(draft, entry.key, {
-                      ...entry,
-                      targetRepsMin: intAt(e.target.value),
-                    }),
-                  )
-                }
-              />
-            </label>
-            <label className="text-sm">
-              Reps máx
-              <input
-                className="input w-16"
-                type="number"
-                min={1}
-                value={entry.targetRepsMax ?? ""}
-                onChange={(e) =>
-                  setDraft(
-                    setTargets(draft, entry.key, {
-                      ...entry,
-                      targetRepsMax: intAt(e.target.value),
-                    }),
-                  )
-                }
-              />
-            </label>
+            {entry.kind === "strength" ? (
+              <>
+                <label className="text-sm">
+                  Series
+                  <input
+                    className="input w-16"
+                    type="number"
+                    min={1}
+                    value={entry.targetSets ?? ""}
+                    onChange={(e) =>
+                      setDraft(
+                        setTargets(draft, entry.key, {
+                          targetSets: intAt(e.target.value),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  Reps mín
+                  <input
+                    className="input w-16"
+                    type="number"
+                    min={1}
+                    value={entry.targetRepsMin ?? ""}
+                    onChange={(e) =>
+                      setDraft(
+                        setTargets(draft, entry.key, {
+                          targetRepsMin: intAt(e.target.value),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  Reps máx
+                  <input
+                    className="input w-16"
+                    type="number"
+                    min={1}
+                    value={entry.targetRepsMax ?? ""}
+                    onChange={(e) =>
+                      setDraft(
+                        setTargets(draft, entry.key, {
+                          targetRepsMax: intAt(e.target.value),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <span className="badge-pending">{KIND_LABELS[entry.kind]}</span>
+                <label className="text-sm">
+                  Distancia (km)
+                  <input
+                    className="input w-20"
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={entry.targetDistanceKm ?? ""}
+                    onChange={(e) =>
+                      setDraft(
+                        setTargets(draft, entry.key, {
+                          targetDistanceKm: numAt(e.target.value),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  Tiempo (min)
+                  <input
+                    className="input w-20"
+                    type="number"
+                    min={0}
+                    value={entry.targetDurationMin ?? ""}
+                    onChange={(e) =>
+                      setDraft(
+                        setTargets(draft, entry.key, {
+                          targetDurationMin: intAt(e.target.value),
+                        }),
+                      )
+                    }
+                  />
+                </label>
+              </>
+            )}
             <button
               className="btn-secondary min-h-11 min-w-11"
               aria-label="Subir"
@@ -591,9 +625,12 @@ function TemplateEditor({
                 key: newEntryKey(),
                 exerciseId: e.id,
                 exerciseName: e.name,
+                kind: e.kind,
                 targetSets: null,
                 targetRepsMin: null,
                 targetRepsMax: null,
+                targetDistanceKm: null,
+                targetDurationMin: null,
               }),
             )
           }
@@ -639,16 +676,6 @@ function TemplateCard({
           aria-label={template.name}
           onClick={onToggle}
         >
-          <span
-            aria-hidden
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-              expanded
-                ? "bg-primary-container text-on-primary"
-                : "border border-border bg-surface-muted text-text-secondary"
-            }`}
-          >
-            {letterOf(template)}
-          </span>
           <span className="truncate text-lg font-semibold">
             {template.name}
           </span>
@@ -678,9 +705,24 @@ function TemplateCard({
                 onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}
               >
                 <span className="truncate">{e.exerciseName}</span>
-                {e.targetSets != null && (
+                {e.kind === "strength" ? (
+                  e.targetSets != null && (
+                    <span className="shrink-0 text-sm text-text-secondary">
+                      {e.targetSets} {e.targetSets === 1 ? "serie" : "series"}
+                    </span>
+                  )
+                ) : (
                   <span className="shrink-0 text-sm text-text-secondary">
-                    {e.targetSets} {e.targetSets === 1 ? "serie" : "series"}
+                    {[
+                      e.targetDistanceKm != null
+                        ? `${e.targetDistanceKm} km`
+                        : null,
+                      e.targetDurationMin != null
+                        ? `${e.targetDurationMin} min`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || KIND_LABELS[e.kind]}
                   </span>
                 )}
               </button>
@@ -737,6 +779,433 @@ function TemplateCard({
   );
 }
 
+// --- Editor del día (sesión) ------------------------------------------------
+
+type DayRow = SessionItem & {
+  key: string;
+  exerciseId: number;
+  exerciseName: string;
+  kind: ExerciseKind;
+};
+
+function rowsFrom(session: SessionDetail | null): DayRow[] {
+  if (!session) return [];
+  return session.exercises.map((e) => ({
+    key: `e${e.id}`,
+    exerciseId: e.exerciseId,
+    exerciseName: e.exerciseName,
+    kind: e.kind,
+    targetSets: e.targetSets,
+    targetRepsMin: e.targetRepsMin,
+    targetRepsMax: e.targetRepsMax,
+    targetDistanceKm: e.targetDistanceKm,
+    targetDurationMin: e.targetDurationMin,
+  }));
+}
+
+/** Expande una plantilla en filas del día: un ejercicio presente se queda UNA vez. */
+function expandTemplate(
+  template: Template,
+  current: DayRow[],
+): { rows: DayRow[]; skipped: number } {
+  const rows = [...current];
+  const taken = new Set(rows.map((r) => r.exerciseId));
+  let skipped = 0;
+  for (const e of template.exercises) {
+    if (taken.has(e.exerciseId)) {
+      skipped++;
+      continue;
+    }
+    taken.add(e.exerciseId);
+    rows.push({
+      key: `t${template.id}-${e.id}`,
+      exerciseId: e.exerciseId,
+      exerciseName: e.exerciseName,
+      kind: e.kind,
+      targetSets: e.kind === "strength" ? (e.targetSets ?? 3) : null,
+      targetRepsMin: e.targetRepsMin,
+      targetRepsMax: e.targetRepsMax,
+      targetDistanceKm: e.targetDistanceKm,
+      targetDurationMin: e.targetDurationMin,
+    });
+  }
+  return { rows, skipped };
+}
+
+/** Modal de añadir al día: plantillas (se expanden) y ejercicios sueltos. */
+function SessionPicker({
+  templates,
+  exercises,
+  takenIds,
+  onPickTemplate,
+  onPickExercise,
+  onClose,
+}: {
+  templates: Template[];
+  exercises: Exercise[];
+  takenIds: Set<number>;
+  onPickTemplate: (t: Template) => void;
+  onPickExercise: (e: Exercise) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const shownTemplates = needle
+    ? templates.filter((t) => t.name.toLowerCase().includes(needle))
+    : templates;
+  const shownExercises = needle
+    ? exercises.filter((e) => e.name.toLowerCase().includes(needle))
+    : exercises;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-label="Añadir al día"
+        className="card flex max-h-[80vh] w-full max-w-md flex-col gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-bold">Añadir al día</h2>
+        <input
+          type="text"
+          autoFocus
+          placeholder="Buscar plantilla o ejercicio…"
+          aria-label="Buscar"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="min-h-11 rounded-lg border border-border px-3"
+        />
+        <section className="flex min-h-0 flex-col gap-1 overflow-y-auto">
+          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+            Plantillas
+          </h3>
+          {shownTemplates.length === 0 ? (
+            <p className="text-sm text-text-secondary">Sin plantillas</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {shownTemplates.map((t) => (
+                <li key={t.id}>
+                  <button
+                    className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted"
+                    onClick={() => onPickTemplate(t)}
+                  >
+                    {t.name}
+                    <span className="ml-2 text-sm text-text-secondary">
+                      {t.exercises.length}{" "}
+                      {t.exercises.length === 1 ? "ejercicio" : "ejercicios"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section className="flex min-h-0 flex-col gap-1 overflow-y-auto">
+          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+            Ejercicios
+          </h3>
+          {shownExercises.length === 0 ? (
+            <p className="text-sm text-text-secondary">Sin ejercicios</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {shownExercises.map((e) => {
+                const taken = takenIds.has(e.id);
+                return (
+                  <li key={e.id}>
+                    <button
+                      className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
+                      disabled={taken}
+                      onClick={() => {
+                        if (!taken) onPickExercise(e);
+                      }}
+                    >
+                      {e.name}
+                      {e.kind === "strength"
+                        ? null
+                        : ` · ${KIND_LABELS[e.kind]}`}
+                      {taken ? (
+                        <span className="ml-2 text-sm">ya añadido</span>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+        <button className="btn-secondary self-end" onClick={onClose}>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Planifica el día: nombre + ejercicios (series/reps o distancia/tiempo). */
+function SessionEditor({
+  date,
+  session,
+  templates,
+  exercises,
+  saving,
+  serverError,
+  onSave,
+  onDelete,
+  onCancel,
+}: {
+  date: string;
+  session: SessionDetail | null;
+  templates: Template[];
+  exercises: Exercise[];
+  saving: boolean;
+  serverError: string | null;
+  onSave: (payload: SessionPayload) => void;
+  onDelete: () => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(session?.name ?? "");
+  const [rows, setRows] = useState<DayRow[]>(() => rowsFrom(session));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const takenIds = new Set(rows.map((r) => r.exerciseId));
+
+  const patchRow = (key: string, patch: Partial<DayRow>) =>
+    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+
+  const pickTemplate = (t: Template) => {
+    const { rows: next, skipped } = expandTemplate(t, rows);
+    setRows(next);
+    setNote(
+      skipped > 0
+        ? `${skipped} ${skipped === 1 ? "ejercicio ya estaba" : "ejercicios ya estaban"} en el día`
+        : null,
+    );
+    if (name.trim() === "") setName(t.name);
+  };
+
+  const pickExercise = (e: Exercise) => {
+    if (takenIds.has(e.id)) return;
+    setRows((rs) => [
+      ...rs,
+      {
+        key: `x${e.id}`,
+        exerciseId: e.id,
+        exerciseName: e.name,
+        kind: e.kind,
+        targetSets: null,
+        targetRepsMin: null,
+        targetRepsMax: null,
+        targetDistanceKm: null,
+        targetDurationMin: null,
+      },
+    ]);
+  };
+
+  const save = () => {
+    if (saving || rows.length === 0) return;
+    onSave({
+      name: name.trim() === "" ? null : name.trim(),
+      items: rows.map((r) => ({
+        exerciseId: r.exerciseId,
+        targetSets: r.targetSets,
+        targetRepsMin: r.targetRepsMin,
+        targetRepsMax: r.targetRepsMax,
+        targetDistanceKm: r.targetDistanceKm,
+        targetDurationMin: r.targetDurationMin,
+      })),
+    });
+  };
+
+  return (
+    <section className="card flex flex-col gap-3">
+      <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
+        <h2 className="text-lg font-bold">
+          {session ? "Editar sesión" : "Nueva sesión"} · {date}
+        </h2>
+        <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
+          <label htmlFor="day-name">Nombre</label>
+          <input
+            id="day-name"
+            className="input"
+            placeholder={`Sesión del ${date}`}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+      </header>
+
+      {note && <p className="text-sm text-text-secondary">{note}</p>}
+      {serverError && <p className="text-sm text-error">{serverError}</p>}
+
+      <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
+        {rows.map((row, i) => (
+          <li
+            key={row.key}
+            className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
+              i < rows.length - 1 ? "border-b border-border" : ""
+            }`}
+          >
+            <span className="min-w-32 font-medium">{row.exerciseName}</span>
+            {row.kind === "strength" ? (
+              <>
+                <label className="text-sm">
+                  Series
+                  <input
+                    className="input w-16"
+                    type="number"
+                    min={1}
+                    aria-label={`${row.exerciseName} series`}
+                    value={row.targetSets ?? ""}
+                    onChange={(e) =>
+                      patchRow(row.key, { targetSets: intAt(e.target.value) })
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  Reps mín
+                  <input
+                    className="input w-16"
+                    type="number"
+                    min={1}
+                    aria-label={`${row.exerciseName} reps mín`}
+                    value={row.targetRepsMin ?? ""}
+                    onChange={(e) =>
+                      patchRow(row.key, {
+                        targetRepsMin: intAt(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  Reps máx
+                  <input
+                    className="input w-16"
+                    type="number"
+                    min={1}
+                    aria-label={`${row.exerciseName} reps máx`}
+                    value={row.targetRepsMax ?? ""}
+                    onChange={(e) =>
+                      patchRow(row.key, {
+                        targetRepsMax: intAt(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <span className="badge-pending">{KIND_LABELS[row.kind]}</span>
+                <label className="text-sm">
+                  Distancia (km)
+                  <input
+                    className="input w-20"
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    aria-label={`${row.exerciseName} distancia (km)`}
+                    value={row.targetDistanceKm ?? ""}
+                    onChange={(e) =>
+                      patchRow(row.key, {
+                        targetDistanceKm: numAt(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="text-sm">
+                  Tiempo (min)
+                  <input
+                    className="input w-20"
+                    type="number"
+                    min={0}
+                    aria-label={`${row.exerciseName} tiempo (min)`}
+                    value={row.targetDurationMin ?? ""}
+                    onChange={(e) =>
+                      patchRow(row.key, {
+                        targetDurationMin: intAt(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </>
+            )}
+            <button
+              className="btn-secondary ml-auto"
+              aria-label={`Quitar ${row.exerciseName}`}
+              onClick={() =>
+                setRows((rs) => rs.filter((r) => r.key !== row.key))
+              }
+            >
+              Quitar
+            </button>
+          </li>
+        ))}
+        {rows.length === 0 && (
+          <li className="bg-surface p-3 text-text-secondary">
+            Sin ejercicios todavía. Añade una plantilla o ejercicios sueltos.
+          </li>
+        )}
+      </ul>
+
+      <button
+        className="btn-secondary self-start"
+        onClick={() => setPickerOpen(true)}
+      >
+        + Añadir
+      </button>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="btn-primary"
+          disabled={saving || rows.length === 0}
+          onClick={save}
+        >
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
+        <button className="btn-secondary" onClick={onCancel}>
+          Cancelar
+        </button>
+        {session &&
+          (confirming ? (
+            <span className="flex items-center gap-2">
+              <span>¿Eliminar la sesión completa?</span>
+              <button className="btn-primary bg-error" onClick={onDelete}>
+                Confirmar
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => setConfirming(false)}
+              >
+                No
+              </button>
+            </span>
+          ) : (
+            <button
+              className="btn-secondary"
+              onClick={() => setConfirming(true)}
+            >
+              Eliminar sesión
+            </button>
+          ))}
+      </div>
+
+      {pickerOpen && (
+        <SessionPicker
+          templates={templates}
+          exercises={exercises}
+          takenIds={takenIds}
+          onPickTemplate={pickTemplate}
+          onPickExercise={pickExercise}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+    </section>
+  );
+}
+
 // --- Page ------------------------------------------------------------------
 
 export function PlanFuerzaPage() {
@@ -754,13 +1223,83 @@ export function PlanFuerzaPage() {
     null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [day, setDay] = useState<{
+    date: string;
+    session: SessionDetail | null;
+  } | null>(null);
+  const [daySaving, setDaySaving] = useState(false);
+  const [dayLoading, setDayLoading] = useState(false);
+  const [dayError, setDayError] = useState<string | null>(null);
   const cards = useRef(new Map<number, HTMLElement>());
+  const { exercises } = useExercises();
+  const [params, setParams] = useSearchParams();
+  const isoWeek = params.get("week") ?? currentIsoWeek();
+  const gotoWeek = (week: string) => setParams({ week });
+  const week = usePlanWeek(isoWeek);
 
-  const goTo = (t: Template) => {
-    setExpanded((x) => ({ ...x, [t.id]: true }));
-    cards.current
-      .get(t.id)
-      ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  /** Abre (o crea) el editor del día; el detalle se carga por HTTP. */
+  const openDay = async (date: string) => {
+    setDayError(null);
+    const found = week.sessions.find((s) => s.date === date);
+    if (!found || found.status === "logged") {
+      setDay({ date, session: null });
+      return;
+    }
+    setDayLoading(true);
+    try {
+      const detail = await apiGet<SessionDetail>(
+        `/api/plan-sessions/${found.id}`,
+      );
+      setDay({ date, session: detail });
+    } catch (e) {
+      setDay(null);
+      setDayError(
+        e instanceof Error ? e.message : "No se pudo cargar la sesión",
+      );
+    } finally {
+      setDayLoading(false);
+    }
+  };
+
+  const saveDay = async (payload: SessionPayload) => {
+    if (!day || daySaving) return;
+    setDaySaving(true);
+    setDayError(null);
+    try {
+      if (day.session) {
+        await apiSend(`/api/plan-sessions/${day.session.id}`, "PUT", payload);
+      } else {
+        await apiSend("/api/plan-sessions", "POST", {
+          date: day.date,
+          ...payload,
+        });
+      }
+      await week.reload();
+      setDay(null);
+    } catch (e) {
+      setDayError(
+        e instanceof ApiError ? e.error : "No se pudo guardar la sesión",
+      );
+    } finally {
+      setDaySaving(false);
+    }
+  };
+
+  const deleteDay = async () => {
+    if (!day?.session) return;
+    setDaySaving(true);
+    setDayError(null);
+    try {
+      await apiSend(`/api/plan-sessions/${day.session.id}`, "DELETE", {});
+      await week.reload();
+      setDay(null);
+    } catch (e) {
+      setDayError(
+        e instanceof ApiError ? e.error : "No se pudo eliminar la sesión",
+      );
+    } finally {
+      setDaySaving(false);
+    }
   };
 
   const save = async (draft: Draft) => {
@@ -788,9 +1327,6 @@ export function PlanFuerzaPage() {
       }),
     );
   };
-  const [params, setParams] = useSearchParams();
-  const isoWeek = params.get("week") ?? currentIsoWeek();
-  const gotoWeek = (week: string) => setParams({ week });
 
   return (
     <div>
@@ -801,42 +1337,40 @@ export function PlanFuerzaPage() {
             Ejercicios
           </Link>
         </div>
-        {templates.length > 0 && (
-          <div
-            className="flex items-center gap-1 self-start rounded-full border border-border bg-surface-muted p-1.5 md:self-auto"
-            aria-label="Orden de rotación"
-          >
-            {templates.map((t, i) => (
-              <Fragment key={t.id}>
-                {i > 0 && (
-                  <span
-                    aria-hidden
-                    className="px-1 text-sm text-text-secondary"
-                  >
-                    →
-                  </span>
-                )}
-                <button
-                  aria-label={t.name}
-                  onClick={() => goTo(t)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-                    i === 0
-                      ? "bg-primary-container text-on-primary shadow-sm"
-                      : "border border-border bg-surface text-text-secondary"
-                  }`}
-                >
-                  {letterOf(t)}
-                </button>
-              </Fragment>
-            ))}
-          </div>
-        )}
       </section>
 
       <WeekGrid
         isoWeek={isoWeek}
+        sessions={week.sessions}
+        loading={week.loading}
+        error={week.error}
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
+        onOpenDay={(date) => void openDay(date)}
+        onRemove={(id) => void week.remove(id)}
       />
+
+      {dayLoading && <div className="card mt-4">Cargando sesión…</div>}
+
+      {day && (
+        <div className="mt-4">
+          <SessionEditor
+            key={`${day.date}-${day.session?.id ?? "nueva"}`}
+            date={day.date}
+            session={day.session}
+            templates={templates}
+            exercises={exercises}
+            saving={daySaving}
+            serverError={dayError}
+            onSave={(payload) => void saveDay(payload)}
+            onDelete={() => void deleteDay()}
+            onCancel={() => setDay(null)}
+          />
+        </div>
+      )}
+
+      {dayError && !day && (
+        <div className="card mt-4 text-error">{dayError}</div>
+      )}
 
       {error && (
         <div className="card mb-4 flex items-center justify-between">
@@ -864,7 +1398,7 @@ export function PlanFuerzaPage() {
               draft={
                 editing.template
                   ? toDraft(editing.template)
-                  : { name: "", rotationIndex: 0, entries: [] }
+                  : { name: "", entries: [] }
               }
               submitting={submitting}
               onSave={save}

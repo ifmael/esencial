@@ -1,4 +1,4 @@
-// /plan-fuerza screen + template editor (E4 tasks 2.1-2.4, 3.1-3.7, 6.1).
+// /plan-fuerza — rejilla semanal + editor del día (sesión) + CRUD de plantillas.
 
 import {
   cleanup,
@@ -23,6 +23,7 @@ const press: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pecho"],
+  kind: "strength",
 };
 const remo: Exercise = {
   id: 8,
@@ -32,6 +33,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
+  kind: "strength",
 };
 const sent: Exercise = {
   id: 9,
@@ -41,12 +43,22 @@ const sent: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
+  kind: "strength",
+};
+const run: Exercise = {
+  id: 10,
+  name: "Running",
+  description: null,
+  setupCues: null,
+  techniqueUrl: null,
+  steps: null,
+  tags: ["cardio"],
+  kind: "running",
 };
 
 const tplA = (): Template => ({
   id: 1,
   name: "A — Empuje",
-  rotationIndex: 0,
   exercises: [
     {
       id: 11,
@@ -55,7 +67,10 @@ const tplA = (): Template => ({
       targetSets: 3,
       targetRepsMin: 8,
       targetRepsMax: 8,
+      targetDistanceKm: null,
+      targetDurationMin: null,
       exerciseName: "Press banca",
+      kind: "strength",
     },
     {
       id: 12,
@@ -64,20 +79,33 @@ const tplA = (): Template => ({
       targetSets: null,
       targetRepsMin: null,
       targetRepsMax: null,
+      targetDistanceKm: null,
+      targetDurationMin: null,
       exerciseName: "Remo",
+      kind: "strength",
+    },
+    {
+      id: 13,
+      exerciseId: 10,
+      position: 2,
+      targetSets: null,
+      targetRepsMin: null,
+      targetRepsMax: null,
+      targetDistanceKm: 10,
+      targetDurationMin: 45,
+      exerciseName: "Running",
+      kind: "running",
     },
   ],
 });
 const tplB = (): Template => ({
   id: 2,
   name: "B — Tirón",
-  rotationIndex: 1,
   exercises: [],
 });
 const tplC = (): Template => ({
   id: 3,
   name: "C — Piernas",
-  rotationIndex: 2,
   exercises: [],
 });
 
@@ -101,7 +129,7 @@ function cardOf(name: string): HTMLElement {
 beforeEach(() => {
   api = mockApi({
     templates: [tplA(), tplB(), tplC()],
-    exercises: [press, remo, sent],
+    exercises: [press, remo, sent, run],
   });
 });
 afterEach(() => {
@@ -110,19 +138,17 @@ afterEach(() => {
 });
 
 async function openPlan() {
-  renderAt("/plan-fuerza");
+  renderAt("/plan-fuerza?week=2026-W36");
   await screen.findByText("B — Tirón");
 }
 
 describe("plan screen", () => {
-  it("renders header, chips and one card per template in API order", async () => {
+  it("renders header and one card per template in API order", async () => {
     await openPlan();
     expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
-    const chips = screen.getAllByRole("button", { name: "C — Piernas" });
-    expect(chips.length).toBeGreaterThanOrEqual(2); // chip + card header
-    const biz = api.calls.find((c) => !c.url.includes("/api/auth/status"));
-    expect(biz?.url).toBe("/api/plan-sessions"); // la rejilla carga primero
+    expect(api.calls.some((c) => c.url === "/api/plan-sessions")).toBe(true); // la rejilla carga la semana
     expect(api.calls.some((c) => c.url === "/api/templates")).toBe(true);
+    expect(screen.getByText("A — Empuje")).toBeDefined();
   });
 
   it("enlace 'Ejercicios' abre el catálogo", async () => {
@@ -140,16 +166,16 @@ describe("plan screen", () => {
         {
           id: 1,
           date: "2026-08-31",
+          name: "Empuje A",
           status: "planned",
-          templateId: 1,
-          templateName: "A — Empuje",
+          exercises: [],
         },
         {
           id: 2,
           date: "2026-09-01",
+          name: "Cardio suave",
           status: "logged",
-          templateId: 1,
-          templateName: "A — Empuje",
+          exercises: [],
         },
       ],
     });
@@ -160,6 +186,31 @@ describe("plan screen", () => {
       ),
     );
     expect(screen.getByText("Hecho").className).toContain("badge-done");
+    expect(screen.getByText("Empuje A")).toBeDefined();
+    expect(screen.getByText("Cardio suave")).toBeDefined();
+  });
+
+  it("celda logged → tap navega a /sesion/:date", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press],
+      sessions: [
+        {
+          id: 2,
+          date: "2026-09-01",
+          name: "Cardio suave",
+          status: "logged",
+          exercises: [],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /ver sesión del 2026-09-01/i,
+      }),
+    );
+    expect(window.location.pathname).toBe("/sesion/2026-09-01");
   });
 
   it("empty state invites creating the first template", async () => {
@@ -200,7 +251,7 @@ describe("plan screen", () => {
     await screen.findByText(/primera plantilla/i);
   });
 
-  it("expand/collapse needs zero extra network; rows show series or name only", async () => {
+  it("expand/collapse needs zero extra network; rows show series or cardio marcas", async () => {
     await openPlan();
     expect(screen.queryByText("3 series")).toBeNull();
     const before = api.calls.length;
@@ -208,6 +259,7 @@ describe("plan screen", () => {
       within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }),
     );
     await waitFor(() => expect(screen.getByText("3 series")).toBeDefined());
+    expect(screen.getByText("10 km · 45 min")).toBeDefined();
     expect(api.calls.length).toBe(before);
     expect(
       within(cardOf("A — Empuje")).getByText("Remo").closest("button")
@@ -219,12 +271,6 @@ describe("plan screen", () => {
     expect(screen.queryByText("3 series")).toBeNull();
   });
 
-  it("tapping chip C expands the C card", async () => {
-    await openPlan();
-    fireEvent.click(screen.getAllByRole("button", { name: "C — Piernas" })[0]);
-    expect(cardOf("C — Piernas").getAttribute("data-expanded")).toBe("true");
-  });
-
   it("row tap navigates to /ejercicios/:id", async () => {
     await openPlan();
     fireEvent.click(
@@ -233,6 +279,149 @@ describe("plan screen", () => {
     await screen.findByText("3 series");
     fireEvent.click(screen.getByRole("button", { name: /^Press banca/ }));
     expect(window.location.pathname).toBe("/ejercicios/7");
+  });
+});
+
+describe("editor del día (sesión)", () => {
+  async function openFirstDay() {
+    await openPlan();
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: "+ añadir" }))[0],
+    );
+    return screen.findByLabelText("Nombre");
+  }
+
+  it("día vacío: expandir plantilla (fuerza + cardio) y guardar → POST", async () => {
+    const name = await openFirstDay();
+    expect(screen.getByText(/Nueva sesión · 2026-08-31/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
+    // nombre sugerido por la primera plantilla
+    expect((name as HTMLInputElement).value).toBe("A — Empuje");
+    expect(screen.getAllByText("Press banca").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText(/^running distancia \(km\)$/i)).toBeDefined();
+    // el mismo ejercicio ya no se puede volver a añadir
+    const pressBtn = within(dialog).getByRole("button", {
+      name: /Press banca/,
+    });
+    expect(pressBtn.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(1));
+    expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
+    expect(payloadAt(0)).toEqual({
+      date: "2026-08-31",
+      name: "A — Empuje",
+      items: [
+        {
+          exerciseId: 7,
+          targetSets: 3,
+          targetRepsMin: 8,
+          targetRepsMax: 8,
+          targetDistanceKm: null,
+          targetDurationMin: null,
+        },
+        {
+          exerciseId: 8,
+          targetSets: 3, // ?? 3 al expandir (explícito y editable en el día)
+          targetRepsMin: null,
+          targetRepsMax: null,
+          targetDistanceKm: null,
+          targetDurationMin: null,
+        },
+        {
+          exerciseId: 10,
+          targetSets: null,
+          targetRepsMin: null,
+          targetRepsMax: null,
+          targetDistanceKm: 10,
+          targetDurationMin: 45,
+        },
+      ],
+    });
+    const cell = await screen.findByRole("button", {
+      name: /editar sesión del 2026-08-31/i,
+    });
+    expect(cell.textContent).toBe("A — Empuje");
+  });
+
+  it("día con sesión: editar series → PUT; eliminar → DELETE", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press, remo],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            {
+              id: 51,
+              exerciseId: 7,
+              exerciseName: "Press banca",
+              kind: "strength",
+              position: 0,
+              targetSets: 3,
+              targetRepsMin: 8,
+              targetRepsMax: 8,
+              targetDistanceKm: null,
+              targetDurationMin: null,
+            },
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /editar sesión del 2026-08-31/i,
+      }),
+    );
+    expect(await screen.findByText(/Editar sesión · 2026-08-31/)).toBeDefined();
+    fireEvent.change(screen.getByLabelText(/^press banca series$/i), {
+      target: { value: "5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(api.calls.some((c) => c.method === "PUT")).toBe(true),
+    );
+    const putCalls = mutations().filter((c) => c.method === "PUT");
+    expect(putCalls).toHaveLength(1);
+    expect(putCalls[0].url).toBe("/api/plan-sessions/1");
+    const putBody = putCalls[0].body as { items: { targetSets: number }[] };
+    expect(putBody.items[0].targetSets).toBe(5);
+
+    // reabrir y eliminar la sesión
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /editar sesión del 2026-08-31/i,
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Eliminar sesión" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(0));
+    expect(
+      api.calls.some(
+        (c) => c.method === "DELETE" && c.url === "/api/plan-sessions/1",
+      ),
+    ).toBe(true);
+  });
+
+  it("ejercicio suelto repetido queda deshabilitado en el picker", async () => {
+    await openFirstDay();
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /Remo/ }));
+    expect(within(dialog).getByRole("button", { name: /Remo/ })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(within(dialog).getByText("ya añadido")).toBeDefined();
   });
 });
 
@@ -251,11 +440,16 @@ describe("template editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
     const dialog = await screen.findByRole("dialog");
     const dlg = within(dialog);
+    const searchesBefore = api.calls.filter(
+      (c) => c.url === "/api/exercises",
+    ).length;
     fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
       target: { value: "sent" },
     });
     expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull(); // client-side filter
-    expect(api.calls.filter((c) => c.url === "/api/exercises").length).toBe(1); // search hit no network
+    expect(api.calls.filter((c) => c.url === "/api/exercises").length).toBe(
+      searchesBefore,
+    ); // search hit no network
     fireEvent.click(dlg.getByRole("button", { name: /^Sentadilla$/ }));
     fireEvent.click(dlg.getByRole("button", { name: "Cerrar" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
@@ -267,10 +461,45 @@ describe("template editor", () => {
         targetSets: null,
         targetRepsMin: null,
         targetRepsMax: null,
+        targetDistanceKm: null,
+        targetDurationMin: null,
       },
     ]);
     await screen.findByText("D — Movilidad");
     expect(screen.queryByLabelText("Nombre")).toBeNull();
+  });
+
+  it("cardio en plantilla: el picker lo lista con su tipo y acepta distancia/tiempo", async () => {
+    await openEditor();
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
+    const dialog = await screen.findByRole("dialog");
+    const dlg = within(dialog);
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
+      target: { value: "running" },
+    });
+    fireEvent.click(dlg.getByRole("button", { name: /Running · Running/ }));
+    fireEvent.click(dlg.getByRole("button", { name: "Cerrar" }));
+    fireEvent.change(screen.getByLabelText(/^distancia \(km\)$/i), {
+      target: { value: "12" },
+    });
+    fireEvent.change(screen.getByLabelText(/^tiempo \(min\)$/i), {
+      target: { value: "55" },
+    });
+    fireEvent.change(screen.getByLabelText("Nombre"), {
+      target: { value: "E — Cardio" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.templates).toHaveLength(4));
+    expect(payloadAt(0).exercises).toEqual([
+      {
+        exerciseId: 10,
+        targetSets: null,
+        targetRepsMin: null,
+        targetRepsMax: null,
+        targetDistanceKm: 12,
+        targetDurationMin: 55,
+      },
+    ]);
   });
 
   it("body map: selecting a muscle group filters the list; Todos resets; empty group shows state", async () => {
@@ -324,8 +553,7 @@ describe("template editor", () => {
     expect(put.url).toBe("/api/templates/1");
     const body = put.body as unknown as TemplatePayload;
     expect(body.name).toBe("A — Empuje y núcleo");
-    expect(body.rotationIndex).toBe(0);
-    expect(body.exercises.map((e) => e.exerciseId)).toEqual([8, 7]); // displaced swap, no gaps/dupes
+    expect(body.exercises.map((e) => e.exerciseId)).toEqual([8, 7, 10]); // displaced swap, no gaps/dupes
     expect(body.exercises[1].targetSets).toBe(4);
     await screen.findByText("A — Empuje y núcleo");
   });
@@ -388,6 +616,8 @@ describe("template editor", () => {
       targetSets: 4,
       targetRepsMin: 6,
       targetRepsMax: 8,
+      targetDistanceKm: null,
+      targetDurationMin: null,
     });
     await screen.findByText("4 series");
   });
@@ -403,7 +633,7 @@ describe("template editor", () => {
     await waitFor(() =>
       expect(mutations().some((c) => c.method === "PUT")).toBe(true),
     );
-    expect(payloadAt(0).exercises.map((e) => e.exerciseId)).toEqual([8]);
+    expect(payloadAt(0).exercises.map((e) => e.exerciseId)).toEqual([8, 10]);
   });
 
   it("duplicate: POST with source entries and (copia) name", async () => {
@@ -414,9 +644,9 @@ describe("template editor", () => {
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     const copy = api.state.templates[3];
     expect(copy.name).toBe("A — Empuje (copia)");
-    expect(copy.exercises.map((e) => e.exerciseId)).toEqual([7, 8]);
+    expect(copy.exercises.map((e) => e.exerciseId)).toEqual([7, 8, 10]);
     expect(copy.exercises[0].targetSets).toBe(3);
-    expect(copy.rotationIndex).toBe(0);
+    expect(copy.exercises[2].targetDistanceKm).toBe(10);
     await screen.findByText("A — Empuje (copia)");
   });
 
@@ -488,15 +718,16 @@ describe("exercise picker modal", () => {
   it("draft exercises are disabled; re-adding is impossible", async () => {
     const dialog = await openPicker();
     const dlg = within(dialog);
-    const press = dlg.getByRole("button", { name: /^Press banca$/ });
-    expect(press.hasAttribute("disabled")).toBe(true);
-    fireEvent.click(press);
+    const pressBtn = dlg.getByRole("button", { name: /^Press banca$/ });
+    expect(pressBtn.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(pressBtn);
     fireEvent.click(dlg.getByRole("button", { name: /^Remo$/ }));
-    expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(2);
+    // plantilla A = Press banca + Remo + Running: siguen siendo 3 filas
+    expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(3);
     const sentadilla = dlg.getByRole("button", { name: /^Sentadilla$/ });
     expect(sentadilla.hasAttribute("disabled")).toBe(false);
     fireEvent.click(sentadilla);
-    expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(4);
   });
 
   it("closing with Cerrar preserves the draft", async () => {

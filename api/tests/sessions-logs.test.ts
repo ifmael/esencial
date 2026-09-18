@@ -1,5 +1,5 @@
-// E1 parity: schedule sessions, close with workout log (409 double), read-only
-// after close, last-values per exercise.
+// Cerrar el día: series de fuerza + marcas de cardio contra los ejercicios de la
+// sesión; doble POST 409; logged solo lectura; last-values por ejercicio.
 import { beforeAll, describe, expect, it } from "vitest";
 import { d1, freshDb, get, post } from "./helpers";
 
@@ -9,16 +9,22 @@ async function body(res: Response): Promise<Record<string, unknown>> {
   return (await res.json()) as Record<string, unknown>;
 }
 
-/** Seeds bench + curl exercises and an "Empuje A" template holding both. */
-async function seed(): Promise<{
+type Seed = {
   benchId: number;
-  templateId: number;
-  teBench: number;
-  teCurl: number;
-}> {
+  runId: number;
+  sessionId: number;
+  seBench: number;
+  seCurl: number;
+  seRun: number;
+};
+
+/** Sesión planificada con banca + curl (fuerza) y running (cardio). */
+async function seed(date: string): Promise<Seed> {
   // reset so UNIQUE names do not collide between tests
+  await d1.run("DELETE FROM cardio_logs");
   await d1.run("DELETE FROM set_logs");
   await d1.run("DELETE FROM workout_logs");
+  await d1.run("DELETE FROM plan_session_exercises");
   await d1.run("DELETE FROM plan_sessions");
   await d1.run("DELETE FROM template_exercises");
   await d1.run("DELETE FROM session_templates");
@@ -27,101 +33,70 @@ async function seed(): Promise<{
     "INSERT INTO exercises (name) VALUES ('Press banca')",
   );
   const curlId = await d1.run("INSERT INTO exercises (name) VALUES ('Curl')");
-  const templateId = await d1.run(
-    "INSERT INTO session_templates (name, rotation_index) VALUES ('Empuje A', 0)",
+  const runId = await d1.run(
+    "INSERT INTO exercises (name, kind) VALUES ('Running', 'running')",
   );
-  const teBench = await d1.run(
-    "INSERT INTO template_exercises (template_id, exercise_id, position, target_sets) VALUES (?, ?, 0, 3)",
-    templateId,
+  const res = await post("/api/plan-sessions", {
+    date,
+    name: "Empuje A",
+    items: [
+      { exerciseId: benchId, targetSets: 3 },
+      { exerciseId: curlId, targetSets: 3 },
+      { exerciseId: runId, targetDistanceKm: 5, targetDurationMin: 30 },
+    ],
+  });
+  const created = (await body(res)) as {
+    id: number;
+    exercises: { id: number; exerciseId: number }[];
+  };
+  const byExercise = new Map(
+    created.exercises.map((e) => [e.exerciseId, e.id]),
+  );
+  return {
     benchId,
-  );
-  const teCurl = await d1.run(
-    "INSERT INTO template_exercises (template_id, exercise_id, position, target_sets) VALUES (?, ?, 1, 3)",
-    templateId,
-    curlId,
-  );
-  return { benchId, templateId, teBench, teCurl };
+    runId,
+    sessionId: created.id,
+    seBench: Number(byExercise.get(benchId)),
+    seCurl: Number(byExercise.get(curlId)),
+    seRun: Number(byExercise.get(runId)),
+  };
 }
 
-describe("/api/plan-sessions", () => {
-  it("schedules a template on a date", async () => {
-    const s = await seed();
-    const res = await post("/api/plan-sessions", {
-      date: "2026-09-03",
-      templateId: s.templateId,
-    });
-    expect(res.status).toBe(201);
-    const r = await body(res);
-    expect(r.date).toBe("2026-09-03");
-    expect(r.status).toBe("planned");
-    expect(r.templateId).toBe(s.templateId);
-  });
-
-  it("409 on second schedule for the same date", async () => {
-    const s = await seed();
-    await post("/api/plan-sessions", {
-      date: "2026-09-04",
-      templateId: s.templateId,
-    });
-    const res = await post("/api/plan-sessions", {
-      date: "2026-09-04",
-      templateId: s.templateId,
-    });
-    expect(res.status).toBe(409);
-  });
-
-  it("400 with invalid date or unknown template", async () => {
-    const s = await seed();
-    expect(
-      (
-        await post("/api/plan-sessions", {
-          date: "03-09-2026",
-          templateId: s.templateId,
-        })
-      ).status,
-    ).toBe(400);
-    expect(
-      (
-        await post("/api/plan-sessions", {
-          date: "2026-12-25",
-          templateId: 999999,
-        })
-      ).status,
-    ).toBe(400);
-  });
-});
-
 describe("/api/workout-logs/:date", () => {
-  it("closes a planned session with sets+effort → GET returns read-only log", async () => {
-    const s = await seed();
-    await post("/api/plan-sessions", {
-      date: "2026-09-05",
-      templateId: s.templateId,
-    });
+  it("cierra una sesión planificada con series + cardio → GET read-only", async () => {
+    const s = await seed("2026-09-05");
     const res = await post("/api/workout-logs/2026-09-05", {
       effort: 3,
       note: "se sintió fuerte",
       sets: [
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: s.seBench,
           setIndex: 0,
           weightKg: 57.5,
           reps: 8,
           done: true,
         },
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: s.seBench,
           setIndex: 1,
           weightKg: 57.5,
           reps: 6,
           done: true,
         },
         {
-          templateExerciseId: s.teCurl,
+          planSessionExerciseId: s.seCurl,
           setIndex: 0,
           weightKg: 20,
           reps: 12,
           done: false,
+        },
+      ],
+      cardio: [
+        {
+          planSessionExerciseId: s.seRun,
+          distanceKm: 5.2,
+          durationMin: 32,
+          done: true,
         },
       ],
     });
@@ -130,33 +105,62 @@ describe("/api/workout-logs/:date", () => {
     expect(got.status).toBe("logged"); // read-only marker
     expect(got.readOnly).toBe(true);
     expect(got.effort).toBe(3);
+    expect(got.session).toEqual({ id: s.sessionId, name: "Empuje A" });
     const sets = got.sets as {
+      exerciseName: string;
       weightKg: number;
       reps: number;
       done: boolean;
     }[];
-    expect(sets.length).toBe(3);
+    expect(sets.map((x) => x.exerciseName)).toEqual([
+      "Press banca",
+      "Press banca",
+      "Curl",
+    ]);
     expect(sets[0].weightKg).toBe(57.5);
-    // order is by set_index: bench0, curl0 (not done), bench1
-    expect(sets[1].done).toBe(false);
-    // the plan session flipped to logged
+    expect(sets[2].done).toBe(false);
+    expect(got.cardio).toEqual([
+      {
+        planSessionExerciseId: s.seRun,
+        exerciseName: "Running",
+        distanceKm: 5.2,
+        durationMin: 32,
+        done: true,
+      },
+    ]);
     const ps = await d1.get<{ status: string }>(
       "SELECT status FROM plan_sessions WHERE date='2026-09-05'",
     );
     expect(ps?.status).toBe("logged");
   });
 
-  it("409 on double close; first log unchanged", async () => {
-    const s = await seed();
-    await post("/api/plan-sessions", {
-      date: "2026-09-06",
-      templateId: s.templateId,
+  it("cardio 'hecho' sin marcas → distancia y tiempo null", async () => {
+    const s = await seed("2026-09-14");
+    const res = await post("/api/workout-logs/2026-09-14", {
+      effort: 2,
+      sets: [],
+      cardio: [{ planSessionExerciseId: s.seRun, done: true }],
     });
+    expect(res.status).toBe(201);
+    const got = await body(await get("/api/workout-logs/2026-09-14"));
+    expect(got.cardio).toEqual([
+      {
+        planSessionExerciseId: s.seRun,
+        exerciseName: "Running",
+        distanceKm: null,
+        durationMin: null,
+        done: true,
+      },
+    ]);
+  });
+
+  it("409 on double close; first log unchanged", async () => {
+    const s = await seed("2026-09-06");
     const good = {
       effort: 2,
       sets: [
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: s.seBench,
           setIndex: 0,
           weightKg: 60,
           reps: 5,
@@ -169,7 +173,7 @@ describe("/api/workout-logs/:date", () => {
       effort: 5,
       sets: [
         {
-          templateExerciseId: s.teCurl,
+          planSessionExerciseId: s.seCurl,
           setIndex: 0,
           weightKg: 99,
           reps: 1,
@@ -194,11 +198,7 @@ describe("/api/workout-logs/:date", () => {
   });
 
   it("400 when effort out of 1-5", async () => {
-    const s = await seed();
-    await post("/api/plan-sessions", {
-      date: "2026-09-08",
-      templateId: s.templateId,
-    });
+    await seed("2026-09-08");
     const res = await post("/api/workout-logs/2026-09-08", {
       effort: 9,
       sets: [],
@@ -207,18 +207,60 @@ describe("/api/workout-logs/:date", () => {
     expect((await body(res)).field).toBe("effort");
   });
 
+  it("400 cuando el set apunta a un ejercicio de otra sesión", async () => {
+    const s = await seed("2026-09-15");
+    const other = await post("/api/plan-sessions", {
+      date: "2026-09-16",
+      items: [{ exerciseId: s.benchId }],
+    });
+    const otherSession = (await body(other)) as {
+      exercises: { id: number }[];
+    };
+    const foreign = otherSession.exercises[0].id;
+    const res = await post("/api/workout-logs/2026-09-15", {
+      effort: 3,
+      sets: [
+        { planSessionExerciseId: foreign, setIndex: 0, reps: 8, done: true },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("sets");
+  });
+
+  it("400 cuando un set apunta a un ejercicio de cardio (y viceversa)", async () => {
+    const s = await seed("2026-09-17");
+    expect(
+      (
+        await post("/api/workout-logs/2026-09-17", {
+          effort: 3,
+          sets: [
+            {
+              planSessionExerciseId: s.seRun,
+              setIndex: 0,
+              reps: 8,
+              done: true,
+            },
+          ],
+        })
+      ).status,
+    ).toBe(400);
+    const res = await post("/api/workout-logs/2026-09-17", {
+      effort: 3,
+      sets: [],
+      cardio: [{ planSessionExerciseId: s.seBench, done: true }],
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("cardio");
+  });
+
   // E6 debt (design D3): clean break — snake_case wire names are rejected.
   it("400 on snake_case set fields; no workout_logs row created", async () => {
-    const s = await seed();
-    await post("/api/plan-sessions", {
-      date: "2026-09-11",
-      templateId: s.templateId,
-    });
+    const s = await seed("2026-09-11");
     const res = await post("/api/workout-logs/2026-09-11", {
       effort: 3,
       sets: [
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: s.seBench,
           set_index: 0,
           weight_kg: 60,
           reps: 8,
@@ -243,16 +285,12 @@ describe("/api/workout-logs/:date", () => {
 
   // Contract lock (task 1.3): POST response echoes the camelCase wire shape.
   it("POST 201 response echoes setIndex/weightKg/done:boolean camelCase", async () => {
-    const s = await seed();
-    await post("/api/plan-sessions", {
-      date: "2026-09-12",
-      templateId: s.templateId,
-    });
+    const s = await seed("2026-09-12");
     const res = await post("/api/workout-logs/2026-09-12", {
       effort: 4,
       sets: [
         {
-          templateExerciseId: s.teCurl,
+          planSessionExerciseId: s.seCurl,
           setIndex: 0,
           weightKg: 20,
           reps: 12,
@@ -277,17 +315,12 @@ describe("/api/workout-logs/:date", () => {
 
 describe("last values per exercise", () => {
   it("GET /api/exercises/:id/last returns weight+reps of most recent logged set", async () => {
-    const s = await seed();
-    // older day
-    await post("/api/plan-sessions", {
-      date: "2026-09-09",
-      templateId: s.templateId,
-    });
+    const older = await seed("2026-09-09");
     await post("/api/workout-logs/2026-09-09", {
       effort: 2,
       sets: [
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: older.seBench,
           setIndex: 0,
           weightKg: 55,
           reps: 8,
@@ -295,16 +328,13 @@ describe("last values per exercise", () => {
         },
       ],
     });
-    // newer day wins
-    await post("/api/plan-sessions", {
-      date: "2026-09-10",
-      templateId: s.templateId,
-    });
+    // newer day wins (same exercise, new session)
+    const newer = await seed("2026-09-10");
     await post("/api/workout-logs/2026-09-10", {
       effort: 3,
       sets: [
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: newer.seBench,
           setIndex: 0,
           weightKg: 57.5,
           reps: 8,
@@ -312,7 +342,7 @@ describe("last values per exercise", () => {
         },
       ],
     });
-    const res = await get(`/api/exercises/${s.benchId}/last`);
+    const res = await get(`/api/exercises/${newer.benchId}/last`);
     expect(res.status).toBe(200);
     const r = await body(res);
     const last = r.last as { weightKg: number; reps: number; date: string };
@@ -329,16 +359,12 @@ describe("last values per exercise", () => {
   });
 
   it("skips logged sets without weight/reps (E6 smoke)", async () => {
-    const s = await seed();
-    await post("/api/plan-sessions", {
-      date: "2026-09-13",
-      templateId: s.templateId,
-    });
+    const s = await seed("2026-09-13");
     await post("/api/workout-logs/2026-09-13", {
       effort: 2,
       sets: [
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: s.seBench,
           setIndex: 0,
           weightKg: 60,
           reps: 8,
@@ -346,7 +372,7 @@ describe("last values per exercise", () => {
         },
         // skipped set logged empty — must not poison prefill
         {
-          templateExerciseId: s.teBench,
+          planSessionExerciseId: s.seBench,
           setIndex: 1,
           weightKg: null,
           reps: null,

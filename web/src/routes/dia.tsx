@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { photoSrc } from "../lib/api";
 import { type DayData, type DaySession, toISODate, useDay } from "../lib/day";
+import { KIND_LABELS } from "../lib/exercises";
 
 export function formatDateEs(date: Date): string {
   return new Intl.DateTimeFormat("es-ES", {
@@ -169,7 +170,7 @@ function StrengthSection({
         <button className="card w-full text-left" onClick={openWorkout}>
           <div className="flex items-center gap-2">
             <span className="badge-done">Hecho</span>
-            <span className="font-semibold">{session.templateName}</span>
+            <span className="font-semibold">{session.name ?? "Sesión"}</span>
           </div>
           <p className="mt-1 text-sm text-done-text">
             Sesión completada · {session.summary.exercises} ejercicios ·{" "}
@@ -180,12 +181,17 @@ function StrengthSection({
         <div className="card">
           <div className="flex items-center gap-2">
             <span className="badge-pending">Pendiente</span>
-            <span className="font-semibold">{session.templateName}</span>
+            <span className="font-semibold">{session.name ?? "Sesión"}</span>
           </div>
           {session.status === "planned" && session.exercises?.length ? (
             <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
               {session.exercises.map((e) => (
-                <li key={e.exerciseId}>{e.exerciseName}</li>
+                <li key={e.exerciseId}>
+                  {e.exerciseName}
+                  {e.kind === "strength"
+                    ? null
+                    : ` · ${KIND_LABELS[e.kind].toLowerCase()}`}
+                </li>
               ))}
             </ol>
           ) : null}

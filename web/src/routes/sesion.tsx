@@ -1,9 +1,14 @@
-// E6 — /sesion/:date: mobile-first workout logging (wireframe pantalla-3).
-// State A (planned) is an in-memory draft; state B (logged) is read-only from
-// GET /api/workout-logs/:date. Reads compose existing endpoints only (D2).
+// /sesion/:date — registro del día (wireframe pantalla-3). El estado planned es
+// un borrador en memoria sobre los ejercicios de la sesión (fuerza y cardio);
+// el estado logged es solo lectura desde GET /api/workout-logs/:date.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ApiError, apiGet, apiSend } from "../lib/api";
+import type {
+  PlanSession,
+  SessionDetail,
+  SessionExercise,
+} from "../lib/plan-week";
 import {
   defaultSetCount,
   formatLast,
@@ -17,47 +22,49 @@ import { formatDateEs } from "./dia";
 
 // --- Wire types (camelCase after the E6 setLogSchema normalization) ---------
 
-type PlanSession = {
-  id: number;
-  date: string;
-  status: string;
-  templateId: number;
-  templateName: string;
-};
-
-type TemplateExercise = {
-  id: number;
-  exerciseId: number;
-  exerciseName: string;
-  position: number;
-  targetSets: number | null;
-};
-
 type LastValue = { weightKg: number; reps: number; date: string };
 
 type SetLogItem = {
-  templateExerciseId: number;
+  planSessionExerciseId: number;
   setIndex: number;
   weightKg: number | null;
   reps: number | null;
+  done: boolean;
+  exerciseName: string;
+};
+
+type CardioLogItem = {
+  planSessionExerciseId: number;
+  exerciseName: string;
+  distanceKm: number | null;
+  durationMin: number | null;
   done: boolean;
 };
 
 type LoggedDay = {
   date: string;
+  status: string;
+  readOnly: boolean;
   effort: number;
   note: string | null;
-  template: { id: number; name: string } | null;
-  sets: (SetLogItem & { exerciseName: string })[];
+  session: { id: number; name: string | null } | null;
+  sets: SetLogItem[];
+  cardio: CardioLogItem[];
 };
 
 // --- Draft model -------------------------------------------------------------
 
 type DraftSet = { weightKg: number | null; reps: number | null; done: boolean };
 type DraftExercise = {
-  te: TemplateExercise;
+  se: SessionExercise;
   last: LastValue | null;
   sets: DraftSet[];
+};
+type CardioDraft = {
+  se: SessionExercise;
+  distanceKm: number | null;
+  durationMin: number | null;
+  done: boolean;
 };
 
 type View =
@@ -69,6 +76,7 @@ type View =
       kind: "draft";
       session: PlanSession;
       exercises: DraftExercise[];
+      cardio: CardioDraft[];
       historyFailed: boolean;
       effort: number | null;
       note: string;
@@ -99,43 +107,53 @@ export function useWorkoutDay(date: string) {
         const log = await apiGet<LoggedDay>(`/api/workout-logs/${date}`);
         return setView({ kind: "logged", session, log });
       }
-      const template = await apiGet<{ exercises: TemplateExercise[] }>(
-        `/api/templates/${session.templateId}`,
+      const detail = await apiGet<SessionDetail>(
+        `/api/plan-sessions/${session.id}`,
       );
-      const exercises = template.exercises.sort(
+      const items = [...detail.exercises].sort(
         (a, b) => a.position - b.position,
       );
       let historyFailed = false;
-      const drafts: DraftExercise[] = await Promise.all(
-        exercises.map(async (te) => {
+      const strength = items.filter((e) => e.kind === "strength");
+      const exercises: DraftExercise[] = await Promise.all(
+        strength.map(async (se) => {
           let last: LastValue | null = null;
           try {
             last = (
               await apiGet<{ last: LastValue | null }>(
-                `/api/exercises/${te.exerciseId}/last`,
+                `/api/exercises/${se.exerciseId}/last`,
               )
             ).last;
           } catch {
             historyFailed = true;
           }
           return {
-            te,
+            se,
             last,
             sets: Array.from(
-              { length: defaultSetCount(te.targetSets) },
+              { length: defaultSetCount(se.targetSets) },
               () => ({
                 weightKg: last?.weightKg ?? null,
-                reps: last?.reps ?? null,
+                reps: last?.reps ?? se.targetRepsMin ?? null,
                 done: false,
               }),
             ),
           };
         }),
       );
+      const cardio: CardioDraft[] = items
+        .filter((e) => e.kind !== "strength")
+        .map((se) => ({
+          se,
+          distanceKm: null,
+          durationMin: null,
+          done: false,
+        }));
       setView({
         kind: "draft",
         session,
-        exercises: drafts,
+        exercises,
+        cardio,
         historyFailed,
         effort: null,
         note: "",
@@ -160,13 +178,13 @@ export function useWorkoutDay(date: string) {
   ) => setView((v) => (v.kind === "draft" ? { ...v, ...patch(v) } : v));
 
   const mutateSet = (
-    teId: number,
+    seId: number,
     setIdx: number,
     patch: (s: DraftSet) => DraftSet,
   ) =>
     patchDraft((v) => ({
       exercises: v.exercises.map((ex) =>
-        ex.te.id !== teId
+        ex.se.id !== seId
           ? ex
           : {
               ...ex,
@@ -176,30 +194,52 @@ export function useWorkoutDay(date: string) {
     }));
 
   const setDraftValue = (
-    teId: number,
+    seId: number,
     setIdx: number,
     field: "weightKg" | "reps",
     value: string,
-  ) => mutateSet(teId, setIdx, (s) => ({ ...s, [field]: numOrNull(value) }));
+  ) => mutateSet(seId, setIdx, (s) => ({ ...s, [field]: numOrNull(value) }));
 
   const stepValue = (
-    teId: number,
+    seId: number,
     setIdx: number,
     field: "weightKg" | "reps",
     delta: number,
   ) =>
-    mutateSet(teId, setIdx, (s) => ({
+    mutateSet(seId, setIdx, (s) => ({
       ...s,
       [field]: Math.max(0, (s[field] ?? 0) + delta),
     }));
 
-  const toggleDone = (teId: number, setIdx: number) =>
-    mutateSet(teId, setIdx, (s) => ({ ...s, done: !s.done }));
+  const toggleDone = (seId: number, setIdx: number) =>
+    mutateSet(seId, setIdx, (s) => ({ ...s, done: !s.done }));
+
+  const mutateCardio = (seId: number, patch: (c: CardioDraft) => CardioDraft) =>
+    patchDraft((v) => ({
+      cardio: v.cardio.map((c) => (c.se.id === seId ? patch(c) : c)),
+    }));
+
+  const setCardioValue = (
+    seId: number,
+    field: "distanceKm" | "durationMin",
+    value: string,
+  ) => {
+    const parsed = numOrNull(value);
+    mutateCardio(seId, (c) => ({
+      ...c,
+      [field]: parsed,
+      // Escribir marcas implica que se hizo (aunque el checkbox no se toque).
+      done: parsed === null ? c.done : true,
+    }));
+  };
+
+  const toggleCardioDone = (seId: number) =>
+    mutateCardio(seId, (c) => ({ ...c, done: !c.done }));
 
   const setEffort = (effort: number) => patchDraft(() => ({ effort }));
   const setNote = (note: string) => patchDraft(() => ({ note }));
-  const toggleExpand = (teId: number) =>
-    setExpanded((m) => ({ ...m, [teId]: !m[teId] }));
+  const toggleExpand = (seId: number) =>
+    setExpanded((m) => ({ ...m, [seId]: !m[seId] }));
 
   /** Cerrar sesión: single in-flight POST; 201→B, 409→refetch into B, 400→banner + draft. */
   const close = () => {
@@ -210,16 +250,24 @@ export function useWorkoutDay(date: string) {
           effort: v.effort,
           note: noteOrNull(v.note),
           sets: v.exercises.flatMap((ex) =>
-            ex.sets.map(
-              (s, i): SetLogItem => ({
-                templateExerciseId: ex.te.id,
-                setIndex: i,
-                weightKg: s.weightKg,
-                reps: s.reps,
-                done: s.done,
-              }),
-            ),
+            ex.sets.map((s, i) => ({
+              planSessionExerciseId: ex.se.id,
+              setIndex: i,
+              weightKg: s.weightKg,
+              reps: s.reps,
+              done: s.done,
+            })),
           ),
+          cardio: v.cardio
+            .filter(
+              (c) => c.done || c.distanceKm !== null || c.durationMin !== null,
+            )
+            .map((c) => ({
+              planSessionExerciseId: c.se.id,
+              distanceKm: c.distanceKm,
+              durationMin: c.durationMin,
+              done: c.done,
+            })),
         };
         try {
           const log = await apiSend<LoggedDay>(
@@ -260,6 +308,8 @@ export function useWorkoutDay(date: string) {
     setDraftValue,
     stepValue,
     toggleDone,
+    setCardioValue,
+    toggleCardioDone,
     toggleExpand,
     close,
     reload: load,
@@ -270,11 +320,11 @@ export function useWorkoutDay(date: string) {
 
 function Header({
   date,
-  templateName,
+  name,
   logged,
 }: {
   date: string;
-  templateName: string;
+  name: string;
   logged: boolean;
 }) {
   return (
@@ -292,7 +342,7 @@ function Header({
         </h1>
       </div>
       <div className="flex items-center gap-2">
-        <span className="font-semibold">{templateName}</span>
+        <span className="font-semibold">{name}</span>
         {logged && <span className="badge-done">Registrado</span>}
       </div>
     </header>
@@ -450,27 +500,25 @@ export function SesionPage() {
       </div>
     );
 
-  if (view.kind === "logged")
+  if (view.kind === "logged") {
+    const byExercise = view.log.sets.reduce<Record<number, SetLogItem[]>>(
+      (acc, s) => {
+        acc[s.planSessionExerciseId] ??= [];
+        acc[s.planSessionExerciseId].push(s);
+        return acc;
+      },
+      {},
+    );
     return (
       <div>
         <Header
           date={date}
-          templateName={
-            view.log.template?.name ?? view.session?.templateName ?? ""
-          }
+          name={view.log.session?.name ?? view.session?.name ?? "Sesión"}
           logged
         />
         <div className="flex flex-col gap-3">
-          {Object.entries(
-            view.log.sets.reduce<
-              Record<number, (SetLogItem & { exerciseName: string })[]>
-            >((acc, s) => {
-              acc[s.templateExerciseId] ??= [];
-              acc[s.templateExerciseId].push(s);
-              return acc;
-            }, {}),
-          ).map(([teId, sets]) => (
-            <section key={teId} className="card">
+          {Object.entries(byExercise).map(([seId, sets]) => (
+            <section key={seId} className="card">
               <h2 className="mb-2 font-semibold">{sets[0].exerciseName}</h2>
               <ul className="flex flex-col gap-1">
                 {sets.map((s) => (
@@ -492,6 +540,24 @@ export function SesionPage() {
               </ul>
             </section>
           ))}
+          {view.log.cardio.map((c) => (
+            <section key={c.planSessionExerciseId} className="card">
+              <h2 className="mb-2 font-semibold">{c.exerciseName}</h2>
+              <p className="flex items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className={c.done ? "text-primary" : "text-text-secondary"}
+                >
+                  {c.done ? "✓" : "○"}
+                </span>
+                <span className="font-medium">
+                  {c.distanceKm === null && c.durationMin === null
+                    ? "Hecho sin marcas"
+                    : `${c.distanceKm ?? "—"} km · ${c.durationMin ?? "—"} min`}
+                </span>
+              </p>
+            </section>
+          ))}
           <section className="card flex flex-col gap-3">
             <h2 className="font-semibold">Esfuerzo percibido</h2>
             <EffortDots effort={view.log.effort} />
@@ -502,16 +568,13 @@ export function SesionPage() {
         </div>
       </div>
     );
+  }
 
   // state A — editable draft
   const v = view;
   return (
     <div>
-      <Header
-        date={date}
-        templateName={v.session.templateName}
-        logged={false}
-      />
+      <Header date={date} name={v.session.name ?? "Sesión"} logged={false} />
       {v.historyFailed && (
         <div role="status" className="card mb-3 text-pending-text">
           No se pudo cargar el histórico de últimos pesos; puedes registrarlo
@@ -525,23 +588,23 @@ export function SesionPage() {
       )}
       <div className="flex flex-col gap-3">
         {v.exercises.map((ex) => {
-          const open = !!day.expanded[ex.te.id];
+          const open = !!day.expanded[ex.se.id];
           const helper = formatLast(ex.last);
           return (
-            <section key={ex.te.id} className="card">
+            <section key={ex.se.id} className="card">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Link
-                    to={`/ejercicios/${ex.te.exerciseId}`}
+                    to={`/ejercicios/${ex.se.exerciseId}`}
                     className="font-semibold text-primary underline-offset-4 hover:underline"
                   >
-                    {ex.te.exerciseName}
+                    {ex.se.exerciseName}
                   </Link>
                   <button
                     type="button"
-                    aria-label={`Series de ${ex.te.exerciseName}`}
+                    aria-label={`Series de ${ex.se.exerciseName}`}
                     className="btn-secondary min-h-11"
-                    onClick={() => day.toggleExpand(ex.te.id)}
+                    onClick={() => day.toggleExpand(ex.se.id)}
                   >
                     {open ? "Ocultar" : "Registrar series"}
                   </button>
@@ -557,10 +620,10 @@ export function SesionPage() {
                       <input
                         key={i}
                         type="checkbox"
-                        aria-label={`${ex.te.exerciseName} serie ${i + 1}`}
+                        aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
                         className="min-h-11 min-w-11 accent-primary"
                         checked={s.done}
-                        onChange={() => day.toggleDone(ex.te.id, i)}
+                        onChange={() => day.toggleDone(ex.se.id, i)}
                       />
                     ))}
                   </div>
@@ -572,33 +635,33 @@ export function SesionPage() {
                     <li key={i} className="flex flex-wrap items-center gap-3">
                       <input
                         type="checkbox"
-                        aria-label={`${ex.te.exerciseName} serie ${i + 1}`}
+                        aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
                         className="min-h-11 min-w-11 accent-primary"
                         checked={s.done}
-                        onChange={() => day.toggleDone(ex.te.id, i)}
+                        onChange={() => day.toggleDone(ex.se.id, i)}
                       />
                       <span className="w-16 text-text-secondary">
                         Serie {i + 1}
                       </span>
                       <Stepper
-                        label={`${ex.te.exerciseName} serie ${i + 1} (kg)`}
+                        label={`${ex.se.exerciseName} serie ${i + 1} (kg)`}
                         value={s.weightKg}
                         step={2.5}
                         onValue={(val) =>
-                          day.setDraftValue(ex.te.id, i, "weightKg", val)
+                          day.setDraftValue(ex.se.id, i, "weightKg", val)
                         }
                         onStep={(d) =>
-                          day.stepValue(ex.te.id, i, "weightKg", d)
+                          day.stepValue(ex.se.id, i, "weightKg", d)
                         }
                       />
                       <Stepper
-                        label={`${ex.te.exerciseName} serie ${i + 1} (reps)`}
+                        label={`${ex.se.exerciseName} serie ${i + 1} (reps)`}
                         value={s.reps}
                         step={1}
                         onValue={(val) =>
-                          day.setDraftValue(ex.te.id, i, "reps", val)
+                          day.setDraftValue(ex.se.id, i, "reps", val)
                         }
-                        onStep={(d) => day.stepValue(ex.te.id, i, "reps", d)}
+                        onStep={(d) => day.stepValue(ex.se.id, i, "reps", d)}
                       />
                     </li>
                   ))}
@@ -607,6 +670,62 @@ export function SesionPage() {
             </section>
           );
         })}
+
+        {v.cardio.map((c) => (
+          <section key={c.se.id} className="card">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to={`/ejercicios/${c.se.exerciseId}`}
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                {c.se.exerciseName}
+              </Link>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label={`${c.se.exerciseName} hecho`}
+                  className="min-h-11 min-w-11 accent-primary"
+                  checked={c.done}
+                  onChange={() => day.toggleCardioDone(c.se.id)}
+                />
+                Hecho
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Stepper
+                label={`${c.se.exerciseName} distancia (km)`}
+                value={c.distanceKm}
+                step={1}
+                onValue={(val) =>
+                  day.setCardioValue(c.se.id, "distanceKm", val)
+                }
+                onStep={(d) =>
+                  day.setCardioValue(
+                    c.se.id,
+                    "distanceKm",
+                    String(Math.max(0, (c.distanceKm ?? 0) + d)),
+                  )
+                }
+              />
+              <Stepper
+                label={`${c.se.exerciseName} tiempo (min)`}
+                value={c.durationMin}
+                step={5}
+                onValue={(val) =>
+                  day.setCardioValue(c.se.id, "durationMin", val)
+                }
+                onStep={(d) =>
+                  day.setCardioValue(
+                    c.se.id,
+                    "durationMin",
+                    String(Math.max(0, (c.durationMin ?? 0) + d)),
+                  )
+                }
+              />
+            </div>
+          </section>
+        ))}
+
         <section className="card flex flex-col gap-3">
           <h2 className="font-semibold">Esfuerzo percibido</h2>
           <EffortDots effort={v.effort} onSelect={day.setEffort} />

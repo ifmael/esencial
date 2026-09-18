@@ -1,24 +1,32 @@
-// Pure template-editor draft logic (E4 design D2): the editor mutates a local
-// draft; save flushes exactly one payload with positions renumbered 0..n-1.
+// Lógica pura del editor de plantillas (E4 design D2): el editor muta un
+// borrador local; guardar envía un único payload con posiciones 0..n-1.
+// Una entrada es de fuerza (series/reps) o de cardio (distancia/tiempo).
+import type { ExerciseKind } from "./exercises";
 
 export type DraftEntry = {
   key: string; // stable React row key (never the position)
   exerciseId: number;
   exerciseName: string;
+  kind: ExerciseKind;
   targetSets: number | null;
   targetRepsMin: number | null;
   targetRepsMax: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
 };
 
 export type Draft = {
   name: string;
-  rotationIndex: number;
   entries: DraftEntry[];
 };
 
 export type Targets = Pick<
   DraftEntry,
-  "targetSets" | "targetRepsMin" | "targetRepsMax"
+  | "targetSets"
+  | "targetRepsMin"
+  | "targetRepsMax"
+  | "targetDistanceKm"
+  | "targetDurationMin"
 >;
 
 let keySeq = 0;
@@ -52,7 +60,7 @@ export const removeEntry = (draft: Draft, key: string): Draft => ({
 export const setTargets = (
   draft: Draft,
   key: string,
-  targets: Targets,
+  targets: Partial<Targets>,
 ): Draft => ({
   ...draft,
   entries: draft.entries.map((e) => (e.key === key ? { ...e, ...targets } : e)),
@@ -70,29 +78,30 @@ export type TemplateEntryPayload = {
   targetSets: number | null;
   targetRepsMin: number | null;
   targetRepsMax: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
 };
 
 export type TemplatePayload = {
   name: string;
-  // Optional like the server schema: absent = preserve stored rotation (COALESCE).
-  rotationIndex?: number;
   exercises: TemplateEntryPayload[];
 };
 
 export function buildTemplatePayload(draft: Draft): TemplatePayload {
   return {
     name: draft.name,
-    rotationIndex: draft.rotationIndex,
     exercises: draft.entries.map((e) => ({
       exerciseId: e.exerciseId,
       targetSets: e.targetSets,
       targetRepsMin: e.targetRepsMin,
       targetRepsMax: e.targetRepsMax,
+      targetDistanceKm: e.targetDistanceKm,
+      targetDurationMin: e.targetDurationMin,
     })),
   };
 }
 
-/** "B — Tirón" → "B — Tirón (copia)", then "(copia 2)", "(copia 3)"… */
+/** "Tirón" → "Tirón (copia)", then "(copia 2)", "(copia 3)"… */
 export function nextCopyName(
   source: string,
   existing: readonly string[],

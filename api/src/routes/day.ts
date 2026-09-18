@@ -35,12 +35,10 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
 
     const session = await row(
       db,
-      `SELECT ps.id, ps.status, ps.template_id AS templateId, st.name AS templateName,
-              wl.effort,
-              COUNT(DISTINCT sl.template_exercise_id) AS exercises,
+      `SELECT ps.id, ps.status, ps.name, wl.effort,
+              COUNT(DISTINCT sl.plan_session_exercise_id) AS exercises,
               COUNT(sl.id) AS sets
        FROM plan_sessions ps
-       JOIN session_templates st ON st.id = ps.template_id
        LEFT JOIN workout_logs wl ON wl.date = ps.date
        LEFT JOIN set_logs sl ON sl.workout_log_id = wl.id
        WHERE ps.date = ?
@@ -50,13 +48,14 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
     const exercises = session
       ? await rows(
           db,
-          `SELECT te.exercise_id AS exerciseId, e.name AS exerciseName, te.position
-           FROM template_exercises te
-           JOIN exercises e ON e.id = te.exercise_id
-           JOIN plan_sessions ps ON ps.template_id = te.template_id
-           WHERE ps.date = ?
-           ORDER BY te.position`,
-          date,
+          `SELECT pse.exercise_id AS exerciseId, e.name AS exerciseName, e.kind AS kind,
+                  pse.position, pse.target_sets AS targetSets,
+                  pse.target_distance_km AS targetDistanceKm,
+                  pse.target_duration_min AS targetDurationMin
+           FROM plan_session_exercises pse JOIN exercises e ON e.id = pse.exercise_id
+           WHERE pse.plan_session_id = ?
+           ORDER BY pse.position, pse.id`,
+          Number(session.id),
         )
       : [];
 
@@ -74,8 +73,7 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
       session: session
         ? {
             id: Number(session.id),
-            templateId: Number(session.templateId),
-            templateName: String(session.templateName),
+            name: session.name == null ? null : String(session.name),
             status: String(session.status),
             exercises,
             summary:

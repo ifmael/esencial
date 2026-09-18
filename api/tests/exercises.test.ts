@@ -139,4 +139,33 @@ describe("/api/exercises", () => {
     const got = await body(await get(`/api/exercises/${id}`));
     expect(got.steps).toEqual(["Primer paso", "Segundo paso"]);
   });
+
+  it("kind por defecto strength", async () => {
+    const id = await makePressBanca();
+    const got = await body(await get(`/api/exercises/${id}`));
+    expect(got.kind).toBe("strength");
+  });
+
+  it("crea cardio con kind running y lo devuelve", async () => {
+    const res = await post("/api/exercises", {
+      name: "Running",
+      tags: ["cardio"],
+      kind: "running",
+    });
+    expect(res.status).toBe(201);
+    const created = (await body(res)) as { id: number; kind: string };
+    expect(created.kind).toBe("running");
+    const got = await body(await get(`/api/exercises/${created.id}`));
+    expect(got.kind).toBe("running");
+  });
+
+  it("400 con kind desconocido", async () => {
+    const res = await post("/api/exercises", {
+      name: "Raro",
+      tags: ["x"],
+      kind: "cinta",
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("kind");
+  });
 });

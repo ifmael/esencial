@@ -69,7 +69,7 @@ export async function loadExercise(
 ): Promise<Row | null> {
   const head = await row(
     db,
-    "SELECT id, name, description, setup_cues AS setupCues, technique_url AS techniqueUrl, steps FROM exercises WHERE id = ?",
+    "SELECT id, name, description, setup_cues AS setupCues, technique_url AS techniqueUrl, steps, kind FROM exercises WHERE id = ?",
     id,
   );
   if (!head) return null;
@@ -90,7 +90,7 @@ export async function loadTemplate(
 ): Promise<Row | null> {
   const head = await row(
     db,
-    "SELECT id, name, rotation_index AS rotationIndex FROM session_templates WHERE id = ?",
+    "SELECT id, name FROM session_templates WHERE id = ?",
     id,
   );
   if (!head) return null;
@@ -98,7 +98,8 @@ export async function loadTemplate(
     db,
     `SELECT te.id, te.exercise_id AS exerciseId, te.position,
             te.target_sets AS targetSets, te.target_reps_min AS targetRepsMin, te.target_reps_max AS targetRepsMax,
-            e.name AS exerciseName
+            te.target_distance_km AS targetDistanceKm, te.target_duration_min AS targetDurationMin,
+            e.name AS exerciseName, e.kind AS kind
      FROM template_exercises te JOIN exercises e ON e.id = te.exercise_id
      WHERE te.template_id = ? ORDER BY te.position, te.id`,
     id,

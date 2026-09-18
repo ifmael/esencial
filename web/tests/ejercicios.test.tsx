@@ -24,6 +24,7 @@ const press: Exercise = {
     "Baja controlado y sube empujando.",
   ],
   tags: ["pecho", "tríceps"],
+  kind: "strength",
 };
 const remo: Exercise = {
   id: 8,
@@ -33,6 +34,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
+  kind: "strength",
 };
 const peso: Exercise = {
   id: 9,
@@ -42,12 +44,12 @@ const peso: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
+  kind: "strength",
 };
 
 const tplA = (): Template => ({
   id: 1,
   name: "A — Empuje",
-  rotationIndex: 0,
   exercises: [
     {
       id: 11,
@@ -56,7 +58,10 @@ const tplA = (): Template => ({
       targetSets: 3,
       targetRepsMin: 8,
       targetRepsMax: 8,
+      targetDistanceKm: null,
+      targetDurationMin: null,
       exerciseName: "Press banca",
+      kind: "strength",
     },
     {
       id: 12,
@@ -65,7 +70,10 @@ const tplA = (): Template => ({
       targetSets: null,
       targetRepsMin: null,
       targetRepsMax: null,
+      targetDistanceKm: null,
+      targetDurationMin: null,
       exerciseName: "Remo",
+      kind: "strength",
     },
   ],
 });
@@ -232,12 +240,8 @@ describe("detail", () => {
     );
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/templates/1");
-    const body = put.body as {
-      exercises: { exerciseId: number }[];
-      rotationIndex: number;
-    };
+    const body = put.body as { exercises: { exerciseId: number }[] };
     expect(body.exercises.map((e) => e.exerciseId)).toEqual([7, 8, 9]);
-    expect(body.rotationIndex).toBe(0);
     await screen.findByText(/añadido/i);
     expect(window.location.pathname).toBe("/ejercicios/9");
   });

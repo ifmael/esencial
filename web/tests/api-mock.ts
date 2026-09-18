@@ -1,5 +1,6 @@
-// In-memory fake of the E1 API for component tests: mirrors the real envelope
-// behaviour ({error, field} on 400/404, 204 on delete, UNIQUE name, FK in-use).
+// In-memory fake of the API for component tests: mirrors the real envelope
+// behaviour ({error, field} on 400/404, 204 on delete, UNIQUE name, FK in-use)
+// and the v2 session model (la sesión es el día con items sin duplicados).
 import { vi } from "vitest";
 import type { Exercise } from "../src/lib/exercises";
 import type { Template } from "../src/lib/templates";
@@ -10,12 +11,25 @@ export type Call = {
   body: Record<string, unknown> | undefined;
 };
 
+export type SessionExerciseRow = {
+  id: number;
+  exerciseId: number;
+  exerciseName: string;
+  kind: "strength" | "running" | "bike";
+  position: number;
+  targetSets: number | null;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
+};
+
 export type PlanSessionRow = {
   id: number;
   date: string;
+  name: string | null;
   status: "planned" | "logged";
-  templateId: number;
-  templateName: string;
+  exercises: SessionExerciseRow[];
 };
 
 export type Seed = {
@@ -43,6 +57,15 @@ const json = (data: unknown, status = 200) =>
 const err = (error: string, field?: string, status = 400) =>
   json(field ? { error, field } : { error }, status);
 
+type RawItem = {
+  exerciseId: number;
+  targetSets?: number | null;
+  targetRepsMin?: number | null;
+  targetRepsMax?: number | null;
+  targetDistanceKm?: number | null;
+  targetDurationMin?: number | null;
+};
+
 export function mockApi(seed: Seed = {}): MockApi {
   const api: MockApi = {
     state: {
@@ -57,6 +80,34 @@ export function mockApi(seed: Seed = {}): MockApi {
   let nextTemplateId = Math.max(0, ...api.state.templates.map((t) => t.id)) + 1;
   let nextRowId = 100;
   let nextSessionId = 1000;
+  let nextSessionRowId = 2000;
+
+  const itemsProblem = (items: RawItem[]): Response | null => {
+    const ids = items.map((i) => i.exerciseId);
+    if (new Set(ids).size !== ids.length)
+      return err("Ejercicio duplicado en la sesión", "items");
+    const unknown = ids.some(
+      (id) => !api.state.exercises.some((e) => e.id === id),
+    );
+    return unknown ? err("Ejercicio desconocido", "items") : null;
+  };
+
+  const hydrateSessionRows = (items: RawItem[]): SessionExerciseRow[] =>
+    items.map((raw, pos) => {
+      const ex = api.state.exercises.find((x) => x.id === raw.exerciseId);
+      return {
+        id: nextSessionRowId++,
+        exerciseId: raw.exerciseId,
+        exerciseName: ex?.name ?? "?",
+        kind: ex?.kind ?? "strength",
+        position: pos,
+        targetSets: raw.targetSets ?? null,
+        targetRepsMin: raw.targetRepsMin ?? null,
+        targetRepsMax: raw.targetRepsMax ?? null,
+        targetDistanceKm: raw.targetDistanceKm ?? null,
+        targetDurationMin: raw.targetDurationMin ?? null,
+      };
+    });
 
   const impl = async (
     input: RequestInfo | URL,
@@ -73,25 +124,69 @@ export function mockApi(seed: Seed = {}): MockApi {
       return json({ authenticated: true });
     if (api.hang) return new Promise<Response>(() => {}); // pending forever
 
+    const sMatch = /^\/api\/plan-sessions(?:\/(\d+))?$/.exec(url);
     const tMatch = /^\/api\/templates(?:\/(\d+))?$/.exec(url);
     const eMatch = /^\/api\/exercises(?:\/(\d+))?$/.exec(url);
+
+    if (sMatch) {
+      const id = sMatch[1] ? Number(sMatch[1]) : null;
+      if (method === "GET" && id === null)
+        return json(api.state.sessions.map(({ exercises, ...rest }) => rest));
+      if (method === "GET" && id !== null) {
+        const s = api.state.sessions.find((x) => x.id === id);
+        return s ? json(s) : err("Not found", undefined, 404);
+      }
+      if (method === "POST") {
+        const b = body as {
+          date: string;
+          name?: string | null;
+          items: RawItem[];
+        };
+        if (api.state.sessions.some((s) => s.date === b.date))
+          return err("Ya hay una sesión ese día", "date", 409);
+        const bad = itemsProblem(b.items ?? []);
+        if (bad) return bad;
+        const session: PlanSessionRow = {
+          id: nextSessionId++,
+          date: b.date,
+          name: b.name ?? null,
+          status: "planned",
+          exercises: hydrateSessionRows(b.items ?? []),
+        };
+        api.state.sessions.push(session);
+        return json(session, 201);
+      }
+      if (id !== null) {
+        const s = api.state.sessions.find((x) => x.id === id);
+        if (!s) return err("Not found", undefined, 404);
+        if (s.status === "logged")
+          return err("Sesión ya registrada", undefined, 409);
+        if (method === "PUT") {
+          const b = body as { name?: string | null; items: RawItem[] };
+          const bad = itemsProblem(b.items ?? []);
+          if (bad) return bad;
+          s.name = b.name ?? null;
+          s.exercises = hydrateSessionRows(b.items ?? []);
+          return json(s);
+        }
+        if (method === "DELETE") {
+          api.state.sessions = api.state.sessions.filter((x) => x.id !== id);
+          return json({});
+        }
+      }
+    }
 
     if (tMatch) {
       const id = tMatch[1] ? Number(tMatch[1]) : null;
       if (method === "GET" && id === null) return json(api.state.templates);
       if (method === "POST") {
-        const b = body as {
-          name: string;
-          rotationIndex: number;
-          exercises: unknown[];
-        };
+        const b = body as { name: string; exercises: unknown[] };
         const name = b.name.trim();
         if (api.state.templates.some((t) => t.name === name))
           return err("Already exists", "name");
         const t: Template = {
           id: nextTemplateId++,
           name,
-          rotationIndex: b.rotationIndex,
           exercises: b.exercises.map((raw, pos) =>
             hydrate(raw, pos, api, nextRowId++),
           ),
@@ -103,11 +198,7 @@ export function mockApi(seed: Seed = {}): MockApi {
         const t = api.state.templates.find((x) => x.id === id);
         if (!t) return err("Not found", undefined, 404);
         if (method === "PUT") {
-          const b = body as {
-            name: string;
-            rotationIndex?: number;
-            exercises: unknown[];
-          };
+          const b = body as { name: string; exercises: unknown[] };
           if (
             api.state.templates.some(
               (x) => x.name === b.name.trim() && x.id !== id,
@@ -115,8 +206,6 @@ export function mockApi(seed: Seed = {}): MockApi {
           )
             return err("Already exists", "name");
           t.name = b.name.trim();
-          if (b.rotationIndex !== undefined && b.rotationIndex !== null)
-            t.rotationIndex = b.rotationIndex;
           t.exercises = b.exercises.map((raw, pos) =>
             hydrate(raw, pos, api, nextRowId++),
           );
@@ -150,7 +239,9 @@ export function mockApi(seed: Seed = {}): MockApi {
           description?: string | null;
           setupCues?: string | null;
           techniqueUrl?: string | null;
+          steps?: string[] | null;
           tags: string[];
+          kind?: "strength" | "running" | "bike";
         };
         const bad = validate(b);
         if (bad) return bad;
@@ -162,8 +253,9 @@ export function mockApi(seed: Seed = {}): MockApi {
           description: b.description ?? null,
           setupCues: b.setupCues ?? null,
           techniqueUrl: b.techniqueUrl ?? null,
-          steps: (b as { steps?: string[] | null }).steps ?? null,
+          steps: b.steps ?? null,
           tags: b.tags,
+          kind: b.kind ?? "strength",
         };
         api.state.exercises.push(ex);
         return json(ex, 201);
@@ -183,8 +275,9 @@ export function mockApi(seed: Seed = {}): MockApi {
             description: b.description ?? null,
             setupCues: b.setupCues ?? null,
             techniqueUrl: b.techniqueUrl ?? null,
-            steps: (b as { steps?: string[] | null }).steps ?? null,
+            steps: b.steps ?? null,
             tags: b.tags,
+            kind: b.kind ?? "strength",
           });
           return json(ex);
         }
@@ -197,24 +290,6 @@ export function mockApi(seed: Seed = {}): MockApi {
           api.state.exercises = api.state.exercises.filter((x) => x.id !== id);
           return new Response(null, { status: 204 });
         }
-      }
-    }
-    if (url === "/api/plan-sessions") {
-      if (method === "GET") return json(api.state.sessions);
-      if (method === "POST") {
-        const b = body as { date: string; templateId: number };
-        if (api.state.sessions.some((s) => s.date === b.date))
-          return err("Ya hay una sesión ese día", undefined, 409);
-        const tpl = api.state.templates.find((t) => t.id === b.templateId);
-        if (!tpl) return err("Not found", undefined, 404);
-        api.state.sessions.push({
-          id: nextSessionId++,
-          date: b.date,
-          status: "planned",
-          templateId: tpl.id,
-          templateName: tpl.name,
-        });
-        return json({ id: nextSessionId - 1 }, 201);
       }
     }
     return err("Not found", undefined, 404);
@@ -231,12 +306,8 @@ function hydrate(
   api: MockApi,
   rowId: number,
 ): Template["exercises"][number] {
-  const e = raw as {
-    exerciseId: number;
-    targetSets?: number | null;
-    targetRepsMin?: number | null;
-    targetRepsMax?: number | null;
-  };
+  const e = raw as RawItem;
+  const ex = api.state.exercises.find((x) => x.id === e.exerciseId);
   return {
     id: rowId,
     exerciseId: e.exerciseId,
@@ -244,7 +315,9 @@ function hydrate(
     targetSets: e.targetSets ?? null,
     targetRepsMin: e.targetRepsMin ?? null,
     targetRepsMax: e.targetRepsMax ?? null,
-    exerciseName:
-      api.state.exercises.find((x) => x.id === e.exerciseId)?.name ?? "?",
+    targetDistanceKm: e.targetDistanceKm ?? null,
+    targetDurationMin: e.targetDurationMin ?? null,
+    exerciseName: ex?.name ?? "?",
+    kind: ex?.kind ?? "strength",
   };
 }

@@ -49,7 +49,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
       const results = await db.batch([
         db
           .prepare(
-            "INSERT INTO exercises (name, description, setup_cues, technique_url, steps) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO exercises (name, description, setup_cues, technique_url, steps, kind) VALUES (?, ?, ?, ?, ?, ?)",
           )
           .bind(
             name,
@@ -57,6 +57,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
             input.setupCues ?? null,
             input.techniqueUrl ?? null,
             input.steps ? JSON.stringify(input.steps) : null,
+            input.kind,
           ),
         ...tagStatements(name, input.tags, db),
       ]);
@@ -90,7 +91,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
       await db.batch([
         db
           .prepare(
-            "UPDATE exercises SET name=?, description=?, setup_cues=?, technique_url=?, steps=? WHERE id=?",
+            "UPDATE exercises SET name=?, description=?, setup_cues=?, technique_url=?, steps=?, kind=? WHERE id=?",
           )
           .bind(
             name,
@@ -98,6 +99,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
             input.setupCues ?? null,
             input.techniqueUrl ?? null,
             input.steps ? JSON.stringify(input.steps) : null,
+            input.kind,
             id,
           ),
         db.prepare("DELETE FROM exercise_tags WHERE exercise_id=?").bind(id),
@@ -131,9 +133,9 @@ export const exercises = new Hono<{ Bindings: Env }>()
         db,
         `SELECT sl.weight_kg AS weightKg, sl.reps, wl.date
          FROM set_logs sl
-         JOIN template_exercises te ON te.id = sl.template_exercise_id
+         JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
          JOIN workout_logs wl ON wl.id = sl.workout_log_id
-         WHERE te.exercise_id = ? AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL)
+         WHERE pse.exercise_id = ? AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL)
          ORDER BY wl.date DESC, sl.id DESC
          LIMIT 1`,
         id,

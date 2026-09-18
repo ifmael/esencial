@@ -1,268 +1,79 @@
 import { type APIRequestContext, expect, test } from "@playwright/test";
 import { apiRequest, uniqueName } from "./helpers";
 
-test.describe("STRENGTH — template, schedule and session loop", () => {
+type ItemPayload = {
+  exerciseId: number;
+  targetSets?: number | null;
+  targetRepsMin?: number | null;
+  targetRepsMax?: number | null;
+  targetDistanceKm?: number | null;
+  targetDurationMin?: number | null;
+};
+
+/** Ejercicio del catálogo (fuerza o cardio) creado por API con nombre único. */
+function createExercise(
+  request: APIRequestContext,
+  name: string,
+  kind: "strength" | "running" | "bike" = "strength",
+) {
+  return apiRequest<{ id: number }>(request, "POST", "/api/exercises", {
+    name,
+    tags: [kind === "strength" ? "pecho" : "cardio"],
+    kind,
+  });
+}
+
+/** Plantilla (agrupación semántica) con los items indicados. */
+function createTemplate(
+  request: APIRequestContext,
+  name: string,
+  items: ItemPayload[],
+) {
+  return apiRequest<{ id: number }>(request, "POST", "/api/templates", {
+    name,
+    exercises: items,
+  });
+}
+
+/** Sesión del día: nombre + items expandidos. */
+function createSession(
+  request: APIRequestContext,
+  date: string,
+  items: ItemPayload[],
+  name?: string,
+) {
+  return apiRequest<{ id: number }>(request, "POST", "/api/plan-sessions", {
+    date,
+    name,
+    items,
+  });
+}
+
+/** ISO week "YYYY-Www" de una fecha UTC (misma convención que la app). */
+function isoWeekOf(date: string): string {
+  const t = new Date(`${date}T12:00:00Z`);
+  t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7) + 3); // jueves
+  const jan4 = new Date(Date.UTC(t.getUTCFullYear(), 0, 4, 12));
+  jan4.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7) + 3);
+  const week =
+    1 + Math.round((t.getTime() - jan4.getTime()) / (7 * 86_400_000));
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   test.use({ storageState: ".auth/state.json" });
 
-  // Self-contained: dates unique per run (day offset encodes the run), so a
-  // rerun never collides with a session left by an earlier failed attempt.
+  // Fechas únicas por ejecución (el offset codifica la run) para no chocar con
+  // sesiones de intentos anteriores.
   const RUN_OFFSET = 30 + (Date.now() % 300);
   const iso = (offsetDays: number) => {
     const d = new Date();
     d.setDate(d.getDate() + RUN_OFFSET + offsetDays);
     return d.toISOString().slice(0, 10);
   };
+  const weekOf = (offsetDays: number) => isoWeekOf(iso(offsetDays));
 
-  async function createTemplateViaApi(
-    request: APIRequestContext,
-    name: string,
-  ): Promise<{ id: number }> {
-    // Two seeded exercises (D1 has 91); pick by id via the list endpoint.
-    const exercises = await apiRequest<{ id: number }[]>(
-      request,
-      "GET",
-      "/api/exercises",
-    );
-    const [a, b] = exercises.slice(0, 2);
-    return apiRequest(request, "POST", "/api/templates", {
-      name,
-      rotationIndex: 0,
-      exercises: [
-        {
-          exerciseId: a.id,
-          targetSets: 3,
-          targetRepsMin: 8,
-          targetRepsMax: 10,
-        },
-        {
-          exerciseId: b.id,
-          targetSets: 3,
-          targetRepsMin: 10,
-          targetRepsMax: 12,
-        },
-      ],
-    });
-  }
-
-  test("template created with two exercises shows them", async ({ page }) => {
-    const name = uniqueName("Plantilla E2E");
-    await page.goto("/plan-fuerza");
-    await page.getByRole("button", { name: "+ Nueva plantilla" }).click();
-
-    await page.locator("#tpl-name").fill(name);
-    await page.getByRole("button", { name: "+ Añadir ejercicio" }).click();
-    await page.getByPlaceholder("Buscar ejercicio").fill("press banca");
-    const dialog = page.getByRole("dialog", { name: "Añadir ejercicio" });
-    const exerciseButtons = dialog
-      .getByRole("button")
-      .filter({ hasText: /press/i });
-    await exerciseButtons.first().click();
-    await exerciseButtons.nth(1).click();
-    await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Guardar", exact: true }).click();
-
-    // Saved: editor closed; the card auto-expands and lists its two exercises
-    await expect(
-      page.getByRole("button", { name: "Guardar", exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name, exact: true }).first(),
-    ).toBeVisible();
-    await expect(
-      page
-        .getByRole("listitem")
-        .filter({ has: page.getByRole("button", { name: "Press banca" }) })
-        .first(),
-    ).toBeVisible();
-  });
-
-  test("Programar → FUERZA card at / shows template name and numbered exercises", async ({
-    page,
-  }) => {
-    const name = uniqueName("Prog E2E");
-    const date = iso(1);
-    const tpl = await createTemplateViaApi(page.request, name);
-    expect(tpl.id).toBeGreaterThan(0);
-
-    // Schedule via API (UI for scheduling lives on the Día/session flow)
-    const scheduled = await apiRequest<{ status: string }>(
-      page.request,
-      "POST",
-      "/api/plan-sessions",
-      { date, templateId: tpl.id },
-    );
-    expect(scheduled.status).toBe("planned");
-
-    // FUERZA card at / (tomorrow) shows the template
-    await page.goto("/");
-    await page.getByLabel("Ir a una fecha").fill(iso(1));
-    await expect(page.getByRole("heading", { name: "FUERZA" })).toBeVisible();
-    await expect(page.getByText(name)).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Registrar sesión" }),
-    ).toBeVisible();
-  });
-
-  test("Registrar sesión → logged summary on FUERZA card in Hoy", async ({
-    page,
-  }) => {
-    const name = uniqueName("Log E2E");
-    const date = iso(2);
-    const tpl = await createTemplateViaApi(page.request, name);
-    await apiRequest(page.request, "POST", "/api/plan-sessions", {
-      date,
-      templateId: tpl.id,
-    });
-
-    await page.goto(`/sesion/${date}`);
-    await expect(page.getByText(name).first()).toBeVisible();
-
-    // Expand first exercise and check a set, set effort 3
-    await page
-      .getByRole("button", { name: /Series de / })
-      .first()
-      .click();
-    await page
-      .getByRole("checkbox", { name: / serie 1$/ })
-      .first()
-      .check();
-    await page.getByText("Moderado", { exact: true }).click();
-
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
-    await expect(page.getByText("Registrado")).toBeVisible();
-
-    // FUERZA card in Hoy shows the logged summary
-    await page.goto("/");
-    await page.getByLabel("Ir a una fecha").fill(iso(2));
-    await expect(page.getByText(/Sesión completada/)).toBeVisible();
-    await expect(page.getByText(/ejercicios · .* series/)).toBeVisible();
-  });
-
-  test("second session same date → visible 'Ya hay una sesión ese día' and no duplicate", async ({
-    page,
-  }) => {
-    const name = uniqueName("Dup E2E");
-    const date = iso(3);
-    const tpl = await createTemplateViaApi(page.request, name);
-    await apiRequest(page.request, "POST", "/api/plan-sessions", {
-      date,
-      templateId: tpl.id,
-    });
-
-    // First registration through the UI (state A → B)
-    await page.goto(`/sesion/${date}`);
-    await page
-      .getByRole("button", { name: /Series de / })
-      .first()
-      .click();
-    await page
-      .getByRole("checkbox", { name: / serie 1$/ })
-      .first()
-      .check();
-    await page.getByText("Fácil", { exact: true }).click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
-    await expect(page.getByText("Registrado")).toBeVisible();
-
-    // Second attempt: schedule again via API → 409 with the exact envelope text
-    const res = await page.request.post("/api/plan-sessions", {
-      data: { date, templateId: tpl.id },
-    });
-    expect(res.status()).toBe(409);
-    const body = await res.json();
-    expect(body.error).toBe("Ya hay una sesión ese día");
-
-    // And the UI path: re-open the session page → read-only logged, not a draft
-    await page.goto(`/sesion/${date}`);
-    await expect(page.getByText("Registrado")).toBeVisible();
-    await expect(
-      page.getByRole("main").getByRole("button", { name: "Cerrar sesión" }),
-    ).toHaveCount(0);
-  });
-});
-
-test.describe("PLANIFICADOR SEMANAL", () => {
-  test.use({ storageState: ".auth/state.json" });
-
-  // Dates unique per run, weeks far from the first describe's range.
-  const RUN_OFFSET = 400 + (Date.now() % 300);
-  const dateAt = (offsetDays: number) =>
-    new Date(Date.now() + (RUN_OFFSET + offsetDays) * 86_400_000);
-
-  /** ISO week "YYYY-Www" of a UTC-noon date (same convention as the app). */
-  function isoWeekOf(d: Date): string {
-    const t = new Date(
-      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12),
-    );
-    t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7) + 3); // Thursday
-    const jan4 = new Date(Date.UTC(t.getUTCFullYear(), 0, 4, 12));
-    jan4.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7) + 3);
-    const week =
-      1 + Math.round((t.getTime() - jan4.getTime()) / (7 * 86_400_000));
-    return `${t.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
-  }
-
-  /** Monday of ISO week, mirroring week-grid.tsx dayOf. */
-  function mondayOf(week: string): string {
-    const [year, w] = week.split("-W").map(Number);
-    const jan4 = new Date(Date.UTC(year, 0, 4));
-    const monday = new Date(
-      jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86_400_000,
-    );
-    monday.setUTCDate(monday.getUTCDate() + (w - 1) * 7);
-    return monday.toISOString().slice(0, 10);
-  }
-
-  const weekOf = (n: number) => isoWeekOf(dateAt(n));
-  const weekAfter = (week: string) =>
-    isoWeekOf(
-      new Date(Date.parse(`${mondayOf(week)}T12:00:00Z`) + 86_400_000 * 7),
-    );
-
-  /** Template seeded via API; name unique so the picker search hits one row. */
-  async function seedTemplate(
-    request: APIRequestContext,
-    prefix: string,
-  ): Promise<{ id: number; name: string }> {
-    const name = uniqueName(prefix);
-    const exercises = await apiRequest<{ id: number }[]>(
-      request,
-      "GET",
-      "/api/exercises",
-    );
-    const [a, b] = exercises.slice(0, 2);
-    const tpl = await apiRequest<{ id: number }>(
-      request,
-      "POST",
-      "/api/templates",
-      {
-        name,
-        rotationIndex: 0,
-        exercises: [
-          {
-            exerciseId: a.id,
-            targetSets: 3,
-            targetRepsMin: 8,
-            targetRepsMax: 10,
-          },
-          {
-            exerciseId: b.id,
-            targetSets: 3,
-            targetRepsMin: 10,
-            targetRepsMax: 12,
-          },
-        ],
-      },
-    );
-    return { id: tpl.id, name };
-  }
-
-  /** DELETE any leftover session on `date` (planned rows only; logged 409s). */
+  /** Borra sesiones planned de una fecha (logged → 409, se deja). */
   async function clearDate(request: APIRequestContext, date: string) {
     const sessions = await apiRequest<
       { id: number; status: string; date: string }[]
@@ -274,43 +85,210 @@ test.describe("PLANIFICADOR SEMANAL", () => {
     }
   }
 
-  test("añadir plantilla a un día desde la rejilla", async ({ page }) => {
-    const tpl = await seedTemplate(page.request, "Rejilla E2E");
+  test("plantilla con fuerza + cardio se muestra en la tarjeta", async ({
+    page,
+  }) => {
+    const press = await createExercise(page.request, uniqueName("Banca E2E"));
+    const run = await createExercise(
+      page.request,
+      uniqueName("Running E2E"),
+      "running",
+    );
+    const name = uniqueName("Plantilla E2E");
+    await createTemplate(page.request, name, [
+      { exerciseId: press.id, targetSets: 4, targetRepsMin: 8 },
+      { exerciseId: run.id, targetDistanceKm: 10, targetDurationMin: 45 },
+    ]);
+
+    await page.goto("/plan-fuerza");
+    const card = page.locator("section").filter({ hasText: name }).first();
+    await card.getByRole("button", { name, exact: true }).click();
+    await expect(card.getByText("4 series")).toBeVisible();
+    await expect(card.getByText("10 km · 45 min")).toBeVisible();
+  });
+
+  test("día vacío → editor: expandir plantilla, dedupe y guardar", async ({
+    page,
+  }) => {
+    const press = await createExercise(page.request, uniqueName("Banca E2E"));
+    const remo = await createExercise(page.request, uniqueName("Remo E2E"));
+    const tplA = uniqueName("Empuje E2E");
+    await createTemplate(page.request, tplA, [
+      { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+      { exerciseId: remo.id, targetSets: 3, targetRepsMin: 10 },
+    ]);
+    const tplB = uniqueName("Solo banca E2E");
+    await createTemplate(page.request, tplB, [
+      { exerciseId: press.id, targetSets: 5, targetRepsMin: 5 },
+    ]);
     const week = weekOf(0);
-    const lunes = mondayOf(week);
+    const date = mondayOf(week);
+    await clearDate(page.request, date);
     await page.goto(`/plan-fuerza?week=${week}`);
+    test.skip(
+      (await page
+        .getByRole("button", { name: `Editar sesión del ${date}` })
+        .count()) > 0,
+      "queda una sesión registrada de otra ejecución en el lunes de esta semana",
+    );
 
-    // First empty cell = lunes (week is empty; dates are far in the future).
+    // Primer día de la rejilla = lunes, que es la fecha elegida.
     await page.getByRole("button", { name: "+ añadir" }).first().click();
-    const dialog = page.getByRole("dialog", { name: "Elegir plantilla" });
-    await dialog.getByLabel("Buscar plantilla").fill(tpl.name);
-    await dialog.getByRole("button", { name: tpl.name }).click();
-
-    // Planned cell replaces the empty one: template + Pendiente + ✕.
-    await expect(page.getByText(tpl.name).first()).toBeVisible();
-    await expect(page.getByText("Pendiente").first()).toBeVisible();
     await expect(
-      page.getByRole("button", { name: `Desprogramar sesión del ${lunes}` }),
-    ).toBeAttached();
+      page.getByText(new RegExp(`Nueva sesión · ${date}`)),
+    ).toBeVisible();
+
+    // Expandir las dos plantillas: solo entra el ejercicio nuevo, sin duplicar.
+    await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Añadir al día" });
+    await dialog
+      .getByRole("button", { name: new RegExp(escapeRe(tplA)) })
+      .click();
+    await dialog
+      .getByRole("button", { name: new RegExp(escapeRe(tplB)) })
+      .click();
+    await expect(
+      page.getByText(/1 ejercicio ya estaba en el día/),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Cerrar" }).click();
+    await expect(page.getByRole("button", { name: "Quitar" })).toHaveCount(2);
+
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await expect(
+      page.getByRole("button", { name: `Editar sesión del ${date}` }),
+    ).toBeVisible();
+    await expect(page.getByText("Pendiente").first()).toBeVisible();
+  });
+
+  test("editar la sesión cambia las series y persiste", async ({ page }) => {
+    const pressName = uniqueName("Banca E2E");
+    const press = await createExercise(page.request, pressName);
+    const week = weekOf(1);
+    const date = mondayOf(week);
+    await clearDate(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3, targetRepsMin: 8 }],
+      uniqueName("Sesión E2E"),
+    );
+    await page.goto(`/plan-fuerza?week=${week}`);
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    await page
+      .getByLabel(new RegExp(`${escapeRe(pressName)} series`, "i"))
+      .fill("6");
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await expect(page.getByText("Pendiente").first()).toBeVisible();
+
+    // Reabrir: el valor persistido es 6.
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    await expect(
+      page.getByLabel(new RegExp(`${escapeRe(pressName)} series`, "i")),
+    ).toHaveValue("6");
+  });
+
+  test("registrar el día con series + cardio (marcas y solo hecho)", async ({
+    page,
+  }) => {
+    const press = await createExercise(page.request, uniqueName("Banca E2E"));
+    const run = await createExercise(
+      page.request,
+      uniqueName("Running E2E"),
+      "running",
+    );
+    const date = iso(2);
+    await clearDate(page.request, date);
+    const session = uniqueName("Sesión E2E");
+    await createSession(
+      page.request,
+      date,
+      [
+        { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+        { exerciseId: run.id, targetDistanceKm: 5, targetDurationMin: 30 },
+      ],
+      session,
+    );
+
+    await page.goto(`/sesion/${date}`);
+    await expect(page.getByText(session).first()).toBeVisible();
+
+    // Fuerza: marcar la primera serie.
+    await page
+      .getByRole("button", { name: /Series de / })
+      .first()
+      .click();
+    await page
+      .getByRole("checkbox", { name: / serie 1$/ })
+      .first()
+      .check();
+
+    // Cardio: marcar Hecho sin marcas.
+    await page
+      .getByRole("checkbox", { name: /hecho$/i })
+      .first()
+      .check();
+
+    await page.getByText("Moderado", { exact: true }).click();
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Cerrar sesión" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+    await expect(page.getByText("Hecho sin marcas")).toBeVisible();
+
+    // La tarjeta del día muestra el resumen ya registrado.
+    await page.goto("/");
+    await page.getByLabel("Ir a una fecha").fill(date);
+    await expect(page.getByText(/Sesión completada/)).toBeVisible();
+  });
+
+  test("reprogramar un día ocupado no duplica la sesión", async ({ page }) => {
+    const press = await createExercise(page.request, uniqueName("Banca E2E"));
+    const date = iso(3);
+    await clearDate(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3 }],
+      uniqueName("Sesión E2E"),
+    );
+
+    // El día ya ocupado se edita (PUT), nunca se crea otra sesión.
+    await page.goto(`/plan-fuerza?week=${weekOf(3)}`);
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    await expect(
+      page.getByText(new RegExp(`Editar sesión · ${date}`)),
+    ).toBeVisible();
+    const sessions = await apiRequest<{ date: string }[]>(
+      page.request,
+      "GET",
+      "/api/plan-sessions",
+    );
+    expect(sessions.filter((s) => s.date === date)).toHaveLength(1);
   });
 
   test("desprogramar con la ✕ (confirmación inline)", async ({ page }) => {
-    const tpl = await seedTemplate(page.request, "Desprog E2E");
-    const week = weekOf(1);
-    const lunes = mondayOf(week);
-    await clearDate(page.request, lunes);
-    await apiRequest(page.request, "POST", "/api/plan-sessions", {
-      date: lunes,
-      templateId: tpl.id,
-    });
-    await page.goto(`/plan-fuerza?week=${week}`);
+    const press = await createExercise(page.request, uniqueName("Banca E2E"));
+    const date = iso(4);
+    await clearDate(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3 }],
+      uniqueName("Sesión E2E"),
+    );
+    await page.goto(`/plan-fuerza?week=${weekOf(4)}`);
 
     const desprogramar = page.getByRole("button", {
-      name: `Desprogramar sesión del ${lunes}`,
+      name: `Desprogramar sesión del ${date}`,
     });
     await expect(desprogramar).toBeVisible();
-
-    // Inline confirmation, two clicks.
     await desprogramar.click();
     const confirmar = page.getByRole("button", {
       name: "Confirmar desprogramar",
@@ -318,26 +296,17 @@ test.describe("PLANIFICADOR SEMANAL", () => {
     await expect(confirmar).toBeVisible();
     await confirmar.click();
 
-    // Back to empty: the lunes cell (first day) shows "+ añadir" again, no ✕.
     await expect(desprogramar).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: "+ añadir" }).first(),
-    ).toBeVisible();
+      page.getByRole("button", { name: `Editar sesión del ${date}` }),
+    ).toHaveCount(0);
   });
 
-  test("error 409 visible al ocupar un día ocupado", async ({ page }) => {
-    const tpl = await seedTemplate(page.request, "409 E2E");
-    const week = weekOf(2);
-    const martes = mondayOf(week);
-    await clearDate(page.request, martes);
-    await apiRequest(page.request, "POST", "/api/plan-sessions", {
-      date: martes,
-      templateId: tpl.id,
-    });
-    await page.goto(`/plan-fuerza?week=${week}`);
-
-    // UI can only select empty days; the 409 path is exercised by
-    // intercepting the create POST with the API's real duplicate-day envelope.
+  test("error del servidor visible al guardar (409)", async ({ page }) => {
+    const name = uniqueName("Banca E2E");
+    await createExercise(page.request, name);
+    const date = iso(5);
+    await clearDate(page.request, date);
     await page.route("**/api/plan-sessions", (route) => {
       if (route.request().method() !== "POST") return route.continue();
       return route.fulfill({
@@ -347,35 +316,31 @@ test.describe("PLANIFICADOR SEMANAL", () => {
       });
     });
 
+    await page.goto(`/plan-fuerza?week=${weekOf(5)}`);
     await page.getByRole("button", { name: "+ añadir" }).first().click();
-    const dialog = page.getByRole("dialog", { name: "Elegir plantilla" });
-    await dialog.getByLabel("Buscar plantilla").fill(tpl.name);
-    await dialog.getByRole("button", { name: tpl.name }).click();
-
-    // Hook re-renders the grid error as role="alert".
-    await expect(
-      page.getByRole("alert").filter({ hasText: "Ya hay una sesión ese día" }),
-    ).toBeVisible();
-    // And the occupied cell is untouched.
-    await expect(
-      page.getByRole("button", {
-        name: `Desprogramar sesión del ${martes}`,
-      }),
-    ).toBeAttached();
+    await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Añadir al día" });
+    await dialog
+      .getByRole("button", { name: new RegExp(escapeRe(name)) })
+      .click();
+    await dialog.getByRole("button", { name: "Cerrar" }).click();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await expect(page.getByText("Ya hay una sesión ese día")).toBeVisible();
   });
 
   test("badge Hecho tras registrar una sesión", async ({ page }) => {
-    const tpl = await seedTemplate(page.request, "Hecho E2E");
-    const week = weekOf(3);
-    const lunes = mondayOf(week);
-    await clearDate(page.request, lunes);
-    await apiRequest(page.request, "POST", "/api/plan-sessions", {
-      date: lunes,
-      templateId: tpl.id,
-    });
+    const press = await createExercise(page.request, uniqueName("Banca E2E"));
+    const date = iso(6);
+    await clearDate(page.request, date);
+    const session = uniqueName("Sesión E2E");
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3 }],
+      session,
+    );
 
-    // Register the session through the existing session-page flow.
-    await page.goto(`/sesion/${lunes}`);
+    await page.goto(`/sesion/${date}`);
     await page
       .getByRole("button", { name: /Series de / })
       .first()
@@ -391,27 +356,30 @@ test.describe("PLANIFICADOR SEMANAL", () => {
       .click();
     await expect(page.getByText("Registrado")).toBeVisible();
 
-    // Grid shows the logged badge for that week/day.
-    await page.goto(`/plan-fuerza?week=${week}`);
-    await expect(page.getByText("Hecho", { exact: true })).toBeVisible();
-    await expect(page.getByText(tpl.name).first()).toBeVisible();
-    // Logged cells have no ✕.
+    await page.goto(`/plan-fuerza?week=${weekOf(6)}`);
     await expect(
-      page.getByRole("button", {
-        name: `Desprogramar sesión del ${lunes}`,
-      }),
+      page.getByText("Hecho", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(page.getByText(session).first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `Desprogramar sesión del ${date}` }),
     ).toHaveCount(0);
   });
 
   test("navegación de semanas", async ({ page }) => {
-    const cur = weekOf(4);
+    const cur = weekOf(7);
     await page.goto(`/plan-fuerza?week=${cur}`);
     await expect(
       page.getByRole("heading", { name: cur, exact: true }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Semana siguiente" }).click();
-    const next = weekAfter(cur);
+    const monday = mondayOf(cur);
+    const next = isoWeekOf(
+      new Date(Date.parse(`${monday}T12:00:00Z`) + 7 * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    );
     await expect(
       page.getByRole("heading", { name: next, exact: true }),
     ).toBeVisible();
@@ -422,4 +390,19 @@ test.describe("PLANIFICADOR SEMANAL", () => {
       page.getByRole("heading", { name: cur, exact: true }),
     ).toBeVisible();
   });
+
+  /** Lunes de la semana ISO (espejo de week-grid.tsx). */
+  function mondayOf(week: string): string {
+    const [year, w] = week.split("-W").map(Number);
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const monday = new Date(
+      jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86_400_000,
+    );
+    monday.setUTCDate(monday.getUTCDate() + (w - 1) * 7);
+    return monday.toISOString().slice(0, 10);
+  }
+
+  function escapeRe(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 });

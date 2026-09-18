@@ -1,9 +1,6 @@
-// TDD RED: hook usePlanWeek (tasks 1.2; patrón hooks.test.tsx + stub de fetch
-// como en plan-fuerza.test.tsx, porque api-mock.ts no conoce /api/plan-sessions).
-// Contrato (design.md §4): usePlanWeek(isoWeek) → { sessions, loading, error,
-// reload, create(date, templateId), remove(id) } con
-// PlanSession = { id, date, status, templateId, templateName }.
-// El GET devuelve todas las sesiones; el hook filtra la semana ISO en cliente.
+// usePlanWeek: sesiones de la semana ISO (id/date/name/status). El GET devuelve
+// todas las sesiones; el hook filtra la semana en cliente. Las mutaciones del
+// editor del día viven en la página, no en el hook.
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,9 +13,8 @@ type FetchMock = Mock<
 type PlanSession = {
   id: number;
   date: string;
+  name: string | null;
   status: "planned" | "logged";
-  templateId: number;
-  templateName: string;
 };
 
 const jsonResponse = (data: unknown, status = 200) =>
@@ -31,7 +27,6 @@ const jsonResponse = (data: unknown, status = 200) =>
 const WEEK = "2026-W36";
 
 let rows: PlanSession[] = [];
-let nextId = 100;
 let getCalls = 0;
 let failGet = false;
 
@@ -43,21 +38,6 @@ function handle(url: string, init?: RequestInit): Response {
       return failGet
         ? jsonResponse({ error: "boom" }, 500)
         : jsonResponse(rows);
-    }
-    if (method === "POST") {
-      const raw = String(init?.body ?? "{}");
-      const b = JSON.parse(raw) as { date: string; templateId: number };
-      if (rows.some((r) => r.date === b.date))
-        return jsonResponse({ error: "Ya hay una sesión ese día" }, 409);
-      const created: PlanSession = {
-        id: nextId++,
-        date: b.date,
-        status: "planned",
-        templateId: b.templateId,
-        templateName: "A — Empuje",
-      };
-      rows.push(created);
-      return jsonResponse({ id: created.id }, 201);
     }
     if (method === "DELETE") {
       const match = /\/api\/plan-sessions\/(\d+)$/.exec(url);
@@ -82,25 +62,21 @@ function mockFetch(): FetchMock {
   return fetchMock;
 }
 
-// Fixtures PlanSession con la forma exacta del contrato del hook.
 const planned = (id: number, date: string): PlanSession => ({
   id,
   date,
+  name: "A — Empuje",
   status: "planned",
-  templateId: 1,
-  templateName: "A — Empuje",
 });
 const logged = (id: number, date: string): PlanSession => ({
   id,
   date,
+  name: "B — Tirón",
   status: "logged",
-  templateId: 2,
-  templateName: "B — Tirón",
 });
 
 beforeEach(() => {
   rows = [planned(1, "2026-09-02"), logged(2, "2026-09-10")];
-  nextId = 100;
   getCalls = 0;
   failGet = false;
 });
@@ -120,36 +96,12 @@ describe("usePlanWeek", () => {
     ).toBe(true);
   });
 
-  it("create hace POST {date, templateId} y recarga la semana", async () => {
-    const fetchMock = mockFetch();
-    const { result } = renderHook(() => usePlanWeek(WEEK));
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    await act(async () => result.current.create("2026-09-04", 1));
-    expect(result.current.error).toBeNull();
-    expect(result.current.sessions.map((s) => s.date)).toEqual([
-      "2026-09-02",
-      "2026-09-04",
-    ]);
-    expect(getCalls).toBe(2); // carga inicial + recarga tras crear
-    const post = fetchMock.mock.calls.find(([, i]) => i?.method === "POST");
-    expect(post).toBeDefined();
-    expect(String(post?.[0])).toBe("/api/plan-sessions");
-    expect(
-      JSON.parse(String((post?.[1] as RequestInit | undefined)?.body)),
-    ).toEqual({
-      date: "2026-09-04",
-      templateId: 1,
-    });
-  });
-
-  it("create en día ocupado (409): error 'Ya hay una sesión ese día' y estado re-sincronizado", async () => {
+  it("name null se mantiene null (la UI pone el fallback)", async () => {
     mockFetch();
+    rows = [{ id: 5, date: "2026-09-02", name: null, status: "planned" }];
     const { result } = renderHook(() => usePlanWeek(WEEK));
     await waitFor(() => expect(result.current.loading).toBe(false));
-    await act(async () => result.current.create("2026-09-02", 1));
-    expect(result.current.error).toContain("Ya hay una sesión ese día");
-    // tras la recarga, el estado refleja la verdad del servidor
-    expect(result.current.sessions).toEqual([planned(1, "2026-09-02")]);
+    expect(result.current.sessions[0].name).toBeNull();
   });
 
   it("remove hace DELETE /api/plan-sessions/:id y recarga sin la sesión", async () => {
@@ -162,6 +114,7 @@ describe("usePlanWeek", () => {
     const del = fetchMock.mock.calls.find(([, i]) => i?.method === "DELETE");
     expect(del).toBeDefined();
     expect(String(del?.[0])).toBe("/api/plan-sessions/1");
+    expect(getCalls).toBe(2); // carga inicial + recarga tras borrar
   });
 
   it("remove de logged (409): error 'Sesión ya registrada' y la sesión permanece", async () => {

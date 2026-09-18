@@ -1,6 +1,15 @@
 // useExercises hook (E4, E2 useRecipes pattern): full list + mutate + refetch.
+// kind: fuerza (series/reps) o cardio (distancia/tiempo).
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "./api";
+
+export type ExerciseKind = "strength" | "running" | "bike";
+
+export const KIND_LABELS: Record<ExerciseKind, string> = {
+  strength: "Fuerza",
+  running: "Running",
+  bike: "Bici",
+};
 
 export type Exercise = {
   id: number;
@@ -10,6 +19,7 @@ export type Exercise = {
   techniqueUrl: string | null;
   steps: string[] | null;
   tags: string[];
+  kind: ExerciseKind;
 };
 
 export type ExerciseInput = {
@@ -19,6 +29,8 @@ export type ExerciseInput = {
   techniqueUrl?: string | null;
   steps?: string[] | null;
   tags: string[];
+  /** Ausente = el servidor aplica "strength". */
+  kind?: ExerciseKind;
 };
 
 export type ExercisesState = {

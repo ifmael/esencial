@@ -1,6 +1,7 @@
 // E5 (design D4): un fetch por fecha a /api/day/:date con estado { data,
 // loading, error, reload }. Las respuestas de fechas ya superadas se descartan.
 import { useEffect, useRef, useState } from "react";
+import type { ExerciseKind } from "./exercises";
 
 export type DayMeal = {
   meal: string;
@@ -11,10 +12,17 @@ export type DayMeal = {
 
 export type DaySession = {
   id: number;
-  templateId: number;
-  templateName: string;
+  name: string | null;
   status: "planned" | "logged";
-  exercises?: { exerciseId: number; exerciseName: string; position: number }[];
+  exercises?: {
+    exerciseId: number;
+    exerciseName: string;
+    kind: ExerciseKind;
+    position: number;
+    targetSets: number | null;
+    targetDistanceKm: number | null;
+    targetDurationMin: number | null;
+  }[];
   summary?: { effort: number; exercises: number; sets: number } | null;
 };
 

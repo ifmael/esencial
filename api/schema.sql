@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS exercises (
   name          TEXT NOT NULL UNIQUE,
   description   TEXT,
   setup_cues    TEXT,
-  technique_url TEXT
+  technique_url TEXT,
+  -- 'strength' | 'running' | 'bike'; el cardio usa distance/duration, no series.
+  kind          TEXT NOT NULL DEFAULT 'strength'
 );
 
 CREATE TABLE IF NOT EXISTS exercise_tags (
@@ -47,19 +49,21 @@ CREATE TABLE IF NOT EXISTS exercise_tags (
 );
 
 CREATE TABLE IF NOT EXISTS session_templates (
-  id             INTEGER PRIMARY KEY,
-  name           TEXT NOT NULL UNIQUE,
-  rotation_index INTEGER NOT NULL DEFAULT 0
+  id   INTEGER PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS template_exercises (
-  id               INTEGER PRIMARY KEY,
-  template_id      INTEGER NOT NULL REFERENCES session_templates(id) ON DELETE CASCADE,
-  exercise_id      INTEGER NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
-  position         INTEGER NOT NULL,
-  target_sets      INTEGER,
-  target_reps_min  INTEGER,
-  target_reps_max  INTEGER
+  id                  INTEGER PRIMARY KEY,
+  template_id         INTEGER NOT NULL REFERENCES session_templates(id) ON DELETE CASCADE,
+  exercise_id         INTEGER NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
+  position            INTEGER NOT NULL,
+  target_sets         INTEGER,
+  target_reps_min     INTEGER,
+  target_reps_max     INTEGER,
+  target_distance_km  REAL,
+  target_duration_min INTEGER,
+  UNIQUE (template_id, exercise_id)
 );
 
 CREATE TABLE IF NOT EXISTS week_plans (
@@ -77,10 +81,23 @@ CREATE TABLE IF NOT EXISTS meal_slots (
 );
 
 CREATE TABLE IF NOT EXISTS plan_sessions (
-  id          INTEGER PRIMARY KEY,
-  date        TEXT NOT NULL UNIQUE,
-  template_id INTEGER NOT NULL REFERENCES session_templates(id) ON DELETE RESTRICT,
-  status      TEXT NOT NULL CHECK (status IN ('planned', 'logged'))
+  id     INTEGER PRIMARY KEY,
+  date   TEXT NOT NULL UNIQUE,
+  name   TEXT,
+  status TEXT NOT NULL CHECK (status IN ('planned', 'logged'))
+);
+
+CREATE TABLE IF NOT EXISTS plan_session_exercises (
+  id                  INTEGER PRIMARY KEY,
+  plan_session_id     INTEGER NOT NULL REFERENCES plan_sessions(id) ON DELETE CASCADE,
+  exercise_id         INTEGER NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
+  position            INTEGER NOT NULL,
+  target_sets         INTEGER,
+  target_reps_min     INTEGER,
+  target_reps_max     INTEGER,
+  target_distance_km  REAL,
+  target_duration_min INTEGER,
+  UNIQUE (plan_session_id, exercise_id)
 );
 
 CREATE TABLE IF NOT EXISTS workout_logs (
@@ -92,13 +109,23 @@ CREATE TABLE IF NOT EXISTS workout_logs (
 );
 
 CREATE TABLE IF NOT EXISTS set_logs (
-  id                   INTEGER PRIMARY KEY,
-  workout_log_id       INTEGER NOT NULL REFERENCES workout_logs(id) ON DELETE CASCADE,
-  template_exercise_id INTEGER NOT NULL REFERENCES template_exercises(id) ON DELETE RESTRICT,
-  set_index            INTEGER NOT NULL,
-  weight_kg            REAL,
-  reps                 INTEGER,
-  done                 INTEGER NOT NULL DEFAULT 0
+  id                       INTEGER PRIMARY KEY,
+  workout_log_id           INTEGER NOT NULL REFERENCES workout_logs(id) ON DELETE CASCADE,
+  plan_session_exercise_id INTEGER NOT NULL REFERENCES plan_session_exercises(id) ON DELETE RESTRICT,
+  set_index                INTEGER NOT NULL,
+  weight_kg                REAL,
+  reps                     INTEGER,
+  done                     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS cardio_logs (
+  id                       INTEGER PRIMARY KEY,
+  workout_log_id           INTEGER NOT NULL REFERENCES workout_logs(id) ON DELETE CASCADE,
+  plan_session_exercise_id INTEGER NOT NULL REFERENCES plan_session_exercises(id) ON DELETE RESTRICT,
+  distance_km              REAL,
+  duration_min             INTEGER,
+  done                     INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (workout_log_id, plan_session_exercise_id)
 );
 
 -- One editable note per day: date is the PK (implicitly UNIQUE).

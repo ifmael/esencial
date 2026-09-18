@@ -28,6 +28,8 @@ export type RecipeInput = z.infer<typeof recipeSchema>;
 
 // --- Exercises -------------------------------------------------------------
 
+export const KINDS = ["strength", "running", "bike"] as const;
+
 export const exerciseSchema = z.object({
   name: z.string().min(1, "Exercise name is required"),
   description: z.string().optional().nullable(),
@@ -42,6 +44,7 @@ export const exerciseSchema = z.object({
     .optional()
     .nullable(),
   tags: z.array(z.string().min(1)).min(1, "At least one tag is required"),
+  kind: z.enum(KINDS).default("strength"),
 });
 export type ExerciseInput = z.infer<typeof exerciseSchema>;
 
@@ -52,12 +55,12 @@ export const templateExerciseSchema = z.object({
   targetSets: z.number().int().positive().optional().nullable(),
   targetRepsMin: z.number().int().positive().optional().nullable(),
   targetRepsMax: z.number().int().positive().optional().nullable(),
+  targetDistanceKm: z.number().min(0).optional().nullable(),
+  targetDurationMin: z.number().int().min(0).optional().nullable(),
 });
 
 export const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
-  // Absent on PUT means "preserve the stored value" (no default).
-  rotationIndex: z.number().int().min(0).optional(),
   exercises: z.array(templateExerciseSchema).optional().default([]),
 });
 export type TemplateInput = z.infer<typeof templateSchema>;
@@ -79,16 +82,44 @@ export type MealPlanInput = z.infer<typeof mealPlanSchema>;
 
 // --- Plan sessions + workout logs -------------------------------------------
 
-export const planSessionSchema = z.object({
+/** Un ejercicio planificado en el día: fuerza (series/reps) o cardio (distancia/tiempo). */
+export const planSessionItemSchema = z.object({
+  exerciseId: z.number().int().positive(),
+  targetSets: z.number().int().min(1).optional().nullable(),
+  targetRepsMin: z.number().int().min(0).optional().nullable(),
+  targetRepsMax: z.number().int().min(0).optional().nullable(),
+  targetDistanceKm: z.number().min(0).optional().nullable(),
+  targetDurationMin: z.number().int().min(0).optional().nullable(),
+});
+
+export const planSessionCreateSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
-  templateId: z.number().int().positive(),
+  name: z.string().trim().max(80).optional().nullable(),
+  items: z
+    .array(planSessionItemSchema)
+    .min(1, "At least one exercise is required"),
+});
+
+export const planSessionUpdateSchema = z.object({
+  name: z.string().trim().max(80).optional().nullable(),
+  items: z
+    .array(planSessionItemSchema)
+    .min(1, "At least one exercise is required"),
 });
 
 export const setLogSchema = z.object({
-  templateExerciseId: z.number().int().positive(),
+  planSessionExerciseId: z.number().int().positive(),
   setIndex: z.number().int().min(0),
   weightKg: z.number().min(0).optional().nullable(),
   reps: z.number().int().min(0).optional().nullable(),
+  done: z.boolean().optional().default(false),
+});
+
+// Cardio: distancia y tiempo opcionales; `done` sin marcas = hecho sin números.
+export const cardioLogSchema = z.object({
+  planSessionExerciseId: z.number().int().positive(),
+  distanceKm: z.number().min(0).optional().nullable(),
+  durationMin: z.number().int().min(0).optional().nullable(),
   done: z.boolean().optional().default(false),
 });
 
@@ -96,6 +127,7 @@ export const workoutLogSchema = z.object({
   effort: z.number().int().min(1).max(5, "effort must be 1-5"),
   note: z.string().optional().nullable(),
   sets: z.array(setLogSchema),
+  cardio: z.array(cardioLogSchema).optional().default([]),
 });
 export type WorkoutLogInput = z.infer<typeof workoutLogSchema>;
 

@@ -33,8 +33,12 @@ deploy falla (el bucket no se crea automáticamente).
 
 # = wrangler d1 migrations apply esencial --remote
 # Registra cada archivo de api/migrations/ en _cf_D1_MIGRATIONS y lo ejecuta
-# una sola vez (idempotente). 0001 es el baseline (espejo de api/schema.sql)
-# y bootstrapea una base vacía; los deltas aditivos viven en 0002+.
+# una sola vez (idempotente). 0001 es el baseline (v1) y bootstrapea una base
+# vacía; `api/schema.sql` refleja el estado final; los deltas viven en 0002+.
+#
+# ⚠️ 0009_fuerza_v2 RECREA las tablas de planificación de fuerza
+#    (plan_sessions / workout_logs / set_logs): se pierden las sesiones
+#    planificadas y el historial registrado. Ejecutarla justo después del deploy.
 pnpm db:migrate:remote
 ```
 

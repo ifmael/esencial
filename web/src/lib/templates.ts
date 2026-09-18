@@ -1,7 +1,8 @@
-// useTemplates hook (E4, E2 useRecipes pattern): list in API order
-// (rotationIndex, name) + mutate + refetch.
+// useTemplates hook (E4, E2 useRecipes pattern): agrupaciones semánticas de
+// ejercicios (fuerza y/o cardio) en orden alfabético + mutate + refetch.
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "./api";
+import type { ExerciseKind } from "./exercises";
 import type { TemplatePayload } from "./template-draft";
 
 export type TemplateExerciseRow = {
@@ -11,13 +12,15 @@ export type TemplateExerciseRow = {
   targetSets: number | null;
   targetRepsMin: number | null;
   targetRepsMax: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
   exerciseName: string;
+  kind: ExerciseKind;
 };
 
 export type Template = {
   id: number;
   name: string;
-  rotationIndex: number;
   exercises: TemplateExerciseRow[];
 };
 

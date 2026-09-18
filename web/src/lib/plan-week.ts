@@ -1,16 +1,47 @@
 // usePlanWeek (tasks 1.2, patrón useMealPlan): sesiones de la semana ISO.
-// El GET devuelve TODAS las sesiones; el hook filtra por semana ISO en cliente.
-// Tras un POST/DELETE fallido se recarga primero y el error se fija después,
-// para que el mensaje sobreviva a la re-sincronización del estado.
+// El GET devuelve TODAS las sesiones (id/date/name/status); el hook filtra por
+// semana ISO en cliente. Tras un POST/PUT/DELETE fallido se recarga primero y el
+// error se fija después, para que el mensaje sobreviva a la re-sincronización.
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiGet, apiSend } from "./api";
+import type { ExerciseKind } from "./exercises";
 
 export type PlanSession = {
   id: number;
   date: string;
+  name: string | null;
   status: "planned" | "logged";
-  templateId: number;
-  templateName: string;
+};
+
+/** Ejercicio planificado en el día (wire de GET /api/plan-sessions/:id). */
+export type SessionExercise = {
+  id: number;
+  exerciseId: number;
+  exerciseName: string;
+  kind: ExerciseKind;
+  position: number;
+  targetSets: number | null;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
+};
+
+export type SessionDetail = PlanSession & { exercises: SessionExercise[] };
+
+/** Fila editable del editor del día (lo que viaja en items[]). */
+export type SessionItem = {
+  exerciseId: number;
+  targetSets?: number | null;
+  targetRepsMin?: number | null;
+  targetRepsMax?: number | null;
+  targetDistanceKm?: number | null;
+  targetDurationMin?: number | null;
+};
+
+export type SessionPayload = {
+  name?: string | null;
+  items: SessionItem[];
 };
 
 function msg(e: unknown): string {
@@ -29,15 +60,7 @@ export function usePlanWeek(isoWeek: string) {
     try {
       const all = await apiGet<PlanSession[]>("/api/plan-sessions");
       // Week filter via Monday-anchored ISO week of "YYYY-MM-DD" (no clock).
-      setSessions(
-        all.filter((s) => {
-          const [y, m, d] = s.date.split("-").map(Number);
-          const date = new Date(Date.UTC(y, m - 1, d));
-          const thu = new Date(date.getTime());
-          thu.setUTCDate(thu.getUTCDate() - ((thu.getUTCDay() + 6) % 7) + 3);
-          return isoWeekOf(thu) === isoWeek;
-        }),
-      );
+      setSessions(all.filter((s) => isoWeekOf(s.date) === isoWeek));
       setError(null);
     } catch {
       setSessions([]);
@@ -53,19 +76,6 @@ export function usePlanWeek(isoWeek: string) {
 
   const reload = useCallback(() => load(), [load]);
 
-  const create = useCallback(
-    async (date: string, templateId: number) => {
-      try {
-        await apiSend("/api/plan-sessions", "POST", { date, templateId });
-        await load();
-      } catch (e) {
-        await load();
-        setError(msg(e));
-      }
-    },
-    [load],
-  );
-
   const remove = useCallback(
     async (id: number) => {
       try {
@@ -79,17 +89,21 @@ export function usePlanWeek(isoWeek: string) {
     [load],
   );
 
-  return { sessions, loading, error, reload, create, remove };
+  return { sessions, loading, error, reload, remove };
 }
 
-/** ISO week ("YYYY-Www") of the UTC date `thu` belongs to (mirror of iso-week.ts). */
-function isoWeekOf(date: Date): string {
-  const year = date.getUTCFullYear();
+/** ISO week ("YYYY-Www") of a "YYYY-MM-DD" date (UTC, no clock). */
+function isoWeekOf(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const thu = new Date(date.getTime());
+  thu.setUTCDate(thu.getUTCDate() - ((thu.getUTCDay() + 6) % 7) + 3);
+  const year = thu.getUTCFullYear();
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const monday = new Date(
     jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86_400_000,
   );
   const week =
-    Math.floor((date.getTime() - monday.getTime()) / (7 * 86_400_000)) + 1;
+    Math.floor((thu.getTime() - monday.getTime()) / (7 * 86_400_000)) + 1;
   return `${year}-W${String(week).padStart(2, "0")}`;
 }

@@ -15,14 +15,21 @@ const ex = (id: number, name: string): DraftEntry => ({
   key: `e${id}`,
   exerciseId: id,
   exerciseName: name,
+  kind: "strength",
   targetSets: null,
   targetRepsMin: null,
   targetRepsMax: null,
+  targetDistanceKm: null,
+  targetDurationMin: null,
+});
+
+const cardio = (id: number, name: string): DraftEntry => ({
+  ...ex(id, name),
+  kind: "running",
 });
 
 const draft = (...entries: DraftEntry[]): Draft => ({
   name: "A — Empuje",
-  rotationIndex: 0,
   entries,
 });
 
@@ -59,7 +66,7 @@ describe("draft reducer", () => {
     expect(r.entries.map((e) => e.exerciseName)).toEqual(["a", "c"]);
   });
 
-  it("setTargets updates one entry by key", () => {
+  it("setTargets updates one entry by key (fuerza y cardio)", () => {
     const d = draft(ex(1, "a"), ex(2, "b"));
     const s = setTargets(d, "e2", {
       targetSets: 4,
@@ -71,11 +78,19 @@ describe("draft reducer", () => {
     expect(s.entries[1].targetRepsMax).toBe(8);
     expect(s.entries[0].targetSets).toBeNull();
     expect(d.entries[1].targetSets).toBeNull();
+
+    const c = setTargets(d, "e1", {
+      targetDistanceKm: 10,
+      targetDurationMin: 45,
+    });
+    expect(c.entries[0].targetDistanceKm).toBe(10);
+    expect(c.entries[0].targetDurationMin).toBe(45);
+    expect(c.entries[0].targetSets).toBeNull();
   });
 });
 
 describe("buildTemplatePayload", () => {
-  it("renumbers positions 0..n-1 and emits nullable targets", () => {
+  it("emits nullable targets 0..n-1 including cardio", () => {
     const a = {
       ...ex(7, "Press"),
       targetSets: 3,
@@ -83,17 +98,34 @@ describe("buildTemplatePayload", () => {
       targetRepsMax: 12,
     };
     const b = ex(9, "Remo");
-    const payload = buildTemplatePayload(draft(a, b));
+    const c = { ...cardio(10, "Running"), targetDistanceKm: 10 };
+    const payload = buildTemplatePayload(draft(a, b, c));
     expect(payload).toEqual({
       name: "A — Empuje",
-      rotationIndex: 0,
       exercises: [
-        { exerciseId: 7, targetSets: 3, targetRepsMin: 8, targetRepsMax: 12 },
+        {
+          exerciseId: 7,
+          targetSets: 3,
+          targetRepsMin: 8,
+          targetRepsMax: 12,
+          targetDistanceKm: null,
+          targetDurationMin: null,
+        },
         {
           exerciseId: 9,
           targetSets: null,
           targetRepsMin: null,
           targetRepsMax: null,
+          targetDistanceKm: null,
+          targetDurationMin: null,
+        },
+        {
+          exerciseId: 10,
+          targetSets: null,
+          targetRepsMin: null,
+          targetRepsMax: null,
+          targetDistanceKm: 10,
+          targetDurationMin: null,
         },
       ],
     });

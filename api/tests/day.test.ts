@@ -40,8 +40,7 @@ async function uploadPhoto(): Promise<string> {
 }
 type SessionBox = {
   id: number;
-  templateId: number;
-  templateName: string;
+  name: string | null;
   status: string;
   summary: { effort: number; exercises: number; sets: number } | null;
 };
@@ -68,14 +67,12 @@ describe("GET /api/day/:date", () => {
       name: "Press banca",
       tags: ["pecho"],
     });
-    const template = await post("/api/templates", {
+    const benchId = Number((await body(bench)).id);
+    await post("/api/plan-sessions", {
+      date: "2026-09-02",
       name: "Empuje A",
-      exercises: [
-        { exerciseId: Number((await body(bench)).id), targetSets: 3 },
-      ],
+      items: [{ exerciseId: benchId, targetSets: 3 }],
     });
-    const templateId = Number((await body(template)).id);
-    await post("/api/plan-sessions", { date: "2026-09-02", templateId });
     await put("/api/notes/2026-09-02", { text: "Buen día" });
 
     const res = await get("/api/day/2026-09-02");
@@ -105,15 +102,14 @@ describe("GET /api/day/:date", () => {
       },
     ]);
     expect(day.session as SessionBox).toMatchObject({
-      templateId,
-      templateName: "Empuje A",
+      name: "Empuje A",
       status: "planned",
       summary: null,
     });
     expect(day.note).toEqual({ text: "Buen día" });
   });
 
-  it("planned session incluye exercises [{exerciseId, exerciseName, position}] ordenados por position", async () => {
+  it("planned session incluye exercises expandidos (kind y targets) ordenados por position", async () => {
     const r1 = await post("/api/exercises", {
       name: "Press banca",
       tags: ["pecho"],
@@ -126,28 +122,51 @@ describe("GET /api/day/:date", () => {
       name: "Remo",
       tags: ["espalda"],
     });
-    const [e1, e2, e3] = await Promise.all([body(r1), body(r2), body(r3)]).then(
-      (rs) => rs.map((r) => Number(r.id)),
-    );
-    const template = await post("/api/templates", {
-      name: "Empuje B",
-      exercises: [{ exerciseId: e3 }, { exerciseId: e1 }, { exerciseId: e2 }],
+    const r4 = await post("/api/exercises", {
+      name: "Running",
+      tags: ["cardio"],
+      kind: "running",
     });
-    const templateId = Number((await body(template)).id);
-    await post("/api/plan-sessions", { date: "2026-09-02", templateId });
+    const [e1, e2, e3, e4] = await Promise.all([
+      body(r1),
+      body(r2),
+      body(r3),
+      body(r4),
+    ]).then((rs) => rs.map((r) => Number(r.id)));
+    await post("/api/plan-sessions", {
+      date: "2026-09-02",
+      items: [
+        { exerciseId: e3 },
+        { exerciseId: e1 },
+        { exerciseId: e2 },
+        { exerciseId: e4, targetDistanceKm: 6, targetDurationMin: 35 },
+      ],
+    });
 
     const res = await get("/api/day/2026-09-02");
     expect(res.status).toBe(200);
     const day = await body(res);
-    expect(day.session as SessionBox).toMatchObject({
-      templateId,
-      status: "planned",
-    });
+    expect(day.session as SessionBox).toMatchObject({ status: "planned" });
     const session = day.session as SessionBox & { exercises: unknown };
+    const empty = {
+      kind: "strength",
+      targetSets: null,
+      targetDistanceKm: null,
+      targetDurationMin: null,
+    };
     expect(session.exercises).toEqual([
-      { exerciseId: e3, exerciseName: "Remo", position: 0 },
-      { exerciseId: e1, exerciseName: "Press banca", position: 1 },
-      { exerciseId: e2, exerciseName: "Fondos", position: 2 },
+      { ...empty, exerciseId: e3, exerciseName: "Remo", position: 0 },
+      { ...empty, exerciseId: e1, exerciseName: "Press banca", position: 1 },
+      { ...empty, exerciseId: e2, exerciseName: "Fondos", position: 2 },
+      {
+        ...empty,
+        kind: "running",
+        exerciseId: e4,
+        exerciseName: "Running",
+        position: 3,
+        targetDistanceKm: 6,
+        targetDurationMin: 35,
+      },
     ]);
   });
 
@@ -205,53 +224,57 @@ describe("GET /api/day/:date", () => {
       name: "Curl",
       tags: ["bíceps"],
     });
-    const template = await post("/api/templates", {
-      name: "Empuje B",
-      exercises: [
-        { exerciseId: Number((await body(bench)).id), targetSets: 4 },
-        { exerciseId: Number((await body(curl)).id), targetSets: 4 },
+    const benchId = Number((await body(bench)).id);
+    const curlId = Number((await body(curl)).id);
+    const created = await post("/api/plan-sessions", {
+      date: "2026-09-02",
+      items: [
+        { exerciseId: benchId, targetSets: 4 },
+        { exerciseId: curlId, targetSets: 4 },
       ],
     });
-    const templateId = Number((await body(template)).id);
-    const tmpl = (await body(await get(`/api/templates/${templateId}`))) as {
-      exercises: { id: number }[];
+    const planned = (await body(created)) as {
+      exercises: { id: number; exerciseId: number }[];
     };
-    const [teBench, teCurl] = tmpl.exercises.map((e) => e.id);
-    await post("/api/plan-sessions", { date: "2026-09-02", templateId });
+    const byExercise = new Map(
+      planned.exercises.map((e) => [e.exerciseId, e.id]),
+    );
+    const teBench = Number(byExercise.get(benchId));
+    const teCurl = Number(byExercise.get(curlId));
     // 3 series banca + 2 curl = 5 sets, 2 ejercicios, esfuerzo 3
     const log = await post("/api/workout-logs/2026-09-02", {
       effort: 3,
       sets: [
         {
-          templateExerciseId: teBench,
+          planSessionExerciseId: teBench,
           setIndex: 0,
           weightKg: 60,
           reps: 8,
           done: true,
         },
         {
-          templateExerciseId: teBench,
+          planSessionExerciseId: teBench,
           setIndex: 1,
           weightKg: 60,
           reps: 7,
           done: true,
         },
         {
-          templateExerciseId: teBench,
+          planSessionExerciseId: teBench,
           setIndex: 2,
           weightKg: 62,
           reps: 6,
           done: true,
         },
         {
-          templateExerciseId: teCurl,
+          planSessionExerciseId: teCurl,
           setIndex: 0,
           weightKg: 10,
           reps: 12,
           done: true,
         },
         {
-          templateExerciseId: teCurl,
+          planSessionExerciseId: teCurl,
           setIndex: 1,
           weightKg: 10,
           reps: 10,

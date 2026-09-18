@@ -6,6 +6,8 @@ import { apiField } from "../lib/api";
 import {
   type Exercise,
   type ExerciseInput,
+  type ExerciseKind,
+  KIND_LABELS,
   useExercises,
 } from "../lib/exercises";
 import {
@@ -41,6 +43,7 @@ type Draft = {
   techniqueUrl: string;
   steps: string;
   tags: string[];
+  kind: ExerciseKind;
 };
 
 const emptyDraft = (): Draft => ({
@@ -50,6 +53,7 @@ const emptyDraft = (): Draft => ({
   techniqueUrl: "",
   steps: "",
   tags: [],
+  kind: "strength",
 });
 
 const toDraft = (x: Exercise): Draft => ({
@@ -59,6 +63,7 @@ const toDraft = (x: Exercise): Draft => ({
   techniqueUrl: x.techniqueUrl ?? "",
   steps: x.steps?.join("\n") ?? "",
   tags: [...x.tags],
+  kind: x.kind,
 });
 
 const toInput = (d: Draft): ExerciseInput => {
@@ -73,6 +78,7 @@ const toInput = (d: Draft): ExerciseInput => {
     techniqueUrl: d.techniqueUrl || null,
     steps: steps.length ? steps : null,
     tags: d.tags,
+    kind: d.kind,
   };
 };
 
@@ -134,6 +140,23 @@ function ExerciseEditor({
         {errors.name && (
           <span className="text-sm text-error">{errors.name}</span>
         )}
+      </div>
+      <div className="flex flex-col gap-1 text-sm">
+        <label htmlFor="ex-kind">Tipo</label>
+        <select
+          id="ex-kind"
+          className="input"
+          value={draft.kind}
+          onChange={(e) =>
+            setDraft({ ...draft, kind: e.target.value as ExerciseKind })
+          }
+        >
+          {(Object.keys(KIND_LABELS) as ExerciseKind[]).map((k) => (
+            <option key={k} value={k}>
+              {KIND_LABELS[k]}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-desc">Descripción</label>
@@ -289,6 +312,11 @@ export function EjerciciosPage() {
                 className="card flex flex-col gap-2"
               >
                 <span className="text-lg font-semibold">{e.name}</span>
+                {e.kind === "strength" ? null : (
+                  <span className="badge-pending self-start">
+                    {KIND_LABELS[e.kind]}
+                  </span>
+                )}
                 <TagChips tags={e.tags} />
               </Link>
             ))}
@@ -327,19 +355,22 @@ function AddToTemplate({
     try {
       await updateTemplate(t.id, {
         name: t.name,
-        rotationIndex: t.rotationIndex,
         exercises: [
           ...t.exercises.map((e) => ({
             exerciseId: e.exerciseId,
             targetSets: e.targetSets,
             targetRepsMin: e.targetRepsMin,
             targetRepsMax: e.targetRepsMax,
+            targetDistanceKm: e.targetDistanceKm,
+            targetDurationMin: e.targetDurationMin,
           })),
           {
             exerciseId: exercise.id,
             targetSets: null,
             targetRepsMin: null,
             targetRepsMax: null,
+            targetDistanceKm: null,
+            targetDurationMin: null,
           },
         ],
       });
@@ -367,16 +398,22 @@ function AddToTemplate({
               </Link>
             </span>
           )}
-          {templates.map((t) => (
-            <button
-              key={t.id}
-              className="btn-secondary text-left"
-              disabled={picked !== null}
-              onClick={() => void add(t)}
-            >
-              {picked === t.id ? "Añadiendo…" : t.name}
-            </button>
-          ))}
+          {templates.map((t) => {
+            const already = t.exercises.some(
+              (x) => x.exerciseId === exercise.id,
+            );
+            return (
+              <button
+                key={t.id}
+                className="btn-secondary text-left"
+                disabled={picked !== null || already}
+                onClick={() => void add(t)}
+              >
+                {picked === t.id ? "Añadiendo…" : t.name}
+                {already ? " · ya está" : ""}
+              </button>
+            );
+          })}
         </div>
       )}
       {done && (

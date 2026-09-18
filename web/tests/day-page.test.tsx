@@ -16,6 +16,21 @@ import type { DayData } from "../src/lib/day";
 
 const DAY = "2026-09-02";
 
+/** Ejercicio planificado del día tal y como lo emite GET /api/day/:date. */
+const strength = (
+  exerciseId: number,
+  exerciseName: string,
+  position: number,
+) => ({
+  exerciseId,
+  exerciseName,
+  kind: "strength" as const,
+  position,
+  targetSets: null,
+  targetDistanceKm: null,
+  targetDurationMin: null,
+});
+
 function renderAt(path: string) {
   window.history.pushState({}, "", path);
   return render(<App />);
@@ -238,8 +253,7 @@ describe("sección FUERZA", () => {
         payload({
           session: {
             id: 3,
-            templateId: 2,
-            templateName: "Empuje A",
+            name: "Empuje A",
             status: "planned",
             summary: null,
           },
@@ -259,8 +273,7 @@ describe("sección FUERZA", () => {
         payload({
           session: {
             id: 3,
-            templateId: 2,
-            templateName: "Empuje A",
+            name: "Empuje A",
             status: "logged",
             summary: { effort: 3, exercises: 5, sets: 20 },
           },
@@ -282,15 +295,14 @@ describe("sección FUERZA", () => {
         payload({
           session: {
             id: 3,
-            templateId: 2,
-            templateName: "Empuje A",
+            name: "Empuje A",
             status: "planned",
             summary: null,
             exercises: [
-              { exerciseId: 1, exerciseName: "Press banca", position: 1 },
-              { exerciseId: 2, exerciseName: "Press militar", position: 2 },
-              { exerciseId: 3, exerciseName: "Fondos", position: 3 },
-              { exerciseId: 4, exerciseName: "Aperturas", position: 4 },
+              strength(1, "Press banca", 1),
+              strength(2, "Press militar", 2),
+              strength(3, "Fondos", 3),
+              strength(4, "Aperturas", 4),
             ],
           },
         }),
@@ -312,8 +324,7 @@ describe("sección FUERZA", () => {
           payload({
             session: {
               id: 3,
-              templateId: 2,
-              templateName: "Empuje A",
+              name: "Empuje A",
               status: "planned",
               summary: null,
               exercises,

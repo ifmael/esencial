@@ -31,15 +31,22 @@ Cloudflare que sirve API y SPA.
 
 ### 1. Migraciones locales — bootstrapeo (RESUELTO)
 
-`api/migrations/0001_baseline.sql` ya no es un no-op: es el baseline (espejo de
-`api/schema.sql`) y crea las tablas base. Así `pnpm db:migrate:local` bootstrapea
-una base local vacía sin aplicar `schema.sql` a mano.
+`api/migrations/0001_baseline.sql` ya no es un no-op: es el baseline (v1, espejo
+histórico de `api/schema.sql`) y crea las tablas base. Así
+`pnpm db:migrate:local` bootstrapea una base local vacía sin aplicar
+`schema.sql` a mano.
 
-- `api/schema.sql` y `0001_baseline.sql` son **espejos que se mantienen juntos**;
-  los deltas aditivos (`photo_path`, `section`, `recipe_tags`, `shopping_items`)
-  viven en `0002`+.
-- En remoto no hay nada extra que hacer: el baseline ya está aplicado en la D1 de
-  producción (ver `DEPLOY.md`).
+- `api/schema.sql` es el **estado FINAL** del esquema (lo aplica el bootstrap de
+  tests junto a los deltas `0002`/`0003`/`0005`); `0001_baseline.sql` queda
+  congelado como v1 y NO se reescribe.
+- Los deltas aditivos (`photo_path`, `section`, `recipe_tags`, `shopping_items`)
+  viven en `0002`+; los deltas de **reestructuración** (p. ej. `0009_fuerza_v2`
+  recrea `plan_sessions` con `plan_session_exercises` y `cardio_logs`) viven en
+  su propio número y NO se añaden al bootstrap de tests (schema.sql ya los
+  refleja).
+- En remoto el baseline ya está aplicado en la D1 de producción; pero cada delta
+  nuevo hay que aplicarlo tras el deploy (`pnpm db:migrate:remote`; 0009 destruye
+  el histórico de planificación — ver `DEPLOY.md` §4).
 
 ### 2. wrangler pide confirmación y cuelga en no-TTY
 
@@ -78,6 +85,36 @@ wrangler lee `.dev.vars` desde la **raíz del repo** (junto a `wrangler.toml`),
 - Archivo: `.dev.vars` (raíz), gitignored.
 - **Auto-generado:** `pnpm dev` crea/repara `.dev.vars` (`api/scripts/ensure-dev-vars.ts`). La clave de desarrollo se lee de la variable de entorno **`ESENCIAL_DEV_PASSWORD`**; si no está, se genera una aleatoria y se imprime al arrancar. Ninguna clave vive en git.
 - Cómo fijarla: `ESENCIAL_DEV_PASSWORD='miclave' pnpm dev` (o `export ESENCIAL_DEV_PASSWORD='miclave'`). El predev regenera el hash en `.dev.vars` al arrancar.
+
+## Tests e2e — base de datos propia
+
+`pnpm e2e` **NUNCA** toca la base de desarrollo (`.wrangler/state`). El
+`webServer` de Playwright arranca su propio servidor con una cadena explícita
+(`e2e/playwright.config.ts`), en el puerto **8788** con
+`reuseExistingServer: false` (así un `pnpm dev` en 8787 no se adopta):
+
+1. `ESENCIAL_DEV_PASSWORD=hola pnpm predev` — deja `.dev.vars` con la password
+   que e2e espera.
+2. `rm -rf e2e/.state` — la base de e2e nace vacía en cada corrida.
+3. `wrangler d1 migrations apply esencial --local --persist-to e2e/.state` —
+   toda `api/migrations/` se aplica en orden (esquema + catálogo sembrado).
+4. `pnpm build` y `wrangler dev --persist-to e2e/.state --port 8788`.
+
+Lo que hay que respetar al escribir tests:
+
+- **Añadir una migración no requiere tocar nada de `e2e/`.** La base se deriva
+  de `api/migrations/`. (Ojo: el bootstrap de tests de `api/` sí necesita la
+  tabla nueva en su lista `TABLES`, `api/tests/helpers.ts`.)
+- **Nunca `POST` de un ejercicio que ya está en la semilla**: `exercises.name`
+  es UNIQUE y devuelve 400. El `id` se resuelve con `GET /api/exercises` y se
+  busca por nombre. Solo se crean por API recetas, plantillas y ejercicios de
+  cardio (los 91 sembrados son `kind='strength'`).
+- **`workers: 1`**: hay un servidor y una base por corrida, así que el
+  paralelismo entre archivos es estado compartido, no aislamiento. No lo subas
+  sin dar a cada worker su propia base.
+- **Fechas reales** (hoy, el lunes de la semana actual), no offsets por corrida.
+- `pnpm e2e:check` corre la suite y verifica que los conteos de `.wrangler/state`
+  (filas D1 y objetos R2) no cambian. No navegues la app de dev mientras corre.
 
 ## Catálogo de ejercicios (seed)
 

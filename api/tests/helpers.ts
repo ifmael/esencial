@@ -38,7 +38,10 @@ async function bootstrap(): Promise<void> {
 // Child-before-parent order keeps FK checks happy if enforcement is on.
 const TABLES = [
   "shopping_items",
+  "cardio_logs",
+  "set_logs",
   "workout_logs",
+  "plan_session_exercises",
   "plan_sessions",
   "meal_slots",
   "week_plans",

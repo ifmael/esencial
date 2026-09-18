@@ -1,6 +1,6 @@
-// E6 tasks 3.x + 4.1: /sesion/:date screen (state A editable, state B read-only).
-// jsdom + mocked fetch: the fake router below serves the exact shapes the real
-// API emits (camelCase after the E6 wire normalization).
+// /sesion/:date — estado A (borrador editable sobre la sesión del día: fuerza
+// con series/peso/reps y cardio con distancia/tiempo opcionales) y estado B
+// (solo lectura desde GET /api/workout-logs/:date).
 
 import {
   cleanup,
@@ -19,38 +19,58 @@ afterEach(() => {
 });
 
 type SetItem = {
-  templateExerciseId: number;
+  planSessionExerciseId: number;
   setIndex: number;
   weightKg: number | null;
   reps: number | null;
   done: boolean;
 };
 
-const TE_BENCH = 11; // template_exercise id for "Press banca"
-const TE_ROW = 12; // template_exercise id for "Remo con barra"
+const SE_BENCH = 11; // plan_session_exercise id for "Press banca"
+const SE_ROW = 12; // plan_session_exercise id for "Remo con barra"
+const SE_RUN = 13; // plan_session_exercise id for "Running"
 
-const TEMPLATE = {
-  id: 5,
+const SESSION_DETAIL = {
+  id: 1,
+  date: "2026-09-02",
   name: "Empuje A",
-  rotationIndex: 0,
+  status: "planned",
   exercises: [
     {
-      id: TE_BENCH,
+      id: SE_BENCH,
       exerciseId: 21,
       exerciseName: "Press banca",
+      kind: "strength",
       position: 0,
       targetSets: 3,
       targetRepsMin: 6,
       targetRepsMax: 8,
+      targetDistanceKm: null,
+      targetDurationMin: null,
     },
     {
-      id: TE_ROW,
+      id: SE_ROW,
       exerciseId: 22,
       exerciseName: "Remo con barra",
+      kind: "strength",
       position: 1,
       targetSets: null,
       targetRepsMin: null,
       targetRepsMax: null,
+      targetDistanceKm: null,
+      targetDurationMin: null,
+    },
+    {
+      id: SE_RUN,
+      exerciseId: 23,
+      exerciseName: "Running",
+      kind: "running",
+      position: 2,
+      targetSets: null,
+      targetRepsMin: null,
+      targetRepsMax: null,
+      targetDistanceKm: 5,
+      targetDurationMin: 30,
     },
   ],
 };
@@ -59,6 +79,12 @@ function loggedPayload(
   sets: SetItem[],
   effort = 2,
   note: string | null = null,
+  cardio: {
+    planSessionExerciseId: number;
+    distanceKm: number | null;
+    durationMin: number | null;
+    done: boolean;
+  }[] = [],
 ) {
   return {
     date: "2026-09-02",
@@ -66,12 +92,13 @@ function loggedPayload(
     readOnly: true,
     effort,
     note,
-    template: { id: 5, name: "Empuje A" },
+    session: { id: 1, name: "Empuje A" },
     sets: sets.map((s) => ({
       ...s,
       exerciseName:
-        s.templateExerciseId === TE_BENCH ? "Press banca" : "Remo con barra",
+        s.planSessionExerciseId === SE_BENCH ? "Press banca" : "Remo con barra",
     })),
+    cardio: cardio.map((c) => ({ ...c, exerciseName: "Running" })),
   };
 }
 
@@ -84,9 +111,8 @@ function mockApi(opts: {
   sessions?: {
     id: number;
     date: string;
+    name: string | null;
     status: string;
-    templateId: number;
-    templateName: string;
   }[];
   last?: Record<
     number,
@@ -117,6 +143,8 @@ function mockApi(opts: {
           body: loggedPayload(
             (JSON.parse(init.body ?? "{}").sets ?? []) as SetItem[],
             JSON.parse(init.body ?? "{}").effort,
+            null,
+            JSON.parse(init.body ?? "{}").cardio ?? [],
           ),
         };
         return reply(r.status, r.body);
@@ -125,17 +153,11 @@ function mockApi(opts: {
         return reply(
           200,
           opts.sessions ?? [
-            {
-              id: 1,
-              date: "2026-09-02",
-              status: "planned",
-              templateId: 5,
-              templateName: "Empuje A",
-            },
+            { id: 1, date: "2026-09-02", name: "Empuje A", status: "planned" },
           ],
         );
-      const tpl = /^\/api\/templates\/(\d+)$/.exec(url);
-      if (tpl) return reply(200, TEMPLATE);
+      if (/^\/api\/plan-sessions\/\d+$/.test(url))
+        return reply(200, SESSION_DETAIL);
       const last = /^\/api\/exercises\/(\d+)\/last$/.exec(url);
       if (last) {
         if (opts.lastFails) return reply(500, { error: "boom" });
@@ -168,17 +190,11 @@ function renderAt(path: string) {
 }
 
 const LOGGED = [
-  {
-    id: 1,
-    date: "2026-09-02",
-    status: "logged",
-    templateId: 5,
-    templateName: "Empuje A",
-  },
+  { id: 1, date: "2026-09-02", name: "Empuje A", status: "logged" },
 ];
 
 describe("route states", () => {
-  it("header shows Spanish date + template name", async () => {
+  it("header shows Spanish date + session name", async () => {
     mockApi({});
     renderAt("/sesion/2026-09-02");
     await screen.findByText("Empuje A");
@@ -204,17 +220,18 @@ describe("route states", () => {
 });
 
 describe("state A: editable", () => {
-  it("exercise rows in template order with per-set checkboxes (null → 3)", async () => {
+  it("exercise rows in session order with per-set checkboxes (null → 3)", async () => {
     mockApi({ last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } } });
     renderAt("/sesion/2026-09-02");
     const boxes = await screen.findAllByRole("checkbox");
-    expect(boxes.length).toBe(6); // 3 + 3
+    expect(boxes.length).toBe(7); // 3 + 3 series + 1 checkbox de cardio
     const rows = screen.getAllByRole("link", {
-      name: /press banca|remo con barra/i,
+      name: /press banca|remo con barra|running/i,
     });
     expect(rows.map((r) => r.textContent)).toEqual([
       "Press banca",
       "Remo con barra",
+      "Running",
     ]);
     expect(rows[0].getAttribute("href")).toBe("/ejercicios/21");
   });
@@ -281,6 +298,66 @@ describe("state A: editable", () => {
     expect(screen.queryAllByText(/última/).length).toBe(0);
   });
 
+  it("cardio: marcas opcionales; escribir distancia implica hecho", async () => {
+    const api = mockApi({});
+    renderAt("/sesion/2026-09-02");
+    const distance = await screen.findByLabelText(
+      /^running distancia \(km\)$/i,
+    );
+    const done = screen.getByRole("checkbox", { name: /running hecho/i });
+    expect((distance as HTMLInputElement).value).toBe("");
+    expect((done as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.change(distance, { target: { value: "8.5" } });
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("checkbox", {
+            name: /running hecho/i,
+          }) as HTMLInputElement
+        ).checked,
+      ).toBe(true),
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /4/ }));
+    const close = (await primaryClose()) as HTMLButtonElement;
+    await waitFor(() => expect(close.disabled).toBe(false));
+    fireEvent.click(close);
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    const body = api.posts[0] as { cardio: unknown[] };
+    expect(body.cardio).toEqual([
+      {
+        planSessionExerciseId: SE_RUN,
+        distanceKm: 8.5,
+        durationMin: null,
+        done: true,
+      },
+    ]);
+  });
+
+  it("cardio hecho sin marcas se envía con números null", async () => {
+    const api = mockApi({});
+    renderAt("/sesion/2026-09-02");
+    const done = await screen.findByRole("checkbox", {
+      name: /running hecho/i,
+    });
+    fireEvent.click(done);
+    fireEvent.click(screen.getByRole("radio", { name: /4/ }));
+    const close = (await primaryClose()) as HTMLButtonElement;
+    await waitFor(() => expect(close.disabled).toBe(false));
+    fireEvent.click(close);
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    const body = api.posts[0] as { cardio: unknown[] };
+    expect(body.cardio).toEqual([
+      {
+        planSessionExerciseId: SE_RUN,
+        distanceKm: null,
+        durationMin: null,
+        done: true,
+      },
+    ]);
+  });
+
   it("Cerrar sesión disabled until effort; picking dot 4 posts effort 4 with camelCase sets", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
@@ -294,19 +371,20 @@ describe("state A: editable", () => {
       effort: number;
       note?: string | null;
       sets: SetItem[];
+      cardio: unknown[];
     };
     expect(body.effort).toBe(4);
     expect(body.note ?? null).toBeNull(); // blank note never sent as ""
     expect(body.sets.length).toBe(6);
     expect(body.sets[0]).toEqual({
-      templateExerciseId: TE_BENCH,
+      planSessionExerciseId: SE_BENCH,
       setIndex: 0,
       weightKg: null,
-      reps: null,
+      reps: 6, // objetivo de reps del plan cuando no hay histórico
       done: false,
     });
     expect(body.sets[0]).not.toHaveProperty("set_index");
-    expect(body.sets[0]).not.toHaveProperty("weight_kg");
+    expect(body.cardio).toEqual([]); // cardio sin tocar no viaja
   });
 
   it("double click sends exactly one POST; 201 flips to state B with badge", async () => {
@@ -356,7 +434,7 @@ describe("state A: editable", () => {
       log: loggedPayload(
         [
           {
-            templateExerciseId: TE_BENCH,
+            planSessionExerciseId: SE_BENCH,
             setIndex: 0,
             weightKg: 60,
             reps: 8,
@@ -379,20 +457,20 @@ describe("state A: editable", () => {
 });
 
 describe("state B: read-only", () => {
-  it("renders from GET workout-logs: text values, —, filled dots, note, no inputs", async () => {
+  it("renders from GET workout-logs: sets, cardio, dots, note, no inputs", async () => {
     mockApi({
       sessions: LOGGED,
       log: loggedPayload(
         [
           {
-            templateExerciseId: TE_BENCH,
+            planSessionExerciseId: SE_BENCH,
             setIndex: 0,
             weightKg: 60,
             reps: 8,
             done: true,
           },
           {
-            templateExerciseId: TE_BENCH,
+            planSessionExerciseId: SE_BENCH,
             setIndex: 1,
             weightKg: null,
             reps: null,
@@ -401,6 +479,14 @@ describe("state B: read-only", () => {
         ],
         2,
         "sesión floja",
+        [
+          {
+            planSessionExerciseId: SE_RUN,
+            distanceKm: 5.2,
+            durationMin: 32,
+            done: true,
+          },
+        ],
       ),
     });
     const { container } = renderAt("/sesion/2026-09-02");
@@ -408,6 +494,8 @@ describe("state B: read-only", () => {
     expect(screen.getByText(/60×8/)).toBeDefined();
     expect(screen.getByText("sesión floja")).toBeDefined();
     expect(screen.getByText(/—/)).toBeDefined();
+    expect(screen.getByText("Running")).toBeDefined();
+    expect(screen.getByText(/5\.2 km · 32 min/)).toBeDefined();
     expect(container.querySelectorAll("input, textarea, select").length).toBe(
       0,
     );
