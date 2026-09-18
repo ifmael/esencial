@@ -86,6 +86,18 @@ wrangler lee `.dev.vars` desde la **raíz del repo** (junto a `wrangler.toml`),
 - **Auto-generado:** `pnpm dev` crea/repara `.dev.vars` (`api/scripts/ensure-dev-vars.ts`). La clave de desarrollo se lee de la variable de entorno **`ESENCIAL_DEV_PASSWORD`**; si no está, se genera una aleatoria y se imprime al arrancar. Ninguna clave vive en git.
 - Cómo fijarla: `ESENCIAL_DEV_PASSWORD='miclave' pnpm dev` (o `export ESENCIAL_DEV_PASSWORD='miclave'`). El predev regenera el hash en `.dev.vars` al arrancar.
 
+### 5. `pnpm deploy` no ejecuta el script de deploy
+
+`pnpm deploy` es un comando **interno** de pnpm (despliegue de paquetes en un
+monorepo) y tiene prioridad sobre el script del `package.json`, así que falla con
+`ERR_PNPM_CANNOT_DEPLOY_MANY` en vez de construir y desplegar.
+
+**Solución:** `pnpm run deploy` (equivale a `pnpm build && wrangler deploy`).
+
+Ojo: cualquier push a `main` ya dispara Workers Builds, que construye y despliega
+solo. El comando manual solo hace falta para publicar sin push, y deja una
+versión más en el historial de Deployments de Cloudflare.
+
 ## Tests e2e — base de datos propia
 
 `pnpm e2e` **NUNCA** toca la base de desarrollo (`.wrangler/state`). El
