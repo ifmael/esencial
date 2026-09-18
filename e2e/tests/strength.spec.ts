@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, test } from "@playwright/test";
-import { apiRequest, uniqueName } from "./helpers";
+import { apiRequest, seededExercise } from "./helpers";
 
 type ItemPayload = {
   exerciseId: number;
@@ -9,19 +9,6 @@ type ItemPayload = {
   targetDistanceKm?: number | null;
   targetDurationMin?: number | null;
 };
-
-/** Ejercicio del catálogo (fuerza o cardio) creado por API con nombre único. */
-function createExercise(
-  request: APIRequestContext,
-  name: string,
-  kind: "strength" | "running" | "bike" = "strength",
-) {
-  return apiRequest<{ id: number }>(request, "POST", "/api/exercises", {
-    name,
-    tags: [kind === "strength" ? "pecho" : "cardio"],
-    kind,
-  });
-}
 
 /** Plantilla (agrupación semántica) con los items indicados. */
 function createTemplate(
@@ -63,20 +50,25 @@ function isoWeekOf(date: string): string {
 test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   test.use({ storageState: ".auth/state.json" });
 
-  // Fechas únicas por ejecución (el offset codifica la run) para no chocar con
-  // sesiones de intentos anteriores.
-  const RUN_OFFSET = 30 + (Date.now() % 300);
-  const iso = (offsetDays: number) => {
+  // Base fija, no aleatoria: la base de e2e nace de las migraciones en cada
+  // corrida, así que no hay residuo de intentos anteriores. Cada test que
+  // escribe una sesión se queda con su PROPIA semana ISO (offsets múltiplos de
+  // 7), de modo que dos tests nunca compiten por la misma fecha — que es UNIQUE
+  // — y ninguno escribe en "hoy".
+  const BASE_OFFSET = 14;
+  const dayFrom = (offsetDays: number) => {
     const d = new Date();
-    d.setDate(d.getDate() + RUN_OFFSET + offsetDays);
+    d.setDate(d.getDate() + BASE_OFFSET + offsetDays);
     return d.toISOString().slice(0, 10);
   };
-  const weekOf = (offsetDays: number) => isoWeekOf(iso(offsetDays));
+  const weekOf = (offsetDays: number) => isoWeekOf(dayFrom(offsetDays));
 
-  /** Borra sesiones planned de una fecha (logged → 409, se deja). */
-  async function clearDate(request: APIRequestContext, date: string) {
+  /** Un reintento del mismo test reencuentra su sesión ya guardada: la quita
+   *  antes de volver a crearla. Solo toca sesiones `planned` de una fecha que
+   *  este test tiene en exclusiva, nunca datos de otro test ni de otra corrida. */
+  async function resetPlanned(request: APIRequestContext, date: string) {
     const sessions = await apiRequest<
-      { id: number; status: string; date: string }[]
+      { id: number; date: string; status: string }[]
     >(request, "GET", "/api/plan-sessions");
     for (const s of sessions.filter(
       (s) => s.date === date && s.status === "planned",
@@ -88,13 +80,14 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   test("plantilla con fuerza + cardio se muestra en la tarjeta", async ({
     page,
   }) => {
-    const press = await createExercise(page.request, uniqueName("Banca E2E"));
-    const run = await createExercise(
+    const press = await seededExercise(page.request, "Press banca");
+    const run = await apiRequest<{ id: number }>(
       page.request,
-      uniqueName("Running E2E"),
-      "running",
+      "POST",
+      "/api/exercises",
+      { name: "Cinta de correr", tags: ["cardio"], kind: "running" },
     );
-    const name = uniqueName("Plantilla E2E");
+    const name = "Empuje A";
     await createTemplate(page.request, name, [
       { exerciseId: press.id, targetSets: 4, targetRepsMin: 8 },
       { exerciseId: run.id, targetDistanceKm: 10, targetDurationMin: 45 },
@@ -110,27 +103,21 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   test("día vacío → editor: expandir plantilla, dedupe y guardar", async ({
     page,
   }) => {
-    const press = await createExercise(page.request, uniqueName("Banca E2E"));
-    const remo = await createExercise(page.request, uniqueName("Remo E2E"));
-    const tplA = uniqueName("Empuje E2E");
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const tplA = "Empuje B";
     await createTemplate(page.request, tplA, [
       { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
       { exerciseId: remo.id, targetSets: 3, targetRepsMin: 10 },
     ]);
-    const tplB = uniqueName("Solo banca E2E");
+    const tplB = "Solo banca";
     await createTemplate(page.request, tplB, [
       { exerciseId: press.id, targetSets: 5, targetRepsMin: 5 },
     ]);
     const week = weekOf(0);
     const date = mondayOf(week);
-    await clearDate(page.request, date);
+    await resetPlanned(page.request, date);
     await page.goto(`/plan-fuerza?week=${week}`);
-    test.skip(
-      (await page
-        .getByRole("button", { name: `Editar sesión del ${date}` })
-        .count()) > 0,
-      "queda una sesión registrada de otra ejecución en el lunes de esta semana",
-    );
 
     // Primer día de la rejilla = lunes, que es la fecha elegida.
     await page.getByRole("button", { name: "+ añadir" }).first().click();
@@ -161,16 +148,16 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   });
 
   test("editar la sesión cambia las series y persiste", async ({ page }) => {
-    const pressName = uniqueName("Banca E2E");
-    const press = await createExercise(page.request, pressName);
-    const week = weekOf(1);
+    const pressName = "Press banca";
+    const press = await seededExercise(page.request, pressName);
+    const week = weekOf(7);
     const date = mondayOf(week);
-    await clearDate(page.request, date);
+    await resetPlanned(page.request, date);
     await createSession(
       page.request,
       date,
       [{ exerciseId: press.id, targetSets: 3, targetRepsMin: 8 }],
-      uniqueName("Sesión E2E"),
+      "Sesión de series",
     );
     await page.goto(`/plan-fuerza?week=${week}`);
     await page
@@ -194,15 +181,17 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   test("registrar el día con series + cardio (marcas y solo hecho)", async ({
     page,
   }) => {
-    const press = await createExercise(page.request, uniqueName("Banca E2E"));
-    const run = await createExercise(
+    const press = await seededExercise(page.request, "Press banca");
+    const run = await apiRequest<{ id: number }>(
       page.request,
-      uniqueName("Running E2E"),
-      "running",
+      "POST",
+      "/api/exercises",
+      { name: "Bici estática", tags: ["cardio"], kind: "bike" },
     );
-    const date = iso(2);
-    await clearDate(page.request, date);
-    const session = uniqueName("Sesión E2E");
+    const week = weekOf(14);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const session = "Sesión con cardio";
     await createSession(
       page.request,
       date,
@@ -247,18 +236,19 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   });
 
   test("reprogramar un día ocupado no duplica la sesión", async ({ page }) => {
-    const press = await createExercise(page.request, uniqueName("Banca E2E"));
-    const date = iso(3);
-    await clearDate(page.request, date);
+    const press = await seededExercise(page.request, "Press banca");
+    const week = weekOf(21);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
     await createSession(
       page.request,
       date,
       [{ exerciseId: press.id, targetSets: 3 }],
-      uniqueName("Sesión E2E"),
+      "Sesión reprogramada",
     );
 
     // El día ya ocupado se edita (PUT), nunca se crea otra sesión.
-    await page.goto(`/plan-fuerza?week=${weekOf(3)}`);
+    await page.goto(`/plan-fuerza?week=${weekOf(21)}`);
     await page
       .getByRole("button", { name: `Editar sesión del ${date}` })
       .click();
@@ -274,16 +264,17 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   });
 
   test("desprogramar con la ✕ (confirmación inline)", async ({ page }) => {
-    const press = await createExercise(page.request, uniqueName("Banca E2E"));
-    const date = iso(4);
-    await clearDate(page.request, date);
+    const press = await seededExercise(page.request, "Press banca");
+    const week = weekOf(28);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
     await createSession(
       page.request,
       date,
       [{ exerciseId: press.id, targetSets: 3 }],
-      uniqueName("Sesión E2E"),
+      "Sesión a desprogramar",
     );
-    await page.goto(`/plan-fuerza?week=${weekOf(4)}`);
+    await page.goto(`/plan-fuerza?week=${weekOf(28)}`);
 
     const desprogramar = page.getByRole("button", {
       name: `Desprogramar sesión del ${date}`,
@@ -303,10 +294,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   });
 
   test("error del servidor visible al guardar (409)", async ({ page }) => {
-    const name = uniqueName("Banca E2E");
-    await createExercise(page.request, name);
-    const date = iso(5);
-    await clearDate(page.request, date);
+    const name = "Fondos en paralelas";
     await page.route("**/api/plan-sessions", (route) => {
       if (route.request().method() !== "POST") return route.continue();
       return route.fulfill({
@@ -316,7 +304,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       });
     });
 
-    await page.goto(`/plan-fuerza?week=${weekOf(5)}`);
+    await page.goto(`/plan-fuerza?week=${weekOf(35)}`);
     await page.getByRole("button", { name: "+ añadir" }).first().click();
     await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Añadir al día" });
@@ -329,10 +317,11 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   });
 
   test("badge Hecho tras registrar una sesión", async ({ page }) => {
-    const press = await createExercise(page.request, uniqueName("Banca E2E"));
-    const date = iso(6);
-    await clearDate(page.request, date);
-    const session = uniqueName("Sesión E2E");
+    const press = await seededExercise(page.request, "Press banca");
+    const week = weekOf(42);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const session = "Sesión registrada";
     await createSession(
       page.request,
       date,
@@ -356,7 +345,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       .click();
     await expect(page.getByText("Registrado")).toBeVisible();
 
-    await page.goto(`/plan-fuerza?week=${weekOf(6)}`);
+    await page.goto(`/plan-fuerza?week=${weekOf(42)}`);
     await expect(
       page.getByText("Hecho", { exact: true }).first(),
     ).toBeVisible();

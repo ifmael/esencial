@@ -29,20 +29,21 @@
       (silencia el warning de módulo); `e2e/tests/setup.ts` pasa de `__dirname`
       a `import.meta.dirname`; `e2e/tsconfig.json` incluye `scripts`.
 
-## Phase 3: GREEN — datos de test (BLOQUEADA)
+## Phase 3: GREEN — datos de test
 
-Solapa con el rewrite sin commitear de `e2e/tests/strength.spec.ts` (276+/293−).
-No empezar hasta que ese trabajo esté cerrado.
-
-- [ ] 3.1 `e2e/tests/helpers.ts`: añadir `getExerciseByName(request, name)` que
-      resuelve el `id` desde `GET /api/exercises`; retirar `uniqueName()` si
-      ningún spec lo necesita ya.
-- [ ] 3.2 `strength.spec.ts`: cada test resuelve un ejercicio sembrado distinto
-      por nombre; el cardio se crea por `POST` (`kind: "running"`/`"bike"`, tag
-      `cardio`); fechas reales; borrar `RUN_OFFSET`, `iso()` y `clearDate()`.
-- [ ] 3.3 `recipes.spec.ts` y `edge.spec.ts`: nombres de producto distintos por
-      test; fechas reales; sin defensivos.
-- [ ] 3.4 Suite completa verde con `workers: 1`.
+- [x] 3.1 `e2e/tests/helpers.ts`: `seededExercise(request, name)` resuelve el
+      `id` desde `GET /api/exercises` y lanza si el nombre no está en la semilla.
+- [x] 3.2 `strength.spec.ts`: cada test resuelve `Press banca` / `Remo con
+      barra` del catálogo; el cardio se crea por `POST` (`Cinta de correr`,
+      `Bici estática`); sin `RUN_OFFSET` (base fija +14 y una semana ISO por
+      test); `clearDate` → `resetPlanned` (solo sesiones `planned` de la fecha
+      exclusiva del test, para sobrevivir a `retries: 2`).
+- [x] 3.3 `recipes.spec.ts` y `edge.spec.ts`: **sin cambios**, deliberadamente.
+      Crean recetas/plantillas/notas bajo `UNIQUE(name)` y con `retries: 2`; el
+      sufijo sigue siendo necesario para poder repetir un test. La base de e2e es
+      desechable, así que esos nombres ya no llegan a la base de desarrollo.
+- [x] 3.4 Suite completa verde con `workers: 1`: 24 passed (1.3m) en el worktree,
+      con `.wrangler/state` intacto. `strength` en solitario: 10 passed (56s).
 
 ## Phase 4: CI y documentación
 

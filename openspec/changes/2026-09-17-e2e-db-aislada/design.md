@@ -112,13 +112,34 @@ son `kind='strength'`, lo que da la regla completa:
   artefacto compartido que hay que tocar cada vez que un test cambia. Añadirlo
   después es barato; quitarlo con diez tests encima, no.
 
+**Implementado (fase 3)**: `strength.spec.ts` resuelve sus ejercicios con
+`seededExercise(page.request, "Press banca")`; las 48 llamadas que antes creaban
+`"Banca E2E <epoch>-<rand>"` ahora usan el catálogo. El cardio se sigue creando
+por `POST` porque no hay ninguno sembrado (todos los sembrados son
+`kind='strength'`).
+
+**Lo que NO se migró, y por qué**: `recipes.spec.ts` y `edge.spec.ts` conservan
+`uniqueName()` para recetas, plantillas y notas. Son INSERT bajo `UNIQUE(name)` y
+con `retries: 2` un reintento debe poder repetir el test, así que ahí el sufijo
+sigue ganándose el sitio. Como la base de e2e ya es desechable, esos nombres no
+vuelven a aparecer en la base de desarrollo — que era el problema real.
+
 ## D5 — Fechas reales
 
-**Decisión**: hoy, el lunes de la semana actual, la semana que viene.
+**Decisión (implementada)**: `BASE_OFFSET = 14` sobre hoy y, para cada test que
+escribe una sesión, **su propia semana ISO** (offsets múltiplos de 7). Así dos
+tests nunca compiten por la misma fecha — `plan_sessions.date` es UNIQUE — y
+ninguno escribe en hoy, sin depender del día de la semana en que se corra.
 
-**Rationale**: con la base limpia por corrida no hay nada con lo que chocar, así
-que `RUN_OFFSET = 30 + (Date.now() % 300)` y `clearDate()` pierden su razón de
-ser. La fecha deja de ser un dato que el test sortea.
+**Rationale**: con la base limpia por corrida no hay residuo que sortear, así que
+`RUN_OFFSET = 30 + (Date.now() % 300)` desaparece: era aleatoriedad para esquivar
+los datos de intentos anteriores.
+
+**`clearDate` → `resetPlanned`**: el borrado por fecha sin más desaparece; queda
+un reset acotado a sesiones `planned` de la fecha **exclusiva** del propio test.
+El motivo es `retries: 2`: un reintento reencuentra su sesión ya guardada y el
+`POST` daría 409. No puede tocar datos de otro test porque ninguna fecha se
+comparte, ni de otra corrida porque la base nace vacía.
 
 **Caveat**: varios specs dependen de "hoy" (el Día muestra hoy; `recipes`
 planifica la semana actual). Con serial el orden por nombre de archivo es

@@ -42,9 +42,11 @@ an exercise whose name exists in the seed: `exercises.name` is UNIQUE, so the
 insert fails. Tests MAY create via API only the entities absent from the seed —
 recipes, session templates, and cardio exercises (every seeded exercise is
 `kind = 'strength'`) — and within one run the names they create for a given
-entity MUST be unique across test files. Tests MUST use real dates (today, the
-Monday of the current week, the following week) and MUST NOT encode a run offset
-in a date or delete rows they did not create in order to free one.
+entity MUST be unique across test files. Tests MUST use dates relative to today
+with no run-encoded randomness, and every test that writes a session MUST own a
+date no other test writes (a fixed base offset plus one ISO week per test). A
+test MAY delete the planned session on its own exclusive date so that a Playwright
+retry can run again; it MUST NOT delete rows on a date it does not own.
 
 #### Scenarios
 
@@ -56,4 +58,4 @@ in a date or delete rows they did not create in order to free one.
 - GIVEN the suite creates recipes and templates, WHEN it runs twice in a row,
   THEN each run is green and no UNIQUE constraint is violated within a run.
 - GIVEN a fresh e2e database, WHEN a test schedules a session, THEN it uses a
-  real date and deletes no pre-existing session.
+  date it owns and deletes no session belonging to another test.

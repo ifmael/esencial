@@ -21,3 +21,22 @@ export async function apiRequest<T = unknown>(
 export function uniqueName(prefix: string): string {
   return `${prefix} ${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 }
+
+/** Ejercicio del catálogo SEMBRADO, resuelto por nombre.
+ *
+ * Nunca se recrea: `exercises.name` es UNIQUE, así que un POST con un nombre de
+ * la semilla devuelve 400. La base de e2e nace de `api/migrations/`, de modo que
+ * el catálogo siempre está ahí. */
+export async function seededExercise(
+  request: APIRequestContext,
+  name: string,
+): Promise<{ id: number; name: string }> {
+  const all = await apiRequest<{ id: number; name: string }[]>(
+    request,
+    "GET",
+    "/api/exercises",
+  );
+  const found = all.find((e) => e.name === name);
+  if (!found) throw new Error(`El catálogo sembrado no tiene "${name}"`);
+  return found;
+}
