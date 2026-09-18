@@ -10,6 +10,7 @@
     "dev": "pnpm build && wrangler dev",
     "build": "pnpm --filter web build",
     "e2e": "pnpm --filter @esencial/e2e test",
+    "e2e:check": "pnpm --filter @esencial/e2e isolation-check",
     "test": "pnpm --filter api test && pnpm --filter web test",
     "typecheck": "pnpm -r typecheck",
     "deploy": "pnpm build && wrangler deploy",

@@ -25,5 +25,6 @@ wireframes/design.zip
 
 # e2e
 e2e/**/.auth/
+e2e/.state/
 test-results/
 playwright-report/

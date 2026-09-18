@@ -2,8 +2,10 @@
   "name": "@esencial/e2e",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "test": "playwright test",
+    "isolation-check": "node scripts/isolation-check.ts",
     "typecheck": "tsc"
   },
   "devDependencies": {

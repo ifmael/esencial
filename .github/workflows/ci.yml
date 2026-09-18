@@ -32,9 +32,6 @@ jobs:
 
       - run: pnpm test
 
-      - name: Migraciones D1 locales
-        run: npx wrangler d1 migrations apply esencial --local < /dev/null
-
       - run: pnpm --filter @esencial/e2e exec playwright install --with-deps chromium
 
       - run: pnpm e2e
