@@ -47,6 +47,15 @@ const app = new Hono<{ Bindings: WebEnv }>()
     // ("This content is blocked. Contact the site owner to fix the issue.").
     h.set("Referrer-Policy", "strict-origin-when-cross-origin");
   })
+  // B': aquí no hay API. Un /api/* que llegue al frontal (una URL vieja, un
+  // sondeo de salud) falla en claro con 404 JSON en vez de colarse por el
+  // fallback del SPA y devolver HTML con 200.
+  .use(async (c, next) => {
+    if (new URL(c.req.url).pathname.startsWith("/api/")) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    return next();
+  })
   // Guard del HTML (el pageGuard del monolito): solo las rutas sin punto (deep
   // links del SPA) comprueban sesión; /login y los assets hasheados pasan, que
   // son justo lo que hace falta para pintar la pantalla de login.

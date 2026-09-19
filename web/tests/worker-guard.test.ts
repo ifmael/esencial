@@ -49,6 +49,16 @@ describe("guard del HTML en el Worker de la web", () => {
     expect((await get("/assets/index-abc123.js")).status).toBe(200);
   });
 
+  // B': la API es otro Worker. Si un /api/* llega al frontal (una URL vieja, un
+  // sondeo de salud), tiene que fallar en claro y no colarse por el fallback del
+  // SPA devolviendo HTML con 200.
+  it("en el frontal /api/* es un 404 JSON, no la shell del SPA", async () => {
+    const res = await get("/api/health");
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Not found" });
+  });
+
   it("con la cookie compartida se sirve el shell del SPA", async () => {
     const res = await get("/plan-recetas", { cookie: await cookieHeader() });
 
