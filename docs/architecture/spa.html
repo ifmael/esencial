@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — SPA (React)</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Frontend</p>
+        <h1>SPA (React)</h1>
+        <p class="lead">
+          Diez rutas, un layout que las envuelve y ni una línea de estado global. Cada pantalla
+          pide lo que necesita al API con su propio hook y lo pinta; el navegador nunca navega de
+          verdad entre páginas, porque el Worker le entrega el mismo <code>index.html</code> y el
+          router hace el resto.
+        </p>
+
+        <div class="kpis">
+          <div class="kpi"><b>10</b><span>rutas</span></div>
+          <div class="kpi"><b>8</b><span>ficheros de rutas</span></div>
+          <div class="kpi"><b>7</b><span>hooks de datos</span></div>
+          <div class="kpi"><b>0</b><span>estado global</span></div>
+          <div class="kpi"><b>22</b><span>ficheros de test web</span></div>
+        </div>
+
+        <figure>
+          <svg
+            viewBox="0 0 840 350"
+            role="img"
+            aria-label="Un deep link pasa por pageGuard del Worker; si hay sesión entrega index.html, el router monta GuardedShell, que pregunta por /api/auth/status: con sesión renderiza la página, sin sesión navega al login."
+          >
+            <defs>
+              <marker
+                id="f7"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <rect x="20" y="60" width="160" height="60" rx="10" class="dg-box" />
+            <text x="100" y="82" class="dg-text" text-anchor="middle">URL /plan-fuerza</text>
+            <text x="100" y="102" class="dg-sub" text-anchor="middle">deep link o F5</text>
+
+            <rect x="210" y="60" width="180" height="60" rx="10" class="dg-box" />
+            <text x="300" y="82" class="dg-text" text-anchor="middle">pageGuard</text>
+            <text x="300" y="102" class="dg-sub" text-anchor="middle">404 → index.html</text>
+
+            <rect x="420" y="60" width="170" height="60" rx="10" class="dg-box-strong" />
+            <text x="505" y="82" class="dg-text" text-anchor="middle">index.html</text>
+            <text x="505" y="102" class="dg-sub" text-anchor="middle">SPA de single-page-application</text>
+
+            <rect x="620" y="60" width="200" height="60" rx="10" class="dg-box" />
+            <text x="720" y="82" class="dg-text" text-anchor="middle">BrowserRouter</text>
+            <text x="720" y="102" class="dg-sub" text-anchor="middle">web/src/app.tsx</text>
+
+            <rect x="620" y="170" width="200" height="60" rx="10" class="dg-box" />
+            <text x="720" y="192" class="dg-text" text-anchor="middle">GuardedShell</text>
+            <text x="720" y="212" class="dg-sub" text-anchor="middle">GET /api/auth/status</text>
+
+            <rect x="360" y="170" width="210" height="60" rx="10" class="dg-box-strong" />
+            <text x="465" y="192" class="dg-text" text-anchor="middle">Página</text>
+            <text x="465" y="212" class="dg-sub" text-anchor="middle">su hook pide sus datos</text>
+
+            <rect x="360" y="270" width="210" height="52" rx="10" class="dg-box" />
+            <text x="465" y="296" class="dg-text" text-anchor="middle">Navigate a /login?next=</text>
+
+            <line x1="184" y1="90" x2="204" y2="90" class="dg-line-strong" marker-end="url(#f7)" />
+            <line x1="394" y1="90" x2="414" y2="90" class="dg-line-strong" marker-end="url(#f7)" />
+            <line x1="594" y1="90" x2="614" y2="90" class="dg-line-strong" marker-end="url(#f7)" />
+            <line x1="720" y1="120" x2="720" y2="166" class="dg-line-strong" marker-end="url(#f7)" />
+            <line x1="616" y1="200" x2="576" y2="200" class="dg-line-strong" marker-end="url(#f7)" />
+            <text x="596" y="188" class="dg-label" text-anchor="middle">sesión</text>
+            <polyline
+              points="720,230 720,296 576,296"
+              class="dg-line-strong"
+              marker-end="url(#f7)"
+            />
+            <text x="645" y="284" class="dg-label" text-anchor="middle">sin sesión</text>
+          </svg>
+          <figcaption>
+            Dos guardas, no una. El del servidor decide si te entrega la aplicación y responde con
+            un 302 antes de que exista JavaScript; el del cliente (<code>GuardedShell</code>)
+            pregunta por la sesión una vez y, mientras no sabe la respuesta, no pinta nada —eso
+            evita el parpadeo de la pantalla de login.
+          </figcaption>
+        </figure>
+
+        <h2>Las 10 rutas</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ruta</th>
+                <th>Página</th>
+                <th>Fichero</th>
+                <th>Qué hace</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>/login</code></td><td><code>LoginPage</code></td><td><code>routes/login.tsx</code></td><td>Tarjeta con contraseña; al entrar va a <code>?next=</code> o a <code>/</code>. Única ruta pública.</td></tr>
+              <tr><td><code>/</code></td><td><code>DiaPage</code></td><td><code>routes/dia.tsx</code></td><td>El día en una llamada: recetas, fuerza y notas; autoguardado con 800 ms de espera.</td></tr>
+              <tr><td><code>/plan-recetas</code></td><td><code>PlanRecetasPage</code></td><td><code>routes/plan-recetas.tsx</code></td><td>Rejilla 7×3 de la semana ISO, con selector de receta y hoja de la compra.</td></tr>
+              <tr><td><code>/plan-fuerza</code></td><td><code>PlanFuerzaPage</code></td><td><code>routes/plan-fuerza.tsx</code></td><td>Semana + editor del día + plantillas; incluye el mapa corporal SVG para filtrar.</td></tr>
+              <tr><td><code>/recetario</code></td><td><code>RecetarioPage</code></td><td><code>routes/recetario.tsx</code></td><td>Libro de recetas con búsqueda en cliente.</td></tr>
+              <tr><td><code>/recetario/nueva</code></td><td><code>NuevaRecetaPage</code></td><td><code>routes/nueva-receta.tsx</code></td><td>Alta de receta con subida de foto a R2.</td></tr>
+              <tr><td><code>/recetario/:id</code></td><td><code>RecetarioDetallePage</code></td><td><code>routes/recetario.tsx</code></td><td>Detalle: ingredientes, pasos, materiales, tags, editar y borrar.</td></tr>
+              <tr><td><code>/ejercicios</code></td><td><code>EjerciciosPage</code></td><td><code>routes/ejercicios.tsx</code></td><td>Catálogo con buscador y alta de ejercicios.</td></tr>
+              <tr><td><code>/ejercicios/:id</code></td><td><code>EjercicioDetailPage</code></td><td><code>routes/ejercicios.tsx</code></td><td>Ficha: cues, pasos, chips y vídeo embebido.</td></tr>
+              <tr><td><code>/sesion/:date</code></td><td><code>SesionPage</code></td><td><code>routes/sesion.tsx</code></td><td>Registro del día: en borrador se edita, ya registrado es solo lectura.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Todas menos <code>/login</code> se declaran dentro de un <code>&lt;Route
+          element={&lt;GuardedShell /&gt;}&gt;</code>, que es quien aporta el layout y el guard de
+          sesión. <code>/recetario/nueva</code> se declara antes que <code>/recetario/:id</code>,
+          porque si no, «nueva» se leería como un identificador.
+        </p>
+
+        <div class="warn">
+          <p>
+            <strong>Hueco conocido: no hay ruta comodín.</strong> No existe
+            <code>path="*"</code>, así que una URL que el router no reconoce no pinta nada: el
+            Worker entrega <code>index.html</code> y se ve una página en blanco, no un 404. Si se
+            quiere una pantalla de «no encontrado», hay que añadirla.
+          </p>
+        </div>
+
+        <h2>Mapa de módulos</h2>
+        <div class="table-wrap">
+          <table class="paths">
+            <thead>
+              <tr>
+                <th>Carpeta</th>
+                <th>Contenido</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>src/routes/</code></td><td>8 ficheros y 10 páginas. Casi todo el UI vive aquí: <code>plan-fuerza.tsx</code> (1.443 líneas) y <code>sesion.tsx</code> (753) son los grandes.</td></tr>
+              <tr><td><code>src/components/</code></td><td>4 componentes exportados: <code>Shell</code> (layout con sidebar y barra móvil), <code>WeekGrid</code>, <code>ShoppingListSheet</code>, <code>RecipeEditor</code>.</td></tr>
+              <tr><td><code>src/components/recipes/</code></td><td><code>useRecipes</code> (dueño de los accesos a <code>/api/recipes</code>), el editor y el filtro puro de búsqueda.</td></tr>
+              <tr><td><code>src/lib/</code></td><td>8 módulos sin JSX: cliente HTTP, tipos por recurso, semanas ISO, hooks de datos y lógica pura de borrador y de sesión.</td></tr>
+              <tr><td><code>src/app.tsx</code></td><td>Rutas, <code>GuardedShell</code> y el único <code>fetch</code> de sesión.</td></tr>
+              <tr><td><code>src/globals.css</code></td><td>Tokens de diseño y clases base (<code>.card</code>, <code>.btn-primary</code>, <code>.input</code>, badges).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Capa de datos</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>Un hook por pantalla</h3>
+            <p>
+              Siete hooks (<code>useDay</code>, <code>usePlanWeek</code>, <code>useExercises</code>,
+              <code>useTemplates</code>, <code>useRecipes</code>, <code>useMealPlan</code>,
+              <code>useWorkoutDay</code>) devuelven siempre lo mismo: datos, estado de carga, error
+              y funciones para mutar. Nada de store ni de <code>Context</code>.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Un cliente HTTP delgado</h3>
+            <p>
+              <code>lib/api.ts</code> lanza <code>ApiError</code> con <code>error</code>,
+              <code>field</code> y <code>status</code>; sin conexión, <code>status 0</code> y
+              mensaje «No se pudo conectar con el servidor». <code>photoSrc()</code> convierte la
+              clave de R2 en <code>/api/uploads/&lt;key&gt;</code>.
+            </p>
+          </div>
+        </div>
+        <p>
+          Los tipos se declaran a mano en el módulo que los usa —no hay cliente generado— y el
+          contrato es el del envelope del API: el <code>field</code> del error es lo que permite
+          señalar el campo culpable en el formulario.
+        </p>
+
+        <h2>Estilos y build</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Aspecto</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Tailwind</td><td>v4 «CSS-first»: <code>@import "tailwindcss"</code> en <code>globals.css</code> y plugin de Vite. No existe <code>tailwind.config.*</code>.</td></tr>
+              <tr><td>Tokens</td><td><code>--color-primary #15803d</code>, <code>--color-background #fafaf9</code>, <code>--color-surface #ffffff</code>, <code>--radius-card 12px</code>, <code>--font-sans system-ui…</code> — los mismos valores que <code>wireframes/DESIGN.md</code>.</td></tr>
+              <tr><td>Tema</td><td>Solo claro: no hay <code>prefers-color-scheme</code> ni variantes <code>dark:</code> en la app.</td></tr>
+              <tr><td>Accesibilidad táctil</td><td>Objetivos de 44 px (<code>min-h-11</code>/<code>min-w-11</code>) en rejillas, steppers y checkbox.</td></tr>
+              <tr><td>Build</td><td><code>tsc &amp;&amp; vite build</code> → <code>dist/</code>, que es el <code>assets.directory</code> del Worker.</td></tr>
+              <tr><td>Dev</td><td><code>vite</code> con proxy de <code>/api</code> a <code>http://localhost:8787</code> (el <code>wrangler dev</code>), para recarga en caliente.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note">
+          <p>
+            <strong>Fuentes:</strong> <code>web/src/app.tsx</code>, <code>web/src/routes/*</code>,
+            <code>web/src/components/**</code>, <code>web/src/lib/*</code>,
+            <code>web/src/globals.css</code>, <code>web/package.json</code>,
+            <code>web/vite.config.ts</code>, <code>wireframes/DESIGN.md</code>. Conteos
+            verificados por lectura.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>

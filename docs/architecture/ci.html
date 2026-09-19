@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — CI (GitHub Actions)</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Operación</p>
+        <h1>CI (GitHub Actions)</h1>
+        <p class="lead">
+          Un solo workflow, <code>.github/workflows/ci.yml</code>, con dos jobs que corren a la vez:
+          el gate completo (tipos, tests y e2e) y el lint de Biome por separado. Ninguno despliega
+          nada —el CD es de Cloudflare— y ninguno migra la base de datos.
+        </p>
+
+        <div class="kpis">
+          <div class="kpi"><b>1</b><span>workflow</span></div>
+          <div class="kpi"><b>2</b><span>jobs en paralelo</span></div>
+          <div class="kpi"><b>13</b><span>steps entre ambos</span></div>
+          <div class="kpi"><b>24</b><span>Node</span></div>
+          <div class="kpi"><b>0</b><span>deploys</span></div>
+        </div>
+
+        <figure>
+          <svg
+            viewBox="0 0 860 430"
+            role="img"
+            aria-label="Un push o PR a main dispara dos jobs: el job ci, con install, typecheck, test, instalación de chromium y e2e; y el job lint, con install y biome. Ninguno despliega ni migra la base."
+          >
+            <defs>
+              <marker
+                id="f10"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <text x="20" y="20" class="dg-sub" text-anchor="start">concurrency: ci-${{ github.ref }}</text>
+            <text x="20" y="38" class="dg-sub" text-anchor="start">cancel-in-progress: true</text>
+
+            <rect x="300" y="20" width="260" height="56" rx="10" class="dg-box-strong" />
+            <text x="430" y="40" class="dg-text" text-anchor="middle">push o pull_request</text>
+            <text x="430" y="60" class="dg-sub" text-anchor="middle">rama main</text>
+
+            <rect x="20" y="110" width="400" height="300" rx="12" fill="none" stroke="var(--border-strong)" class="dg-dash" />
+            <text x="40" y="132" class="dg-text" text-anchor="start">job «ci» · ubuntu-latest · timeout 20 min</text>
+            <text x="40" y="150" class="dg-sub" text-anchor="start">env: ESENCIAL_DEV_PASSWORD=hola</text>
+
+            <rect x="40" y="164" width="360" height="40" rx="8" class="dg-box" />
+            <text x="56" y="184" class="dg-sub" text-anchor="start">1 · pnpm install --frozen-lockfile</text>
+            <rect x="40" y="212" width="360" height="40" rx="8" class="dg-box" />
+            <text x="56" y="232" class="dg-sub" text-anchor="start">2 · pnpm typecheck</text>
+            <rect x="40" y="260" width="360" height="40" rx="8" class="dg-box" />
+            <text x="56" y="280" class="dg-sub" text-anchor="start">3 · pnpm test  (api + web)</text>
+            <rect x="40" y="308" width="360" height="40" rx="8" class="dg-box" />
+            <text x="56" y="328" class="dg-sub" text-anchor="start">4 · playwright install --with-deps chromium</text>
+            <rect x="40" y="356" width="360" height="40" rx="8" class="dg-box" />
+            <text x="56" y="376" class="dg-sub" text-anchor="start">5 · pnpm e2e</text>
+
+            <rect x="460" y="110" width="380" height="150" rx="12" fill="none" stroke="var(--border-strong)" class="dg-dash" />
+            <text x="480" y="132" class="dg-text" text-anchor="start">job «lint» · ubuntu-latest · timeout 5 min</text>
+            <rect x="480" y="146" width="340" height="40" rx="8" class="dg-box" />
+            <text x="496" y="166" class="dg-sub" text-anchor="start">1 · pnpm install --frozen-lockfile</text>
+            <rect x="480" y="198" width="340" height="40" rx="8" class="dg-box" />
+            <text x="496" y="218" class="dg-sub" text-anchor="start">2 · pnpm lint  (biome check .)</text>
+
+            <rect x="460" y="286" width="380" height="124" rx="12" fill="none" stroke="var(--warn-fg)" />
+            <text x="480" y="310" class="dg-text" text-anchor="start">Lo que NO hace</text>
+            <text x="480" y="332" class="dg-sub" text-anchor="start">no despliega (eso es Workers Builds)</text>
+            <text x="480" y="352" class="dg-sub" text-anchor="start">no aplica migraciones de D1</text>
+            <text x="480" y="372" class="dg-sub" text-anchor="start">sin matrix, sin services, sin artefactos</text>
+            <text x="480" y="392" class="dg-sub" text-anchor="start">cada job instala por su cuenta</text>
+
+            <polyline points="340,76 340,100 220,100 220,106" class="dg-line-strong" marker-end="url(#f10)" />
+            <polyline points="520,76 520,100 650,100 650,106" class="dg-line-strong" marker-end="url(#f10)" />
+          </svg>
+          <figcaption>
+            Los dos jobs son independientes: no hay <code>needs</code> entre ellos, cada uno instala
+            dependencias por su cuenta y el lint no bloquea al job de tests ni al revés. GitHub solo
+            dice si el código pasa; publicar es cosa de Cloudflare.
+          </figcaption>
+        </figure>
+
+        <h2>El workflow, paso a paso</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Step</th>
+                <th>Comando literal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td rowspan="3"><code>ci</code></td><td>Preparación</td><td><code>actions/checkout@v7</code> · <code>pnpm/action-setup@v6</code> · <code>actions/setup-node@v7</code> (node 24, cache pnpm)</td></tr>
+              <tr><td>Instalar</td><td><code>pnpm install --frozen-lockfile</code></td></tr>
+              <tr><td>Verificar</td><td><code>pnpm typecheck</code> → <code>pnpm test</code></td></tr>
+              <tr><td rowspan="2"><code>ci</code></td><td>Navegador</td><td><code>pnpm --filter @esencial/e2e exec playwright install --with-deps chromium</code></td></tr>
+              <tr><td>e2e</td><td><code>pnpm e2e</code></td></tr>
+              <tr><td rowspan="3"><code>lint</code></td><td>Preparación</td><td>Las mismas tres acciones (node 24, cache pnpm)</td></tr>
+              <tr><td>Instalar</td><td><code>pnpm install --frozen-lockfile</code></td></tr>
+              <tr><td>Lint</td><td><code>pnpm lint</code> → <code>biome check .</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          La versión de pnpm no se fija en el workflow: la lee <code>pnpm/action-setup</code> del
+          campo <code>packageManager</code> de <code>package.json</code>. Un solo sitio para
+          cambiarla.
+        </p>
+
+        <h2>Los gates, todos juntos</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Gate</th>
+                <th>Cuándo</th>
+                <th>Qué ejecuta</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Hook de pre-commit</td>
+                <td>En cada <code>git commit</code></td>
+                <td><code>pnpm lint &amp;&amp; pnpm typecheck</code> (husky). No corre tests.</td>
+              </tr>
+              <tr>
+                <td>Job <code>ci</code></td>
+                <td>Push o PR a <code>main</code></td>
+                <td>typecheck + tests de api y web + e2e con su servidor y su base</td>
+              </tr>
+              <tr>
+                <td>Job <code>lint</code></td>
+                <td>Push o PR a <code>main</code></td>
+                <td><code>biome check .</code> sobre todo el repo</td>
+              </tr>
+              <tr>
+                <td>Workers Builds</td>
+                <td>Push a <code>main</code></td>
+                <td>Build del SPA + <code>wrangler deploy</code>, en el runner de Cloudflare</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Con <code>concurrency</code> agrupado por referencia y <code>cancel-in-progress</code>,
+          un push nuevo cancela la corrida anterior de la misma rama: no se encolan ejecuciones
+          obsoletas.
+        </p>
+
+        <div class="warn">
+          <p>
+            <strong>La contraseña de los tests es pública a propósito.</strong> El entorno del job
+            fija <code>ESENCIAL_DEV_PASSWORD=hola</code> para que <code>predev</code> genere el
+            <code>.dev.vars</code> que la suite e2e espera, exactamente el mismo valor que inyecta
+            el <code>webServer</code> de Playwright. No es un secreto de producción.
+          </p>
+        </div>
+
+        <div class="note">
+          <p>
+            <strong>Fuentes:</strong> <code>.github/workflows/ci.yml</code> (el único workflow del
+            repo), <code>package.json</code>, <code>e2e/playwright.config.ts</code>,
+            <code>.husky/pre-commit</code>, <code>biome.json</code>, <code>DEPLOY.md</code> §6.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>
