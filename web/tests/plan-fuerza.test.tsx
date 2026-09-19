@@ -175,6 +175,53 @@ describe("plan screen", () => {
     expect(screen.getByText("Cardio suave")).toBeDefined();
   });
 
+  it("la celda del día desglosa los ejercicios de la sesión", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press, remo],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            {
+              id: 51,
+              exerciseId: 7,
+              exerciseName: "Press banca",
+              kind: "strength",
+              position: 0,
+              targetSets: 3,
+              targetRepsMin: 8,
+              targetRepsMax: 8,
+              targetDistanceKm: null,
+              targetDurationMin: null,
+            },
+            {
+              id: 52,
+              exerciseId: 8,
+              exerciseName: "Remo",
+              kind: "strength",
+              position: 1,
+              targetSets: 3,
+              targetRepsMin: 10,
+              targetRepsMax: 10,
+              targetDistanceKm: null,
+              targetDurationMin: null,
+            },
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    const list = await screen.findByRole("list", {
+      name: "Ejercicios del 2026-08-31",
+    });
+    expect(within(list).getByText("Press banca")).toBeDefined();
+    expect(within(list).getByText("Remo")).toBeDefined();
+  });
+
   it("celda logged → tap navega a /sesion/:date", async () => {
     vi.unstubAllGlobals();
     api = mockApi({
@@ -275,6 +322,39 @@ describe("editor del día (sesión) en modal", () => {
       name: /editar sesión del 2026-08-31/i,
     });
     expect(cell.textContent).toBe("A — Empuje");
+    // y la celda desglosa los ejercicios que trajo la plantilla
+    const dayList = screen.getByRole("list", {
+      name: "Ejercicios del 2026-08-31",
+    });
+    expect(within(dayList).getByText("Press banca")).toBeDefined();
+    expect(within(dayList).getByText("Running")).toBeDefined();
+  });
+
+  it("elegir plantilla avisa dentro del selector y la marca como añadida", async () => {
+    const { dialog } = await openFirstDay();
+    fireEvent.click(within(dialog).getByRole("button", { name: "+ Añadir" }));
+    const picker = await screen.findByRole("dialog", { name: "Añadir al día" });
+    fireEvent.click(within(picker).getByRole("button", { name: /A — Empuje/ }));
+    // el aviso se ve en el propio selector, no detrás del overlay
+    expect(within(picker).getByText("Añadidos 3 ejercicios")).toBeDefined();
+    const tplBtn = within(picker).getByRole("button", { name: /A — Empuje/ });
+    expect(tplBtn).toHaveProperty("disabled", true);
+    expect(within(tplBtn).getByText("ya añadida")).toBeDefined();
+  });
+
+  it("plantilla con ejercicios ya en el día cuenta los que ya estaban", async () => {
+    const { dialog } = await openFirstDay();
+    fireEvent.click(within(dialog).getByRole("button", { name: "+ Añadir" }));
+    const picker = await screen.findByRole("dialog", { name: "Añadir al día" });
+    fireEvent.click(
+      within(picker).getByRole("button", { name: "Press banca" }),
+    );
+    fireEvent.click(within(picker).getByRole("button", { name: /A — Empuje/ }));
+    expect(
+      within(picker).getByText(
+        "Añadidos 2 ejercicios · 1 ejercicio ya estaba en el día",
+      ),
+    ).toBeDefined();
   });
 
   it("día con sesión: editar series → PUT; eliminar → DELETE", async () => {

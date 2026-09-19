@@ -11,6 +11,8 @@ export type PlanSession = {
   date: string;
   name: string | null;
   status: "planned" | "logged";
+  /** Ejercicios del día, ordenados por posición (desglose en la rejilla). */
+  exercises: SessionExercise[];
 };
 
 /** Ejercicio planificado en el día (wire de GET /api/plan-sessions/:id). */
@@ -26,8 +28,6 @@ export type SessionExercise = {
   targetDistanceKm: number | null;
   targetDurationMin: number | null;
 };
-
-export type SessionDetail = PlanSession & { exercises: SessionExercise[] };
 
 /** Fila editable del editor del día (lo que viaja en items[]). */
 export type SessionItem = {

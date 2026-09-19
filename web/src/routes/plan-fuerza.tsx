@@ -14,7 +14,7 @@ import {
 } from "../lib/exercises";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 import {
-  type SessionDetail,
+  type PlanSession,
   type SessionItem,
   type SessionPayload,
   usePlanWeek,
@@ -31,7 +31,7 @@ type DayRow = SessionItem & {
   kind: ExerciseKind;
 };
 
-function rowsFrom(session: SessionDetail | null): DayRow[] {
+function rowsFrom(session: PlanSession | null): DayRow[] {
   if (!session) return [];
   return session.exercises.map((e) => ({
     key: `e${e.id}`,
@@ -75,11 +75,24 @@ function expandTemplate(
   return { rows, skipped };
 }
 
+/** Aviso al expandir una plantilla: cuántos entran y cuántos ya estaban. */
+function expandNote(added: number, skipped: number): string {
+  const parts: string[] = [];
+  if (added > 0)
+    parts.push(`Añadidos ${added} ${added === 1 ? "ejercicio" : "ejercicios"}`);
+  if (skipped > 0)
+    parts.push(
+      `${skipped} ${skipped === 1 ? "ejercicio ya estaba" : "ejercicios ya estaban"} en el día`,
+    );
+  return parts.join(" · ");
+}
+
 /** Modal de añadir al día: plantillas (se expanden) y ejercicios sueltos. */
 function SessionPicker({
   templates,
   exercises,
   takenIds,
+  note,
   templatesError,
   onRetryTemplates,
   onPickTemplate,
@@ -89,6 +102,7 @@ function SessionPicker({
   templates: Template[];
   exercises: Exercise[];
   takenIds: Set<number>;
+  note: string | null;
   templatesError: string | null;
   onRetryTemplates: () => void;
   onPickTemplate: (t: Template) => void;
@@ -125,6 +139,11 @@ function SessionPicker({
           onChange={(e) => setQuery(e.target.value)}
           className="min-h-11 rounded-lg border border-border px-3"
         />
+        {note && (
+          <p role="status" className="text-sm text-text-secondary">
+            {note}
+          </p>
+        )}
         <section className="flex min-h-0 flex-col gap-1 overflow-y-auto">
           <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
             Plantillas
@@ -140,20 +159,33 @@ function SessionPicker({
             <p className="text-sm text-text-secondary">Sin plantillas</p>
           ) : (
             <ul className="flex flex-col gap-1">
-              {shownTemplates.map((t) => (
-                <li key={t.id}>
-                  <button
-                    className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted"
-                    onClick={() => onPickTemplate(t)}
-                  >
-                    {t.name}
-                    <span className="ml-2 text-sm text-text-secondary">
-                      {t.exercises.length}{" "}
-                      {t.exercises.length === 1 ? "ejercicio" : "ejercicios"}
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {shownTemplates.map((t) => {
+                const done =
+                  t.exercises.length > 0 &&
+                  t.exercises.every((e) => takenIds.has(e.exerciseId));
+                return (
+                  <li key={t.id}>
+                    <button
+                      className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
+                      disabled={done}
+                      onClick={() => {
+                        if (!done) onPickTemplate(t);
+                      }}
+                    >
+                      {t.name}
+                      <span className="ml-2 text-sm text-text-secondary">
+                        {done
+                          ? "ya añadida"
+                          : `${t.exercises.length} ${
+                              t.exercises.length === 1
+                                ? "ejercicio"
+                                : "ejercicios"
+                            }`}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -213,7 +245,7 @@ function SessionEditor({
   onCancel,
 }: {
   date: string;
-  session: SessionDetail | null;
+  session: PlanSession | null;
   templates: Template[];
   exercises: Exercise[];
   saving: boolean;
@@ -246,16 +278,13 @@ function SessionEditor({
   const pickTemplate = (t: Template) => {
     const { rows: next, skipped } = expandTemplate(t, rows);
     setRows(next);
-    setNote(
-      skipped > 0
-        ? `${skipped} ${skipped === 1 ? "ejercicio ya estaba" : "ejercicios ya estaban"} en el día`
-        : null,
-    );
+    setNote(expandNote(next.length - rows.length, skipped));
     if (name.trim() === "") setName(t.name);
   };
 
   const pickExercise = (e: Exercise) => {
     if (takenIds.has(e.id)) return;
+    setNote(null);
     setRows((rs) => [
       ...rs,
       {
@@ -310,7 +339,6 @@ function SessionEditor({
         </div>
       </header>
 
-      {note && <p className="text-sm text-text-secondary">{note}</p>}
       {serverError && <p className="text-sm text-error">{serverError}</p>}
 
       <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
@@ -424,7 +452,10 @@ function SessionEditor({
 
       <button
         className="btn-secondary self-start"
-        onClick={() => setPickerOpen(true)}
+        onClick={() => {
+          setNote(null);
+          setPickerOpen(true);
+        }}
       >
         + Añadir
       </button>
@@ -469,6 +500,7 @@ function SessionEditor({
           templates={templates}
           exercises={exercises}
           takenIds={takenIds}
+          note={note}
           templatesError={templatesError}
           onRetryTemplates={onRetryTemplates}
           onPickTemplate={pickTemplate}
@@ -490,7 +522,7 @@ export function PlanFuerzaPage() {
   } = useTemplates();
   const [day, setDay] = useState<{
     date: string;
-    session: SessionDetail | null;
+    session: PlanSession | null;
   } | null>(null);
   const [daySaving, setDaySaving] = useState(false);
   const [dayLoading, setDayLoading] = useState(false);
@@ -511,7 +543,7 @@ export function PlanFuerzaPage() {
     }
     setDayLoading(true);
     try {
-      const detail = await apiGet<SessionDetail>(
+      const detail = await apiGet<PlanSession>(
         `/api/plan-sessions/${found.id}`,
       );
       setDay({ date, session: detail });

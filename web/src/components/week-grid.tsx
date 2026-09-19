@@ -94,6 +94,16 @@ function SessionCell({
         )}
       </div>
       {badge}
+      {session.exercises.length > 0 ? (
+        <ol
+          aria-label={`Ejercicios del ${date}`}
+          className="list-decimal pl-4 text-sm text-text-secondary"
+        >
+          {session.exercises.map((e) => (
+            <li key={e.exerciseId}>{e.exerciseName}</li>
+          ))}
+        </ol>
+      ) : null}
       {confirming ? (
         <button
           className="btn-primary min-h-11 bg-error text-xs"

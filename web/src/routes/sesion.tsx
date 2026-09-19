@@ -4,11 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ApiError, apiGet, apiSend } from "../lib/api";
-import type {
-  PlanSession,
-  SessionDetail,
-  SessionExercise,
-} from "../lib/plan-week";
+import type { PlanSession, SessionExercise } from "../lib/plan-week";
 import {
   defaultSetCount,
   formatLast,
@@ -107,7 +103,7 @@ export function useWorkoutDay(date: string) {
         const log = await apiGet<LoggedDay>(`/api/workout-logs/${date}`);
         return setView({ kind: "logged", session, log });
       }
-      const detail = await apiGet<SessionDetail>(
+      const detail = await apiGet<PlanSession>(
         `/api/plan-sessions/${session.id}`,
       );
       const items = [...detail.exercises].sort(

@@ -129,14 +129,18 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Añadir al día" });
     await dialog
-      .getByRole("button", { name: new RegExp(escapeRe(tplA)) })
-      .click();
-    await dialog
       .getByRole("button", { name: new RegExp(escapeRe(tplB)) })
       .click();
+    await dialog
+      .getByRole("button", { name: new RegExp(escapeRe(tplA)) })
+      .click();
+    // El aviso se ve dentro del selector y la plantilla ya cubierta queda marcada.
     await expect(
-      page.getByText(/1 ejercicio ya estaba en el día/),
+      dialog.getByText(/1 ejercicio ya estaba en el día/),
     ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: new RegExp(escapeRe(tplB)) }),
+    ).toBeDisabled();
     await dialog.getByRole("button", { name: "Cerrar" }).click();
     await expect(page.getByRole("button", { name: "Quitar" })).toHaveCount(2);
 
@@ -145,6 +149,10 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       page.getByRole("button", { name: `Editar sesión del ${date}` }),
     ).toBeVisible();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
+    // La celda del día desglosa los ejercicios de la plantilla expandida.
+    const dayList = page.getByRole("list", { name: `Ejercicios del ${date}` });
+    await expect(dayList.getByText("Press banca")).toBeVisible();
+    await expect(dayList.getByText("Remo con barra")).toBeVisible();
   });
 
   test("editar la sesión cambia las series y persiste", async ({ page }) => {
