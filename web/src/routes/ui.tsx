@@ -16,7 +16,7 @@ import {
   LogoutIcon,
   UtensilsIcon,
 } from "../components/icons";
-import { Badge, Button, Card, Input, Textarea } from "../components/ui";
+import { Badge, Button, Card, Input, Select, Textarea } from "../components/ui";
 
 function Block({
   title,
@@ -117,6 +117,14 @@ export function UiPage() {
             placeholder="Deshabilitado"
             className="sm:max-w-xs"
           />
+          <Select
+            aria-label="Selector"
+            defaultValue="uno"
+            className="sm:max-w-xs"
+          >
+            <option value="uno">Una opción</option>
+            <option value="dos">Otra opción</option>
+          </Select>
         </div>
         <Textarea aria-label="Área de texto" placeholder="Área de texto" />
       </Block>

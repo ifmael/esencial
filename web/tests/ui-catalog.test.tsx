@@ -42,6 +42,12 @@ describe("catálogo del sistema de diseño", () => {
     }
   });
 
+  it("expone los campos con su piel, incluido el selector", () => {
+    render(<UiPage />);
+    expect(screen.getByRole("combobox")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Área de texto" })).toBeTruthy();
+  });
+
   it("expone los diez iconos", () => {
     render(<UiPage />);
     const set = screen.getByTestId("icon-set");

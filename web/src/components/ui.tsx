@@ -60,6 +60,13 @@ export function Card({ className, ...rest }: ComponentProps<"div">) {
   return <div className={cx("card", className)} {...rest} />;
 }
 
+/** Clases de la tarjeta, para los elementos que se ven como una tarjeta pero no
+ * pueden ser un `<div>`: un `<Link>`, un `<button>` o un `<ul>` con sus `<li>`.
+ * `Card` renderiza un div, así que en esos casos la piel se pide aquí. */
+export function cardClass(...parts: (string | false | null | undefined)[]) {
+  return cx("card", ...parts);
+}
+
 /** Campo de texto. El error se marca con `aria-invalid`, que es a la vez el
  * gancho de estilo y lo que anuncia el lector de pantalla. */
 export function Input({
@@ -87,6 +94,21 @@ export function Textarea({
     <textarea
       aria-invalid={invalid}
       className={cx("input", "resize-none", bad && "input-error", className)}
+      {...rest}
+    />
+  );
+}
+
+export function Select({
+  className,
+  "aria-invalid": invalid,
+  ...rest
+}: ComponentProps<"select">) {
+  const bad = invalid === true || invalid === "true";
+  return (
+    <select
+      aria-invalid={invalid}
+      className={cx("input", bad && "input-error", className)}
       {...rest}
     />
   );
