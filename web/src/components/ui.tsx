@@ -23,6 +23,20 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
   icon: "size-11 shrink-0 p-0",
 };
 
+/** Clases del botón, para los `<Link>` que deben *parecer* un botón: así la piel
+ * se define una sola vez y ninguna pantalla repite `.btn-*` a mano. */
+export function buttonClass({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}) {
+  return cx("btn", BUTTON_VARIANT[variant], BUTTON_SIZE[size], className);
+}
+
 export function Button({
   variant = "primary",
   size = "md",
@@ -36,12 +50,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={cx(
-        "btn",
-        BUTTON_VARIANT[variant],
-        BUTTON_SIZE[size],
-        className,
-      )}
+      className={buttonClass({ variant, size, className })}
       {...rest}
     />
   );
