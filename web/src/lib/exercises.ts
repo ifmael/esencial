@@ -11,6 +11,29 @@ export const KIND_LABELS: Record<ExerciseKind, string> = {
   bike: "Bici",
 };
 
+/** Info compacta del objetivo de un ejercicio (formato único de la app):
+ *  fuerza → «3 series» (null si no hay series); cardio → «10 km · 45 min». */
+export function targetSummary(e: {
+  kind: ExerciseKind;
+  targetSets: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
+}): string | null {
+  if (e.kind === "strength") {
+    return e.targetSets == null
+      ? null
+      : `${e.targetSets} ${e.targetSets === 1 ? "serie" : "series"}`;
+  }
+  return (
+    [
+      e.targetDistanceKm != null ? `${e.targetDistanceKm} km` : null,
+      e.targetDurationMin != null ? `${e.targetDurationMin} min` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || KIND_LABELS[e.kind]
+  );
+}
+
 export type Exercise = {
   id: number;
   name: string;

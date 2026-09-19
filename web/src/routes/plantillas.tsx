@@ -4,7 +4,12 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { apiField } from "../lib/api";
-import { type Exercise, KIND_LABELS, useExercises } from "../lib/exercises";
+import {
+  type Exercise,
+  KIND_LABELS,
+  targetSummary,
+  useExercises,
+} from "../lib/exercises";
 import {
   addEntry,
   buildTemplatePayload,
@@ -669,43 +674,31 @@ function TemplateCard({
 
       {expanded ? (
         <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
-          {template.exercises.map((e, i) => (
-            <li
-              key={e.id}
-              className={`flex min-h-12 items-center gap-3 bg-surface px-3 ${
-                i < template.exercises.length - 1
-                  ? "border-b border-border"
-                  : ""
-              }`}
-            >
-              <button
-                className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left font-medium"
-                onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}
+          {template.exercises.map((e, i) => {
+            const info = targetSummary(e);
+            return (
+              <li
+                key={e.id}
+                className={`flex min-h-12 items-center gap-3 bg-surface px-3 ${
+                  i < template.exercises.length - 1
+                    ? "border-b border-border"
+                    : ""
+                }`}
               >
-                <span className="truncate">{e.exerciseName}</span>
-                {e.kind === "strength" ? (
-                  e.targetSets != null && (
+                <button
+                  className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left font-medium"
+                  onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}
+                >
+                  <span className="truncate">{e.exerciseName}</span>
+                  {info ? (
                     <span className="shrink-0 text-sm text-text-secondary">
-                      {e.targetSets} {e.targetSets === 1 ? "serie" : "series"}
+                      {info}
                     </span>
-                  )
-                ) : (
-                  <span className="shrink-0 text-sm text-text-secondary">
-                    {[
-                      e.targetDistanceKm != null
-                        ? `${e.targetDistanceKm} km`
-                        : null,
-                      e.targetDurationMin != null
-                        ? `${e.targetDurationMin} min`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || KIND_LABELS[e.kind]}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
           {template.exercises.length === 0 && (
             <li className="bg-surface p-3 text-text-secondary">
               Sin ejercicios todavía.

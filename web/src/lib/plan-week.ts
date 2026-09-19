@@ -89,7 +89,43 @@ export function usePlanWeek(isoWeek: string) {
     [load],
   );
 
-  return { sessions, loading, error, reload, remove };
+  /** Guarda el orden de un día: el PUT borra y reinserta con position = índice.
+   *  Optimista: la celda reacciona al soltar; el PUT confirma o revierte (load). */
+  const reorder = useCallback(
+    async (session: PlanSession, exercises: SessionExercise[]) => {
+      setSessions((all) =>
+        all.map((s) =>
+          s.id === session.id
+            ? {
+                ...s,
+                exercises: exercises.map((e, i) => ({ ...e, position: i })),
+              }
+            : s,
+        ),
+      );
+      const items: SessionItem[] = exercises.map((e) => ({
+        exerciseId: e.exerciseId,
+        targetSets: e.targetSets,
+        targetRepsMin: e.targetRepsMin,
+        targetRepsMax: e.targetRepsMax,
+        targetDistanceKm: e.targetDistanceKm,
+        targetDurationMin: e.targetDurationMin,
+      }));
+      try {
+        await apiSend(`/api/plan-sessions/${session.id}`, "PUT", {
+          name: session.name,
+          items,
+        });
+        await load();
+      } catch (e) {
+        await load();
+        setError(msg(e));
+      }
+    },
+    [load],
+  );
+
+  return { sessions, loading, error, reload, remove, reorder };
 }
 
 /** ISO week ("YYYY-Www") of a "YYYY-MM-DD" date (UTC, no clock). */

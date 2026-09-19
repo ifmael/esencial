@@ -442,6 +442,238 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
   });
 
+  test("reordenar los ejercicios del día por arrastre y persistir", async ({
+    page,
+  }) => {
+    const pressName = "Press banca";
+    const remoName = "Remo con barra";
+    const press = await seededExercise(page.request, pressName);
+    const remo = await seededExercise(page.request, remoName);
+    const week = weekOf(56);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const session = await createSession(
+      page.request,
+      date,
+      [
+        { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 3, targetRepsMin: 10 },
+      ],
+      "Sesión a reordenar",
+    );
+
+    await page.goto(`/plan-fuerza?week=${week}`);
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: new RegExp(`Editar sesión · ${date}`),
+    });
+    const list = dialog.getByRole("list", { name: "Ejercicios del día" });
+    // Cada fila lleva un asa de arrastre con el nombre del ejercicio.
+    const handles = dialog.getByRole("button", { name: /^Mover / });
+    await expect(handles).toHaveCount(2);
+    const order = () =>
+      handles.evaluateAll((els) =>
+        els.map((el) =>
+          (el.getAttribute("aria-label") ?? "").replace(/^Mover /, ""),
+        ),
+      );
+    expect(await order()).toEqual([pressName, remoName]);
+
+    // Arrastrar el remo por encima del press (ratón real, PointerSensor).
+    const from = await dialog
+      .getByRole("button", { name: `Mover ${remoName}` })
+      .boundingBox();
+    const to = await list.getByText(pressName).boundingBox();
+    if (!from || !to) throw new Error("Sin caja para arrastrar");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2, from.y - 10, { steps: 5 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+      steps: 10,
+    });
+    await page.mouse.up();
+    expect(await order()).toEqual([remoName, pressName]);
+
+    // dnd-kit deja 50 ms un filtro de click en el documento tras soltar (para
+    // que el click del arrastre no active lo que haya debajo): deja que expire
+    // antes de pulsar Guardar.
+    await page.waitForTimeout(100);
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await expect(page.getByText("Pendiente").first()).toBeVisible();
+
+    // Persistió en la base: la API devuelve el nuevo orden…
+    const detail = await apiRequest<{ exercises: { exerciseName: string }[] }>(
+      page.request,
+      "GET",
+      `/api/plan-sessions/${session.id}`,
+    );
+    expect(detail.exercises.map((e) => e.exerciseName)).toEqual([
+      remoName,
+      pressName,
+    ]);
+
+    // …y al reabrir el editor se ve igual.
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    await expect(handles.first()).toHaveAttribute(
+      "aria-label",
+      `Mover ${remoName}`,
+    );
+  });
+
+  test("reordenar también con el dedo (táctil)", async ({ page }) => {
+    const pressName = "Press banca";
+    const remoName = "Remo con barra";
+    const press = await seededExercise(page.request, pressName);
+    const remo = await seededExercise(page.request, remoName);
+    const week = weekOf(63);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const session = await createSession(
+      page.request,
+      date,
+      [
+        { exerciseId: press.id, targetSets: 3 },
+        { exerciseId: remo.id, targetSets: 3 },
+      ],
+      "Sesión táctil",
+    );
+
+    await page.goto(`/plan-fuerza?week=${week}`);
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: new RegExp(`Editar sesión · ${date}`),
+    });
+    const list = dialog.getByRole("list", { name: "Ejercicios del día" });
+    const handles = dialog.getByRole("button", { name: /^Mover / });
+    await expect(handles).toHaveCount(2);
+
+    const from = await dialog
+      .getByRole("button", { name: `Mover ${remoName}` })
+      .boundingBox();
+    const to = await list.getByText(pressName).boundingBox();
+    if (!from || !to) throw new Error("Sin caja para arrastrar");
+    const x = from.x + from.width / 2;
+    const y0 = from.y + from.height / 2;
+    const y1 = to.y + to.height / 2;
+
+    // Dedo de verdad (CDP): el TouchSensor exige mantener pulsado 250 ms.
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: "touchStart" | "touchMove" | "touchEnd", y: number) =>
+      cdp.send("Input.dispatchTouchEvent", {
+        type,
+        touchPoints: type === "touchEnd" ? [] : [{ x, y }],
+      });
+    await touch("touchStart", y0);
+    await page.waitForTimeout(300);
+    for (const t of [0.25, 0.5, 0.75, 1]) {
+      await touch("touchMove", y0 + (y1 - y0) * t);
+      await page.waitForTimeout(30);
+    }
+    await touch("touchEnd", y1);
+
+    await expect(handles.first()).toHaveAttribute(
+      "aria-label",
+      `Mover ${remoName}`,
+    );
+    await page.waitForTimeout(100); // el filtro de click de dnd-kit expira
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await expect(page.getByText("Pendiente").first()).toBeVisible();
+
+    const detail = await apiRequest<{ exercises: { exerciseName: string }[] }>(
+      page.request,
+      "GET",
+      `/api/plan-sessions/${session.id}`,
+    );
+    expect(detail.exercises.map((e) => e.exerciseName)).toEqual([
+      remoName,
+      pressName,
+    ]);
+  });
+
+  test("la celda del día edita en el sitio: info y reordenar por arrastre", async ({
+    page,
+  }) => {
+    const pressName = "Press banca";
+    const remoName = "Remo con barra";
+    const press = await seededExercise(page.request, pressName);
+    const remo = await seededExercise(page.request, remoName);
+    const week = weekOf(70);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const session = await createSession(
+      page.request,
+      date,
+      [
+        { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 4, targetRepsMin: 10 },
+      ],
+      "Sesión editable",
+    );
+
+    await page.goto(`/plan-fuerza?week=${week}`);
+    const dayList = page.getByRole("list", { name: `Ejercicios del ${date}` });
+    // La info básica se ve sin abrir nada.
+    await expect(dayList.getByText("3 series")).toBeVisible();
+    await expect(dayList.getByText("4 series")).toBeVisible();
+
+    // Asas de arrastre dentro de la celda, sin modal.
+    const handles = dayList.getByRole("button", { name: /^Mover / });
+    await expect(handles).toHaveCount(2);
+    const order = () =>
+      handles.evaluateAll((els) =>
+        els.map((el) =>
+          (el.getAttribute("aria-label") ?? "").replace(/^Mover /, ""),
+        ),
+      );
+    expect(await order()).toEqual([pressName, remoName]);
+
+    const from = await dayList
+      .getByRole("button", { name: `Mover ${remoName}` })
+      .boundingBox();
+    const to = await dayList.getByText(pressName).boundingBox();
+    if (!from || !to) throw new Error("Sin caja para arrastrar");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2, from.y - 10, { steps: 5 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+      steps: 10,
+    });
+    await page.mouse.up();
+    expect(await order()).toEqual([remoName, pressName]);
+
+    // Se guarda al soltar, sin abrir el editor…
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const detail = await apiRequest<{
+          exercises: { exerciseName: string }[];
+        }>(page.request, "GET", `/api/plan-sessions/${session.id}`);
+        return detail.exercises.map((e) => e.exerciseName);
+      })
+      .toEqual([remoName, pressName]);
+
+    // …y sigue así tras recargar.
+    await page.reload();
+    await expect(handles.first()).toHaveAttribute(
+      "aria-label",
+      `Mover ${remoName}`,
+    );
+
+    // El clic en la celda (fuera de asas y botones) abre el editor.
+    await dayList.getByText(pressName).first().click();
+    await expect(
+      page.getByRole("dialog", { name: new RegExp(`Editar sesión · ${date}`) }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
   /** Lunes de la semana ISO (espejo de week-grid.tsx). */
   function mondayOf(week: string): string {
     const [year, w] = week.split("-W").map(Number);

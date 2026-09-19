@@ -3,10 +3,25 @@
 // "+ añadir"; planned → nombre + "+" para añadir más + badge Pendiente + ✕ con
 // confirmación inline; logged → badge Hecho y tap hacia la pantalla de sesión
 // (solo lectura).
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toISODate } from "../lib/day";
-import type { PlanSession } from "../lib/plan-week";
+import { targetSummary } from "../lib/exercises";
+import type { PlanSession, SessionExercise } from "../lib/plan-week";
+import {
+  DRAG_INSTRUCTIONS,
+  GripIcon,
+  sortableAnnouncements,
+  useDragSensors,
+} from "./sortable";
 
 const DAYS = [
   "Lunes",
@@ -33,21 +48,68 @@ function dayOf(isoWeek: string, dayIndex: number): string {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
 
+/** Fila de la celda: asa (días planned) + nombre + info del objetivo. */
+function CellRow({
+  exercise,
+  sortable,
+}: {
+  exercise: SessionExercise;
+  sortable: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: exercise.exerciseId, disabled: !sortable });
+  const info = targetSummary(exercise);
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex items-center gap-1 ${
+        isDragging ? "relative z-10 opacity-70" : ""
+      }`}
+    >
+      {sortable ? (
+        <button
+          type="button"
+          className="cursor-grab touch-none px-1 text-text-secondary hover:text-primary active:cursor-grabbing"
+          aria-label={`Mover ${exercise.exerciseName}`}
+          onClick={(e) => e.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
+          <GripIcon />
+        </button>
+      ) : null}
+      <span className="min-w-0 truncate">{exercise.exerciseName}</span>
+      {info ? <span className="ml-auto shrink-0 text-xs">{info}</span> : null}
+    </li>
+  );
+}
+
 function SessionCell({
   date,
   session,
   isToday,
   onOpen,
   onRemove,
+  onReorder,
 }: {
   date: string;
   session: PlanSession | undefined;
   isToday: boolean;
   onOpen: () => void;
   onRemove: (id: number) => void;
+  onReorder: (session: PlanSession, exercises: SessionExercise[]) => void;
 }) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
+  const sensors = useDragSensors();
   const border = isToday ? "border-primary/60" : "";
 
   if (!session) {
@@ -69,10 +131,23 @@ function SessionCell({
   ) : (
     <span className="badge-pending self-start">Pendiente</span>
   );
+  const order = session.exercises;
+  const nameOf = (id: number | string) =>
+    order.find((e) => e.exerciseId === id)?.exerciseName ?? "";
+
+  /** Reordena en el sitio: el PUT (optimista en el hook) lo persiste al soltar. */
+  const moveExercise = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = order.findIndex((e) => e.exerciseId === active.id);
+    const to = order.findIndex((e) => e.exerciseId === over.id);
+    if (from === -1 || to === -1) return;
+    onReorder(session, arrayMove(order, from, to));
+  };
 
   return (
     <div
-      className={`flex min-h-11 flex-1 flex-col gap-1 rounded-lg border border-border bg-surface p-2 ${border}`}
+      className={`flex min-h-11 flex-1 cursor-pointer flex-col gap-1 rounded-lg border border-border bg-surface p-2 ${border}`}
+      onClick={() => (logged ? navigate(`/sesion/${date}`) : onOpen())}
     >
       <div className="flex items-center gap-2">
         <button
@@ -80,7 +155,11 @@ function SessionCell({
           aria-label={
             logged ? `Ver sesión del ${date}` : `Editar sesión del ${date}`
           }
-          onClick={() => (logged ? navigate(`/sesion/${date}`) : onOpen())}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (logged) navigate(`/sesion/${date}`);
+            else onOpen();
+          }}
         >
           {session.name ?? "Sesión"}
         </button>
@@ -88,14 +167,20 @@ function SessionCell({
           <>
             <button
               aria-label={`Añadir ejercicios al ${date}`}
-              onClick={onOpen}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen();
+              }}
               className="min-h-11 px-2 text-text-secondary hover:text-primary"
             >
               +
             </button>
             <button
               aria-label={`Desprogramar sesión del ${date}`}
-              onClick={() => setConfirming(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirming(true);
+              }}
               className="min-h-11 px-2 text-text-secondary hover:text-error"
             >
               ✕
@@ -104,20 +189,39 @@ function SessionCell({
         )}
       </div>
       {badge}
-      {session.exercises.length > 0 ? (
-        <ol
-          aria-label={`Ejercicios del ${date}`}
-          className="list-decimal pl-4 text-sm text-text-secondary"
+      {order.length > 0 ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={moveExercise}
+          accessibility={{
+            screenReaderInstructions: DRAG_INSTRUCTIONS,
+            announcements: sortableAnnouncements(
+              nameOf,
+              (id) => order.findIndex((e) => e.exerciseId === id) + 1,
+            ),
+          }}
         >
-          {session.exercises.map((e) => (
-            <li key={e.exerciseId}>{e.exerciseName}</li>
-          ))}
-        </ol>
+          <SortableContext
+            items={order.map((e) => e.exerciseId)}
+            strategy={verticalListSortingStrategy}
+          >
+            <ol
+              aria-label={`Ejercicios del ${date}`}
+              className="list-decimal pl-4 text-sm text-text-secondary"
+            >
+              {order.map((e) => (
+                <CellRow key={e.exerciseId} exercise={e} sortable={!logged} />
+              ))}
+            </ol>
+          </SortableContext>
+        </DndContext>
       ) : null}
       {confirming ? (
         <button
           className="btn-primary min-h-11 bg-error text-xs"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setConfirming(false);
             onRemove(session.id);
           }}
@@ -137,6 +241,7 @@ export function WeekGrid({
   onShiftWeek,
   onOpenDay,
   onRemove,
+  onReorder,
 }: {
   isoWeek: string;
   sessions: PlanSession[];
@@ -145,6 +250,7 @@ export function WeekGrid({
   onShiftWeek: (delta: number) => void;
   onOpenDay: (date: string) => void;
   onRemove: (id: number) => void;
+  onReorder: (session: PlanSession, exercises: SessionExercise[]) => void;
 }) {
   const today = toISODate(new Date());
   const byDate = new Map(sessions.map((s) => [s.date, s]));
@@ -196,6 +302,7 @@ export function WeekGrid({
                   isToday={date === today}
                   onOpen={() => onOpenDay(date)}
                   onRemove={onRemove}
+                  onReorder={onReorder}
                 />
               </div>
             );

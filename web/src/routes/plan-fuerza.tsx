@@ -3,8 +3,27 @@
 // es una sesión con nombre, compuesta de ejercicios copiados desde plantillas
 // (que se expanden y desaparecen) y/o sueltos, sin duplicados. El CRUD de
 // plantillas vive en /plantillas.
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import {
+  DRAG_INSTRUCTIONS,
+  GripIcon,
+  sortableAnnouncements,
+  useDragSensors,
+} from "../components/sortable";
 import { WeekGrid } from "../components/week-grid";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
@@ -220,6 +239,128 @@ function DayPicker({
   );
 }
 
+/** Fila arrastrable del día: el asa cambia el orden (ratón, táctil o teclado). */
+function DayRowItem({
+  row,
+  onPatch,
+  onRemove,
+}: {
+  row: DayRow;
+  onPatch: (key: string, patch: Partial<DayRow>) => void;
+  onRemove: (key: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.key });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
+        isDragging ? "relative z-10 opacity-70" : ""
+      }`}
+    >
+      <button
+        type="button"
+        className="cursor-grab touch-none rounded-md p-1 text-text-secondary hover:bg-surface-muted active:cursor-grabbing"
+        aria-label={`Mover ${row.exerciseName}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripIcon />
+      </button>
+      <span className="min-w-32 font-medium">{row.exerciseName}</span>
+      {row.kind === "strength" ? (
+        <>
+          <label className="text-sm">
+            Series
+            <input
+              className="input w-16"
+              type="number"
+              min={1}
+              aria-label={`${row.exerciseName} series`}
+              value={row.targetSets ?? ""}
+              onChange={(e) =>
+                onPatch(row.key, { targetSets: intAt(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            Reps mín
+            <input
+              className="input w-16"
+              type="number"
+              min={1}
+              aria-label={`${row.exerciseName} reps mín`}
+              value={row.targetRepsMin ?? ""}
+              onChange={(e) =>
+                onPatch(row.key, { targetRepsMin: intAt(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            Reps máx
+            <input
+              className="input w-16"
+              type="number"
+              min={1}
+              aria-label={`${row.exerciseName} reps máx`}
+              value={row.targetRepsMax ?? ""}
+              onChange={(e) =>
+                onPatch(row.key, { targetRepsMax: intAt(e.target.value) })
+              }
+            />
+          </label>
+        </>
+      ) : (
+        <>
+          <span className="badge-pending">{KIND_LABELS[row.kind]}</span>
+          <label className="text-sm">
+            Distancia (km)
+            <input
+              className="input w-20"
+              type="number"
+              min={0}
+              step="0.1"
+              aria-label={`${row.exerciseName} distancia (km)`}
+              value={row.targetDistanceKm ?? ""}
+              onChange={(e) =>
+                onPatch(row.key, { targetDistanceKm: numAt(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            Tiempo (min)
+            <input
+              className="input w-20"
+              type="number"
+              min={0}
+              aria-label={`${row.exerciseName} tiempo (min)`}
+              value={row.targetDurationMin ?? ""}
+              onChange={(e) =>
+                onPatch(row.key, { targetDurationMin: intAt(e.target.value) })
+              }
+            />
+          </label>
+        </>
+      )}
+      <button
+        className="btn-secondary ml-auto"
+        aria-label={`Quitar ${row.exerciseName}`}
+        onClick={() => onRemove(row.key)}
+      >
+        Quitar
+      </button>
+    </li>
+  );
+}
+
 /** Modal único del día: lateral con lo añadido + selector para sumar más. */
 function SessionEditor({
   date,
@@ -251,14 +392,35 @@ function SessionEditor({
   const [note, setNote] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const takenIds = new Set(rows.map((r) => r.exerciseId));
+  const sensors = useDragSensors();
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") onCancel();
+      // Escape cancela el arrastre de teclado (dnd-kit marca el evento como
+      // gestionado); solo cerramos el modal si nadie lo consumió antes.
+      if (ev.key === "Escape" && !ev.defaultPrevented) onCancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onCancel]);
+
+  const nameOf = (id: UniqueIdentifier) =>
+    rows.find((r) => r.key === id)?.exerciseName ?? "";
+
+  const announcements = sortableAnnouncements(
+    nameOf,
+    (id) => rows.findIndex((r) => r.key === id) + 1,
+  );
+
+  /** El orden de `rows` es el que viaja en `items[]`: reordenar ya es guardar. */
+  const moveRow = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setRows((rs) => {
+      const from = rs.findIndex((r) => r.key === active.id);
+      const to = rs.findIndex((r) => r.key === over.id);
+      return from === -1 || to === -1 ? rs : arrayMove(rs, from, to);
+    });
+  };
 
   const patchRow = (key: string, patch: Partial<DayRow>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -334,122 +496,42 @@ function SessionEditor({
           <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
             Ejercicios del día
           </h3>
-          <ul
-            aria-label="Ejercicios del día"
-            className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-surface-muted/50"
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={moveRow}
+            accessibility={{
+              screenReaderInstructions: DRAG_INSTRUCTIONS,
+              announcements,
+            }}
           >
-            {rows.map((row, i) => (
-              <li
-                key={row.key}
-                className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
-                  i < rows.length - 1 ? "border-b border-border" : ""
-                }`}
+            <SortableContext
+              items={rows.map((r) => r.key)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul
+                aria-label="Ejercicios del día"
+                className="min-h-0 flex-1 divide-y divide-border overflow-y-auto rounded-lg border border-border bg-surface-muted/50"
               >
-                <span className="min-w-32 font-medium">{row.exerciseName}</span>
-                {row.kind === "strength" ? (
-                  <>
-                    <label className="text-sm">
-                      Series
-                      <input
-                        className="input w-16"
-                        type="number"
-                        min={1}
-                        aria-label={`${row.exerciseName} series`}
-                        value={row.targetSets ?? ""}
-                        onChange={(e) =>
-                          patchRow(row.key, {
-                            targetSets: intAt(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Reps mín
-                      <input
-                        className="input w-16"
-                        type="number"
-                        min={1}
-                        aria-label={`${row.exerciseName} reps mín`}
-                        value={row.targetRepsMin ?? ""}
-                        onChange={(e) =>
-                          patchRow(row.key, {
-                            targetRepsMin: intAt(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Reps máx
-                      <input
-                        className="input w-16"
-                        type="number"
-                        min={1}
-                        aria-label={`${row.exerciseName} reps máx`}
-                        value={row.targetRepsMax ?? ""}
-                        onChange={(e) =>
-                          patchRow(row.key, {
-                            targetRepsMax: intAt(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                  </>
-                ) : (
-                  <>
-                    <span className="badge-pending">
-                      {KIND_LABELS[row.kind]}
-                    </span>
-                    <label className="text-sm">
-                      Distancia (km)
-                      <input
-                        className="input w-20"
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        aria-label={`${row.exerciseName} distancia (km)`}
-                        value={row.targetDistanceKm ?? ""}
-                        onChange={(e) =>
-                          patchRow(row.key, {
-                            targetDistanceKm: numAt(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Tiempo (min)
-                      <input
-                        className="input w-20"
-                        type="number"
-                        min={0}
-                        aria-label={`${row.exerciseName} tiempo (min)`}
-                        value={row.targetDurationMin ?? ""}
-                        onChange={(e) =>
-                          patchRow(row.key, {
-                            targetDurationMin: intAt(e.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                  </>
+                {rows.map((row) => (
+                  <DayRowItem
+                    key={row.key}
+                    row={row}
+                    onPatch={patchRow}
+                    onRemove={(key) =>
+                      setRows((rs) => rs.filter((r) => r.key !== key))
+                    }
+                  />
+                ))}
+                {rows.length === 0 && (
+                  <li className="bg-surface p-3 text-text-secondary">
+                    Sin ejercicios todavía. Añade una plantilla o ejercicios
+                    sueltos.
+                  </li>
                 )}
-                <button
-                  className="btn-secondary ml-auto"
-                  aria-label={`Quitar ${row.exerciseName}`}
-                  onClick={() =>
-                    setRows((rs) => rs.filter((r) => r.key !== row.key))
-                  }
-                >
-                  Quitar
-                </button>
-              </li>
-            ))}
-            {rows.length === 0 && (
-              <li className="bg-surface p-3 text-text-secondary">
-                Sin ejercicios todavía. Añade una plantilla o ejercicios
-                sueltos.
-              </li>
-            )}
-          </ul>
+              </ul>
+            </SortableContext>
+          </DndContext>
         </section>
 
         <DayPicker
@@ -608,6 +690,9 @@ export function PlanFuerzaPage() {
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
         onOpenDay={(date) => void openDay(date)}
         onRemove={(id) => void week.remove(id)}
+        onReorder={(session, exercises) =>
+          void week.reorder(session, exercises)
+        }
       />
 
       {dayLoading && <div className="card">Cargando sesión…</div>}
