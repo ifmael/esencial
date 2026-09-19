@@ -91,11 +91,12 @@ const cleanName = (name: string | null | undefined): string | null =>
 export const planSessions = new Hono<{ Bindings: Env }>()
   .get("/", (c) =>
     guard(async () => {
-      const list = await rows(
-        c.env.DB,
-        "SELECT id, date, name, status FROM plan_sessions ORDER BY date",
+      const db = getDb(c.env);
+      const ids = await rows(db, "SELECT id FROM plan_sessions ORDER BY date");
+      // Cada sesión con sus ejercicios: la rejilla semanal pinta el desglose.
+      return json(
+        await Promise.all(ids.map((r) => loadSession(db, Number(r.id)))),
       );
-      return json(list);
     }),
   )
   .post("/", zBody(planSessionCreateSchema), (c) =>

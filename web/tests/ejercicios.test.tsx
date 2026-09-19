@@ -246,7 +246,7 @@ describe("detail", () => {
     expect(window.location.pathname).toBe("/ejercicios/9");
   });
 
-  it("add-to-template with no templates: empty state links to plan, no call", async () => {
+  it("add-to-template with no templates: empty state links to plantillas, no call", async () => {
     vi.unstubAllGlobals();
     api = mockApi({ templates: [], exercises: [peso] });
     renderAt("/ejercicios/9");
@@ -254,8 +254,8 @@ describe("detail", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /añadir a plantilla/i }),
     );
-    const link = await screen.findByRole("link", { name: /ir a plan fuerza/i });
-    expect(link.getAttribute("href")).toBe("/plan-fuerza");
+    const link = await screen.findByRole("link", { name: /ir a plantillas/i });
+    expect(link.getAttribute("href")).toBe("/plantillas");
     expect(
       api.calls.some((c) => c.method === "PUT" || c.method === "POST"),
     ).toBe(false);

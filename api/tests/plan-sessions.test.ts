@@ -180,25 +180,52 @@ describe("PUT /api/plan-sessions/:id", () => {
 });
 
 describe("GET /api/plan-sessions", () => {
-  it("lista las sesiones con nombre y estado", async () => {
-    const { bench } = await seed();
+  it("lista las sesiones con nombre, estado y sus ejercicios (desglose)", async () => {
+    const { bench, run } = await seed();
     await post("/api/plan-sessions", {
       date: "2026-10-14",
       name: "Pierna",
       items: [{ exerciseId: bench }],
     });
+    await post("/api/plan-sessions", {
+      date: "2026-10-13",
+      items: [
+        { exerciseId: run, targetDistanceKm: 8 },
+        { exerciseId: bench, targetSets: 5, targetRepsMin: 5 },
+      ],
+    });
     const res = await get("/api/plan-sessions");
     const list = (await res.json()) as {
+      id: number;
       date: string;
       name: string | null;
       status: string;
+      exercises: Item[];
     }[];
-    expect(list).toHaveLength(1);
-    expect(list[0]).toEqual({
+    expect(list.map((s) => s.date)).toEqual(["2026-10-13", "2026-10-14"]);
+    expect(list[0]).toMatchObject({ name: null, status: "planned" });
+    // Los ejercicios llegan ordenados por posición, listos para pintar el plan.
+    expect(list[0].exercises.map((e) => e.exerciseId)).toEqual([run, bench]);
+    expect(list[0].exercises[0]).toMatchObject({
+      exerciseName: "Running",
+      kind: "running",
+      position: 0,
+      targetDistanceKm: 8,
+      targetDurationMin: null,
+    });
+    expect(list[1]).toEqual({
       id: expect.any(Number),
       date: "2026-10-14",
       name: "Pierna",
       status: "planned",
+      exercises: [
+        expect.objectContaining({
+          exerciseId: bench,
+          exerciseName: "Press banca",
+          kind: "strength",
+          position: 0,
+        }),
+      ],
     });
   });
 

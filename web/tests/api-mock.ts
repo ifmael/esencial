@@ -130,8 +130,7 @@ export function mockApi(seed: Seed = {}): MockApi {
 
     if (sMatch) {
       const id = sMatch[1] ? Number(sMatch[1]) : null;
-      if (method === "GET" && id === null)
-        return json(api.state.sessions.map(({ exercises, ...rest }) => rest));
+      if (method === "GET" && id === null) return json(api.state.sessions);
       if (method === "GET" && id !== null) {
         const s = api.state.sessions.find((x) => x.id === id);
         return s ? json(s) : err("Not found", undefined, 404);
