@@ -302,6 +302,8 @@ describe("editor del día (sesión)", () => {
     expect(screen.getAllByText("Press banca").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/^running distancia \(km\)$/i)).toBeDefined();
+    // El picker agrupa por músculo: desplegar Pecho para ver la fila.
+    fireEvent.click(within(dialog).getByRole("button", { name: "Pecho (1)" }));
     // el mismo ejercicio ya no se puede volver a añadir
     const pressBtn = within(dialog).getByRole("button", {
       name: /Press banca/,
@@ -416,12 +418,48 @@ describe("editor del día (sesión)", () => {
     await openFirstDay();
     fireEvent.click(screen.getByRole("button", { name: "+ Añadir" }));
     const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Espalda (1)" }),
+    );
     fireEvent.click(within(dialog).getByRole("button", { name: /Remo/ }));
     expect(within(dialog).getByRole("button", { name: /Remo/ })).toHaveProperty(
       "disabled",
       true,
     );
     expect(within(dialog).getByText("ya añadido")).toBeDefined();
+  });
+
+  it("picker del día: ejercicios por grupo plegados; el buscador despliega coincidencias", async () => {
+    await openFirstDay();
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("button", { name: "Pecho (1)" }),
+    ).toBeDefined();
+    expect(
+      within(dialog).getByRole("button", { name: "Espalda (1)" }),
+    ).toBeDefined();
+    expect(within(dialog).queryByRole("button", { name: /^Remo$/ })).toBeNull();
+
+    const search = within(dialog).getByPlaceholderText(
+      "Buscar plantilla o ejercicio…",
+    );
+    fireEvent.change(search, { target: { value: "remo" } });
+    expect(
+      within(dialog).getByRole("button", { name: /^Remo$/ }),
+    ).toBeDefined();
+    expect(
+      within(dialog).queryByRole("button", { name: "Pecho (1)" }),
+    ).toBeNull();
+
+    fireEvent.change(search, { target: { value: "" } });
+    expect(within(dialog).queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Espalda (1)" }),
+    );
+    expect(
+      within(dialog).getByRole("button", { name: /^Remo$/ }),
+    ).toBeDefined();
   });
 });
 
@@ -437,8 +475,10 @@ describe("template editor", () => {
     fireEvent.change(screen.getByLabelText("Nombre"), {
       target: { value: "D — Movilidad" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {
+      name: "Nueva plantilla",
+    });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1); // selector dentro
     const dlg = within(dialog);
     const searchesBefore = api.calls.filter(
       (c) => c.url === "/api/exercises",
@@ -451,8 +491,7 @@ describe("template editor", () => {
       searchesBefore,
     ); // search hit no network
     fireEvent.click(dlg.getByRole("button", { name: /^Sentadilla$/ }));
-    fireEvent.click(dlg.getByRole("button", { name: "Cerrar" }));
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(dlg.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
     expect(payloadAt(0).exercises).toEqual([
@@ -471,14 +510,13 @@ describe("template editor", () => {
 
   it("cardio en plantilla: el picker lo lista con su tipo y acepta distancia/tiempo", async () => {
     await openEditor();
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
-    const dialog = await screen.findByRole("dialog");
-    const dlg = within(dialog);
+    const dlg = within(
+      await screen.findByRole("dialog", { name: "Nueva plantilla" }),
+    );
     fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
       target: { value: "running" },
     });
     fireEvent.click(dlg.getByRole("button", { name: /Running · Running/ }));
-    fireEvent.click(dlg.getByRole("button", { name: "Cerrar" }));
     fireEvent.change(screen.getByLabelText(/^distancia \(km\)$/i), {
       target: { value: "12" },
     });
@@ -504,11 +542,13 @@ describe("template editor", () => {
 
   it("body map: selecting a muscle group filters the list; Todos resets; empty group shows state", async () => {
     await openEditor();
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
-    const dialog = await screen.findByRole("dialog");
-    const dlg = within(dialog);
-    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    const dlg = within(
+      await screen.findByRole("dialog", { name: "Nueva plantilla" }),
+    );
+    // Plegado por defecto: cabeceras con conteo, sin ejercicios a la vista.
+    expect(dlg.getByRole("button", { name: "Pecho (1)" })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
 
     fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
     expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
@@ -526,6 +566,8 @@ describe("template editor", () => {
     });
 
     fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    fireEvent.click(dlg.getByRole("button", { name: "Espalda (1)" }));
     expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
 
     fireEvent.click(dlg.getByRole("button", { name: "Core" }));
@@ -537,7 +579,11 @@ describe("template editor", () => {
     fireEvent.click(
       within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
     );
-    const name = await screen.findByLabelText("Nombre");
+    const dialog = await screen.findByRole("dialog", {
+      name: "Editar plantilla",
+    });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    const name = within(dialog).getByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("A — Empuje");
     fireEvent.change(name, { target: { value: "A — Empuje y núcleo" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Bajar" })[0]); // Press moves down
@@ -683,41 +729,138 @@ describe("template editor", () => {
   });
 });
 
-describe("exercise picker modal", () => {
-  async function openPicker() {
+describe("modal de plantilla: selector embebido", () => {
+  async function openNewModal() {
+    await openPlan();
+    fireEvent.click(screen.getByRole("button", { name: "+ Nueva plantilla" }));
+    return within(
+      await screen.findByRole("dialog", { name: "Nueva plantilla" }),
+    );
+  }
+
+  async function openEditModal() {
     await openPlan();
     fireEvent.click(
       within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
     );
-    await screen.findByLabelText("Nombre");
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
-    return screen.findByRole("dialog");
+    return within(
+      await screen.findByRole("dialog", { name: "Editar plantilla" }),
+    );
   }
 
-  it("opens a dialog with exercises grouped by muscle group", async () => {
-    const dialog = await openPicker();
-    const dlg = within(dialog);
-    expect(dlg.getByRole("heading", { name: "Pecho" })).toBeDefined();
-    expect(dlg.getByRole("heading", { name: "Espalda" })).toBeDefined();
-    expect(dlg.getByRole("heading", { name: "Pierna" })).toBeDefined();
-    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
-    expect(dlg.getByRole("button", { name: /^Sentadilla$/ })).toBeDefined();
+  it("el selector vive dentro de la única modal y arranca plegado por grupos", async () => {
+    const dlg = await openNewModal();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    // Cabeceras de grupo con su conteo; ningún ejercicio a la vista.
+    expect(dlg.getByRole("button", { name: "Pecho (1)" })).toBeDefined();
+    expect(dlg.getByRole("button", { name: "Espalda (1)" })).toBeDefined();
+    expect(dlg.getByRole("button", { name: "Pierna (1)" })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    expect(dlg.queryByRole("button", { name: /^Sentadilla$/ })).toBeNull();
   });
 
-  it("muscle filter narrows the picker list; Todos resets", async () => {
-    const dialog = await openPicker();
-    const dlg = within(dialog);
+  it("cada grupo se despliega y se pliega; varios pueden estar abiertos a la vez", async () => {
+    const dlg = await openNewModal();
+    const pecho = dlg.getByRole("button", { name: "Pecho (1)" });
+    const espalda = dlg.getByRole("button", { name: "Espalda (1)" });
+    expect(pecho.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(pecho);
+    expect(pecho.getAttribute("aria-expanded")).toBe("true");
+    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+
+    fireEvent.click(espalda);
+    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+
+    fireEvent.click(pecho);
+    expect(pecho.getAttribute("aria-expanded")).toBe("false");
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+  });
+
+  it("el buscador despliega los grupos con coincidencias y al limpiarlo vuelve lo plegado", async () => {
+    const dlg = await openNewModal();
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
+      target: { value: "remo" },
+    });
+    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: "Pecho (1)" })).toBeNull(); // sin coincidencias
+    expect(dlg.getByRole("button", { name: "Espalda (1)" })).toBeDefined();
+
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
+      target: { value: "" },
+    });
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    expect(dlg.getByRole("button", { name: "Espalda (1)" })).toBeDefined();
+  });
+
+  it("el filtro del mapa corporal despliega el grupo filtrado y Todos repliega", async () => {
+    const dlg = await openNewModal();
+    fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
+    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+  });
+
+  it("grupos y ejercicios salen en orden alfabético ascendente", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      templates: [tplA(), tplB(), tplC()],
+      exercises: [
+        remo, // el mock no garantiza orden de la API
+        { ...press, id: 11, name: "Aperturas con mancuernas" },
+        press,
+        run,
+        sent,
+      ],
+    });
+    const dlg = await openNewModal();
+    const cabeceras = [
+      ...screen.getByRole("dialog").querySelectorAll("h3 button"),
+    ].map((b) => b.textContent?.replace(/[▸▾]/g, "").trim());
+    expect(cabeceras).toEqual([
+      "cardio (1)",
+      "Espalda (1)",
+      "Pecho (2)",
+      "Pierna (1)",
+    ]);
+
+    fireEvent.click(dlg.getByRole("button", { name: "Pecho (2)" }));
+    const seccion = dlg
+      .getByRole("button", { name: "Pecho (2)" })
+      .closest("section")!;
+    expect(
+      within(seccion)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent?.replace(/[▸▾]/g, "").trim()),
+    ).toEqual(["Aperturas con mancuernas", "Press banca"]);
+  });
+
+  it("el mapa corporal filtra por grupo y el buscador acota; Todos reinicia", async () => {
+    const dlg = await openEditModal();
     fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
     expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
     expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
     fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull(); // replegado
+    fireEvent.click(dlg.getByRole("button", { name: "Espalda (1)" }));
     expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
+      target: { value: "zzz" },
+    });
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(dlg.getByText(/sin ejercicios/i)).toBeDefined();
   });
 
-  it("draft exercises are disabled; re-adding is impossible", async () => {
-    const dialog = await openPicker();
-    const dlg = within(dialog);
+  it("los ejercicios ya en el borrador salen deshabilitados", async () => {
+    const dlg = await openEditModal();
+    fireEvent.click(dlg.getByRole("button", { name: "Pecho (1)" }));
+    fireEvent.click(dlg.getByRole("button", { name: "Espalda (1)" }));
+    fireEvent.click(dlg.getByRole("button", { name: "Pierna (1)" }));
     const pressBtn = dlg.getByRole("button", { name: /^Press banca$/ });
     expect(pressBtn.hasAttribute("disabled")).toBe(true);
     fireEvent.click(pressBtn);
@@ -730,27 +873,23 @@ describe("exercise picker modal", () => {
     expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(4);
   });
 
-  it("closing with Cerrar preserves the draft", async () => {
-    const dialog = await openPicker();
-    fireEvent.change(screen.getByLabelText("Nombre"), {
-      target: { value: "A — Empuje 2" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Cerrar" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe(
-      "A — Empuje 2",
-    );
-  });
-
-  it("closing with Escape preserves the draft", async () => {
-    await openPicker();
-    fireEvent.change(screen.getByLabelText("Nombre"), {
-      target: { value: "A — Empuje 3" },
+  it("Escape cierra la modal y descarta el borrador, sin mutaciones", async () => {
+    const dlg = await openEditModal();
+    const before = mutations().length;
+    fireEvent.change(dlg.getByLabelText("Nombre"), {
+      target: { value: "basura" },
     });
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe(
-      "A — Empuje 3",
-    );
+    expect(mutations().length).toBe(before);
+    expect(api.state.templates[0].name).toBe("A — Empuje");
+  });
+
+  it("clic en el fondo cierra la modal sin guardar", async () => {
+    await openNewModal();
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog.parentElement as HTMLElement);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(mutations().some((c) => c.method === "POST")).toBe(false);
   });
 });

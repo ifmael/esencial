@@ -77,6 +77,19 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     }
   }
 
+  /** Un reintento del mismo test reencuentra su plantilla ya creada (el nombre
+   *  es UNIQUE): la quita antes de volver a crearla. */
+  async function resetTemplate(request: APIRequestContext, name: string) {
+    const templates = await apiRequest<{ id: number; name: string }[]>(
+      request,
+      "GET",
+      "/api/templates",
+    );
+    for (const t of templates.filter((t) => t.name === name)) {
+      await request.delete(`/api/templates/${t.id}`);
+    }
+  }
+
   test("plantilla con fuerza + cardio se muestra en la tarjeta", async ({
     page,
   }) => {
@@ -98,6 +111,101 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await card.getByRole("button", { name, exact: true }).click();
     await expect(card.getByText("4 series")).toBeVisible();
     await expect(card.getByText("10 km · 45 min")).toBeVisible();
+  });
+
+  test("crear plantilla desde la UI: una modal con grupos plegables y buscador", async ({
+    page,
+  }) => {
+    const name = "Plantilla UI";
+    await resetTemplate(page.request, name);
+    await page.goto("/plan-fuerza");
+    await page.getByRole("button", { name: "+ Nueva plantilla" }).click();
+    const dialog = page.getByRole("dialog", { name: "Nueva plantilla" });
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(1); // sin modal anidada
+
+    // Grupos musculares plegados con su conteo: los ejercicios no asoman.
+    const pecho = dialog.getByRole("button", { name: /^Pecho \(/ });
+    await expect(pecho).toBeVisible();
+    await expect(
+      dialog.getByRole("button", {
+        name: "Aperturas con mancuernas",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await pecho.click();
+    await expect(
+      dialog.getByRole("button", {
+        name: "Aperturas con mancuernas",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await pecho.click();
+    await expect(
+      dialog.getByRole("button", {
+        name: "Aperturas con mancuernas",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+
+    // Buscador dentro de la modal (filtra en cliente).
+    await dialog.getByPlaceholder("Buscar ejercicio").fill("remo con");
+    await expect(
+      dialog.getByRole("button", { name: "Remo con barra", exact: true }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Press banca", exact: true }),
+    ).toHaveCount(0);
+
+    // Filtro por grupo muscular desde el mapa corporal.
+    await dialog.getByPlaceholder("Buscar ejercicio").fill("");
+    await dialog.getByRole("button", { name: "Pecho", exact: true }).click();
+    await expect(
+      dialog.getByRole("button", { name: "Press banca", exact: true }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Remo con barra", exact: true }),
+    ).toHaveCount(0);
+
+    await dialog
+      .getByRole("button", { name: "Press banca", exact: true })
+      .click();
+    await dialog.getByLabel("Nombre").fill(name);
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const card = page.locator("section").filter({ hasText: name }).first();
+    await expect(card.getByRole("button", { name, exact: true })).toBeVisible();
+  });
+
+  test("editar plantilla desde la UI abre la modal precargada", async ({
+    page,
+  }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const name = "Plantilla a editar";
+    await resetTemplate(page.request, name);
+    await createTemplate(page.request, name, [
+      { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+    ]);
+
+    await page.goto("/plan-fuerza");
+    const card = page.locator("section").filter({ hasText: name }).first();
+    await card.getByRole("button", { name: "Editar", exact: true }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Editar plantilla" });
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(dialog.getByLabel("Nombre")).toHaveValue(name);
+    // Los grupos van plegados: el buscador despliega el grupo del ejercicio.
+    await dialog.getByPlaceholder("Buscar ejercicio").fill("Press banca");
+    // El ejercicio ya en el borrador sale deshabilitado en el selector.
+    await expect(
+      dialog.getByRole("button", { name: "Press banca", exact: true }),
+    ).toBeDisabled();
+
+    await dialog.getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(card.getByRole("button", { name, exact: true })).toBeVisible();
   });
 
   test("día vacío → editor: expandir plantilla, dedupe y guardar", async ({
@@ -128,6 +236,21 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     // Expandir las dos plantillas: solo entra el ejercicio nuevo, sin duplicar.
     await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Añadir al día" });
+    // Los ejercicios también van por grupos plegables.
+    const pecho = dialog.getByRole("button", { name: /^Pecho \(/ });
+    await expect(
+      dialog.getByRole("button", {
+        name: "Aperturas con mancuernas",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await pecho.click();
+    await expect(
+      dialog.getByRole("button", {
+        name: "Aperturas con mancuernas",
+        exact: true,
+      }),
+    ).toBeVisible();
     await dialog
       .getByRole("button", { name: new RegExp(escapeRe(tplA)) })
       .click();
@@ -308,6 +431,8 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await page.getByRole("button", { name: "+ añadir" }).first().click();
     await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Añadir al día" });
+    // El listado va por grupos plegables: el buscador despliega el ejercicio.
+    await dialog.getByPlaceholder("Buscar plantilla o ejercicio…").fill(name);
     await dialog
       .getByRole("button", { name: new RegExp(escapeRe(name)) })
       .click();
