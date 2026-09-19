@@ -3,6 +3,10 @@
 // y el planificador solo las usa para expandirlas en un día.
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import {
+  GROUP_LABELS,
+  GroupedExercises,
+} from "../components/grouped-exercises";
 import { apiField } from "../lib/api";
 import {
   type Exercise,
@@ -44,19 +48,6 @@ const toDraft = (t: Template): Draft => ({
 
 type BodyView = "front" | "back";
 type MuscleRegion = { tag: string; label: string; shapes: ReactNode };
-
-const GROUP_LABELS: Record<string, string> = {
-  pecho: "Pecho",
-  espalda: "Espalda",
-  hombro: "Hombro",
-  bíceps: "Bíceps",
-  tríceps: "Tríceps",
-  pierna: "Pierna",
-  glúteo: "Glúteo",
-  core: "Core",
-  antebrazo: "Antebrazo",
-  gemelo: "Gemelo",
-};
 
 const FRONT_REGIONS: MuscleRegion[] = [
   {
@@ -298,13 +289,6 @@ function ExercisePicker({
   });
   const inDraftIds = new Set(draftEntries.map((en) => en.exerciseId));
 
-  const groups: Record<string, Exercise[]> = {};
-  for (const e of picks) {
-    const tag = e.tags[0] ?? "otro";
-    groups[tag] ??= [];
-    groups[tag].push(e);
-  }
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -365,32 +349,26 @@ function ExercisePicker({
           <p className="text-sm text-text-secondary">Sin ejercicios</p>
         ) : (
           <div className="flex max-h-[45vh] flex-col gap-3 overflow-y-auto">
-            {Object.entries(groups).map(([tag, list]) => (
-              <section key={tag} className="flex flex-col gap-1">
-                <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-                  {GROUP_LABELS[tag] ?? tag}
-                </h3>
-                <ul className="flex flex-col gap-1">
-                  {list.map((e) => (
-                    <li key={e.id}>
-                      <button
-                        className="min-h-9 w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-surface-muted disabled:text-text-secondary"
-                        disabled={inDraftIds.has(e.id)}
-                        onClick={() => {
-                          if (inDraftIds.has(e.id)) return;
-                          onAdd(e);
-                        }}
-                      >
-                        {e.name}
-                        {e.kind === "strength"
-                          ? null
-                          : ` · ${KIND_LABELS[e.kind]}`}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
+            <GroupedExercises
+              exercises={picks}
+              forceOpen={q !== "" || group !== null}
+              listClassName="flex flex-col gap-1"
+              renderItem={(e) => (
+                <li key={e.id}>
+                  <button
+                    className="min-h-9 w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-surface-muted disabled:text-text-secondary"
+                    disabled={inDraftIds.has(e.id)}
+                    onClick={() => {
+                      if (inDraftIds.has(e.id)) return;
+                      onAdd(e);
+                    }}
+                  >
+                    {e.name}
+                    {e.kind === "strength" ? null : ` · ${KIND_LABELS[e.kind]}`}
+                  </button>
+                </li>
+              )}
+            />
           </div>
         )}
 

@@ -221,6 +221,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.8)
+      hono:
+        specifier: 4.13.5
+        version: 4.13.5
       react:
         specifier: 19.2.8
         version: 19.2.8

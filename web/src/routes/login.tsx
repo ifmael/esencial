@@ -3,6 +3,7 @@
 // success → navigate to ?next= (or /). Server gate is authoritative; this is UX.
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { apiFetchRaw } from "../lib/api";
 
 export function LoginPage() {
   const [password, setPassword] = useState("");
@@ -20,7 +21,7 @@ export function LoginPage() {
     setPending(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await apiFetchRaw("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ password }),

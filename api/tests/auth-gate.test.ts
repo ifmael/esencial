@@ -153,43 +153,17 @@ describe("auth gate on /api/*", () => {
   });
 });
 
-describe("SPA page protection (worker-first)", () => {
-  const html = { headers: { accept: "text/html" } };
-
-  it("GET / without session → 302 /login?next=%2F", async () => {
-    const res = await app.request("http://localhost/", html, env);
-    expect(res.status).toBe(302);
-    expect(
-      new URL(res.headers.get("location") as string, "http://localhost")
-        .pathname,
-    ).toBe("/login");
-    expect(
-      new URL(
-        res.headers.get("location") as string,
-        "http://localhost",
-      ).searchParams.get("next"),
-    ).toBe("/");
-  });
-
-  it("GET /plan-recetas without session → 302 with next", async () => {
-    const res = await app.request("http://localhost/plan-recetas", html, env);
-    expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/login?next=%2Fplan-recetas");
-  });
-
-  it("GET /login without session → 200 SPA shell", async () => {
-    const res = await app.request("http://localhost/login", html, env);
-    expect(res.status).toBe(200);
-    expect(await res.text()).toContain('<div id="root">');
-  });
-
-  it("GET / with session → 200 (no redirect loop)", async () => {
+describe("rutas fuera de /api/* (B')", () => {
+  // El guard del HTML (302 → /login) vive en el Worker del frontal y se prueba
+  // en web/tests/worker-guard.test.ts; aquí solo queda el 404 JSON de la API.
+  it("una ruta del SPA ya no la sirve la API: 404 JSON", async () => {
     const res = await app.request(
-      "http://localhost/",
-      { headers: { accept: "text/html", cookie } },
+      "http://localhost/plan-recetas",
+      { headers: { accept: "text/html" } },
       env,
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Not found" });
   });
 
   it("api paths still get JSON 404 WITH session", async () => {
@@ -210,12 +184,12 @@ describe("security headers on every response", () => {
     [string, RequestInit, () => Promise<Response> | Response]
   > = [
     [
-      "asset/page",
-      { headers: { accept: "text/html", cookie } },
+      "404 fuera de /api",
+      {},
       () =>
         app.request(
-          "http://localhost/",
-          { headers: { accept: "text/html", cookie } },
+          "http://localhost/plan-recetas",
+          { headers: { accept: "text/html" } },
           env,
         ),
     ],

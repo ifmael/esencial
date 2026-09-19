@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { apiRequest, uniqueName } from "./helpers";
+import { API_BASE, apiRequest, apiUrl, uniqueName } from "./helpers";
 
 // EDGE (journey 4): week navigation in /plan-recetas, debounced autosave of
 // Hoy notes (flushed when leaving the field/date), visible rendering of API
@@ -71,7 +71,7 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
       return isoWeekOf(new Date(jan4Of(year).getTime() + weekNum * WEEK_MS));
     }, baseWeek);
 
-    const put = await page.request.put(`/api/meal-plan/${nextWeek}`, {
+    const put = await page.request.put(apiUrl(`/api/meal-plan/${nextWeek}`), {
       data: {
         slots: [{ day: 0, meal: "desayuno", recipeId: created.id }],
       },
@@ -124,10 +124,17 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     await page.getByRole("button", { name: "Día anterior" }).click();
 
     await noteSaved;
-    const saved = await page.evaluate(async (date) => {
-      const res = await fetch(`/api/notes/${date}`);
-      return res.json();
-    }, iso);
+    const saved = await page.evaluate(
+      async ({ date, base }) => {
+        // Cross-origin (la API es otro Worker): sin credentials el navegador no
+        // manda la cookie de sesión y la respuesta sería 401.
+        const res = await fetch(`${base}/api/notes/${date}`, {
+          credentials: "include",
+        });
+        return res.json();
+      },
+      { date: iso, base: API_BASE },
+    );
     expect((saved as { text?: string }).text).toBe(text);
   });
 
@@ -153,7 +160,7 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     const week = await page.getByRole("heading", { level: 1 }).textContent();
 
     // API-level 400: two slots with the same day|meal → {error, field:"slots"}.
-    const res = await page.request.put(`/api/meal-plan/${week}`, {
+    const res = await page.request.put(apiUrl(`/api/meal-plan/${week}`), {
       data: {
         slots: [
           { day: 0, meal: "desayuno", recipeId: created.id },

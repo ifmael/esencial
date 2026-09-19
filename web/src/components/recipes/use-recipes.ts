@@ -1,6 +1,7 @@
 // E2 D1: one hook owns all recipe data access against same-origin /api/recipes.
 // GET list returns fully hydrated recipes, so detail reads from `list`.
 import { useCallback, useEffect, useState } from "react";
+import { apiFetchRaw } from "../../lib/api";
 
 export type Ingredient = {
   id: number;
@@ -66,7 +67,7 @@ export function useRecipes() {
     let alive = true;
     setLoading(true);
     setError(null);
-    fetch("/api/recipes")
+    apiFetchRaw("/api/recipes")
       .then(async (res) => {
         if (!res.ok) throw new Error(`GET /api/recipes ${res.status}`);
         return (await res.json()) as Recipe[];
@@ -122,7 +123,7 @@ export function useRecipes() {
     clearFieldError: () => setFieldError(null),
     create: (input: RecipeInput) =>
       mutate(() =>
-        fetch("/api/recipes", {
+        apiFetchRaw("/api/recipes", {
           method: "POST",
           headers: jsonHeaders,
           body: JSON.stringify(input),
@@ -130,14 +131,14 @@ export function useRecipes() {
       ),
     update: (id: number, input: RecipeInput) =>
       mutate(() =>
-        fetch(`/api/recipes/${id}`, {
+        apiFetchRaw(`/api/recipes/${id}`, {
           method: "PUT",
           headers: jsonHeaders,
           body: JSON.stringify(input),
         }),
       ),
     remove: (id: number) =>
-      mutate(() => fetch(`/api/recipes/${id}`, { method: "DELETE" })),
+      mutate(() => apiFetchRaw(`/api/recipes/${id}`, { method: "DELETE" })),
   };
 }
 

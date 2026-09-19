@@ -3,6 +3,7 @@
 // son colapsables y despliegan su submenú. E7: logout button.
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
+import { apiFetchRaw } from "../lib/api";
 
 type NavChild = { href: string; label: string };
 type NavSection = {
@@ -120,7 +121,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           type="button"
           className="btn-secondary mt-auto"
           onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST" });
+            await apiFetchRaw("/api/auth/logout", { method: "POST" });
             navigate("/login");
           }}
         >
@@ -146,7 +147,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           type="button"
           className="rounded-lg px-3 py-2 font-medium text-text-secondary"
           onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST" });
+            await apiFetchRaw("/api/auth/logout", { method: "POST" });
             navigate("/login");
           }}
         >

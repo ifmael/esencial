@@ -1,23 +1,19 @@
-# Single Worker: Hono API under /api/* + built SPA static assets (design D1).
+# Worker del frontal (B'): sirve los assets del SPA y hace el guard del HTML.
+# La API es su propio Worker (api/wrangler.toml) y el navegador la llama
+# directamente; aquí solo viven los assets y el guard.
 name = "esencial"
-main = "api/src/index.ts"
+main = "web/worker/index.ts"
 compatibility_date = "2026-08-31"
 
 [assets]
 directory = "./web/dist"
 binding = "ASSETS"
-# E7: the Worker must SEE every request to gate HTML pages (pageGuard);
-# allowed responses are served via env.ASSETS.fetch inside the Worker.
+# E7: el Worker DEBE VER cada petición para gatear el HTML (guard); las
+# respuestas permitidas se sirven vía env.ASSETS.fetch dentro del Worker.
 run_worker_first = true
 # Deep links (/plan-recetas) fall through to index.html for the SPA router.
 not_found_handling = "single-page-application"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "esencial"
-database_id = "989acff9-fbad-4ef7-a001-695d4966d264"
-migrations_dir = "api/migrations"
-
-[[r2_buckets]]
-binding = "PHOTOS"
-bucket_name = "esencial-photos"
+[vars]
+# Origen público de la API: se autoriza en la CSP del frontal (fetch e <img>).
+API_ORIGIN = "https://esencial-api.nutrirutina.workers.dev"

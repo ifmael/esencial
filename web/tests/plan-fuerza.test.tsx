@@ -312,6 +312,10 @@ describe("editor del día (sesión) en modal", () => {
     expect(
       within(dialog).getByRole("list", { name: "Ejercicios del día" }),
     ).toBeDefined();
+    // Los ejercicios van por grupos de músculo plegables (cerrados por defecto).
+    const pecho = within(dialog).getByRole("button", { name: /^Pecho \(1\)/ });
+    expect(pecho.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(pecho);
     expect(
       within(dialog).getByRole("button", { name: "Press banca" }),
     ).toBeDefined();
@@ -335,6 +339,9 @@ describe("editor del día (sesión) en modal", () => {
     // el cardio entra con sus campos propios (y su nombre en la etiqueta)
     expect(screen.getByLabelText(/^running distancia \(km\)$/i)).toBeDefined();
     // el mismo ejercicio ya no se puede volver a añadir
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^Pecho \(1\)/ }),
+    );
     const pressBtn = within(dialog).getByRole("button", {
       name: /^Press banca/,
     });
@@ -398,6 +405,9 @@ describe("editor del día (sesión) en modal", () => {
   it("plantilla con ejercicios ya en el día cuenta los que ya estaban", async () => {
     const { dialog } = await openFirstDay();
     fireEvent.click(
+      within(dialog).getByRole("button", { name: /^Pecho \(1\)/ }),
+    );
+    fireEvent.click(
       within(dialog).getByRole("button", { name: "Press banca" }),
     );
     fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
@@ -450,6 +460,9 @@ describe("editor del día (sesión) en modal", () => {
     });
     expect(within(day).getByText("Press banca")).toBeDefined();
     // y se añade otro sin botón intermedio
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^Espalda \(1\)/ }),
+    );
     fireEvent.click(within(dialog).getByRole("button", { name: "Remo" }));
     expect(within(day).getByText("Remo")).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
@@ -547,6 +560,9 @@ describe("editor del día (sesión) en modal", () => {
 
   it("ejercicio suelto repetido queda deshabilitado en el selector", async () => {
     const { dialog } = await openFirstDay();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^Espalda \(1\)/ }),
+    );
     fireEvent.click(within(dialog).getByRole("button", { name: "Remo" }));
     expect(
       within(dialog).getByRole("button", { name: /^Remo/ }),

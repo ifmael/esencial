@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — Modelo de datos</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Backend</p>
+        <h1>Modelo de datos</h1>
+        <p class="lead">
+          18 tablas en una única base D1 (SQLite). El esquema no solo guarda datos: codifica las
+          reglas del producto. «Un día, una sesión», «un ejercicio no se repite en el día» o «un
+          registro de esfuerzo por sesión» son restricciones de tabla, no comprobaciones sueltas en
+          el código.
+        </p>
+
+        <div class="kpis">
+          <div class="kpi"><b>18</b><span>tablas</span></div>
+          <div class="kpi"><b>9</b><span>migraciones</span></div>
+          <div class="kpi"><b>91</b><span>ejercicios sembrados</span></div>
+          <div class="kpi"><b>145</b><span>tags del catálogo</span></div>
+          <div class="kpi"><b>4</b><span>CHECKs de dominio</span></div>
+        </div>
+
+        <figure>
+          <svg
+            viewBox="0 0 860 520"
+            role="img"
+            aria-label="Recetas y planificación de comidas: recipes cuelga de recipe_ingredients, recipe_steps, recipe_materials y recipe_tags; week_plans de meal_slots y shopping_items; meal_slots apunta de vuelta a recipes; day_notes no tiene claves foráneas."
+          >
+            <defs>
+              <marker
+                id="f4"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <rect x="330" y="20" width="200" height="60" rx="10" class="dg-box-strong" />
+            <text x="430" y="42" class="dg-text" text-anchor="middle">recipes</text>
+            <text x="430" y="62" class="dg-sub" text-anchor="middle">name UNIQUE · photo_path</text>
+
+            <rect x="20" y="120" width="190" height="56" rx="10" class="dg-box" />
+            <text x="115" y="140" class="dg-text" text-anchor="middle">recipe_ingredients</text>
+            <text x="115" y="160" class="dg-sub" text-anchor="middle">quantity · unit · section</text>
+
+            <rect x="220" y="120" width="190" height="56" rx="10" class="dg-box" />
+            <text x="315" y="140" class="dg-text" text-anchor="middle">recipe_steps</text>
+            <text x="315" y="160" class="dg-sub" text-anchor="middle">position · text</text>
+
+            <rect x="450" y="120" width="190" height="56" rx="10" class="dg-box" />
+            <text x="545" y="140" class="dg-text" text-anchor="middle">recipe_materials</text>
+            <text x="545" y="160" class="dg-sub" text-anchor="middle">utensilios</text>
+
+            <rect x="650" y="120" width="190" height="56" rx="10" class="dg-box" />
+            <text x="745" y="140" class="dg-text" text-anchor="middle">recipe_tags</text>
+            <text x="745" y="160" class="dg-sub" text-anchor="middle">PK (recipe_id, tag)</text>
+
+            <rect x="330" y="230" width="200" height="56" rx="10" class="dg-box-strong" />
+            <text x="430" y="250" class="dg-text" text-anchor="middle">week_plans</text>
+            <text x="430" y="270" class="dg-sub" text-anchor="middle">iso_week UNIQUE</text>
+
+            <rect x="20" y="330" width="190" height="56" rx="10" class="dg-box" />
+            <text x="115" y="350" class="dg-text" text-anchor="middle">meal_slots</text>
+            <text x="115" y="370" class="dg-sub" text-anchor="middle">day · meal · recipe_id</text>
+
+            <rect x="650" y="330" width="190" height="56" rx="10" class="dg-box" />
+            <text x="745" y="350" class="dg-text" text-anchor="middle">shopping_items</text>
+            <text x="745" y="370" class="dg-sub" text-anchor="middle">manuales · checked</text>
+
+            <rect x="330" y="430" width="200" height="56" rx="10" class="dg-box" />
+            <text x="430" y="450" class="dg-text" text-anchor="middle">day_notes</text>
+            <text x="430" y="470" class="dg-sub" text-anchor="middle">date es la PK · sin FKs</text>
+
+            <line x1="380" y1="80" x2="130" y2="116" class="dg-line-strong" marker-end="url(#f4)" />
+            <line x1="430" y1="80" x2="320" y2="116" class="dg-line-strong" marker-end="url(#f4)" />
+            <line x1="480" y1="80" x2="540" y2="116" class="dg-line-strong" marker-end="url(#f4)" />
+            <line x1="500" y1="80" x2="740" y2="116" class="dg-line-strong" marker-end="url(#f4)" />
+            <line x1="430" y1="80" x2="430" y2="226" class="dg-line-strong" marker-end="url(#f4)" />
+            <line x1="360" y1="286" x2="120" y2="326" class="dg-line-strong" marker-end="url(#f4)" />
+            <line x1="500" y1="286" x2="742" y2="326" class="dg-line-strong" marker-end="url(#f4)" />
+            <polyline
+              points="20,358 8,358 8,50 326,50"
+              class="dg-line-strong"
+              marker-end="url(#f4)"
+            />
+            <text x="170" y="40" class="dg-label" text-anchor="middle">meal_slots.recipe_id → recipes</text>
+          </svg>
+          <figcaption>
+            El bloque de recetas es un árbol: las cuatro tablas hijas cuelgan de
+            <code>recipes</code> con borrado en cascada. <code>meal_slots</code> cierra el círculo
+            apuntando de vuelta a la receta, pero con <code>RESTRICT</code>: borrar una receta que
+            está planificada falla, y la API lo resuelve desasignando los huecos antes de borrar.
+          </figcaption>
+        </figure>
+
+        <figure>
+          <svg
+            viewBox="0 0 860 420"
+            role="img"
+            aria-label="Planificación de fuerza: exercises alimenta exercise_tags, template_exercises y plan_session_exercises; session_templates alimenta template_exercises; plan_sessions alimenta plan_session_exercises y workout_logs; plan_session_exercises y workout_logs alimentan set_logs y cardio_logs."
+          >
+            <defs>
+              <marker
+                id="f5"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <rect x="20" y="20" width="170" height="64" rx="10" class="dg-box-strong" />
+            <text x="105" y="42" class="dg-text" text-anchor="middle">exercises</text>
+            <text x="105" y="62" class="dg-sub" text-anchor="middle">name UNIQUE · kind</text>
+
+            <rect x="20" y="130" width="170" height="56" rx="10" class="dg-box" />
+            <text x="105" y="150" class="dg-text" text-anchor="middle">session_templates</text>
+            <text x="105" y="170" class="dg-sub" text-anchor="middle">name UNIQUE</text>
+
+            <rect x="20" y="240" width="170" height="56" rx="10" class="dg-box-strong" />
+            <text x="105" y="260" class="dg-text" text-anchor="middle">plan_sessions</text>
+            <text x="105" y="280" class="dg-sub" text-anchor="middle">date UNIQUE · status</text>
+
+            <rect x="230" y="24" width="180" height="52" rx="10" class="dg-box" />
+            <text x="320" y="50" class="dg-text" text-anchor="middle">exercise_tags</text>
+
+            <rect x="230" y="132" width="180" height="52" rx="10" class="dg-box" />
+            <text x="320" y="158" class="dg-text" text-anchor="middle">template_exercises</text>
+
+            <rect x="230" y="242" width="180" height="52" rx="10" class="dg-box" />
+            <text x="320" y="268" class="dg-text" text-anchor="middle">plan_session_exercises</text>
+
+            <rect x="230" y="330" width="180" height="52" rx="10" class="dg-box" />
+            <text x="320" y="356" class="dg-text" text-anchor="middle">workout_logs</text>
+
+            <rect x="470" y="242" width="180" height="52" rx="10" class="dg-box" />
+            <text x="560" y="268" class="dg-text" text-anchor="middle">set_logs</text>
+
+            <rect x="470" y="330" width="180" height="52" rx="10" class="dg-box" />
+            <text x="560" y="356" class="dg-text" text-anchor="middle">cardio_logs</text>
+
+            <line x1="190" y1="52" x2="230" y2="50" class="dg-line-strong" marker-end="url(#f5)" />
+            <line x1="190" y1="70" x2="230" y2="152" class="dg-line-strong" marker-end="url(#f5)" />
+            <line x1="190" y1="80" x2="230" y2="258" class="dg-line-strong" marker-end="url(#f5)" />
+            <line x1="190" y1="158" x2="230" y2="158" class="dg-line-strong" marker-end="url(#f5)" />
+            <line x1="190" y1="268" x2="230" y2="268" class="dg-line-strong" marker-end="url(#f5)" />
+            <polyline
+              points="190,288 210,288 210,356 230,356"
+              class="dg-line-strong"
+              marker-end="url(#f5)"
+            />
+            <line x1="410" y1="268" x2="440" y2="268" class="dg-line-strong" />
+            <line x1="440" y1="268" x2="440" y2="356" class="dg-line-strong" />
+            <line x1="410" y1="356" x2="440" y2="356" class="dg-line-strong" />
+            <circle cx="440" cy="268" r="3" class="dg-accent" />
+            <circle cx="440" cy="356" r="3" class="dg-accent" />
+            <line x1="440" y1="268" x2="470" y2="268" class="dg-line-strong" marker-end="url(#f5)" />
+            <line x1="440" y1="356" x2="470" y2="356" class="dg-line-strong" marker-end="url(#f5)" />
+
+            <rect x="690" y="120" width="150" height="180" rx="12" fill="none" stroke="var(--border-strong)" class="dg-dash" />
+            <text x="765" y="146" class="dg-sub" text-anchor="middle">dos padres, dos</text>
+            <text x="765" y="164" class="dg-sub" text-anchor="middle">reglas distintas</text>
+            <text x="765" y="196" class="dg-text" text-anchor="middle">workout_logs</text>
+            <text x="765" y="212" class="dg-label" text-anchor="middle">CASCADE</text>
+            <text x="765" y="240" class="dg-text" text-anchor="middle">plan_session_</text>
+            <text x="765" y="256" class="dg-text" text-anchor="middle">exercises</text>
+            <text x="765" y="272" class="dg-label" text-anchor="middle">RESTRICT</text>
+          </svg>
+          <figcaption>
+            La columna vertebral de Fuerza v2: el día (<code>plan_sessions</code>) es la pieza
+            duradera; la plantilla es una agrupación que se expande en
+            <code>plan_session_exercises</code> —con la pareja día+ejercicio como
+            <code>UNIQUE</code>— y una sesión registrada tiene exactamente un
+            <code>workout_logs</code>. Las series y el cardio cuelgan a la vez del registro
+            (borrado en cascada) y del ejercicio del día (borrado restringido).
+          </figcaption>
+        </figure>
+
+        <h2>Las 18 tablas</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tabla</th>
+                <th>Qué guarda</th>
+                <th>Reglas que lleva dentro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>recipes</code></td><td>Receta: nombre, descripción, raciones, foto</td><td><code>name</code> UNIQUE; <code>photo_path</code> validado contra R2 en la API</td></tr>
+              <tr><td><code>recipe_ingredients</code></td><td>Ingredientes con cantidad, unidad y sección de compra</td><td>FK a <code>recipes</code> CASCADE</td></tr>
+              <tr><td><code>recipe_steps</code></td><td>Pasos numerados</td><td>FK CASCADE</td></tr>
+              <tr><td><code>recipe_materials</code></td><td>Utensilios y materiales</td><td>FK CASCADE</td></tr>
+              <tr><td><code>recipe_tags</code></td><td>Etiquetas de receta</td><td>PK compuesta (<code>recipe_id</code>, <code>tag</code>) → sin duplicados</td></tr>
+              <tr><td><code>week_plans</code></td><td>Una semana ISO planificada</td><td><code>iso_week</code> UNIQUE</td></tr>
+              <tr><td><code>meal_slots</code></td><td>Los 21 huecos (7 días × 3 comidas)</td><td>CHECK día 0-6 y comida en desayuno/almuerzo/cena; UNIQUE (día, comida, semana); FK a receta RESTRICT</td></tr>
+              <tr><td><code>shopping_items</code></td><td>Ítems manuales de la compra</td><td>FK a <code>week_plans</code> CASCADE; <code>checked</code> por defecto 0</td></tr>
+              <tr><td><code>exercises</code></td><td>Catálogo: nombre, descripción, cues, vídeo, pasos, tipo</td><td><code>name</code> UNIQUE; <code>kind</code> con DEFAULT <code>'strength'</code> (sin CHECK)</td></tr>
+              <tr><td><code>exercise_tags</code></td><td>Grupo muscular del ejercicio</td><td>PK compuesta (<code>exercise_id</code>, <code>tag</code>)</td></tr>
+              <tr><td><code>session_templates</code></td><td>Plantilla con nombre</td><td><code>name</code> UNIQUE</td></tr>
+              <tr><td><code>template_exercises</code></td><td>Ejercicios de una plantilla, con targets</td><td>UNIQUE (plantilla, ejercicio) + índice único <code>ux_template_exercises_pair</code>; FK a ejercicio RESTRICT</td></tr>
+              <tr><td><code>plan_sessions</code></td><td>Un día de fuerza: nombre y estado</td><td><code>date</code> UNIQUE → una sesión por día; CHECK <code>status IN ('planned','logged')</code></td></tr>
+              <tr><td><code>plan_session_exercises</code></td><td>Ejercicios de ese día, ordenados, con targets</td><td>UNIQUE (sesión, ejercicio) → sin repetir ejercicio en el día; FK a ejercicio RESTRICT</td></tr>
+              <tr><td><code>workout_logs</code></td><td>Registro de la sesión: esfuerzo y nota</td><td><code>plan_session_id</code> UNIQUE → un registro por sesión; CHECK <code>effort BETWEEN 1 AND 5</code></td></tr>
+              <tr><td><code>set_logs</code></td><td>Series: índice, peso, reps, hecha</td><td>FK al registro CASCADE y al ejercicio del día RESTRICT</td></tr>
+              <tr><td><code>cardio_logs</code></td><td>Cardio: distancia, duración, hecha</td><td>UNIQUE (registro, ejercicio del día) → un cardio por ejercicio</td></tr>
+              <tr><td><code>day_notes</code></td><td>Nota del día</td><td><code>date</code> es la PK → una nota por día, upsert</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Dos tablas (<code>recipe_tags</code> y <code>shopping_items</code>) se añadieron después
+          del baseline, así que existen en <code>0002</code> y <code>0003</code> pero no aparecen en
+          <code>api/schema.sql</code>. El bootstrap de tests las conoce y las crea igualmente.
+        </p>
+
+        <h2>Las 9 migraciones</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fichero</th>
+                <th>Qué hace</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>0001</td><td><code>0001_baseline.sql</code></td><td>Crea las 14 tablas base del modelo v1</td><td><span class="pill pending">Baseline congelado</span></td></tr>
+              <tr><td>0002</td><td><code>0002_e2_recipes_photo_tags.sql</code></td><td><code>recipes.photo_path</code> + tabla <code>recipe_tags</code></td><td><span class="pill">Aditiva</span></td></tr>
+              <tr><td>0003</td><td><code>0003_e3_shopping.sql</code></td><td><code>shopping_items</code> + <code>recipe_ingredients.section</code></td><td><span class="pill">Aditiva</span></td></tr>
+              <tr><td>0004</td><td><code>0004_seed_exercises.sql</code></td><td>Siembra 91 ejercicios y 145 tags</td><td><span class="pill">Datos</span></td></tr>
+              <tr><td>0005</td><td><code>0005_exercise_steps.sql</code></td><td><code>exercises.steps</code> (array JSON)</td><td><span class="pill">Aditiva</span></td></tr>
+              <tr><td>0006</td><td><code>0006_exercise_steps_data.sql</code></td><td>Rellena pasos y vídeos de los 91 ejercicios por nombre</td><td><span class="pill">Datos</span></td></tr>
+              <tr><td>0007</td><td><code>0007_exercise_video_fix.sql</code></td><td>Reemplaza el vídeo caído de «Toque de talones»</td><td><span class="pill">Datos</span></td></tr>
+              <tr><td>0008</td><td><code>0008_exercise_spanish_videos.sql</code></td><td>Pasa a español los vídeos de «Bird dog» y «Farmer carry»</td><td><span class="pill">Datos</span></td></tr>
+              <tr><td>0009</td><td><code>0009_fuerza_v2.sql</code></td><td>Recrea la planificación de fuerza: día con ejercicios, cardio y <code>exercises.kind</code></td><td><span class="pill pending">Destructiva</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="danger">
+          <p>
+            <strong>0009 borra datos a propósito.</strong> Recrea <code>plan_sessions</code>,
+            <code>plan_session_exercises</code>, <code>workout_logs</code>, <code>set_logs</code> y
+            <code>cardio_logs</code>: se pierde el histórico de planificación y de entrenamientos.
+            En producción se ejecuta <code>pnpm db:migrate:remote</code> justo después del deploy.
+          </p>
+        </div>
+
+        <h2><code>schema.sql</code> y el baseline no son lo mismo</h2>
+        <p>
+          Hay dos ficheros que describen el esquema y hacen trabajos distintos. Confundirlos fue un
+          bug real: una base local vacía fallaba en <code>0002</code> con «no such table».
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th><code>api/schema.sql</code></th>
+                <th><code>0001_baseline.sql</code></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Rol</td><td>Estado <strong>final</strong> del esquema</td><td>Modelo v1 <strong>congelado</strong>, primer paso del runner</td></tr>
+              <tr><td>Quién lo usa</td><td>Bootstrap de los tests de API</td><td><code>pnpm db:migrate:local</code> y <code>:remote</code></td></tr>
+              <tr><td>Deltas aditivos</td><td>No los incluye</td><td>No los incluye (llegan en 0002+)</td></tr>
+              <tr><td>Fuerza v2</td><td>Sí (ya refleja 0009)</td><td>No (modelo antiguo, con plantilla por día)</td></tr>
+              <tr><td>Se reescribe</td><td>Cuando cambia el esquema final</td><td>Nunca</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Por eso los tests aplican <code>schema.sql</code> <em>más</em> los deltas
+          <code>0002</code>, <code>0003</code> y <code>0005</code>: el esquema final ya trae la
+          reestructuración de <code>0009</code> pero no los añadidos posteriores. Detalle en
+          <code>api/tests/helpers.ts</code>.
+        </p>
+
+        <h2>El catálogo sembrado</h2>
+        <div class="grid three">
+          <div class="card">
+            <h3>91 ejercicios</h3>
+            <p>
+              Sembrados en <code>0004</code> con <code>INSERT OR IGNORE</code>, sin vídeo ni pasos
+              todavía. Los 91 son <code>kind = 'strength'</code>: el cardio se crea desde la app.
+            </p>
+          </div>
+          <div class="card">
+            <h3>145 tags</h3>
+            <p>
+              Diez grupos musculares: pecho, espalda, hombro, bíceps, tríceps, pierna, glúteo,
+              core, antebrazo y gemelo. No hay tabla de tags: el valor vive en la fila.
+            </p>
+          </div>
+          <div class="card">
+            <h3>91 pasos + vídeos</h3>
+            <p>
+              <code>0006</code> rellena pasos y enlaces de YouTube por nombre de ejercicio, y
+              <code>0007</code>/<code>0008</code> corrigen tres vídeos (uno caído, dos en inglés).
+            </p>
+          </div>
+        </div>
+
+        <div class="note">
+          <p>
+            <strong>Fuentes:</strong> <code>api/schema.sql</code>, <code>api/migrations/0001…0009</code>,
+            <code>api/tests/helpers.ts</code>, <code>api/wrangler.toml</code> (<code>migrations_dir</code>),
+            <code>AGENTS.md</code> §1. Conteos verificados leyendo los ficheros.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>

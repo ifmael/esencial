@@ -132,7 +132,10 @@ describe("header y navegación", () => {
     await settle();
     fireEvent.click(screen.getByRole("button", { name: "Ir a hoy" }));
     await settle();
-    expect(fetchMock).toHaveBeenCalledWith(`/api/day/${localToday()}`);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/day/${localToday()}`,
+      expect.objectContaining({ credentials: "include" }),
+    );
     expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(
       /^Hoy/,
     );
@@ -145,7 +148,10 @@ describe("header y navegación", () => {
       target: { value: DAY },
     });
     await settle();
-    expect(fetchMock).toHaveBeenCalledWith(`/api/day/${DAY}`);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/day/${DAY}`,
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 
   it("enlaces rápidos al plan de recetas y de fuerza (scoped al header)", async () => {

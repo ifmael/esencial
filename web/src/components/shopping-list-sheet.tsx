@@ -2,6 +2,7 @@
 // (líneas de receta derivadas del plan + manuales persistidos). Las recetas no se
 // marcan; los manuales se checkboxean con PATCH y se editan con PUT completo.
 import { useCallback, useEffect, useState } from "react";
+import { apiFetchRaw } from "../lib/api";
 
 export type ListItem = {
   id: number | null;
@@ -37,7 +38,7 @@ export function ShoppingListSheet({
 
   const reload = useCallback(() => {
     setError(null);
-    fetch(`/api/shopping-list/${isoWeek}`)
+    apiFetchRaw(`/api/shopping-list/${isoWeek}`)
       .then(async (res) => {
         const data: { sections: ListSection[]; error?: string } =
           await res.json();
@@ -58,11 +59,14 @@ export function ShoppingListSheet({
 
   const toggle = async (item: ListItem) => {
     if (item.id === null) return;
-    const res = await fetch(`/api/shopping-list/${isoWeek}/items/${item.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ checked: !item.checked }),
-    }).catch(() => null);
+    const res = await apiFetchRaw(
+      `/api/shopping-list/${isoWeek}/items/${item.id}`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ checked: !item.checked }),
+      },
+    ).catch(() => null);
     if (!res?.ok) return setError("No se pudo actualizar el artículo.");
     const fresh: ListItem = await res.json();
     setSections((prev) =>
@@ -88,7 +92,7 @@ export function ShoppingListSheet({
           section: s.section,
         })),
     );
-    const res = await fetch(`/api/shopping-list/${isoWeek}/items`, {
+    const res = await apiFetchRaw(`/api/shopping-list/${isoWeek}/items`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

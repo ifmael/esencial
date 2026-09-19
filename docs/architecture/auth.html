@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — Auth y seguridad</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Backend</p>
+        <h1>Auth y seguridad</h1>
+        <p class="lead">
+          Una contraseña, una cookie firmada y cero estado en servidor. No hay tabla de sesiones ni
+          tokens almacenados: el token es una fecha de caducidad con su firma HMAC, y los dos
+          Workers la verifican sin consultar nada. Si falta el secreto, no se autentica a nadie:
+          falla cerrado.
+        </p>
+
+        <div class="kpis">
+          <div class="kpi"><b>30</b><span>días de sesión</span></div>
+          <div class="kpi"><b>100.000</b><span>iteraciones PBKDF2</span></div>
+          <div class="kpi"><b>5</b><span>intentos de login / 15 min</span></div>
+          <div class="kpi"><b>3</b><span>cabeceras de seguridad</span></div>
+          <div class="kpi"><b>2</b><span>guards (API y HTML)</span></div>
+        </div>
+
+        <figure>
+          <svg
+            viewBox="0 0 840 400"
+            role="img"
+            aria-label="Login: la contraseña se verifica con PBKDF2 y se emite una cookie firmada. Cada petición siguiente verifica esa firma: válida entra en la ruta, inválida recibe 401 en la API o un 302 al login que emite el Worker del frontal. Si falta AUTH_SECRET, todo falla cerrado."
+          >
+            <defs>
+              <marker
+                id="f6"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <rect x="20" y="40" width="210" height="60" rx="10" class="dg-box" />
+            <text x="125" y="62" class="dg-text" text-anchor="middle">POST /api/auth/login</text>
+            <text x="125" y="82" class="dg-sub" text-anchor="middle">contraseña en el body</text>
+
+            <rect x="300" y="40" width="210" height="60" rx="10" class="dg-box" />
+            <text x="405" y="62" class="dg-text" text-anchor="middle">verifyPassword</text>
+            <text x="405" y="82" class="dg-sub" text-anchor="middle">PBKDF2-SHA256 · 100k</text>
+
+            <rect x="580" y="40" width="240" height="60" rx="10" class="dg-box-strong" />
+            <text x="700" y="62" class="dg-text" text-anchor="middle">cookie esencial_session</text>
+            <text x="700" y="82" class="dg-sub" text-anchor="middle">exp.firma HMAC · httpOnly</text>
+
+            <rect x="20" y="170" width="210" height="60" rx="10" class="dg-box" />
+            <text x="125" y="192" class="dg-text" text-anchor="middle">Cualquier petición</text>
+            <text x="125" y="212" class="dg-sub" text-anchor="middle">el navegador manda la cookie</text>
+
+            <rect x="300" y="170" width="210" height="60" rx="10" class="dg-box" />
+            <text x="405" y="192" class="dg-text" text-anchor="middle">hasValidSession</text>
+            <text x="405" y="212" class="dg-sub" text-anchor="middle">verifica firma y caducidad</text>
+
+            <rect x="580" y="150" width="240" height="52" rx="10" class="dg-box-strong" />
+            <text x="700" y="176" class="dg-text" text-anchor="middle">Ruta protegida</text>
+
+            <rect x="580" y="222" width="240" height="52" rx="10" class="dg-box" />
+            <text x="700" y="238" class="dg-text" text-anchor="middle">401 en la API</text>
+            <text x="700" y="258" class="dg-sub" text-anchor="middle">302 a /login en el frontal</text>
+
+            <rect x="300" y="320" width="520" height="62" rx="10" fill="none" stroke="var(--warn-fg)" />
+            <text x="320" y="342" class="dg-text" text-anchor="start">Si falta AUTH_SECRET o PASSWORD_HASH: fail closed</text>
+            <text x="320" y="364" class="dg-sub" text-anchor="start">login → 500 · todo lo protegido → 401 · nunca se emite una cookie sin firma</text>
+
+            <line x1="234" y1="70" x2="294" y2="70" class="dg-line-strong" marker-end="url(#f6)" />
+            <line x1="514" y1="70" x2="574" y2="70" class="dg-line-strong" marker-end="url(#f6)" />
+            <text x="544" y="56" class="dg-label" text-anchor="middle">si acierta</text>
+            <text x="264" y="56" class="dg-label" text-anchor="middle">limiter 5/15min</text>
+
+            <line x1="234" y1="200" x2="294" y2="200" class="dg-line-strong" marker-end="url(#f6)" />
+            <line x1="510" y1="176" x2="574" y2="176" class="dg-line-strong" marker-end="url(#f6)" />
+            <line x1="510" y1="216" x2="574" y2="248" class="dg-line-strong" marker-end="url(#f6)" />
+            <text x="545" y="158" class="dg-label" text-anchor="middle">firma válida</text>
+            <text x="545" y="262" class="dg-label" text-anchor="middle">no válida</text>
+
+            <polyline
+              points="700,100 700,145 125,145 125,169"
+              class="dg-line dg-dash"
+              marker-end="url(#f6)"
+            />
+            <text x="430" y="132" class="dg-label" text-anchor="middle">la cookie viaja en cada petición</text>
+          </svg>
+          <figcaption>
+            El login es el único sitio donde se compara una contraseña; a partir de ahí todo se
+            decide verificando una firma. Esa verificación es la misma en los dos Workers: 401 en la
+            API para <code>/api/*</code> y 302 a <code>/login</code> en el Worker del frontal, que
+            es quien entrega el HTML. En ambos casos ocurre antes de que el router vea nada.
+          </figcaption>
+        </figure>
+
+        <h2>La cookie y el token</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pieza</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Nombre</td><td><code>esencial_session</code></td></tr>
+              <tr><td>Contenido</td><td><code>&lt;exp_epoch&gt;.&lt;hmac_sha256(AUTH_SECRET, exp)&gt;</code>, montado con <code>serializeSigned</code> de Hono</td></tr>
+              <tr><td>Atributos</td><td><code>path=/</code>, <code>httpOnly</code>, <code>SameSite=Lax</code>, <code>maxAge=2592000</code> (30 días), <code>secure</code> según el protocolo de la petición</td></tr>
+              <tr><td>Dominio</td><td>En <code>workers.dev</code>: <code>Domain=nutrirutina.workers.dev</code>, para que el Worker del frontal —que hace el guard del HTML— también la vea. Fuera de ahí (dev y e2e en <code>127.0.0.1</code>) queda host-only; las cookies ignoran el puerto, así que en local se comparte igual</td></tr>
+              <tr><td>Renovación</td><td>Ninguna: al caducar, se vuelve a hacer login</td></tr>
+              <tr><td>Borrado</td><td><code>POST /api/auth/logout</code> elimina la cookie; el token no está guardado en ningún sitio, así que no hay nada más que invalidar</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Rotar <code>AUTH_SECRET</code> invalida de golpe todas las cookies emitidas. Es el
+          interruptor de emergencia para cerrar el acceso sin desplegar nada.
+        </p>
+        <p>
+          La cookie la emite la API, pero quien entrega el HTML es el Worker del frontal: el
+          navegador habla con los dos orígenes. Por eso la API autoriza el origen de la web
+          declarado en <code>WEB_ORIGIN</code> con <code>Access-Control-Allow-Credentials:
+          true</code>, y la SPA llama por URL absoluta (<code>VITE_API_URL</code>) con
+          <code>credentials: "include"</code>. El preflight <code>OPTIONS</code> se contesta 204
+          antes del gate de sesión, porque no lleva cookie.
+        </p>
+
+        <h2>La contraseña</h2>
+        <pre><code>formato del digest:  pbkdf2$&lt;iteraciones&gt;$&lt;salt_b64&gt;$&lt;hash_b64&gt;
+parámetros:          PBKDF2-SHA256 · 100.000 iteraciones · salt 16 B · hash 32 B
+comparación:         cripto.subtle.verify (constant-time); la contraseña en claro nunca se compara con ===
+
+generar el digest:   node --disable-warning=ExperimentalWarning api/scripts/hash-password.ts 'tu-clave'
+                     → se pega en:  npx wrangler secret put PASSWORD_HASH -c api/wrangler.toml</code></pre>
+        <p>
+          <code>AUTH_SECRET</code> vive en los dos Workers y con el <strong>mismo valor</strong> —el
+          frontal lo usa en el guard del HTML, la API en <code>/api/*</code>—;
+          <code>PASSWORD_HASH</code> solo hace falta en la API.
+        </p>
+        <p>
+          En desarrollo, <code>pnpm dev</code> ejecuta <code>predev</code> y
+          <code>api/scripts/ensure-dev-vars.ts</code> escribe <strong>dos</strong> ficheros
+          <code>.dev.vars</code> con el mismo contenido: uno en la raíz del repo (lo lee el Worker
+          del frontal, porque allí está su <code>wrangler.toml</code>) y otro en
+          <code>api/.dev.vars</code> (lo lee la API). Los dos van gitignored y llevan
+          <code>AUTH_SECRET</code> y <code>PASSWORD_HASH</code> derivados de
+          <code>ESENCIAL_DEV_PASSWORD</code>; si no le pasas ninguna, genera una aleatoria y la
+          imprime al arrancar.
+        </p>
+        <div class="warn">
+          <p>
+            <strong>Si el login responde 500 en local</strong>, falta uno de los dos
+            <code>.dev.vars</code>: wrangler lee el suyo desde donde está su
+            <code>wrangler.toml</code> —la raíz para el frontal y <code>api/</code> para la API—, y
+            al Worker que se queda sin el fichero no le llegan los secretos. Falla cerrado.
+          </p>
+        </div>
+
+        <h2>Límite de intentos</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>Lo que hay</h3>
+            <p>
+              Cinco fallos por IP en 15 minutos y la sexta petición recibe <code>429</code>. La IP
+              sale de <code>CF-Connecting-IP</code> y el contador es un <code>Map</code> en memoria,
+              por isolate.
+            </p>
+          </div>
+          <div class="card">
+            <h3>El techo, declarado</h3>
+            <p>
+              Al ser por isolate, no es un límite global: con muchos isolates, el límite efectivo es
+              mayor. El propio código marca el techo y la salida (un Durable Object único) en un
+              comentario <code>ponytail:</code>.
+            </p>
+          </div>
+        </div>
+        <p>
+          No hay token anti-CSRF: la defensa es <code>SameSite=Lax</code> más que todas las
+          mutaciones vayan por POST, PUT, PATCH o DELETE.
+        </p>
+
+        <h2>Cabeceras de seguridad</h2>
+        <p>
+          Cada Worker pone las suyas en <em>todas</em> sus respuestas, escribiendo al volver de
+          <code>next()</code>: el del frontal también en el 302 al login y en los assets, y la API
+          (<code>securityHeaders</code>) en cada respuesta JSON, 401 y 404 incluidos. El frontal
+          añade el origen de la API (<code>API_ORIGIN</code>) a <code>connect-src</code> e
+          <code>img-src</code>: sin él, ni los <code>fetch</code> ni las fotos de R2 pasarían la
+          CSP.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cabecera</th>
+                <th>Valor literal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>Content-Security-Policy</code> (frontal)</td>
+                <td>
+                  <code>default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob: &lt;API_ORIGIN&gt;; connect-src 'self' &lt;API_ORIGIN&gt;; style-src 'self' 'unsafe-inline'</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>Content-Security-Policy</code> (API)</td>
+                <td>
+                  <code>default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'</code>
+                </td>
+              </tr>
+              <tr><td><code>X-Content-Type-Options</code></td><td><code>nosniff</code></td></tr>
+              <tr><td><code>Referrer-Policy</code></td><td><code>strict-origin-when-cross-origin</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="danger">
+          <p>
+            <strong>Dos valores que no se pueden endurecer.</strong>
+            <code>frame-src https://www.youtube.com</code> es lo que permite embeber los vídeos del
+            catálogo; sin él, <code>default-src 'self'</code> bloquea el iframe. Y
+            <code>Referrer-Policy</code> no puede ser <code>same-origin</code>: el iframe llegaría a
+            YouTube sin <code>Referer</code> y el reproductor responde «This content is blocked».
+            Con endurecer ambos a la vez, los vídeos dejan de funcionar. Hay tests que lo fijan.
+          </p>
+        </div>
+        <p>
+          El <code>'unsafe-inline'</code> de <code>style-src</code> es deuda consciente: Tailwind v4
+          inyecta <code>&lt;style&gt;</code> y el build puede emitir assets inline.
+        </p>
+
+        <div class="note">
+          <p>
+            <strong>Fuentes:</strong> <code>api/src/auth.ts</code>,
+            <code>api/src/middleware.ts</code>, <code>api/src/rate-limit.ts</code>,
+            <code>api/src/routes/auth.ts</code>, <code>api/src/db.ts</code>,
+            <code>api/scripts/ensure-dev-vars.ts</code>, <code>api/scripts/hash-password.ts</code>,
+            <code>web/worker/index.ts</code>, <code>wrangler.toml</code>,
+            <code>api/wrangler.toml</code>, <code>DEPLOY.md</code> §5, <code>AGENTS.md</code> §4.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>

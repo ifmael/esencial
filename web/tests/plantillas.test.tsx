@@ -302,8 +302,10 @@ describe("template editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
     const dialog = await screen.findByRole("dialog");
     const dlg = within(dialog);
+    // Grupos plegables: se despliegan al pulsar su cabecera.
+    fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
     expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
 
     fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
     expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
@@ -321,6 +323,8 @@ describe("template editor", () => {
     });
 
     fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    // Vuelven a estar plegados: se despliega Espalda para ver Remo.
+    fireEvent.click(dlg.getByRole("button", { name: /^Espalda \(1\)/ }));
     expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
 
     fireEvent.click(dlg.getByRole("button", { name: "Core" }));
@@ -492,12 +496,15 @@ describe("exercise picker modal", () => {
   it("opens a dialog with exercises grouped by muscle group", async () => {
     const dialog = await openPicker();
     const dlg = within(dialog);
-    expect(dlg.getByRole("heading", { name: "Pecho" })).toBeDefined();
-    expect(dlg.getByRole("heading", { name: "Espalda" })).toBeDefined();
-    expect(dlg.getByRole("heading", { name: "Pierna" })).toBeDefined();
+    // Cabeceras con nombre y conteo; plegadas por defecto.
+    expect(dlg.getByRole("button", { name: /^Pecho \(1\)/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Espalda \(1\)/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Pierna \(1\)/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    // Desplegar un grupo muestra sus ejercicios (los otros siguen cerrados).
+    fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
     expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
-    expect(dlg.getByRole("button", { name: /^Sentadilla$/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
   });
 
   it("muscle filter narrows the picker list; Todos resets", async () => {
@@ -507,18 +514,23 @@ describe("exercise picker modal", () => {
     expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
     expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
     fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    // Sin filtro vuelven a estar plegados.
+    fireEvent.click(dlg.getByRole("button", { name: /^Espalda \(1\)/ }));
     expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
   });
 
   it("draft exercises are disabled; re-adding is impossible", async () => {
     const dialog = await openPicker();
     const dlg = within(dialog);
+    fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
     const pressBtn = dlg.getByRole("button", { name: /^Press banca$/ });
     expect(pressBtn.hasAttribute("disabled")).toBe(true);
     fireEvent.click(pressBtn);
+    fireEvent.click(dlg.getByRole("button", { name: /^Espalda \(1\)/ }));
     fireEvent.click(dlg.getByRole("button", { name: /^Remo$/ }));
     // plantilla A = Press banca + Remo + Running: siguen siendo 3 filas
     expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(3);
+    fireEvent.click(dlg.getByRole("button", { name: /^Pierna \(1\)/ }));
     const sentadilla = dlg.getByRole("button", { name: /^Sentadilla$/ });
     expect(sentadilla.hasAttribute("disabled")).toBe(false);
     fireEvent.click(sentadilla);

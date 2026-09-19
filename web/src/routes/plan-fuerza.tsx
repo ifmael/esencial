@@ -18,6 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { GroupedExercises } from "../components/grouped-exercises";
 import {
   DRAG_INSTRUCTIONS,
   GripIcon,
@@ -208,8 +209,11 @@ function DayPicker({
           {shownExercises.length === 0 ? (
             <p className="text-sm text-text-secondary">Sin ejercicios</p>
           ) : (
-            <ul className="flex flex-col gap-1">
-              {shownExercises.map((e) => {
+            <GroupedExercises
+              exercises={shownExercises}
+              forceOpen={needle !== ""}
+              listClassName="flex flex-col gap-1"
+              renderItem={(e) => {
                 const taken = takenIds.has(e.id);
                 return (
                   <li key={e.id}>
@@ -230,8 +234,8 @@ function DayPicker({
                     </button>
                   </li>
                 );
-              })}
-            </ul>
+              }}
+            />
           )}
         </section>
       </div>

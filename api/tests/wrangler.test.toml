@@ -1,7 +1,9 @@
 # Test-only Worker config for @cloudflare/vitest-pool-workers (real local D1,
-# no account needed). Deploy/dev config lives in the root wrangler.toml.
+# no account needed). Deploy/dev config lives in api/wrangler.toml.
+# Vive en tests/ a propósito: wrangler resuelve `.dev.vars` junto al fichero de
+# configuración, y api/.dev.vars (dev, gitignored) pisaría los [vars] de test.
 name = "esencial-api-test"
-main = "src/index.ts"
+main = "../src/index.ts"
 compatibility_date = "2026-08-22"
 
 [[d1_databases]]
@@ -18,10 +20,5 @@ bucket_name = "esencial-photos"
 [vars]
 AUTH_SECRET = "test-auth-secret-32-bytes-long-xx"
 PASSWORD_HASH = "pbkdf2$210000$w96YZTwA8VV+FIucnHHGeQ==$uxU0SzCOX6HKPgMKm1TgAtFlwpKIZkP5004JDJhFRQM="
-
-# Minimal SPA fixture so the page guard can serve an index.html in tests.
-[assets]
-directory = "./tests/fixtures/spa"
-binding = "ASSETS"
-not_found_handling = "single-page-application"
-run_worker_first = true
+# B': origen del Worker de la web en tests (contrato fijado en tests/cors.test.ts).
+WEB_ORIGIN = "http://127.0.0.1:8788"

@@ -192,7 +192,8 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
         .getByText(pressName),
     ).toBeVisible();
 
-    // Añadir sin botón intermedio ni segundo modal.
+    // Añadir sin botón intermedio ni segundo modal (la búsqueda despliega el grupo).
+    await dialog.getByLabel("Buscar").fill(remoName);
     await dialog.getByRole("button", { name: remoName, exact: true }).click();
     await expect(
       dialog.getByRole("button", { name: `Quitar ${remoName}` }),
@@ -371,6 +372,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     await page.goto(`/plan-fuerza?week=${weekOf(35)}`);
     await page.getByRole("button", { name: "+ añadir" }).first().click();
+    await page.getByLabel("Buscar").fill(name);
     await page
       .getByRole("button", { name: new RegExp(escapeRe(name)) })
       .click();
@@ -671,6 +673,35 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       page.getByRole("dialog", { name: new RegExp(`Editar sesión · ${date}`) }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("el selector del día agrupa por músculo y la búsqueda despliega", async ({
+    page,
+  }) => {
+    await page.goto(`/plan-fuerza?week=${weekOf(77)}`);
+    await page.getByRole("button", { name: "+ añadir" }).first().click();
+    const dialog = page.getByRole("dialog", { name: /Nueva sesión ·/ });
+    // Grupos plegables con nombre y conteo: los ejercicios no se ven hasta abrir.
+    // Ojo: «Press banca» cuelga de Hombro (su primer tag es hombro, no pecho).
+    const hombro = dialog.getByRole("button", { name: /^Hombro \(\d+\)$/ });
+    await expect(hombro).toBeVisible();
+    await expect(hombro).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      dialog.getByRole("button", { name: "Press banca", exact: true }),
+    ).toHaveCount(0);
+
+    await hombro.click();
+    await expect(
+      dialog.getByRole("button", { name: "Press banca", exact: true }),
+    ).toBeVisible();
+
+    // La búsqueda despliega los grupos con coincidencias.
+    await dialog.getByLabel("Buscar").fill("Remo con barra");
+    await expect(
+      dialog.getByRole("button", { name: "Remo con barra", exact: true }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancelar" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 

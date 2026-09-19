@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — Visión general</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Visión general</p>
+        <h1>Esencial, de arriba abajo</h1>
+        <p class="lead">
+          Esencial es una app de bienestar personal —recetas, plan semanal y plan de fuerza— que
+          vive en <strong>dos Workers de Cloudflare</strong>: el frontal sirve los assets del SPA y
+          protege el HTML, y la API atiende <code>/api/*</code>. El navegador habla con los dos
+          —la API con CORS y credenciales— y ambos comparten una única base D1 y un bucket R2 para
+          las fotos de recetas.
+        </p>
+
+        <figure>
+          <svg
+            viewBox="0 0 880 380"
+            role="img"
+            aria-label="El navegador pide el documento al Worker frontal esencial (guard del HTML y assets de web/dist) y las llamadas /api/* al Worker esencial-api, donde middleware y Hono atienden con CORS y credenciales; la API habla con D1 por el binding DB y con R2 por el binding PHOTOS."
+          >
+            <defs>
+              <marker
+                id="flecha"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <rect x="172" y="40" width="224" height="300" rx="14" fill="none" stroke="var(--primary)" class="dg-dash" />
+            <text x="192" y="64" class="dg-sub" text-anchor="start">Worker «esencial» · frontal</text>
+
+            <rect x="408" y="40" width="264" height="300" rx="14" fill="none" stroke="var(--primary)" class="dg-dash" />
+            <text x="428" y="64" class="dg-sub" text-anchor="start">Worker «esencial-api»</text>
+
+            <rect x="8" y="150" width="120" height="64" rx="10" class="dg-box" />
+            <text x="68" y="172" class="dg-text" text-anchor="middle">Navegador</text>
+            <text x="68" y="192" class="dg-sub" text-anchor="middle">SPA + cookie</text>
+
+            <rect x="188" y="150" width="192" height="64" rx="10" class="dg-box" />
+            <text x="284" y="172" class="dg-text" text-anchor="middle">guard del HTML</text>
+            <text x="284" y="192" class="dg-sub" text-anchor="middle">web/worker/index.ts</text>
+
+            <rect x="188" y="252" width="192" height="64" rx="10" class="dg-box" />
+            <text x="284" y="274" class="dg-text" text-anchor="middle">ASSETS</text>
+            <text x="284" y="294" class="dg-sub" text-anchor="middle">web/dist</text>
+
+            <line x1="284" y1="214" x2="284" y2="246" class="dg-line-strong" marker-end="url(#flecha)" />
+            <text x="296" y="236" class="dg-label" text-anchor="start">si pasa</text>
+
+            <line x1="132" y1="182" x2="184" y2="182" class="dg-line-strong" marker-end="url(#flecha)" />
+            <text x="150" y="170" class="dg-label" text-anchor="middle">HTTPS</text>
+
+            <polyline
+              points="68,214 68,362 540,362 540,346"
+              class="dg-line-strong"
+              marker-end="url(#flecha)"
+            />
+            <text x="304" y="353" class="dg-label" text-anchor="middle">CORS con credenciales</text>
+
+            <rect x="424" y="96" width="232" height="56" rx="10" class="dg-box" />
+            <text x="540" y="118" class="dg-text" text-anchor="middle">middleware</text>
+            <text x="540" y="138" class="dg-sub" text-anchor="middle">securityHeaders · cors · authGuard</text>
+
+            <rect x="424" y="236" width="232" height="56" rx="10" class="dg-box" />
+            <text x="540" y="258" class="dg-text" text-anchor="middle">Hono API</text>
+            <text x="540" y="278" class="dg-sub" text-anchor="middle">api/src/routes</text>
+
+            <line x1="540" y1="152" x2="540" y2="230" class="dg-line-strong" marker-end="url(#flecha)" />
+            <text x="552" y="196" class="dg-label" text-anchor="start">si pasa</text>
+
+            <rect x="692" y="92" width="180" height="56" rx="10" class="dg-box-strong" />
+            <text x="782" y="112" class="dg-text" text-anchor="middle">D1 «esencial»</text>
+            <text x="782" y="131" class="dg-sub" text-anchor="middle">SQL · binding DB</text>
+
+            <rect x="692" y="262" width="180" height="56" rx="10" class="dg-box-strong" />
+            <text x="782" y="282" class="dg-text" text-anchor="middle">R2 «esencial-photos»</text>
+            <text x="782" y="301" class="dg-sub" text-anchor="middle">fotos · binding PHOTOS</text>
+
+            <polyline
+              points="656,264 668,264 668,120 688,120"
+              class="dg-line-strong"
+              marker-end="url(#flecha)"
+            />
+
+            <line x1="656" y1="290" x2="688" y2="290" class="dg-line-strong" marker-end="url(#flecha)" />
+          </svg>
+          <figcaption>
+            El navegador pide el documento al Worker frontal y las llamadas <code>/api/*</code> al
+            Worker <code>esencial-api</code>. En el frontal, el guard redirige a
+            <code>/login?next=…</code> si no hay sesión y sirve los assets de
+            <code>web/dist</code>; en la API, <code>securityHeaders</code>, <code>cors</code> y
+            <code>authGuard</code> corren antes de las rutas. La API accede a los datos por bindings,
+            nunca por red.
+            <br /><strong>Leyenda:</strong> cada borde verde discontinuo delimita un Worker
+            desplegable; las cajas verdes son los recursos con binding (D1 y R2); las grises, código
+            y piezas del navegador.
+          </figcaption>
+        </figure>
+
+        <h2>Quién contesta a cada dirección</h2>
+        <p>
+          Hay dos programas y dos despliegues: el Worker frontal entrega los archivos de la
+          aplicación y el Worker de la API responde con datos. Al abrir una dirección, el navegador
+          pide el documento a <code>https://esencial.nutrirutina.workers.dev</code>, y la aplicación
+          llama después a <code>https://esencial-api.nutrirutina.workers.dev</code> con CORS y
+          credenciales.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pides</th>
+                <th>Quién contesta</th>
+                <th>¿Hace falta sesión?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>/api/…</code> (datos)</td>
+                <td>El Worker <code>esencial-api</code>: 11 ficheros de rutas</td>
+                <td>Sí, salvo <code>/api/health</code> y las de entrar y salir</td>
+              </tr>
+              <tr>
+                <td><code>/</code> o <code>/plan-fuerza</code> (una pantalla)</td>
+                <td>El Worker frontal entrega <code>index.html</code>, desde sus assets</td>
+                <td>Sí; sin sesión te manda a entrar</td>
+              </tr>
+              <tr>
+                <td><code>/login</code></td>
+                <td>El frontal entrega <code>index.html</code></td>
+                <td>No: es la puerta</td>
+              </tr>
+              <tr>
+                <td>Algo con extensión (<code>.js</code>, <code>.css</code>, <code>.png</code>)</td>
+                <td>El frontal: el archivo tal cual</td>
+                <td>No: la pantalla de entrar necesita los suyos</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>En el <code>dist</code> no hay un archivo por pantalla</h3>
+        <p>
+          Lo que se publica son tres cosas y poco más. No hay una carpeta <code>plan-fuerza</code>
+          ni un <code>recetario.html</code>:
+        </p>
+        <pre><code>web/dist/
+├─ index.html               ← el único documento: el esqueleto de la app
+└─ assets/
+   ├─ index-&lt;código&gt;.js     ← el programa que corre en el navegador
+   └─ index-&lt;código&gt;.css    ← los estilos</code></pre>
+        <p>Cuando pides una pantalla como <code>/plan-fuerza</code>, pasan tres cosas:</p>
+        <ol>
+          <li>El programa busca ese archivo entre los suyos y no lo encuentra.</li>
+          <li>
+            Está configurado para que, si no lo encuentra y la dirección no empieza por
+            <code>/api/</code>, entregue <code>index.html</code>.
+          </li>
+          <li>
+            El programa que va dentro de ese documento lee la dirección y pinta la pantalla de Plan
+            fuerza.
+          </li>
+        </ol>
+        <p>
+          Es decir: todas las pantallas devuelven <em>el mismo</em> documento. Por eso el control de
+          acceso ocurre antes de la entrega y no dentro de la aplicación — dentro ya no habría nada
+          que evitar, la descarga ya habría pasado.
+        </p>
+
+        <h3>Dos momentos distintos</h3>
+        <ul>
+          <li>
+            <strong>Primera entrega</strong> — primera visita, recarga, enlace pegado o un
+            dispositivo nuevo: el navegador pide el documento al frontal, y ahí actúa su guard; las
+            llamadas a <code>/api/*</code> pasan por <code>authGuard</code>.
+          </li>
+          <li>
+            <strong>Aplicación ya abierta</strong> — moverse entre pantallas no pide ningún
+            documento: el control lo hace la propia app preguntando por <code>/api/auth/status</code>.
+          </li>
+        </ul>
+
+        <h3>La API no pide los datos por la red</h3>
+        <p>
+          El código de la API lee la base y las fotos directamente, con los enlaces que Cloudflare
+          le da a su Worker (<code>DB</code> y <code>PHOTOS</code>), no pidiendo otra URL. Lo que sí
+          cruza la red es la llamada del navegador: el SPA llama a la API por su URL absoluta
+          (<code>VITE_API_URL</code>, fijada en el build) con <code>credentials: "include"</code>,
+          así que la API autoriza el origen de la web con CORS y el frontal autoriza el origen de la
+          API en su CSP (<code>connect-src</code> e <code>img-src</code>). La cookie de sesión la
+          emite la API y en <code>workers.dev</code> lleva
+          <code>Domain=nutrirutina.workers.dev</code>, para que el guard del frontal también pueda
+          verla.
+        </p>
+
+        <div class="note">
+          <p>
+            <strong>Compruébalo en 30 segundos.</strong> Ejecuta <code>pnpm build</code> y luego
+            <code>ls web/dist web/dist/assets</code>: verás <code>index.html</code>, el JavaScript y
+            el CSS. Ninguna carpeta por pantalla.
+          </p>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi"><b>2</b><span>Workers: frontal y API</span></div>
+          <div class="kpi"><b>91</b><span>ejercicios sembrados</span></div>
+          <div class="kpi"><b>145</b><span>tags de catálogo</span></div>
+          <div class="kpi"><b>4</b><span>gates en CI</span></div>
+          <div class="kpi"><b>3</b><span>suites: api, web, e2e</span></div>
+        </div>
+
+        <h2>Mapa del sistema</h2>
+        <p>
+          Nueve secciones, cada una con su diagrama. El sidebar de la izquierda es el índice
+          completo; esto es el mismo mapa en tarjetas.
+        </p>
+
+        <div class="grid three">
+          <a class="card" href="stack.html">
+            <h3>Stack y carpetas</h3>
+            <p>Monorepo pnpm con cuatro paquetes, Hono, React 19, Vite, D1 y R2.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+          <a class="card" href="api.html">
+            <h3>API (Hono)</h3>
+            <p>Rutas por recurso, middleware de seguridad y formato de errores.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+          <a class="card" href="datos.html">
+            <h3>Modelo de datos</h3>
+            <p>Tablas, claves foráneas y las migraciones que llevan al esquema final.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+          <a class="card" href="auth.html">
+            <h3>Auth y seguridad</h3>
+            <p>Cookie de sesión firmada, fail closed y las cabeceras que no se pueden endurecer.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+          <a class="card" href="spa.html">
+            <h3>SPA (React)</h3>
+            <p>Rutas del router, páginas, capa de datos y cómo se compila a <code>web/dist</code>.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+          <a class="card" href="deploy.html">
+            <h3>Deploy</h3>
+            <p>Workers Builds al hacer push a <code>main</code>, secretos y migraciones remotas.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+          <a class="card" href="tests.html">
+            <h3>Tests</h3>
+            <p>Tres suites: API con D1 real, componentes web y e2e con base aislada.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+          <a class="card" href="ci.html">
+            <h3>CI (GitHub Actions)</h3>
+            <p>Dos jobs: el gate completo con e2e, y el lint de Biome por separado.</p>
+            <span class="card-go">Ver sección →</span>
+          </a>
+        </div>
+
+        <h2>Las cinco decisiones que explican esta arquitectura</h2>
+        <p>
+          Todo lo demás en este sitio es consecuencia de estas cinco. Cada una tiene su sección.
+        </p>
+        <ol>
+          <li>
+            <strong>Dos Workers: uno para la web y otro para la API.</strong> El
+            <code>wrangler.toml</code> de la raíz fija el frontal (assets de <code>web/dist</code>,
+            binding <code>ASSETS</code>, <code>run_worker_first = true</code> y el guard del HTML en
+            <code>web/worker/index.ts</code>); <code>api/wrangler.toml</code> fija la API (Hono, D1 y
+            R2). El navegador habla con los dos, así que el CORS es explícito y con credenciales.
+          </li>
+          <li>
+            <strong>Cada Worker protege lo suyo.</strong> El frontal aplica las cabeceras y el guard
+            del HTML en <code>web/worker/index.ts</code>; la API aplica
+            <code>securityHeaders</code>, <code>cors</code> y <code>authGuard</code> en
+            <code>api/src/middleware.ts</code> antes de las rutas, así que ninguna ruta nueva puede
+            nacer desprotegida por descuido.
+          </li>
+          <li>
+            <strong>D1 es la única fuente de verdad, y se versiona por migraciones numeradas.</strong>
+            <code>api/schema.sql</code> es el estado final; <code>0001</code> es el baseline
+            congelado y los cambios viven en deltas (aditivos o destructivos) con su propio número.
+          </li>
+          <li>
+            <strong>La sesión-día es la unidad de planificación (Fuerza v2).</strong> Una plantilla
+            es una agrupación semántica que se expande en el día y desaparece como entidad; lo
+            duradero es el día. Se aplica con <code>UNIQUE</code> en base, validación en la API y
+            bloqueo en la UI.
+          </li>
+          <li>
+            <strong>El gate es un test que falla primero.</strong> TDD en cada cambio, y CI que
+            ejecuta <code>typecheck</code>, <code>test</code>, <code>e2e</code> y <code>lint</code> en
+            dos jobs de GitHub Actions antes de tocar <code>main</code>.
+          </li>
+        </ol>
+
+        <div class="note">
+          <p>
+            <strong>Cómo leer este sitio.</strong> Son ficheros HTML estáticos: no hay build, ni
+            dependencias, ni peticiones de red. Los diagramas son SVG en línea, así que también se
+            ven sin conexión, y el tema claro/oscuro lo elige tu sistema.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>
