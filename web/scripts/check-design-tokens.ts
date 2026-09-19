@@ -1,12 +1,17 @@
 // Guardarraíl del sistema de diseño (AGENTS.md § "Sistema de diseño").
 //
-// Una clase arbitraria de Tailwind que inventa un valor —`rounded-[7px]`,
-// `text-[10px]`— se salta la escala de `globals.css`, y por ahí es por donde un
-// diseño se descompone con el tiempo. Este script las busca en `web/src` y falla
-// si encuentra alguna; corre dentro de `pnpm lint`.
+// Vigila las dos formas de saltarse el sistema:
 //
-// Se aceptan los valores derivados (`var()`, `calc()`, `env()`, `min()`,
-// `clamp()`): no inventan una escala, la consumen o la calculan.
+// 1. Clases arbitrarias de Tailwind que inventan un valor —`rounded-[7px]`,
+//    `text-[10px]`— en vez de usar la escala de `globals.css`. Se aceptan los
+//    valores derivados (`var()`, `calc()`, `env()`, `min()`, `clamp()`): no
+//    inventan una escala, la consumen o la calculan.
+// 2. Clases de piel aplicadas a mano en una pantalla (`className="card"`,
+//    `btn-primary`, `input`, `badge-*`): la piel de una primitiva se consume a
+//    través de la primitiva (`<Card>`, `<Button>`, `<Input>`, `<Badge>`). El
+//    único fichero exento es `components/ui.tsx`, que es donde vive esa piel.
+//
+// Corre dentro de `pnpm lint`.
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,10 +49,37 @@ const ARBITRARY = new RegExp(
 );
 const DERIVED = /^(?:var|calc|env|url|min|max|clamp|color-mix)\(/;
 
+/** Piel de una primitiva: se usa a través de `<Card>`, `<Button>`, `<Input>`,
+ * `<Textarea>` o `<Badge>`, nunca escribiendo la clase. Las utilidades
+ * compartidas (`.section-label`, `.list-row`, `.card-interactive`, `.skeleton`)
+ * no entran aquí: esas sí se aplican tal cual. */
+const SKIN_CLASSES: Record<string, true> = {
+  card: true,
+  btn: true,
+  "btn-primary": true,
+  "btn-secondary": true,
+  "btn-ghost": true,
+  input: true,
+  "input-error": true,
+  "badge-pending": true,
+  "badge-done": true,
+  "badge-neutral": true,
+};
+
+/** Valores de `className` en sus tres formas corrientes (comillas dobles,
+ * simples, o plantilla sin anidar). */
+const CLASS_ATTR = /className=(?:"([^"]*)"|'([^']*)'|\{`([^`]*)`\})/g;
+
 export type Violation = { line: number; className: string };
 
-/** Devuelve las clases arbitrarias fuera de escala de un fichero, con su línea. */
-export function findViolations(source: string): Violation[] {
+function lineOf(source: string, index: number): number {
+  let line = 1;
+  for (let i = 0; i < index; i++) if (source[i] === "\n") line++;
+  return line;
+}
+
+/** Clases arbitrarias que inventan un valor fuera de la escala. */
+export function findArbitraryValues(source: string): Violation[] {
   const out: Violation[] = [];
   const lines = source.split("\n");
   for (let i = 0; i < lines.length; i++) {
@@ -61,6 +93,20 @@ export function findViolations(source: string): Violation[] {
   return out;
 }
 
+/** Clases de piel escritas a mano en una pantalla. */
+export function findSkinClassUsage(source: string): Violation[] {
+  const out: Violation[] = [];
+  for (const attr of source.matchAll(CLASS_ATTR)) {
+    const value = attr[1] ?? attr[2] ?? attr[3] ?? "";
+    for (const token of value.split(/\s+/)) {
+      if (SKIN_CLASSES[token]) {
+        out.push({ line: lineOf(source, attr.index), className: token });
+      }
+    }
+  }
+  return out;
+}
+
 async function* walk(dir: string): AsyncGenerator<string> {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -69,14 +115,20 @@ async function* walk(dir: string): AsyncGenerator<string> {
   }
 }
 
-/** Recorre `web/src` y devuelve el número de valores arbitrarios encontrados. */
+/** Recorre `web/src` y devuelve el número de incumplimientos encontrados. */
 export async function check(src: string, cwd: string): Promise<number> {
   const files: string[] = [];
   for await (const file of walk(src)) files.push(file);
 
   let found = 0;
   for (const file of files.sort()) {
-    for (const hit of findViolations(await readFile(file, "utf8"))) {
+    const source = await readFile(file, "utf8");
+    const isSkinSource = file.endsWith(join("components", "ui.tsx"));
+    const hits = [
+      ...findArbitraryValues(source),
+      ...(isSkinSource ? [] : findSkinClassUsage(source)),
+    ];
+    for (const hit of hits) {
       console.error(`${relative(cwd, file)}:${hit.line}  ${hit.className}`);
       found++;
     }
@@ -84,15 +136,15 @@ export async function check(src: string, cwd: string): Promise<number> {
 
   if (found > 0) {
     console.error(
-      `\n${found} valor(es) arbitrario(s) fuera de la escala. ` +
-        "Añade el token en web/src/globals.css y usa la utilidad " +
-        "(AGENTS.md § Sistema de diseño).",
+      `\n${found} incumplimiento(s) del sistema de diseño. Usa un token y la ` +
+        "primitiva correspondiente (AGENTS.md § Sistema de diseño); el " +
+        "catálogo de variantes está en la ruta /ui.",
     );
     return found;
   }
 
   console.log(
-    `Diseño OK: ${files.length} ficheros sin valores arbitrarios fuera de escala.`,
+    `Diseño OK: ${files.length} ficheros sin valores arbitrarios ni piel a mano.`,
   );
   return 0;
 }
