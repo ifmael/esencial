@@ -3,6 +3,7 @@
 // marcan; los manuales se checkboxean con PATCH y se editan con PUT completo.
 import { useCallback, useEffect, useState } from "react";
 import { apiFetchRaw } from "../lib/api";
+import { Button, Card } from "./ui";
 
 export type ListItem = {
   id: number | null;
@@ -121,15 +122,16 @@ export function ShoppingListSheet({
       </div>
 
       {error ? (
-        <div role="alert" className="card border-error/40 text-error">
+        <Card role="alert" className="border-error/40 text-error">
           <p>{error}</p>
-          <button
-            className="btn-secondary mt-2"
+          <Button
+            variant="secondary"
+            className="mt-2"
             onClick={() => setAttempt((a) => a + 1)}
           >
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Card>
       ) : null}
 
       {sections === null && !error ? (

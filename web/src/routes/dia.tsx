@@ -16,7 +16,14 @@ import {
   CloudIcon,
   UtensilsIcon,
 } from "../components/icons";
-import { Badge, Button, Card, Textarea } from "../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  cardClass,
+  Input,
+  Textarea,
+} from "../components/ui";
 import { apiFetchRaw, photoSrc } from "../lib/api";
 import { type DayData, type DaySession, toISODate, useDay } from "../lib/day";
 import { KIND_LABELS } from "../lib/exercises";
@@ -88,10 +95,10 @@ export function DayHeader({
           </button>
           <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
           {/* ponytail: input nativo; un picker con librería si saltar fechas fine. */}
-          <input
+          <Input
             type="date"
             aria-label="Ir a una fecha"
-            className="input h-8 min-h-0 w-auto border-0 bg-transparent px-1.5 text-caption shadow-none"
+            className="h-8 min-h-0 w-auto border-0 bg-transparent px-1.5 text-caption shadow-none"
             value={toISODate(date)}
             onChange={(e) => {
               if (e.target.value)
@@ -192,7 +199,9 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
           <button
             type="button"
             key={m.meal}
-            className="card card-interactive group flex w-full items-center gap-3 p-3 text-left"
+            className={cardClass(
+              "card-interactive group flex w-full items-center gap-3 p-3 text-left",
+            )}
             onClick={() => navigate(`/recetario/${m.recipeId}`)}
           >
             {m.recipePhoto ? (
@@ -251,7 +260,9 @@ function StrengthSection({
       <Section title="FUERZA">
         <button
           type="button"
-          className="card card-interactive flex w-full flex-col gap-2 text-left"
+          className={cardClass(
+            "card-interactive flex w-full flex-col gap-2 text-left",
+          )}
           onClick={openWorkout}
         >
           <div className="flex items-center justify-between gap-2">

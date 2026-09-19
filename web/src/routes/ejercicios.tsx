@@ -2,6 +2,16 @@
 // Diseño D4: "Ver técnica" acepta cualquier URL; los enlaces de YouTube se empotran (E8).
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import {
+  Badge,
+  Button,
+  buttonClass,
+  Card,
+  cardClass,
+  Input,
+  Select,
+  Textarea,
+} from "../components/ui";
 import { apiField } from "../lib/api";
 import {
   type Exercise,
@@ -27,8 +37,8 @@ const ytEmbedId = (url: string): string | null =>
 const TagChips = ({ tags }: { tags: string[] }) => (
   <ul className="flex flex-wrap gap-1" aria-label="tags">
     {tags.map((t) => (
-      <li key={t} className="badge-done">
-        {t}
+      <li key={t}>
+        <Badge tone="done">{t}</Badge>
       </li>
     ))}
   </ul>
@@ -128,12 +138,11 @@ function ExerciseEditor({
   };
 
   return (
-    <div className="card flex flex-col gap-3">
+    <Card className="flex flex-col gap-3">
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-name">Nombre</label>
-        <input
+        <Input
           id="ex-name"
-          className="input"
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
         />
@@ -143,9 +152,8 @@ function ExerciseEditor({
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-kind">Tipo</label>
-        <select
+        <Select
           id="ex-kind"
-          className="input"
           value={draft.kind}
           onChange={(e) =>
             setDraft({ ...draft, kind: e.target.value as ExerciseKind })
@@ -156,31 +164,28 @@ function ExerciseEditor({
               {KIND_LABELS[k]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-desc">Descripción</label>
-        <textarea
+        <Textarea
           id="ex-desc"
-          className="input"
           value={draft.description}
           onChange={(e) => setDraft({ ...draft, description: e.target.value })}
         />
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-cues">Claves de preparación</label>
-        <textarea
+        <Textarea
           id="ex-cues"
-          className="input"
           value={draft.setupCues}
           onChange={(e) => setDraft({ ...draft, setupCues: e.target.value })}
         />
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-steps">Pasos de ejecución</label>
-        <textarea
+        <Textarea
           id="ex-steps"
-          className="input"
           placeholder="Un paso por línea"
           value={draft.steps}
           onChange={(e) => setDraft({ ...draft, steps: e.target.value })}
@@ -188,9 +193,8 @@ function ExerciseEditor({
       </div>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="ex-url">Técnica (URL de YouTube)</label>
-        <input
+        <Input
           id="ex-url"
-          className="input"
           placeholder="Pega una URL (YouTube u otra)"
           value={draft.techniqueUrl}
           onChange={(e) => setDraft({ ...draft, techniqueUrl: e.target.value })}
@@ -206,8 +210,7 @@ function ExerciseEditor({
         )}
         <TagChips tags={draft.tags} />
         <div className="flex gap-2">
-          <input
-            className="input"
+          <Input
             placeholder="Añadir tag"
             aria-labelledby="ex-tags-label"
             value={tagText}
@@ -219,13 +222,9 @@ function ExerciseEditor({
               }
             }}
           />
-          <button
-            className="btn-secondary"
-            aria-label="Añadir tag"
-            onClick={addTag}
-          >
+          <Button variant="secondary" aria-label="Añadir tag" onClick={addTag}>
             +
-          </button>
+          </Button>
         </div>
         {draft.tags.map((t) => (
           <button
@@ -240,14 +239,14 @@ function ExerciseEditor({
         ))}
       </div>
       <div className="flex gap-2">
-        <button className="btn-primary" disabled={submitting} onClick={save}>
+        <Button disabled={submitting} onClick={save}>
           {submitting ? "Guardando…" : "Guardar"}
-        </button>
-        <button className="btn-secondary" onClick={onCancel}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancelar
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -272,12 +271,12 @@ export function EjerciciosPage() {
     <div>
       <h1 className="mb-4 text-2xl font-bold">Ejercicios</h1>
       {error && (
-        <div className="card mb-4 flex items-center justify-between">
+        <Card className="mb-4 flex items-center justify-between">
           <span className="text-error">{error}</span>
-          <button className="btn-secondary" onClick={reload}>
+          <Button variant="secondary" onClick={reload}>
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Card>
       )}
       {creating ? (
         <ExerciseEditor
@@ -290,41 +289,39 @@ export function EjerciciosPage() {
         />
       ) : (
         <>
-          <input
-            className="input mb-4"
+          <Input
+            className="mb-4"
             placeholder="Buscar por nombre o tag"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {pending && exercises.length === 0 && (
-            <div className="card">Cargando ejercicios…</div>
+            <Card>Cargando ejercicios…</Card>
           )}
           {!pending && shown.length === 0 && (
-            <div className="card mb-4 text-text-secondary">
+            <Card className="mb-4 text-text-secondary">
               Aún no hay ejercicios. Crea tu primer ejercicio.
-            </div>
+            </Card>
           )}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {shown.map((e) => (
               <Link
                 key={e.id}
                 to={`/ejercicios/${e.id}`}
-                className="card flex flex-col gap-2"
+                className={cardClass("flex flex-col gap-2")}
               >
                 <span className="text-lg font-semibold">{e.name}</span>
                 {e.kind === "strength" ? null : (
-                  <span className="badge-pending self-start">
+                  <Badge tone="pending" className="self-start">
                     {KIND_LABELS[e.kind]}
-                  </span>
+                  </Badge>
                 )}
                 <TagChips tags={e.tags} />
               </Link>
             ))}
           </div>
           <div className="mt-4">
-            <button className="btn-primary" onClick={() => setCreating(true)}>
-              + Nuevo ejercicio
-            </button>
+            <Button onClick={() => setCreating(true)}>+ Nuevo ejercicio</Button>
           </div>
         </>
       )}
@@ -384,11 +381,9 @@ function AddToTemplate({
 
   return (
     <div className="flex flex-col gap-2">
-      <button className="btn-primary" onClick={() => setOpen((o) => !o)}>
-        Añadir a plantilla
-      </button>
+      <Button onClick={() => setOpen((o) => !o)}>Añadir a plantilla</Button>
       {open && (
-        <div className="card flex flex-col gap-2">
+        <Card className="flex flex-col gap-2">
           {pending && <span>Cargando plantillas…</span>}
           {!pending && templates.length === 0 && (
             <span>
@@ -403,18 +398,19 @@ function AddToTemplate({
               (x) => x.exerciseId === exercise.id,
             );
             return (
-              <button
+              <Button
                 key={t.id}
-                className="btn-secondary text-left"
+                variant="secondary"
+                className="text-left"
                 disabled={picked !== null || already}
                 onClick={() => void add(t)}
               >
                 {picked === t.id ? "Añadiendo…" : t.name}
                 {already ? " · ya está" : ""}
-              </button>
+              </Button>
             );
           })}
-        </div>
+        </Card>
       )}
       {done && (
         <p className="text-sm text-primary">
@@ -443,23 +439,23 @@ export function EjercicioDetailPage() {
 
   if (error)
     return (
-      <div className="card flex items-center justify-between">
+      <Card className="flex items-center justify-between">
         <span className="text-error">{error}</span>
-        <button className="btn-secondary" onClick={reload}>
+        <Button variant="secondary" onClick={reload}>
           Reintentar
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   if (pending && exercises.length === 0)
-    return <div className="card">Cargando ejercicio…</div>;
+    return <Card>Cargando ejercicio…</Card>;
   if (!exercise)
     return (
-      <div className="card flex flex-col gap-2">
+      <Card className="flex flex-col gap-2">
         <h1 className="text-xl font-semibold">Este ejercicio no existe.</h1>
         <Link className="text-primary underline" to="/ejercicios">
           ← Volver al catálogo
         </Link>
-      </div>
+      </Card>
     );
 
   return (
@@ -467,7 +463,7 @@ export function EjercicioDetailPage() {
       <Link className="text-text-secondary" to="/ejercicios">
         ← Volver
       </Link>
-      <div className="card flex flex-col gap-3">
+      <Card className="flex flex-col gap-3">
         <div className="flex items-start gap-4">
           {/* Placeholder de foto: la tabla exercises no tiene columna de imagen (E4). */}
           <div
@@ -511,7 +507,7 @@ export function EjercicioDetailPage() {
         )}
         {exercise.techniqueUrl && (
           <a
-            className="btn-secondary"
+            className={buttonClass({ variant: "secondary" })}
             href={exercise.techniqueUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -521,24 +517,20 @@ export function EjercicioDetailPage() {
         )}
         <AddToTemplate exercise={exercise} state={templates} />
         <div className="flex gap-2">
-          <button className="btn-secondary" onClick={() => setEditing(true)}>
+          <Button variant="secondary" onClick={() => setEditing(true)}>
             ✏️ Editar
-          </button>
-          <button className="btn-secondary" onClick={() => setConfirming(true)}>
+          </Button>
+          <Button variant="secondary" onClick={() => setConfirming(true)}>
             Eliminar
-          </button>
+          </Button>
         </div>
         {confirming && (
           <div className="flex flex-wrap items-center gap-2">
             <span>¿Eliminar {exercise.name}?</span>
-            <button
-              className="btn-secondary"
-              onClick={() => setConfirming(false)}
-            >
+            <Button variant="secondary" onClick={() => setConfirming(false)}>
               Cancelar
-            </button>
-            <button
-              className="btn-primary"
+            </Button>
+            <Button
               onClick={async () => {
                 setDeleteError(null);
                 try {
@@ -551,11 +543,11 @@ export function EjercicioDetailPage() {
               }}
             >
               Confirmar
-            </button>
+            </Button>
           </div>
         )}
         {deleteError && <p className="text-sm text-error">{deleteError}</p>}
-      </div>
+      </Card>
       {editing && (
         <ExerciseEditor
           initial={toDraft(exercise)}

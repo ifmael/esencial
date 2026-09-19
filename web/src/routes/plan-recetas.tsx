@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
+import { Button, buttonClass, Card, cardClass } from "../components/ui";
 import { apiFetchRaw, photoSrc } from "../lib/api";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
@@ -124,10 +125,10 @@ function RecipePicker({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
       onClick={onClose}
     >
-      <div
+      <Card
         role="dialog"
         aria-label="Elegir receta"
-        className="card flex max-h-[80vh] w-full max-w-md flex-col gap-3"
+        className="flex max-h-[80vh] w-full max-w-md flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -157,10 +158,10 @@ function RecipePicker({
             <li className="px-3 text-text-secondary">Sin resultados.</li>
           ) : null}
         </ul>
-        <button className="btn-secondary" onClick={onClose}>
+        <Button variant="secondary" onClick={onClose}>
           Cerrar
-        </button>
-      </div>
+        </Button>
+      </Card>
     </div>
   );
 }
@@ -215,15 +216,15 @@ function SlotCell({
         </button>
       </div>
       {confirming ? (
-        <button
-          className="btn-primary bg-error min-h-11 text-xs"
+        <Button
+          className="bg-error min-h-11 text-xs"
           onClick={() => {
             setConfirming(false);
             onRemove();
           }}
         >
           Confirmar quitar
-        </button>
+        </Button>
       ) : null}
     </div>
   );
@@ -257,42 +258,48 @@ export function PlanRecetasPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
         <header className="flex items-center justify-between gap-2">
-          <button
+          <Button
+            variant="secondary"
             aria-label="Semana anterior"
-            className="btn-secondary"
             onClick={() => gotoWeek(shiftIsoWeek(isoWeek, -1))}
           >
             ‹
-          </button>
+          </Button>
           <h1 className="text-2xl font-bold">{isoWeek}</h1>
-          <button
+          <Button
+            variant="secondary"
             aria-label="Semana siguiente"
-            className="btn-secondary"
             onClick={() => gotoWeek(shiftIsoWeek(isoWeek, 1))}
           >
             ›
-          </button>
+          </Button>
         </header>
-        <Link to="/recetario" className="btn-secondary self-start">
+        <Link
+          to="/recetario"
+          className={buttonClass({
+            variant: "secondary",
+            className: "self-start",
+          })}
+        >
           Recetario
         </Link>
       </div>
 
       {error ? (
-        <div role="alert" className="card border-error/40 text-error">
+        <Card role="alert" className="border-error/40 text-error">
           <p>{error}</p>
-          <button className="btn-secondary mt-2" onClick={retry}>
+          <Button variant="secondary" className="mt-2" onClick={retry}>
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Card>
       ) : null}
 
       {slots === null && !error ? (
-        <div className="card text-text-secondary">Cargando…</div>
+        <Card className="text-text-secondary">Cargando…</Card>
       ) : (
         <div className="flex flex-col gap-3 md:grid md:grid-flow-col md:auto-cols-fr md:gap-2">
           {DAYS.map((day, di) => (
-            <section key={day} className="card flex flex-col gap-2 p-3">
+            <section key={day} className={cardClass("flex flex-col gap-2 p-3")}>
               <h2 className="font-semibold">{day}</h2>
               {MEALS.map((meal) => (
                 <div key={meal} className="flex flex-col gap-1">
@@ -311,12 +318,12 @@ export function PlanRecetasPage() {
         </div>
       )}
 
-      <button
-        className="btn-primary sticky bottom-4 self-start md:self-end"
+      <Button
+        className="sticky bottom-4 self-start md:self-end"
         onClick={() => setSheetOpen(true)}
       >
         Lista de la compra
-      </button>
+      </Button>
 
       {picker ? (
         <RecipePicker

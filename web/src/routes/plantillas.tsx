@@ -7,6 +7,7 @@ import {
   GROUP_LABELS,
   GroupedExercises,
 } from "../components/grouped-exercises";
+import { Badge, Button, Card, cardClass, Input } from "../components/ui";
 import { apiField } from "../lib/api";
 import {
   type Exercise,
@@ -294,30 +295,30 @@ function ExercisePicker({
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
       onClick={onClose}
     >
-      <div
+      <Card
         role="dialog"
         aria-label="Añadir ejercicio"
-        className="card my-8 flex w-full max-w-xl flex-col gap-3"
+        className="my-8 flex w-full max-w-xl flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-bold">Añadir ejercicio</h2>
 
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-medium">Vista:</span>
-          <button
-            className={view === "front" ? "btn-primary" : "btn-secondary"}
+          <Button
+            variant={view === "front" ? "primary" : "secondary"}
             aria-pressed={view === "front"}
             onClick={() => setView("front")}
           >
             Frontal
-          </button>
-          <button
-            className={view === "back" ? "btn-primary" : "btn-secondary"}
+          </Button>
+          <Button
+            variant={view === "back" ? "primary" : "secondary"}
             aria-pressed={view === "back"}
             onClick={() => setView("back")}
           >
             Trasera
-          </button>
+          </Button>
         </div>
 
         <BodyMap
@@ -327,19 +328,18 @@ function ExercisePicker({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            className={group == null ? "btn-primary" : "btn-secondary"}
+          <Button
+            variant={group == null ? "primary" : "secondary"}
             onClick={() => setGroup(null)}
           >
             Todos
-          </button>
+          </Button>
           <span className="text-sm text-text-secondary">
             Grupo: {group ? GROUP_LABELS[group] : "Todos"}
           </span>
         </div>
 
-        <input
-          className="input"
+        <Input
           placeholder="Buscar ejercicio"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -372,10 +372,10 @@ function ExercisePicker({
           </div>
         )}
 
-        <button className="btn-secondary self-end" onClick={onClose}>
+        <Button variant="secondary" className="self-end" onClick={onClose}>
           Cerrar
-        </button>
-      </div>
+        </Button>
+      </Card>
     </div>
   );
 }
@@ -417,13 +417,12 @@ function TemplateEditor({
   };
 
   return (
-    <div className="card flex flex-col gap-3">
+    <Card className="flex flex-col gap-3">
       <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
         <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
           <label htmlFor="tpl-name">Nombre</label>
-          <input
+          <Input
             id="tpl-name"
-            className="input"
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           />
@@ -451,8 +450,8 @@ function TemplateEditor({
               <>
                 <label className="text-sm">
                   Series
-                  <input
-                    className="input w-16"
+                  <Input
+                    className="w-16"
                     type="number"
                     min={1}
                     value={entry.targetSets ?? ""}
@@ -467,8 +466,8 @@ function TemplateEditor({
                 </label>
                 <label className="text-sm">
                   Reps mín
-                  <input
-                    className="input w-16"
+                  <Input
+                    className="w-16"
                     type="number"
                     min={1}
                     value={entry.targetRepsMin ?? ""}
@@ -483,8 +482,8 @@ function TemplateEditor({
                 </label>
                 <label className="text-sm">
                   Reps máx
-                  <input
-                    className="input w-16"
+                  <Input
+                    className="w-16"
                     type="number"
                     min={1}
                     value={entry.targetRepsMax ?? ""}
@@ -500,11 +499,11 @@ function TemplateEditor({
               </>
             ) : (
               <>
-                <span className="badge-pending">{KIND_LABELS[entry.kind]}</span>
+                <Badge tone="pending">{KIND_LABELS[entry.kind]}</Badge>
                 <label className="text-sm">
                   Distancia (km)
-                  <input
-                    className="input w-20"
+                  <Input
+                    className="w-20"
                     type="number"
                     min={0}
                     step="0.1"
@@ -520,8 +519,8 @@ function TemplateEditor({
                 </label>
                 <label className="text-sm">
                   Tiempo (min)
-                  <input
-                    className="input w-20"
+                  <Input
+                    className="w-20"
                     type="number"
                     min={0}
                     value={entry.targetDurationMin ?? ""}
@@ -536,47 +535,50 @@ function TemplateEditor({
                 </label>
               </>
             )}
-            <button
-              className="btn-secondary min-h-11 min-w-11"
+            <Button
+              variant="secondary"
+              className="min-h-11 min-w-11"
               aria-label="Subir"
               disabled={i === 0}
               onClick={() => setDraft(moveEntry(draft, i, i - 1))}
             >
               ↑
-            </button>
-            <button
-              className="btn-secondary min-h-11 min-w-11"
+            </Button>
+            <Button
+              variant="secondary"
+              className="min-h-11 min-w-11"
               aria-label="Bajar"
               disabled={i === draft.entries.length - 1}
               onClick={() => setDraft(moveEntry(draft, i, i + 1))}
             >
               ↓
-            </button>
-            <button
-              className="btn-secondary"
+            </Button>
+            <Button
+              variant="secondary"
               aria-label="Quitar"
               onClick={() => setDraft(removeEntry(draft, entry.key))}
             >
               Quitar
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
 
-      <button
-        className="btn-secondary self-start"
+      <Button
+        variant="secondary"
+        className="self-start"
         onClick={() => setPickerOpen(true)}
       >
         + Añadir ejercicio
-      </button>
+      </Button>
 
       <div className="flex gap-2">
-        <button className="btn-primary" disabled={submitting} onClick={save}>
+        <Button disabled={submitting} onClick={save}>
           {submitting ? "Guardando…" : "Guardar"}
-        </button>
-        <button className="btn-secondary" onClick={onCancel}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancelar
-        </button>
+        </Button>
       </div>
 
       {pickerOpen && (
@@ -601,7 +603,7 @@ function TemplateEditor({
           onClose={() => setPickerOpen(false)}
         />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -629,7 +631,7 @@ function TemplateCard({
   return (
     <section
       data-expanded={String(expanded)}
-      className={`card flex flex-col gap-3 ${expanded ? "xl:col-span-2" : ""}`}
+      className={cardClass("flex flex-col gap-3", expanded && "xl:col-span-2")}
     >
       <header className="flex items-center justify-between gap-2">
         <button
@@ -690,27 +692,23 @@ function TemplateCard({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button className="btn-secondary" onClick={onEdit}>
+        <Button variant="secondary" onClick={onEdit}>
           Editar
-        </button>
-        <button className="btn-secondary" onClick={onDuplicate}>
+        </Button>
+        <Button variant="secondary" onClick={onDuplicate}>
           Duplicar
-        </button>
-        <button className="btn-secondary" onClick={() => setConfirming(true)}>
+        </Button>
+        <Button variant="secondary" onClick={() => setConfirming(true)}>
           Eliminar
-        </button>
+        </Button>
       </div>
       {confirming && (
         <div className="flex flex-wrap items-center gap-2">
           <span>¿Eliminar {template.name}?</span>
-          <button
-            className="btn-secondary"
-            onClick={() => setConfirming(false)}
-          >
+          <Button variant="secondary" onClick={() => setConfirming(false)}>
             Cancelar
-          </button>
-          <button
-            className="btn-primary"
+          </Button>
+          <Button
             onClick={async () => {
               const msg = await onDelete();
               if (msg) {
@@ -720,7 +718,7 @@ function TemplateCard({
             }}
           >
             Confirmar
-          </button>
+          </Button>
         </div>
       )}
       {error && <p className="text-sm text-error">{error}</p>}
@@ -777,22 +775,22 @@ export function PlantillasPage() {
       <h1 className="text-2xl font-bold">Plantillas</h1>
 
       {error && (
-        <div className="card flex items-center justify-between">
+        <Card className="flex items-center justify-between">
           <span className="text-error">{error}</span>
-          <button className="btn-secondary" onClick={reload}>
+          <Button variant="secondary" onClick={reload}>
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Card>
       )}
 
       {pending && templates.length === 0 && !error && (
-        <div className="card">Cargando plantillas…</div>
+        <Card>Cargando plantillas…</Card>
       )}
 
       {!pending && templates.length === 0 && !error && (
-        <div className="card text-text-secondary">
+        <Card className="text-text-secondary">
           Aún no hay plantillas. Crea tu primera plantilla de sesión.
-        </div>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

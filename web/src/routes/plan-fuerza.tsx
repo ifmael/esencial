@@ -25,6 +25,7 @@ import {
   sortableAnnouncements,
   useDragSensors,
 } from "../components/sortable";
+import { Badge, Button, buttonClass, Card, Input } from "../components/ui";
 import { WeekGrid } from "../components/week-grid";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
@@ -284,8 +285,8 @@ function DayRowItem({
         <>
           <label className="text-sm">
             Series
-            <input
-              className="input w-16"
+            <Input
+              className="w-16"
               type="number"
               min={1}
               aria-label={`${row.exerciseName} series`}
@@ -297,8 +298,8 @@ function DayRowItem({
           </label>
           <label className="text-sm">
             Reps mín
-            <input
-              className="input w-16"
+            <Input
+              className="w-16"
               type="number"
               min={1}
               aria-label={`${row.exerciseName} reps mín`}
@@ -310,8 +311,8 @@ function DayRowItem({
           </label>
           <label className="text-sm">
             Reps máx
-            <input
-              className="input w-16"
+            <Input
+              className="w-16"
               type="number"
               min={1}
               aria-label={`${row.exerciseName} reps máx`}
@@ -324,11 +325,11 @@ function DayRowItem({
         </>
       ) : (
         <>
-          <span className="badge-pending">{KIND_LABELS[row.kind]}</span>
+          <Badge tone="pending">{KIND_LABELS[row.kind]}</Badge>
           <label className="text-sm">
             Distancia (km)
-            <input
-              className="input w-20"
+            <Input
+              className="w-20"
               type="number"
               min={0}
               step="0.1"
@@ -341,8 +342,8 @@ function DayRowItem({
           </label>
           <label className="text-sm">
             Tiempo (min)
-            <input
-              className="input w-20"
+            <Input
+              className="w-20"
               type="number"
               min={0}
               aria-label={`${row.exerciseName} tiempo (min)`}
@@ -354,13 +355,14 @@ function DayRowItem({
           </label>
         </>
       )}
-      <button
-        className="btn-secondary ml-auto"
+      <Button
+        variant="secondary"
+        className="ml-auto"
         aria-label={`Quitar ${row.exerciseName}`}
         onClick={() => onRemove(row.key)}
       >
         Quitar
-      </button>
+      </Button>
     </li>
   );
 }
@@ -471,11 +473,11 @@ function SessionEditor({
   };
 
   return (
-    <section
+    <Card
       role="dialog"
       aria-modal="true"
       aria-labelledby="day-editor-title"
-      className="card flex max-h-[85vh] flex-col gap-3"
+      className="flex max-h-[85vh] flex-col gap-3"
     >
       <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
         <h2 id="day-editor-title" className="text-lg font-bold">
@@ -483,9 +485,8 @@ function SessionEditor({
         </h2>
         <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
           <label htmlFor="day-name">Nombre</label>
-          <input
+          <Input
             id="day-name"
-            className="input"
             placeholder={`Sesión del ${date}`}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -551,40 +552,30 @@ function SessionEditor({
       </div>
 
       <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-        <button
-          className="btn-primary"
-          disabled={saving || rows.length === 0}
-          onClick={save}
-        >
+        <Button disabled={saving || rows.length === 0} onClick={save}>
           {saving ? "Guardando…" : "Guardar"}
-        </button>
-        <button className="btn-secondary" onClick={onCancel}>
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancelar
-        </button>
+        </Button>
         {session &&
           (confirming ? (
             <span className="flex items-center gap-2">
               <span>¿Eliminar la sesión completa?</span>
-              <button className="btn-primary bg-error" onClick={onDelete}>
+              <Button className="bg-error" onClick={onDelete}>
                 Confirmar
-              </button>
-              <button
-                className="btn-secondary"
-                onClick={() => setConfirming(false)}
-              >
+              </Button>
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
                 No
-              </button>
+              </Button>
             </span>
           ) : (
-            <button
-              className="btn-secondary"
-              onClick={() => setConfirming(true)}
-            >
+            <Button variant="secondary" onClick={() => setConfirming(true)}>
               Eliminar sesión
-            </button>
+            </Button>
           ))}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -678,10 +669,16 @@ export function PlanFuerzaPage() {
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <section className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">Plan fuerza</h1>
-        <Link to="/ejercicios" className="btn-secondary">
+        <Link
+          to="/ejercicios"
+          className={buttonClass({ variant: "secondary" })}
+        >
           Ejercicios
         </Link>
-        <Link to="/plantillas" className="btn-secondary">
+        <Link
+          to="/plantillas"
+          className={buttonClass({ variant: "secondary" })}
+        >
           Plantillas
         </Link>
       </section>
@@ -699,7 +696,7 @@ export function PlanFuerzaPage() {
         }
       />
 
-      {dayLoading && <div className="card">Cargando sesión…</div>}
+      {dayLoading && <Card>Cargando sesión…</Card>}
 
       {day && (
         <div
@@ -727,7 +724,7 @@ export function PlanFuerzaPage() {
         </div>
       )}
 
-      {dayError && !day && <div className="card text-error">{dayError}</div>}
+      {dayError && !day && <Card className="text-error">{dayError}</Card>}
     </div>
   );
 }

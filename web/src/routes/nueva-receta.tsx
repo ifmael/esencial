@@ -8,7 +8,7 @@ import {
   type RecipeInput,
   useRecipes,
 } from "../components/recipes/use-recipes";
-
+import { Button, buttonClass, Card } from "../components/ui";
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -222,14 +222,9 @@ export function NuevaRecetaPage() {
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Nueva receta</h1>
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={api.saving || uploading}
-          onClick={save}
-        >
+        <Button disabled={api.saving || uploading} onClick={save}>
           {api.saving || uploading ? "Guardando…" : "Guardar"}
-        </button>
+        </Button>
       </header>
 
       {api.fieldError && api.fieldError.field !== "name" && (
@@ -251,7 +246,7 @@ export function NuevaRecetaPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section>
           <h3 className="mb-2 font-semibold">Foto principal</h3>
-          <div className="card">
+          <Card>
             {draft.photo_path ? (
               <>
                 <img
@@ -259,13 +254,13 @@ export function NuevaRecetaPage() {
                   alt="Vista previa de la foto"
                   className="h-40 w-full rounded-lg object-cover"
                 />
-                <button
-                  type="button"
-                  className="btn-secondary mt-2"
+                <Button
+                  variant="secondary"
+                  className="mt-2"
                   onClick={removePhoto}
                 >
                   Quitar foto
-                </button>
+                </Button>
               </>
             ) : (
               <div className="flex h-40 items-center justify-center rounded-lg bg-surface-muted text-sm text-text-secondary">
@@ -280,19 +275,18 @@ export function NuevaRecetaPage() {
             {uploadError && (
               <div className="mt-2 flex items-center gap-3" role="alert">
                 <p className="text-sm text-error">{uploadError}</p>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={discardPendingUpload}
-                >
+                <Button variant="secondary" onClick={discardPendingUpload}>
                   Descartar
-                </button>
+                </Button>
               </div>
             )}
             <label
-              className={`btn-secondary mt-2 inline-block cursor-pointer ${
-                uploading ? "opacity-50 pointer-events-none" : ""
-              }`}
+              className={buttonClass({
+                variant: "secondary",
+                className: `mt-2 inline-block cursor-pointer ${
+                  uploading ? "opacity-50 pointer-events-none" : ""
+                }`,
+              })}
             >
               Elegir foto
               <input
@@ -308,7 +302,7 @@ export function NuevaRecetaPage() {
                 }}
               />
             </label>
-          </div>
+          </Card>
         </section>
 
         <section>
@@ -361,13 +355,12 @@ export function NuevaRecetaPage() {
               value={tag}
               onChange={(e) => setTag(e.target.value)}
             />
-            <button
-              type="button"
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() => addChip("tags", tag, () => setTag(""))}
             >
               Añadir categoría
-            </button>
+            </Button>
           </div>
         </section>
 
@@ -402,15 +395,14 @@ export function NuevaRecetaPage() {
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
             />
-            <button
-              type="button"
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() =>
                 addChip("materials", material, () => setMaterial(""))
               }
             >
               Añadir material
-            </button>
+            </Button>
           </div>
         </section>
 
@@ -478,9 +470,9 @@ export function NuevaRecetaPage() {
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            className="btn-secondary mt-2"
+          <Button
+            variant="secondary"
+            className="mt-2"
             onClick={() =>
               set("ingredients", [
                 ...draft.ingredients,
@@ -489,7 +481,7 @@ export function NuevaRecetaPage() {
             }
           >
             Añadir ingrediente
-          </button>
+          </Button>
         </section>
 
         <section>
@@ -547,13 +539,13 @@ export function NuevaRecetaPage() {
               </li>
             ))}
           </ol>
-          <button
-            type="button"
-            className="btn-secondary mt-2"
+          <Button
+            variant="secondary"
+            className="mt-2"
             onClick={() => set("steps", [...draft.steps, ""])}
           >
             Añadir paso
-          </button>
+          </Button>
         </section>
       </div>
     </div>

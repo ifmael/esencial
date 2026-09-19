@@ -22,6 +22,7 @@ import {
   sortableAnnouncements,
   useDragSensors,
 } from "./sortable";
+import { Badge, Button, cardClass } from "./ui";
 
 const DAYS = [
   "Lunes",
@@ -127,9 +128,13 @@ function SessionCell({
 
   const logged = session.status === "logged";
   const badge = logged ? (
-    <span className="badge-done self-start">Hecho</span>
+    <Badge tone="done" className="self-start">
+      Hecho
+    </Badge>
   ) : (
-    <span className="badge-pending self-start">Pendiente</span>
+    <Badge tone="pending" className="self-start">
+      Pendiente
+    </Badge>
   );
   const order = session.exercises;
   const nameOf = (id: number | string) =>
@@ -218,8 +223,8 @@ function SessionCell({
         </DndContext>
       ) : null}
       {confirming ? (
-        <button
-          className="btn-primary min-h-11 bg-error text-xs"
+        <Button
+          className="min-h-11 bg-error text-xs"
           onClick={(e) => {
             e.stopPropagation();
             setConfirming(false);
@@ -227,7 +232,7 @@ function SessionCell({
           }}
         >
           Confirmar desprogramar
-        </button>
+        </Button>
       ) : null}
     </div>
   );
@@ -256,23 +261,23 @@ export function WeekGrid({
   const byDate = new Map(sessions.map((s) => [s.date, s]));
 
   return (
-    <section className="card flex min-h-0 flex-1 flex-col gap-3">
+    <section className={cardClass("flex min-h-0 flex-1 flex-col gap-3")}>
       <header className="flex items-center justify-between gap-2">
-        <button
+        <Button
+          variant="secondary"
           aria-label="Semana anterior"
-          className="btn-secondary"
           onClick={() => onShiftWeek(-1)}
         >
           ‹
-        </button>
+        </Button>
         <h2 className="text-xl font-bold">{isoWeek}</h2>
-        <button
+        <Button
+          variant="secondary"
           aria-label="Semana siguiente"
-          className="btn-secondary"
           onClick={() => onShiftWeek(1)}
         >
           ›
-        </button>
+        </Button>
       </header>
 
       {error ? (

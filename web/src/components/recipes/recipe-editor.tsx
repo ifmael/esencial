@@ -2,6 +2,7 @@
 // call; save POSTs/PUTs the whole draft; field errors render beside the field.
 import { useRef, useState } from "react";
 import { ApiError, apiFetch, photoSrc } from "../../lib/api";
+import { Button, buttonClass, Card } from "../ui";
 import type { Recipe, RecipeInput, RecipesApi } from "./use-recipes";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -228,10 +229,10 @@ export function RecipeEditor({
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
       onClick={cancel}
     >
-      <div
+      <Card
         role="dialog"
         aria-label={title}
-        className="card my-8 w-full max-w-xl"
+        className="my-8 w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-xl font-bold">{title}</h2>
@@ -308,19 +309,21 @@ export function RecipeEditor({
                     alt="Foto actual"
                     className="h-12 w-12 rounded-lg object-cover"
                   />
-                  <button
-                    type="button"
-                    className="btn-secondary"
+                  <Button
+                    variant="secondary"
                     onClick={() => set("photo_path", "")}
                   >
                     Quitar
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <label
-                  className={`btn-secondary inline-block cursor-pointer ${
-                    uploading ? "opacity-50 pointer-events-none" : ""
-                  }`}
+                  className={buttonClass({
+                    variant: "secondary",
+                    className: `inline-block cursor-pointer ${
+                      uploading ? "opacity-50 pointer-events-none" : ""
+                    }`,
+                  })}
                 >
                   Subir foto
                   <input
@@ -341,13 +344,9 @@ export function RecipeEditor({
               {uploadError && (
                 <div className="mt-2 flex items-center gap-3" role="alert">
                   <p className="text-sm text-error">{uploadError}</p>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={discardPendingUpload}
-                  >
+                  <Button variant="secondary" onClick={discardPendingUpload}>
                     Descartar
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -417,9 +416,9 @@ export function RecipeEditor({
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              className="btn-secondary mt-2"
+            <Button
+              variant="secondary"
+              className="mt-2"
               onClick={() =>
                 set("ingredients", [
                   ...draft.ingredients,
@@ -428,7 +427,7 @@ export function RecipeEditor({
               }
             >
               Añadir ingrediente
-            </button>
+            </Button>
           </section>
 
           <section>
@@ -488,13 +487,13 @@ export function RecipeEditor({
                 </li>
               ))}
             </ol>
-            <button
-              type="button"
-              className="btn-secondary mt-2"
+            <Button
+              variant="secondary"
+              className="mt-2"
               onClick={() => set("steps", [...draft.steps, ""])}
             >
               Añadir paso
-            </button>
+            </Button>
           </section>
 
           <section>
@@ -528,15 +527,14 @@ export function RecipeEditor({
                 value={material}
                 onChange={(e) => setMaterial(e.target.value)}
               />
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
                 onClick={() =>
                   addChip("materials", material, () => setMaterial(""))
                 }
               >
                 Añadir material
-              </button>
+              </Button>
             </div>
           </section>
 
@@ -571,31 +569,25 @@ export function RecipeEditor({
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
               />
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
                 onClick={() => addChip("tags", tag, () => setTag(""))}
               >
                 Añadir etiqueta
-              </button>
+              </Button>
             </div>
           </section>
 
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn-secondary" onClick={cancel}>
+            <Button variant="secondary" onClick={cancel}>
               Cancelar
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={api.saving || uploading}
-              onClick={save}
-            >
+            </Button>
+            <Button disabled={api.saving || uploading} onClick={save}>
               {api.saving || uploading ? "Guardando…" : "Guardar"}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
