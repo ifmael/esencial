@@ -197,7 +197,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Móvil: barra inferior */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_20px_-14px_rgb(28_25_23/0.5)] backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-up backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-lg items-stretch px-2 py-1.5">
           {NAV.map((section) => {
             const SectionIcon = section.icon;

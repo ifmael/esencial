@@ -57,6 +57,8 @@
   --shadow-raised:
     0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
   --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
+  /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
+  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
 }
 
 @theme inline {
@@ -116,6 +118,7 @@
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
   --shadow-inset: var(--shadow-inset);
+  --shadow-up: var(--shadow-up);
 
   --ease-out-quart: var(--ease-out-quart);
 }

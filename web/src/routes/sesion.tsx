@@ -414,9 +414,7 @@ function EffortDots({
               data-filled={String(filled)}
               className={`min-h-11 min-w-11 rounded-full border-2 ${filled ? "border-primary bg-primary" : "border-border bg-surface"}`}
             />
-            <span className="text-[10px] leading-tight text-text-secondary">
-              {label}
-            </span>
+            <span className="text-micro text-text-secondary">{label}</span>
             {onSelect && (
               <input
                 type="radio"

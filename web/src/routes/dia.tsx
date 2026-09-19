@@ -82,7 +82,7 @@ export function DayHeader({
             type="button"
             aria-label="Ir a hoy"
             onClick={() => onChange(new Date())}
-            className="grid h-8 place-items-center rounded-[7px] px-2.5 text-caption font-semibold text-primary transition-colors duration-150 ease-out-quart hover:bg-primary-soft"
+            className="grid h-8 place-items-center rounded-[calc(var(--radius-control)-2px)] px-2.5 text-caption font-semibold text-primary transition-colors duration-150 ease-out-quart hover:bg-primary-soft"
           >
             Hoy
           </button>
