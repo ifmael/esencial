@@ -43,6 +43,10 @@ pnpm db:migrate:remote
 
 La base es la MISMA para los dos Workers; solo la API la toca.
 
+En local, la config de la API vive en `api/`, así que los scripts llevan
+`--persist-to .wrangler/state`: la base de desarrollo sigue en la raíz y no en
+`api/.wrangler/state`.
+
 ## 5. Secretos (una vez, y al rotar la contraseña)
 
 **Los dos Workers necesitan `AUTH_SECRET`** (firma/valida la cookie de sesión:
@@ -63,9 +67,9 @@ node --disable-warning=ExperimentalWarning api/scripts/hash-password.ts 'tu-clav
   | npx wrangler secret put PASSWORD_HASH -c api/wrangler.toml
 ```
 
-Rotar `AUTH_SECRET` invalida todas las sesiones (basta volver a entrar). Si solo
-se rota en uno de los dos Workers, el guard y la API dejarán de coincidir: rota
-siempre los dos.
+Rotar `AUTH_SECRET` invalida todas las sesiones (basta volver a entrar). El
+valor actual de `esencial` no se puede leer desde el panel: o reutilizas el que
+guardaste, o rotas los dos a la vez. Nunca pongas valores distintos.
 
 Local: `pnpm dev` / `pnpm e2e` generan **dos** `.dev.vars` con el mismo contenido
 (`.dev.vars` en la raíz para el frontal y `api/.dev.vars` para la API) — wrangler
@@ -87,15 +91,25 @@ Con Workers Builds conectado (repo `ifmael/esencial`, branch `main`) hacen falta
   Environment variables), o el SPA quedará llamando a su propio origen.
 - Un push a `main` dispara los dos builds: hasta que exista el segundo, el push
   solo publica el frontal.
+- Cloudflare exige que el nombre del Worker del panel coincida con el `name` del
+  config en ese root directory, o el build falla: los dos Workers se crean antes
+  con el deploy manual (§6), así que al montar cada build solo hay que
+  comprobarlo.
 - `api/wrangler.toml` define el origen del frontal en `[vars] WEB_ORIGIN` y el
   `wrangler.toml` de la raíz define el de la API en `[vars] API_ORIGIN`: si
   cambias de subdominio, actualiza los dos.
 
-Deploy manual (publica los dos):
+Deploy manual (publica los dos, la API primero):
 
 ```bash
-pnpm run deploy    # build del SPA con la URL de la API + deploy de ambos Workers
+pnpm run deploy    # build del SPA con la URL de la API + deploy de la API y del frontal
 ```
+
+Orden del corte (importa): los secretos de la API, luego la API, y solo entonces
+el frontal. El deploy del frontal **reemplaza** el Worker `esencial` (pasa de
+monolito a solo-frontal): si se publica antes de que la API esté arriba con sus
+secretos, el login de producción se rompe hasta completar el paso de la API. La
+URL que usas a diario no cambia: sigue siendo la del frontal.
 
 El primer deploy crea los Workers y publica:
 
