@@ -284,10 +284,10 @@
               </tr>
               <tr>
                 <td><code>deploy</code></td>
-                <td><code>pnpm build:prod &amp;&amp; wrangler deploy -c api/wrangler.toml &amp;&amp; wrangler deploy</code></td>
+                <td><code>pnpm build &amp;&amp; wrangler deploy -c api/wrangler.toml &amp;&amp; wrangler deploy</code></td>
                 <td>
-                  Build del SPA con el <code>VITE_API_URL</code> de producción, deploy de la API
-                  primero y después el frontal. Ojo: hay que invocarlo como
+                  Build del SPA (la URL de la API vive en <code>web/.env.production</code>), deploy
+                  de la API primero y después el frontal. Ojo: hay que invocarlo como
                   <code>pnpm run deploy</code>, porque <code>pnpm deploy</code> es un comando interno
                   de pnpm.
                 </td>

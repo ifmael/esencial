@@ -35,7 +35,8 @@ tarea lo requiere.
 | `esencial-api` | `api/wrangler.toml` | las rutas `/api/*` (Hono), D1 y R2; sin assets | `https://esencial-api.nutrirutina.workers.dev` |
 
 - El navegador llama a **los dos**: la SPA usa la URL absoluta de la API
-  (`VITE_API_URL`, fijada en el build) con `credentials: "include"`, y la API
+  (`VITE_API_URL`, en `web/.env.production`; dev/e2e la sobreescriben) con
+  `credentials: "include"`, y la API
   autoriza ese origen con CORS (`WEB_ORIGIN`). El frontal autoriza el origen de
   la API en su CSP (`API_ORIGIN`): los dos valores tienen que cuadrar.
 - La cookie de sesión se emite desde la API, y en `workers.dev` lleva

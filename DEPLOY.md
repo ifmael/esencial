@@ -86,9 +86,10 @@ Con Workers Builds conectado (repo `ifmael/esencial`, branch `main`) hacen falta
 | `esencial` | `/` | `pnpm build` | `npx wrangler deploy` |
 | `esencial-api` | `api/` | *(vacío)* | `npx wrangler deploy` |
 
-- El build del frontal necesita la variable de build
-  `VITE_API_URL=https://esencial-api.nutrirutina.workers.dev` (Settings → Build →
-  Environment variables), o el SPA quedará llamando a su propio origen.
+- El build del frontal **no necesita variable en el panel**: el SPA se construye
+  contra `https://esencial-api.nutrirutina.workers.dev` porque esa URL vive en el
+  repo, en `web/.env.production` (Vite la embebe en `pnpm build`; una variable de
+  entorno real la sobreescribe, que es lo que usan dev y e2e).
 - Un push a `main` dispara los dos builds: hasta que exista el segundo, el push
   solo publica el frontal.
 - Cloudflare exige que el nombre del Worker del panel coincida con el `name` del
