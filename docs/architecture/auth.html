@@ -38,8 +38,9 @@
         <h1>Auth y seguridad</h1>
         <p class="lead">
           Una contraseña, una cookie firmada y cero estado en servidor. No hay tabla de sesiones ni
-          tokens almacenados: el token es una fecha de caducidad con su firma HMAC, y el Worker lo
-          verifica sin consultar nada. Si falta el secreto, no se autentica a nadie: falla cerrado.
+          tokens almacenados: el token es una fecha de caducidad con su firma HMAC, y los dos
+          Workers la verifican sin consultar nada. Si falta el secreto, no se autentica a nadie:
+          falla cerrado.
         </p>
 
         <div class="kpis">
@@ -54,7 +55,7 @@
           <svg
             viewBox="0 0 840 400"
             role="img"
-            aria-label="Login: la contraseña se verifica con PBKDF2 y se emite una cookie firmada. Cada petición siguiente verifica esa firma: válida entra en la ruta, inválida recibe 401 en la API o un 302 al login. Si falta AUTH_SECRET, todo falla cerrado."
+            aria-label="Login: la contraseña se verifica con PBKDF2 y se emite una cookie firmada. Cada petición siguiente verifica esa firma: válida entra en la ruta, inválida recibe 401 en la API o un 302 al login que emite el Worker del frontal. Si falta AUTH_SECRET, todo falla cerrado."
           >
             <defs>
               <marker
@@ -95,7 +96,7 @@
 
             <rect x="580" y="222" width="240" height="52" rx="10" class="dg-box" />
             <text x="700" y="238" class="dg-text" text-anchor="middle">401 en la API</text>
-            <text x="700" y="258" class="dg-sub" text-anchor="middle">302 a /login en el HTML</text>
+            <text x="700" y="258" class="dg-sub" text-anchor="middle">302 a /login en el frontal</text>
 
             <rect x="300" y="320" width="520" height="62" rx="10" fill="none" stroke="var(--warn-fg)" />
             <text x="320" y="342" class="dg-text" text-anchor="start">Si falta AUTH_SECRET o PASSWORD_HASH: fail closed</text>
@@ -121,8 +122,9 @@
           </svg>
           <figcaption>
             El login es el único sitio donde se compara una contraseña; a partir de ahí todo se
-            decide verificando una firma. Esa verificación es la misma para la API (401) y para las
-            páginas HTML (302), y ocurre antes de que el router vea nada.
+            decide verificando una firma. Esa verificación es la misma en los dos Workers: 401 en la
+            API para <code>/api/*</code> y 302 a <code>/login</code> en el Worker del frontal, que
+            es quien entrega el HTML. En ambos casos ocurre antes de que el router vea nada.
           </figcaption>
         </figure>
 
@@ -139,6 +141,7 @@
               <tr><td>Nombre</td><td><code>esencial_session</code></td></tr>
               <tr><td>Contenido</td><td><code>&lt;exp_epoch&gt;.&lt;hmac_sha256(AUTH_SECRET, exp)&gt;</code>, montado con <code>serializeSigned</code> de Hono</td></tr>
               <tr><td>Atributos</td><td><code>path=/</code>, <code>httpOnly</code>, <code>SameSite=Lax</code>, <code>maxAge=2592000</code> (30 días), <code>secure</code> según el protocolo de la petición</td></tr>
+              <tr><td>Dominio</td><td>En <code>workers.dev</code>: <code>Domain=nutrirutina.workers.dev</code>, para que el Worker del frontal —que hace el guard del HTML— también la vea. Fuera de ahí (dev y e2e en <code>127.0.0.1</code>) queda host-only; las cookies ignoran el puerto, así que en local se comparte igual</td></tr>
               <tr><td>Renovación</td><td>Ninguna: al caducar, se vuelve a hacer login</td></tr>
               <tr><td>Borrado</td><td><code>POST /api/auth/logout</code> elimina la cookie; el token no está guardado en ningún sitio, así que no hay nada más que invalidar</td></tr>
             </tbody>
@@ -148,6 +151,14 @@
           Rotar <code>AUTH_SECRET</code> invalida de golpe todas las cookies emitidas. Es el
           interruptor de emergencia para cerrar el acceso sin desplegar nada.
         </p>
+        <p>
+          La cookie la emite la API, pero quien entrega el HTML es el Worker del frontal: el
+          navegador habla con los dos orígenes. Por eso la API autoriza el origen de la web
+          declarado en <code>WEB_ORIGIN</code> con <code>Access-Control-Allow-Credentials:
+          true</code>, y la SPA llama por URL absoluta (<code>VITE_API_URL</code>) con
+          <code>credentials: "include"</code>. El preflight <code>OPTIONS</code> se contesta 204
+          antes del gate de sesión, porque no lleva cookie.
+        </p>
 
         <h2>La contraseña</h2>
         <pre><code>formato del digest:  pbkdf2$&lt;iteraciones&gt;$&lt;salt_b64&gt;$&lt;hash_b64&gt;
@@ -155,19 +166,28 @@ parámetros:          PBKDF2-SHA256 · 100.000 iteraciones · salt 16 B · hash 
 comparación:         cripto.subtle.verify (constant-time); la contraseña en claro nunca se compara con ===
 
 generar el digest:   node --disable-warning=ExperimentalWarning api/scripts/hash-password.ts 'tu-clave'
-                     → se pega en:  npx wrangler secret put PASSWORD_HASH</code></pre>
+                     → se pega en:  npx wrangler secret put PASSWORD_HASH -c api/wrangler.toml</code></pre>
+        <p>
+          <code>AUTH_SECRET</code> vive en los dos Workers y con el <strong>mismo valor</strong> —el
+          frontal lo usa en el guard del HTML, la API en <code>/api/*</code>—;
+          <code>PASSWORD_HASH</code> solo hace falta en la API.
+        </p>
         <p>
           En desarrollo, <code>pnpm dev</code> ejecuta <code>predev</code> y
-          <code>api/scripts/ensure-dev-vars.ts</code> escribe <code>.dev.vars</code> <strong>en la
-          raíz del repo</strong> con <code>AUTH_SECRET</code> y <code>PASSWORD_HASH</code> derivados
-          de la variable <code>ESENCIAL_DEV_PASSWORD</code>. Si no le pasas ninguna, genera una
-          aleatoria y la imprime al arrancar.
+          <code>api/scripts/ensure-dev-vars.ts</code> escribe <strong>dos</strong> ficheros
+          <code>.dev.vars</code> con el mismo contenido: uno en la raíz del repo (lo lee el Worker
+          del frontal, porque allí está su <code>wrangler.toml</code>) y otro en
+          <code>api/.dev.vars</code> (lo lee la API). Los dos van gitignored y llevan
+          <code>AUTH_SECRET</code> y <code>PASSWORD_HASH</code> derivados de
+          <code>ESENCIAL_DEV_PASSWORD</code>; si no le pasas ninguna, genera una aleatoria y la
+          imprime al arrancar.
         </p>
         <div class="warn">
           <p>
-            <strong>Si el login responde 500 en local</strong>, el fichero está mal ubicado:
-            wrangler lee <code>.dev.vars</code> desde donde está <code>wrangler.toml</code>, es
-            decir, desde la raíz. En <code>api/.dev.vars</code> el Worker no lo ve y falla cerrado.
+            <strong>Si el login responde 500 en local</strong>, falta uno de los dos
+            <code>.dev.vars</code>: wrangler lee el suyo desde donde está su
+            <code>wrangler.toml</code> —la raíz para el frontal y <code>api/</code> para la API—, y
+            al Worker que se queda sin el fichero no le llegan los secretos. Falla cerrado.
           </p>
         </div>
 
@@ -197,9 +217,12 @@ generar el digest:   node --disable-warning=ExperimentalWarning api/scripts/hash
 
         <h2>Cabeceras de seguridad</h2>
         <p>
-          Las fija <code>securityHeaders</code> en <em>toda</em> respuesta —también en los 401, en
-          el 302 de login y en los assets—, porque llama a <code>next()</code> primero y escribe al
-          volver.
+          Cada Worker pone las suyas en <em>todas</em> sus respuestas, escribiendo al volver de
+          <code>next()</code>: el del frontal también en el 302 al login y en los assets, y la API
+          (<code>securityHeaders</code>) en cada respuesta JSON, 401 y 404 incluidos. El frontal
+          añade el origen de la API (<code>API_ORIGIN</code>) a <code>connect-src</code> e
+          <code>img-src</code>: sin él, ni los <code>fetch</code> ni las fotos de R2 pasarían la
+          CSP.
         </p>
         <div class="table-wrap">
           <table>
@@ -211,7 +234,13 @@ generar el digest:   node --disable-warning=ExperimentalWarning api/scripts/hash
             </thead>
             <tbody>
               <tr>
-                <td><code>Content-Security-Policy</code></td>
+                <td><code>Content-Security-Policy</code> (frontal)</td>
+                <td>
+                  <code>default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob: &lt;API_ORIGIN&gt;; connect-src 'self' &lt;API_ORIGIN&gt;; style-src 'self' 'unsafe-inline'</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>Content-Security-Policy</code> (API)</td>
                 <td>
                   <code>default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'</code>
                 </td>
@@ -243,7 +272,8 @@ generar el digest:   node --disable-warning=ExperimentalWarning api/scripts/hash
             <code>api/src/middleware.ts</code>, <code>api/src/rate-limit.ts</code>,
             <code>api/src/routes/auth.ts</code>, <code>api/src/db.ts</code>,
             <code>api/scripts/ensure-dev-vars.ts</code>, <code>api/scripts/hash-password.ts</code>,
-            <code>DEPLOY.md</code> §5, <code>AGENTS.md</code> §4.
+            <code>web/worker/index.ts</code>, <code>wrangler.toml</code>,
+            <code>api/wrangler.toml</code>, <code>DEPLOY.md</code> §5, <code>AGENTS.md</code> §4.
           </p>
         </div>
 

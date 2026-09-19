@@ -1,6 +1,7 @@
 // E5 (design D4): un fetch por fecha a /api/day/:date con estado { data,
 // loading, error, reload }. Las respuestas de fechas ya superadas se descartan.
 import { useEffect, useRef, useState } from "react";
+import { apiFetchRaw } from "./api";
 import type { ExerciseKind } from "./exercises";
 
 export type DayMeal = {
@@ -61,7 +62,7 @@ export function useDay(date: string): DayState {
     setData(null); // nada de datos rancios mientras carga la nueva fecha
     setLoading(true);
     setError(null);
-    fetch(`/api/day/${date}`)
+    apiFetchRaw(`/api/day/${date}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<DayData>;

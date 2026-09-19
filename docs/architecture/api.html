@@ -54,7 +54,7 @@
           <svg
             viewBox="0 0 920 780"
             role="img"
-            aria-label="Ladder de las seis fases por las que pasa una petición: securityHeaders, authGuard, pageGuard, los once sub-routers de Hono, notFound y onError. Cada fase se explica con lo que es y con el motivo por el que está en ese punto de la cadena."
+            aria-label="Ladder de las seis fases por las que pasa una petición: securityHeaders, cors, authGuard, los once sub-routers de Hono, notFound y onError. Cada fase se explica con lo que es y con el motivo por el que está en ese punto de la cadena."
           >
             <defs>
               <marker
@@ -81,28 +81,28 @@
             <text x="159" y="106" class="dg-sub" text-anchor="middle">api/src/middleware.ts:18</text>
             <text x="276" y="84" class="dg-sub" text-anchor="start">Fija las tres cabeceras de seguridad de cada</text>
             <text x="276" y="106" class="dg-sub" text-anchor="start">respuesta: CSP, nosniff y Referrer-Policy.</text>
-            <text x="616" y="84" class="dg-sub" text-anchor="start">Escribe al volver de next(), así que sella también</text>
-            <text x="616" y="106" class="dg-sub" text-anchor="start">los 401, el 302 del login y los assets: nada sale sin CSP.</text>
+            <text x="616" y="84" class="dg-sub" text-anchor="start">Escribe al volver de next(), así que sella también los</text>
+            <text x="616" y="106" class="dg-sub" text-anchor="start">401 y los 404: ninguna respuesta JSON sale sin CSP.</text>
 
             <circle cx="40" cy="198" r="13" class="dg-accent" />
             <text x="40" y="198" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">2</text>
             <rect x="64" y="154" width="190" height="88" rx="10" class="dg-box" />
-            <text x="159" y="188" class="dg-text" text-anchor="middle">authGuard</text>
-            <text x="159" y="212" class="dg-sub" text-anchor="middle">api/src/middleware.ts:44</text>
-            <text x="276" y="190" class="dg-sub" text-anchor="start">Gate de /api/*: exige cookie firmada válida.</text>
-            <text x="276" y="212" class="dg-sub" text-anchor="start">Exentos: GET /api/health y /api/auth/*.</text>
-            <text x="616" y="190" class="dg-sub" text-anchor="start">Corre antes del router, así que una ruta que no existe</text>
-            <text x="616" y="212" class="dg-sub" text-anchor="start">responde 401 y no 404: no se pueden sondear rutas.</text>
+            <text x="159" y="188" class="dg-text" text-anchor="middle">cors</text>
+            <text x="159" y="212" class="dg-sub" text-anchor="middle">api/src/middleware.ts:56</text>
+            <text x="276" y="190" class="dg-sub" text-anchor="start">Autoriza WEB_ORIGIN con credenciales y contesta</text>
+            <text x="276" y="212" class="dg-sub" text-anchor="start">el preflight OPTIONS con 204 antes del gate.</text>
+            <text x="616" y="190" class="dg-sub" text-anchor="start">La web es otro Worker, en otro origen: sin esta capa</text>
+            <text x="616" y="212" class="dg-sub" text-anchor="start">el navegador no manda la cookie ni lee la respuesta.</text>
 
             <circle cx="40" cy="304" r="13" class="dg-accent" />
             <text x="40" y="304" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">3</text>
             <rect x="64" y="260" width="190" height="88" rx="10" class="dg-box" />
-            <text x="159" y="294" class="dg-text" text-anchor="middle">pageGuard</text>
-            <text x="159" y="318" class="dg-sub" text-anchor="middle">api/src/middleware.ts:63</text>
-            <text x="276" y="296" class="dg-sub" text-anchor="start">Protege el HTML: sin sesión, 302 a</text>
-            <text x="276" y="318" class="dg-sub" text-anchor="start">/login?next=…; /login y los assets pasan.</text>
-            <text x="616" y="296" class="dg-sub" text-anchor="start">Un 401 rompería la navegación: el navegador necesita</text>
-            <text x="616" y="318" class="dg-sub" text-anchor="start">una redirección. Solo funciona con run_worker_first.</text>
+            <text x="159" y="294" class="dg-text" text-anchor="middle">authGuard</text>
+            <text x="159" y="318" class="dg-sub" text-anchor="middle">api/src/middleware.ts:83</text>
+            <text x="276" y="296" class="dg-sub" text-anchor="start">Gate de /api/*: exige cookie firmada válida.</text>
+            <text x="276" y="318" class="dg-sub" text-anchor="start">Exentos: GET /api/health y /api/auth/*.</text>
+            <text x="616" y="296" class="dg-sub" text-anchor="start">Corre antes del router, así que una ruta que no existe</text>
+            <text x="616" y="318" class="dg-sub" text-anchor="start">responde 401 y no 404: no se pueden sondear rutas.</text>
 
             <circle cx="40" cy="410" r="13" class="dg-accent" />
             <text x="40" y="410" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">4</text>
@@ -119,10 +119,10 @@
             <rect x="64" y="472" width="190" height="88" rx="10" class="dg-box" />
             <text x="159" y="506" class="dg-text" text-anchor="middle">notFound</text>
             <text x="159" y="530" class="dg-sub" text-anchor="middle">api/src/index.ts:44</text>
-            <text x="276" y="508" class="dg-sub" text-anchor="start">Bajo /api → 404 JSON. El resto →</text>
-            <text x="276" y="530" class="dg-sub" text-anchor="start">env.ASSETS.fetch, re-envuelto.</text>
-            <text x="616" y="508" class="dg-sub" text-anchor="start">Separa «no autorizado» de «no existe» y sirve el SPA</text>
-            <text x="616" y="530" class="dg-sub" text-anchor="start">en deep links; los headers de assets son inmutables.</text>
+            <text x="276" y="508" class="dg-sub" text-anchor="start">Fuera de /api/* → 404 JSON: este Worker</text>
+            <text x="276" y="530" class="dg-sub" text-anchor="start">no sirve el SPA y no tiene binding ASSETS.</text>
+            <text x="616" y="508" class="dg-sub" text-anchor="start">Separa «no autorizado» de «no existe» y deja el SPA</text>
+            <text x="616" y="530" class="dg-sub" text-anchor="start">y su guard donde viven: en el Worker del frontal.</text>
 
             <circle cx="40" cy="622" r="13" class="dg-accent" />
             <text x="40" y="622" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">6</text>
@@ -146,18 +146,22 @@
           </svg>
           <figcaption>
             La cadena tiene seis fases y cada una existe por una razón concreta: la primera
-            envuelve la respuesta, las dos siguientes pueden cortar la petición, la cuarta ya solo
-            sirve, y las dos últimas cierran los casos que no cubre nadie. El orden no es
-            decorativo: <code>authGuard</code> responde 401 en lugar de 404 para no revelar qué
-            rutas existen, y <code>pageGuard</code> redirige en lugar de responder 401 porque quien
-            pregunta es un navegador, no un cliente de API.
+            envuelve la respuesta, las dos siguientes deciden si la petición sigue —<code>cors</code>
+            puede contestarla antes de tiempo y <code>authGuard</code> puede cortarla—, la cuarta ya
+            solo sirve, y las dos últimas cierran los casos que no cubre nadie. El orden no es
+            decorativo: <code>cors</code> contesta el <code>OPTIONS</code> antes del gate de sesión
+            porque un preflight no lleva cookie, y <code>authGuard</code> responde 401 en lugar de
+            404 para no revelar qué rutas existen. El guard que redirige al login no está aquí:
+            vive en el Worker del frontal, que es quien entrega el HTML.
           </figcaption>
         </figure>
 
         <p>
           Añadir un endpoint nuevo es añadir un fichero en <code>api/src/routes/</code> y montarlo:
           hereda las tres fases de seguridad sin tocar ninguna. Por eso hay 3 middlewares globales
-          para 38 endpoints y no 38 comprobaciones de sesión repetidas.
+          para 38 endpoints y no 38 comprobaciones de sesión repetidas. Este Worker solo atiende
+          <code>/api/*</code>: fuera de ahí responde <code>404 { error: "Not found" }</code>, porque
+          el SPA y su guard viven en el Worker del frontal.
         </p>
 
         <h2>Los 38 endpoints</h2>
@@ -279,8 +283,8 @@
             <strong>Fuentes:</strong> <code>api/src/index.ts</code>,
             <code>api/src/middleware.ts</code>, <code>api/src/http.ts</code>,
             <code>api/src/validation.ts</code>, <code>api/src/routes/*</code> (11 ficheros),
-            <code>api/src/api-validation.ts</code>, <code>wrangler.toml</code>. Números verificados
-            por lectura directa del código.
+            <code>api/src/api-validation.ts</code>, <code>api/wrangler.toml</code>. Números
+            verificados por lectura directa del código.
           </p>
         </div>
 

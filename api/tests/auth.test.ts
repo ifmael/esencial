@@ -84,6 +84,41 @@ describe("POST /api/auth/login", () => {
     expect(https.headers.get("set-cookie")).toMatch(/Secure/i);
   });
 
+  // B' (dos despliegues): la web y la API son dos subdominios de la misma cuenta
+  // de workers.dev, así que la cookie se emite para el dominio registrable y el
+  // Worker de la web (que hace el guard del HTML) también la ve.
+  it("en workers.dev la cookie se comparte con el Worker de la web (Domain)", async () => {
+    const res = await app.request(
+      "https://esencial-api.mi-cuenta.workers.dev/api/auth/login",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: PASSWORD }),
+      },
+      env,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toMatch(
+      /Domain=mi-cuenta\.workers\.dev/i,
+    );
+  });
+
+  it("fuera de workers.dev la cookie sigue siendo host-only (sin Domain)", async () => {
+    const res = await app.request(
+      "http://127.0.0.1:8789/api/auth/login",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: PASSWORD }),
+      },
+      env,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).not.toMatch(/Domain=/i);
+  });
+
   it("401 { error, field } + no cookie on wrong password", async () => {
     const res = await loginAt("/api/auth/login", `wrong-${Math.random()}`);
     expect(res.status).toBe(401);
@@ -190,6 +225,31 @@ describe("POST /api/auth/logout + GET /api/auth/status", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("set-cookie")).toContain(SESSION_COOKIE);
     expect(res.headers.get("set-cookie")).toMatch(/Max-Age=0/i);
+  });
+
+  // B' (dos despliegues): el borrado debe llevar el MISMO Domain que la
+  // emisión; si no, el navegador conserva la cookie compartida.
+  it("logout borra la cookie con el mismo Domain compartido", async () => {
+    const login = await app.request(
+      "https://esencial-api.mi-cuenta.workers.dev/api/auth/login",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: PASSWORD }),
+      },
+      env,
+    );
+    const cookie = (login.headers.get("set-cookie") as string).split(";")[0];
+    const res = await app.request(
+      "https://esencial-api.mi-cuenta.workers.dev/api/auth/logout",
+      { method: "POST", headers: { cookie } },
+      env,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toMatch(
+      /Domain=mi-cuenta\.workers\.dev/i,
+    );
   });
 });
 

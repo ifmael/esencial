@@ -38,16 +38,17 @@
         <h1>Esencial, de arriba abajo</h1>
         <p class="lead">
           Esencial es una app de bienestar personal —recetas, plan semanal y plan de fuerza— que
-          vive entera en <strong>un solo Worker de Cloudflare</strong>. Ese Worker sirve la API
-          bajo <code>/api/*</code> y los assets del SPA en la misma URL, con una única base D1 y un
-          bucket R2 para las fotos de recetas.
+          vive en <strong>dos Workers de Cloudflare</strong>: el frontal sirve los assets del SPA y
+          protege el HTML, y la API atiende <code>/api/*</code>. El navegador habla con los dos
+          —la API con CORS y credenciales— y ambos comparten una única base D1 y un bucket R2 para
+          las fotos de recetas.
         </p>
 
         <figure>
           <svg
             viewBox="0 0 880 380"
             role="img"
-            aria-label="El navegador pide al Worker esencial; un middleware decide entre la API Hono en /api/* y los assets del SPA; la API habla con D1 por el binding DB y con R2 por el binding PHOTOS."
+            aria-label="El navegador pide el documento al Worker frontal esencial (guard del HTML y assets de web/dist) y las llamadas /api/* al Worker esencial-api, donde middleware y Hono atienden con CORS y credenciales; la API habla con D1 por el binding DB y con R2 por el binding PHOTOS."
           >
             <defs>
               <marker
@@ -63,70 +64,84 @@
               </marker>
             </defs>
 
-            <rect x="196" y="40" width="464" height="300" rx="14" fill="none" stroke="var(--primary)" class="dg-dash" />
-            <text x="216" y="64" class="dg-sub" text-anchor="start">Cloudflare · Worker «esencial»</text>
+            <rect x="172" y="40" width="224" height="300" rx="14" fill="none" stroke="var(--primary)" class="dg-dash" />
+            <text x="192" y="64" class="dg-sub" text-anchor="start">Worker «esencial» · frontal</text>
 
-            <rect x="8" y="150" width="160" height="64" rx="10" class="dg-box" />
-            <text x="88" y="172" class="dg-text" text-anchor="middle">Navegador</text>
-            <text x="88" y="192" class="dg-sub" text-anchor="middle">SPA + cookie</text>
+            <rect x="408" y="40" width="264" height="300" rx="14" fill="none" stroke="var(--primary)" class="dg-dash" />
+            <text x="428" y="64" class="dg-sub" text-anchor="start">Worker «esencial-api»</text>
 
-            <rect x="216" y="150" width="136" height="64" rx="10" class="dg-box" />
-            <text x="284" y="172" class="dg-text" text-anchor="middle">middleware.ts</text>
-            <text x="284" y="192" class="dg-sub" text-anchor="middle">pageGuard · authGuard</text>
+            <rect x="8" y="150" width="120" height="64" rx="10" class="dg-box" />
+            <text x="68" y="172" class="dg-text" text-anchor="middle">Navegador</text>
+            <text x="68" y="192" class="dg-sub" text-anchor="middle">SPA + cookie</text>
 
-            <line x1="168" y1="182" x2="208" y2="182" class="dg-line-strong" marker-end="url(#flecha)" />
-            <text x="189" y="168" class="dg-label" text-anchor="middle">HTTPS</text>
+            <rect x="188" y="150" width="192" height="64" rx="10" class="dg-box" />
+            <text x="284" y="172" class="dg-text" text-anchor="middle">guard del HTML</text>
+            <text x="284" y="192" class="dg-sub" text-anchor="middle">web/worker/index.ts</text>
 
-            <line x1="352" y1="182" x2="396" y2="182" class="dg-line" />
-            <circle cx="396" cy="182" r="3" class="dg-accent" />
-            <line x1="396" y1="120" x2="396" y2="290" class="dg-line" />
-            <line x1="396" y1="120" x2="414" y2="120" class="dg-line-strong" marker-end="url(#flecha)" />
-            <line x1="396" y1="290" x2="414" y2="290" class="dg-line-strong" marker-end="url(#flecha)" />
-            <text x="414" y="106" class="dg-label" text-anchor="end">/api/*</text>
+            <rect x="188" y="252" width="192" height="64" rx="10" class="dg-box" />
+            <text x="284" y="274" class="dg-text" text-anchor="middle">ASSETS</text>
+            <text x="284" y="294" class="dg-sub" text-anchor="middle">web/dist</text>
 
-            <rect x="420" y="88" width="150" height="64" rx="10" class="dg-box" />
-            <text x="495" y="110" class="dg-text" text-anchor="middle">Hono API</text>
-            <text x="495" y="130" class="dg-sub" text-anchor="middle">api/src/routes</text>
+            <line x1="284" y1="214" x2="284" y2="246" class="dg-line-strong" marker-end="url(#flecha)" />
+            <text x="296" y="236" class="dg-label" text-anchor="start">si pasa</text>
 
-            <rect x="420" y="258" width="150" height="64" rx="10" class="dg-box" />
-            <text x="495" y="280" class="dg-text" text-anchor="middle">ASSETS</text>
-            <text x="495" y="300" class="dg-sub" text-anchor="middle">el resto · web/dist</text>
-
-            <rect x="672" y="92" width="192" height="56" rx="10" class="dg-box-strong" />
-            <text x="768" y="112" class="dg-text" text-anchor="middle">D1 «esencial»</text>
-            <text x="768" y="131" class="dg-sub" text-anchor="middle">SQL · binding DB</text>
-
-            <rect x="672" y="262" width="192" height="56" rx="10" class="dg-box-strong" />
-            <text x="768" y="282" class="dg-text" text-anchor="middle">R2 «esencial-photos»</text>
-            <text x="768" y="301" class="dg-sub" text-anchor="middle">fotos · binding PHOTOS</text>
-
-            <line x1="572" y1="120" x2="662" y2="120" class="dg-line-strong" marker-end="url(#flecha)" />
-            <text x="617" y="106" class="dg-label" text-anchor="middle">binding DB</text>
+            <line x1="132" y1="182" x2="184" y2="182" class="dg-line-strong" marker-end="url(#flecha)" />
+            <text x="150" y="170" class="dg-label" text-anchor="middle">HTTPS</text>
 
             <polyline
-              points="570,140 640,140 640,290 662,290"
+              points="68,214 68,362 540,362 540,346"
               class="dg-line-strong"
               marker-end="url(#flecha)"
             />
-            <text x="634" y="196" class="dg-label" text-anchor="end">binding PHOTOS</text>
+            <text x="304" y="353" class="dg-label" text-anchor="middle">CORS con credenciales</text>
+
+            <rect x="424" y="96" width="232" height="56" rx="10" class="dg-box" />
+            <text x="540" y="118" class="dg-text" text-anchor="middle">middleware</text>
+            <text x="540" y="138" class="dg-sub" text-anchor="middle">securityHeaders · cors · authGuard</text>
+
+            <rect x="424" y="236" width="232" height="56" rx="10" class="dg-box" />
+            <text x="540" y="258" class="dg-text" text-anchor="middle">Hono API</text>
+            <text x="540" y="278" class="dg-sub" text-anchor="middle">api/src/routes</text>
+
+            <line x1="540" y1="152" x2="540" y2="230" class="dg-line-strong" marker-end="url(#flecha)" />
+            <text x="552" y="196" class="dg-label" text-anchor="start">si pasa</text>
+
+            <rect x="692" y="92" width="180" height="56" rx="10" class="dg-box-strong" />
+            <text x="782" y="112" class="dg-text" text-anchor="middle">D1 «esencial»</text>
+            <text x="782" y="131" class="dg-sub" text-anchor="middle">SQL · binding DB</text>
+
+            <rect x="692" y="262" width="180" height="56" rx="10" class="dg-box-strong" />
+            <text x="782" y="282" class="dg-text" text-anchor="middle">R2 «esencial-photos»</text>
+            <text x="782" y="301" class="dg-sub" text-anchor="middle">fotos · binding PHOTOS</text>
+
+            <polyline
+              points="656,264 668,264 668,120 688,120"
+              class="dg-line-strong"
+              marker-end="url(#flecha)"
+            />
+
+            <line x1="656" y1="290" x2="688" y2="290" class="dg-line-strong" marker-end="url(#flecha)" />
           </svg>
           <figcaption>
-            La petición entra al Worker y pasa siempre por el middleware: las páginas HTML van
-            gateadas por <code>pageGuard</code> y la API por <code>authGuard</code>. Solo después se
-            decide el destino —Hono para <code>/api/*</code>, los assets compilados para el resto— y
-            la API accede a los datos por bindings, nunca por red.
-            <br /><strong>Leyenda:</strong> el borde verde discontinuo delimita lo que se despliega
-            (el Worker); las cajas verdes son los recursos con binding (D1 y R2); las grises, código
+            El navegador pide el documento al Worker frontal y las llamadas <code>/api/*</code> al
+            Worker <code>esencial-api</code>. En el frontal, el guard redirige a
+            <code>/login?next=…</code> si no hay sesión y sirve los assets de
+            <code>web/dist</code>; en la API, <code>securityHeaders</code>, <code>cors</code> y
+            <code>authGuard</code> corren antes de las rutas. La API accede a los datos por bindings,
+            nunca por red.
+            <br /><strong>Leyenda:</strong> cada borde verde discontinuo delimita un Worker
+            desplegable; las cajas verdes son los recursos con binding (D1 y R2); las grises, código
             y piezas del navegador.
           </figcaption>
         </figure>
 
         <h2>Quién contesta a cada dirección</h2>
         <p>
-          Hay un solo programa y un solo despliegue: el mismo Worker que habla con la base de datos
-          es el que entrega los archivos de la aplicación. Cuando abres una dirección, la petición
-          pasa primero por las fases del diagrama y <strong>solo después</strong> se decide el
-          destino.
+          Hay dos programas y dos despliegues: el Worker frontal entrega los archivos de la
+          aplicación y el Worker de la API responde con datos. Al abrir una dirección, el navegador
+          pide el documento a <code>https://esencial.nutrirutina.workers.dev</code>, y la aplicación
+          llama después a <code>https://esencial-api.nutrirutina.workers.dev</code> con CORS y
+          credenciales.
         </p>
         <div class="table-wrap">
           <table>
@@ -140,22 +155,22 @@
             <tbody>
               <tr>
                 <td><code>/api/…</code> (datos)</td>
-                <td>El código de la API: 11 ficheros de rutas</td>
+                <td>El Worker <code>esencial-api</code>: 11 ficheros de rutas</td>
                 <td>Sí, salvo <code>/api/health</code> y las de entrar y salir</td>
               </tr>
               <tr>
                 <td><code>/</code> o <code>/plan-fuerza</code> (una pantalla)</td>
-                <td>Se entrega <code>index.html</code>, desde los archivos enlazados al programa</td>
+                <td>El Worker frontal entrega <code>index.html</code>, desde sus assets</td>
                 <td>Sí; sin sesión te manda a entrar</td>
               </tr>
               <tr>
                 <td><code>/login</code></td>
-                <td><code>index.html</code></td>
+                <td>El frontal entrega <code>index.html</code></td>
                 <td>No: es la puerta</td>
               </tr>
               <tr>
                 <td>Algo con extensión (<code>.js</code>, <code>.css</code>, <code>.png</code>)</td>
-                <td>El archivo tal cual</td>
+                <td>El frontal: el archivo tal cual</td>
                 <td>No: la pantalla de entrar necesita los suyos</td>
               </tr>
             </tbody>
@@ -194,8 +209,8 @@
         <ul>
           <li>
             <strong>Primera entrega</strong> — primera visita, recarga, enlace pegado o un
-            dispositivo nuevo: el navegador pregunta al servidor, y ahí actúan <code>authGuard</code>
-            y <code>pageGuard</code>.
+            dispositivo nuevo: el navegador pide el documento al frontal, y ahí actúa su guard; las
+            llamadas a <code>/api/*</code> pasan por <code>authGuard</code>.
           </li>
           <li>
             <strong>Aplicación ya abierta</strong> — moverse entre pantallas no pide ningún
@@ -203,12 +218,17 @@
           </li>
         </ul>
 
-        <h3>Las dos mitades no se hablan por la red</h3>
+        <h3>La API no pide los datos por la red</h3>
         <p>
           El código de la API lee la base y las fotos directamente, con los enlaces que Cloudflare
-          le da al Worker (<code>DB</code> y <code>PHOTOS</code>), no pidiendo otra URL. Por eso no
-          hay CORS que configurar, hay una sola dirección, y una pantalla y su endpoint se despliegan
-          juntos: cambia el SPA, cambia en la misma publicación.
+          le da a su Worker (<code>DB</code> y <code>PHOTOS</code>), no pidiendo otra URL. Lo que sí
+          cruza la red es la llamada del navegador: el SPA llama a la API por su URL absoluta
+          (<code>VITE_API_URL</code>, fijada en el build) con <code>credentials: "include"</code>,
+          así que la API autoriza el origen de la web con CORS y el frontal autoriza el origen de la
+          API en su CSP (<code>connect-src</code> e <code>img-src</code>). La cookie de sesión la
+          emite la API y en <code>workers.dev</code> lleva
+          <code>Domain=nutrirutina.workers.dev</code>, para que el guard del frontal también pueda
+          verla.
         </p>
 
         <div class="note">
@@ -220,7 +240,7 @@
         </div>
 
         <div class="kpis">
-          <div class="kpi"><b>1</b><span>Worker sirve API y SPA</span></div>
+          <div class="kpi"><b>2</b><span>Workers: frontal y API</span></div>
           <div class="kpi"><b>91</b><span>ejercicios sembrados</span></div>
           <div class="kpi"><b>145</b><span>tags de catálogo</span></div>
           <div class="kpi"><b>4</b><span>gates en CI</span></div>
@@ -282,14 +302,17 @@
         </p>
         <ol>
           <li>
-            <strong>Un Worker hace de frontend y de backend.</strong> <code>wrangler.toml</code> fija
-            <code>main</code>, un binding <code>ASSETS</code> hacia <code>web/dist</code> y
-            <code>run_worker_first = true</code>: cada petición pasa por el Worker, también las
-            páginas HTML. Un solo despliegue, una sola URL, sin CORS.
+            <strong>Dos Workers: uno para la web y otro para la API.</strong> El
+            <code>wrangler.toml</code> de la raíz fija el frontal (assets de <code>web/dist</code>,
+            binding <code>ASSETS</code>, <code>run_worker_first = true</code> y el guard del HTML en
+            <code>web/worker/index.ts</code>); <code>api/wrangler.toml</code> fija la API (Hono, D1 y
+            R2). El navegador habla con los dos, así que el CORS es explícito y con credenciales.
           </li>
           <li>
-            <strong>Un middleware global decide el acceso.</strong> Las cabeceras de seguridad y los
-            dos guards viven en <code>api/src/middleware.ts</code>, así que ninguna ruta nueva puede
+            <strong>Cada Worker protege lo suyo.</strong> El frontal aplica las cabeceras y el guard
+            del HTML en <code>web/worker/index.ts</code>; la API aplica
+            <code>securityHeaders</code>, <code>cors</code> y <code>authGuard</code> en
+            <code>api/src/middleware.ts</code> antes de las rutas, así que ninguna ruta nueva puede
             nacer desprotegida por descuido.
           </li>
           <li>

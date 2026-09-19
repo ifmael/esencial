@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, test } from "@playwright/test";
-import { apiRequest, seededExercise } from "./helpers";
+import { apiRequest, apiUrl, seededExercise } from "./helpers";
 
 type ItemPayload = {
   exerciseId: number;
@@ -73,7 +73,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     for (const s of sessions.filter(
       (s) => s.date === date && s.status === "planned",
     )) {
-      await request.delete(`/api/plan-sessions/${s.id}`);
+      await request.delete(apiUrl(`/api/plan-sessions/${s.id}`));
     }
   }
 

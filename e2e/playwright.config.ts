@@ -5,17 +5,31 @@ const BRAVE = "/usr/bin/brave-browser";
 // Puerto propio de e2e: con 8787 + reuseExistingServer, un `pnpm dev` en marcha
 // sería adoptado y la suite escribiría en la base de desarrollo.
 const BASE = "http://127.0.0.1:8788";
+// B' (dos despliegues): la API es su propio Worker, en su propio puerto. El SPA
+// se construye apuntando ahí (VITE_API_URL) y el frontal autoriza ese origen en
+// su CSP (API_ORIGIN): los dos valores tienen que ser el mismo.
+const API = "http://127.0.0.1:8790";
 
 // La base de e2e se DERIVA de api/migrations/ en cada corrida y vive en
 // e2e/.state: nunca se lee ni se escribe .wrangler/state. Añadir una migración
 // no requiere tocar nada de aquí. `< /dev/null` evita el prompt (Y/n) de wrangler
 // cuando corre en TTY (AGENTS.md, problema conocido 2).
-const SERVER =
+const API_SERVER =
   "ESENCIAL_DEV_PASSWORD=hola pnpm predev && " +
   "rm -rf e2e/.state && " +
-  "npx wrangler d1 migrations apply esencial --local --persist-to e2e/.state < /dev/null && " +
-  "pnpm build && " +
-  "npx wrangler dev --persist-to e2e/.state --port 8788";
+  "npx wrangler d1 migrations apply esencial --local -c api/wrangler.toml --persist-to e2e/.state < /dev/null && " +
+  // --var WEB_ORIGIN: el [vars] de api/wrangler.toml es el origen de producción;
+  // en e2e el navegador viene de http://127.0.0.1:8788 y sin esto la API no le
+  // daría permiso CORS (el login fallaría).
+  `npx wrangler dev -c api/wrangler.toml --port 8790 --var WEB_ORIGIN:${BASE} --persist-to e2e/.state`;
+
+// El Worker del frontal no toca D1: se le da su propio estado local para que el
+// `rm -rf e2e/.state` del arranque de la API no le pise la caché a mitad de
+// arranque. `--var API_ORIGIN` sustituye el valor de producción del wrangler.toml.
+const WEB_SERVER =
+  "ESENCIAL_DEV_PASSWORD=hola pnpm predev && " +
+  `VITE_API_URL=${API} pnpm build && ` +
+  `npx wrangler dev --port 8788 --var API_ORIGIN:${API} --persist-to e2e/.state-web`;
 
 export default defineConfig({
   testDir: "./tests",
@@ -32,14 +46,24 @@ export default defineConfig({
       args: ["--no-sandbox"],
     },
   },
-  webServer: {
-    command: SERVER,
-    cwd: "..",
-    url: `${BASE}/api/health`,
-    // rm + migraciones + build: más lento que `pnpm dev` a secas.
-    timeout: 180_000,
-    reuseExistingServer: false,
-  },
+  webServer: [
+    {
+      command: API_SERVER,
+      cwd: "..",
+      url: `${API}/api/health`,
+      // rm + migraciones: más lento que `pnpm dev` a secas.
+      timeout: 180_000,
+      reuseExistingServer: false,
+    },
+    {
+      command: WEB_SERVER,
+      cwd: "..",
+      url: `${BASE}/login`,
+      // tsc + vite build antes de arrancar.
+      timeout: 180_000,
+      reuseExistingServer: false,
+    },
+  ],
   projects: [
     { name: "setup", testMatch: /setup\.ts/, use: devices["Desktop Chrome"] },
     {

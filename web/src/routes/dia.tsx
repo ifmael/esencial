@@ -4,7 +4,7 @@
 // cambiar de fecha vía desmontaje del editor keyed por fecha).
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { photoSrc } from "../lib/api";
+import { apiFetchRaw, photoSrc } from "../lib/api";
 import { type DayData, type DaySession, toISODate, useDay } from "../lib/day";
 import { KIND_LABELS } from "../lib/exercises";
 
@@ -232,7 +232,7 @@ export function NoteEditor({
     timer.current = undefined;
     setStatus("saving");
     try {
-      const res = await fetch(`/api/notes/${date}`, {
+      const res = await apiFetchRaw(`/api/notes/${date}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text: value }),

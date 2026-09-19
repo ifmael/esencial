@@ -163,7 +163,7 @@
               <tr>
                 <td>Job <code>ci</code></td>
                 <td>Push o PR a <code>main</code></td>
-                <td>typecheck + tests de api y web + e2e con su servidor y su base</td>
+                <td>typecheck + tests de api y web + e2e con sus dos servidores y sus dos bases</td>
               </tr>
               <tr>
                 <td>Job <code>lint</code></td>
@@ -173,7 +173,11 @@
               <tr>
                 <td>Workers Builds</td>
                 <td>Push a <code>main</code></td>
-                <td>Build del SPA + <code>wrangler deploy</code>, en el runner de Cloudflare</td>
+                <td>
+                  Dos builds, uno por Worker: el frontal (root <code>/</code>, <code>pnpm build</code>
+                  del SPA, con la URL de la API en <code>web/.env.production</code>) y la API (root <code>api/</code>,
+                  sin build), en el runner de Cloudflare
+                </td>
               </tr>
             </tbody>
           </table>
@@ -187,9 +191,9 @@
         <div class="warn">
           <p>
             <strong>La contraseña de los tests es pública a propósito.</strong> El entorno del job
-            fija <code>ESENCIAL_DEV_PASSWORD=hola</code> para que <code>predev</code> genere el
-            <code>.dev.vars</code> que la suite e2e espera, exactamente el mismo valor que inyecta
-            el <code>webServer</code> de Playwright. No es un secreto de producción.
+            fija <code>ESENCIAL_DEV_PASSWORD=hola</code> para que <code>predev</code> genere los dos
+            <code>.dev.vars</code> que la suite e2e espera, exactamente el mismo valor que inyectan
+            los dos <code>webServer</code> de Playwright. No es un secreto de producción.
           </p>
         </div>
 
