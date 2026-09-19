@@ -1,24 +1,38 @@
 // E0 shell ported from legacy/next-app: desktop sidebar + mobile bottom tabs.
 // Menú lateral con 3 secciones (Hoy, Deporte, Nutrición); Deporte y Nutrición
 // son colapsables y despliegan su submenú. E7: logout button.
+//
+// Variante A (acabado): misma estructura —3 secciones, mismos submenús, mismos
+// destinos— con el acabado del sistema: marca, iconos, pastilla de activo,
+// transiciones cortas y una barra inferior con área táctil de 44px.
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { apiFetchRaw } from "../lib/api";
+import {
+  CalendarIcon,
+  ChevronDownIcon,
+  DumbbellIcon,
+  LeafIcon,
+  LogoutIcon,
+  UtensilsIcon,
+} from "./icons";
 
 type NavChild = { href: string; label: string };
 type NavSection = {
   key: string;
   href: string;
   label: string;
+  icon: (props: { width?: number; height?: number }) => React.ReactNode;
   children?: NavChild[];
 };
 
 const NAV: NavSection[] = [
-  { key: "hoy", href: "/", label: "Hoy" },
+  { key: "hoy", href: "/", label: "Hoy", icon: CalendarIcon },
   {
     key: "deporte",
     href: "/plan-fuerza",
     label: "Deporte",
+    icon: DumbbellIcon,
     children: [
       { href: "/ejercicios", label: "Ejercicios" },
       { href: "/plantillas", label: "Plantillas" },
@@ -28,6 +42,7 @@ const NAV: NavSection[] = [
     key: "nutricion",
     href: "/plan-recetas",
     label: "Nutrición",
+    icon: UtensilsIcon,
     children: [{ href: "/recetario", label: "Recetas" }],
   },
 ];
@@ -39,6 +54,25 @@ const sectionActive = (pathname: string, section: NavSection) =>
   isActive(pathname, section.href) ||
   (section.children ?? []).some((child) => isActive(pathname, child.href));
 
+/** Fila de menú: 44px de alto. La pastilla de activo la pinta el contenedor
+ * de la fila (`rowBox`) para que todas las filas acaben en el mismo borde,
+ * tenga o no un botón de desplegar a su derecha. */
+const rowClass = (active: boolean) =>
+  [
+    "flex h-11 items-center gap-3 rounded-control px-3 text-body",
+    "transition-colors duration-150 ease-out-quart",
+    active
+      ? "font-semibold text-primary"
+      : "font-medium text-text-secondary hover:bg-surface-muted hover:text-text",
+  ].join(" ");
+
+const rowBox = (active: boolean) =>
+  [
+    "flex items-center rounded-control",
+    "transition-colors duration-150 ease-out-quart",
+    active ? "bg-primary-soft" : "",
+  ].join(" ");
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -46,22 +80,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // usuario la colapsó/desplegó a mano.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
-  const linkClass = (active: boolean) =>
-    active
-      ? "text-white bg-primary rounded-lg px-3 py-2 font-semibold"
-      : "text-text-secondary hover:text-text rounded-lg px-3 py-2 font-medium";
+  const logout = async () => {
+    await apiFetchRaw("/api/auth/logout", { method: "POST" });
+    navigate("/login");
+  };
 
   const nav = NAV.map((section) => {
     const active = sectionActive(pathname, section);
+    const SectionIcon = section.icon;
     if (!section.children) {
       return (
         <Link
           key={section.href}
           to={section.href}
           aria-current={isActive(pathname, section.href) ? "page" : undefined}
-          className={linkClass(active)}
+          className={rowBox(active)}
         >
-          {section.label}
+          <span className={rowClass(active)}>
+            <SectionIcon />
+            {section.label}
+          </span>
         </Link>
       );
     }
@@ -69,12 +107,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
     const panelId = `nav-${section.key}`;
     return (
       <div key={section.href} className="flex flex-col">
-        <div className="flex items-center gap-1">
+        <div className={rowBox(active)}>
           <Link
             to={section.href}
             aria-current={active ? "page" : undefined}
-            className={`flex-1 ${linkClass(active)}`}
+            className={`flex-1 ${rowClass(active)}`}
           >
+            <SectionIcon />
             {section.label}
           </Link>
           <button
@@ -85,13 +124,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
             onClick={() =>
               setToggled((t) => ({ ...t, [section.key]: !expanded }))
             }
-            className="min-h-11 min-w-11 rounded-lg text-text-secondary hover:text-text"
+            className="-ml-1 mr-1 grid size-9 shrink-0 place-items-center rounded-control transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text"
           >
-            <span aria-hidden>{expanded ? "▾" : "▸"}</span>
+            <ChevronDownIcon
+              width={18}
+              height={18}
+              className={`transition-transform duration-200 ease-out-quart ${
+                expanded ? "" : "-rotate-90"
+              }`}
+            />
           </button>
         </div>
         {expanded && (
-          <ul id={panelId} className="flex flex-col gap-1 pl-4">
+          <ul
+            id={panelId}
+            className="mt-1 ml-5 flex flex-col gap-0.5 border-l border-border pl-2"
+          >
             {section.children.map((child) => (
               <li key={child.href}>
                 <Link
@@ -99,7 +147,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   aria-current={
                     isActive(pathname, child.href) ? "page" : undefined
                   }
-                  className={`block ${linkClass(isActive(pathname, child.href))}`}
+                  className={rowClass(isActive(pathname, child.href))}
                 >
                   {child.label}
                 </Link>
@@ -112,47 +160,81 @@ export function Shell({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className="flex min-h-dvh flex-col md:flex-row">
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-56 md:flex-col gap-2 border-r border-border bg-surface p-4">
-        <div className="mb-4 text-xl font-bold text-primary">Esencial</div>
-        <nav className="flex flex-col gap-1">{nav}</nav>
+    <div className="flex min-h-dvh flex-col lg:flex-row">
+      {/* Escritorio: barra lateral fija */}
+      <aside className="hidden w-64 shrink-0 flex-col gap-6 border-r border-border bg-surface px-4 py-6 lg:flex">
+        <Link
+          to="/"
+          className="flex items-center gap-3 rounded-control px-2 py-1 transition-colors duration-150 ease-out-quart hover:bg-surface-muted"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-panel bg-primary text-on-primary">
+            <LeafIcon width={22} height={22} />
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="text-title font-bold tracking-tight text-primary">
+              Esencial
+            </span>
+            <span className="text-caption text-text-secondary">
+              Bienestar personal
+            </span>
+          </span>
+        </Link>
+
+        <nav className="flex flex-1 flex-col gap-1">{nav}</nav>
+
         <button
           type="button"
-          className="btn-secondary mt-auto"
-          onClick={async () => {
-            await apiFetchRaw("/api/auth/logout", { method: "POST" });
-            navigate("/login");
-          }}
+          onClick={logout}
+          className="flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text"
         >
+          <LogoutIcon />
           Cerrar sesión
         </button>
       </aside>
 
-      <main className="flex flex-1 flex-col p-4 pb-20 md:pb-4">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:px-8 lg:py-8 lg:pb-8">
+        {children}
+      </main>
 
-      {/* Mobile bottom tabs */}
-      <nav className="fixed inset-x-0 bottom-0 flex justify-around border-t border-border bg-surface p-2 md:hidden">
-        {NAV.map((section) => (
-          <Link
-            key={section.href}
-            to={section.href}
-            aria-current={isActive(pathname, section.href) ? "page" : undefined}
-            className={linkClass(isActive(pathname, section.href))}
+      {/* Móvil: barra inferior */}
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_20px_-14px_rgb(28_25_23/0.5)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-lg items-stretch px-2 py-1.5">
+          {NAV.map((section) => {
+            const SectionIcon = section.icon;
+            const active = sectionActive(pathname, section);
+            return (
+              <Link
+                key={section.href}
+                to={section.href}
+                aria-current={
+                  isActive(pathname, section.href) ? "page" : undefined
+                }
+                className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel px-1 py-1 text-micro font-semibold transition-colors duration-150 ease-out-quart ${
+                  active ? "text-primary" : "text-text-secondary"
+                }`}
+              >
+                <span
+                  className={`grid size-9 place-items-center rounded-panel transition-colors duration-200 ease-out-quart ${
+                    active ? "bg-primary-soft" : ""
+                  }`}
+                >
+                  <SectionIcon />
+                </span>
+                {section.label}
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={logout}
+            className="ml-1 flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel border-l border-border px-1 py-1 text-micro font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:text-text"
           >
-            {section.label}
-          </Link>
-        ))}
-        <button
-          type="button"
-          className="rounded-lg px-3 py-2 font-medium text-text-secondary"
-          onClick={async () => {
-            await apiFetchRaw("/api/auth/logout", { method: "POST" });
-            navigate("/login");
-          }}
-        >
-          Salir
-        </button>
+            <span className="grid size-9 place-items-center">
+              <LogoutIcon />
+            </span>
+            Salir
+          </button>
+        </div>
       </nav>
     </div>
   );
