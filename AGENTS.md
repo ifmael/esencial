@@ -27,6 +27,51 @@ tarea lo requiere.
 - **Propón alternativas con tradeoffs** cuando haya un cruce real de diseño.
 - La UI y los datos van en **español**; nombres de ejercicios/recetas en español.
 
+## Sistema de diseño (UI)
+
+**La fuente única es `web/src/globals.css`.** Tres capas, con un solo dueño cada
+una:
+
+1. `:root` — valores crudos (colores, escala tipográfica, ritmo de espaciado,
+   radios, sombras, movimiento) y los pocos derivados (`--color-primary-soft`,
+   `--color-ring`).
+2. `@theme inline` — el puente a Tailwind: convierte esos tokens en utilidades
+   (`text-lead`, `p-card`, `gap-section`, `rounded-card`, `shadow-raised`…).
+3. `@layer components` — la piel de las piezas reutilizables (`.card`, `.btn-*`,
+   `.input`, `.badge-*`, `.section-label`, `.list-row`, `.skeleton`).
+
+Las pantallas consumen **las primitivas** de `web/src/components/ui.tsx`
+(`Button`, `Card`, `Input`, `Textarea`, `Badge`); los iconos salen de
+`web/src/components/icons.tsx` (SVG en línea, sin dependencia). Las clases del
+punto 3 son el **detalle de implementación** de esas primitivas: una pantalla no
+las usa directamente.
+
+**Al añadir algo nuevo:** reutiliza una primitiva existente. Si no encaja, añade
+primero el token (`:root` + `@theme inline`) y después la primitiva. **Nunca un
+valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`):
+`pnpm lint` lo detecta y falla (ver `web/scripts/check-design-tokens.ts`). Se
+aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
+inventan una escala.
+
+Escala vigente — todo lo demás sale de aquí:
+
+| Familia | Tokens |
+| --- | --- |
+| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
+| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
+| Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
+| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
+| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+
+- Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
+  campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
+  la vez, sin estado duplicado en una clase aparte.
+- Todo lo animado se neutraliza con `prefers-reduced-motion`.
+- Catálogo de variantes en la ruta **`/ui`** (fuera del menú): míralo antes de
+  inventar una pieza.
+- `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
+  `globals.css`, manda `globals.css`.
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |
