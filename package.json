@@ -18,7 +18,7 @@
     "deploy": "pnpm build && wrangler deploy -c api/wrangler.toml && wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply esencial --local -c api/wrangler.toml --persist-to .wrangler/state",
     "db:migrate:remote": "wrangler d1 migrations apply esencial --remote -c api/wrangler.toml",
-    "lint": "biome check .",
+    "lint": "biome check . && pnpm --filter @esencial/web check:tokens",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "prepare": "husky"
