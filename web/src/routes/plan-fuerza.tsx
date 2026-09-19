@@ -236,7 +236,7 @@ function BodyMap({
   return (
     <svg
       viewBox="0 0 200 400"
-      className="h-80 w-56"
+      className="h-48 w-36"
       aria-label={`Vista ${view === "front" ? "frontal" : "trasera"}`}
     >
       <BodySilhouette />
@@ -274,30 +274,85 @@ function BodyMap({
   );
 }
 
-// --- Añadir ejercicio (modal) ------------------------------------------------
+// --- Selector de ejercicios (sin diálogo propio) -----------------------------
 
-function ExercisePicker({
+/** Cotejador alfabético español (acentos y mayúsculas sin peso). */
+const collator = new Intl.Collator("es", { sensitivity: "base" });
+
+/** Grupos por primer tag (músculo): grupos y ejercicios en orden alfabético;
+ *  los ejercicios sin tag caen en «otro». */
+function groupByMuscle(list: Exercise[]): [string, Exercise[]][] {
+  const groups: Record<string, Exercise[]> = {};
+  for (const e of list) {
+    const tag = e.tags[0] ?? "otro";
+    groups[tag] ??= [];
+    groups[tag].push(e);
+  }
+  const entries = Object.entries(groups);
+  for (const [, items] of entries) {
+    items.sort((a, b) => collator.compare(a.name, b.name));
+  }
+  return entries.sort(([a], [b]) =>
+    collator.compare(GROUP_LABELS[a] ?? a, GROUP_LABELS[b] ?? b),
+  );
+}
+
+/** Grupos plegables: cabecera con nombre y conteo. Cerrados por defecto; si la
+ *  lista viene forzada (búsqueda o filtro activos) salen desplegados, y el
+ *  usuario puede plegarlos igualmente. */
+function GroupedExercises({
+  exercises,
+  forceOpen,
+  listClassName,
+  renderItem,
+}: {
+  exercises: Exercise[];
+  forceOpen: boolean;
+  listClassName: string;
+  renderItem: (e: Exercise) => ReactNode;
+}) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  return (
+    <>
+      {groupByMuscle(exercises).map(([tag, list]) => {
+        const isOpen = forceOpen ? open[tag] !== false : open[tag] === true;
+        return (
+          <section key={tag} className="flex flex-col gap-1">
+            <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 text-left"
+                aria-expanded={isOpen}
+                onClick={() => setOpen((o) => ({ ...o, [tag]: !isOpen }))}
+              >
+                {GROUP_LABELS[tag] ?? tag} ({list.length})
+                <span aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
+              </button>
+            </h3>
+            {isOpen ? (
+              <ul className={listClassName}>{list.map(renderItem)}</ul>
+            ) : null}
+          </section>
+        );
+      })}
+    </>
+  );
+}
+
+/** Mapa corporal + filtro por grupo + buscador + lista agrupada. Es contenido
+ *  puro: la modal de plantilla lo embebe, así nunca hay modal dentro de modal. */
+function ExercisePickerBody({
   exercises,
   draftEntries,
   onAdd,
-  onClose,
 }: {
   exercises: Exercise[];
   draftEntries: DraftEntry[];
   onAdd: (e: Exercise) => void;
-  onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState<string | null>(null);
   const [view, setView] = useState<BodyView>("front");
-
-  useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const q = search.trim().toLowerCase();
   const picks = exercises.filter((e) => {
@@ -314,126 +369,114 @@ function ExercisePicker({
   });
   const inDraftIds = new Set(draftEntries.map((en) => en.exerciseId));
 
-  const groups: Record<string, Exercise[]> = {};
-  for (const e of picks) {
-    const tag = e.tags[0] ?? "otro";
-    groups[tag] ??= [];
-    groups[tag].push(e);
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-label="Añadir ejercicio"
-        className="card my-8 flex w-full max-w-xl flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-bold">Añadir ejercicio</h2>
-
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">Vista:</span>
-          <button
-            className={view === "front" ? "btn-primary" : "btn-secondary"}
-            aria-pressed={view === "front"}
-            onClick={() => setView("front")}
-          >
-            Frontal
-          </button>
-          <button
-            className={view === "back" ? "btn-primary" : "btn-secondary"}
-            aria-pressed={view === "back"}
-            onClick={() => setView("back")}
-          >
-            Trasera
-          </button>
-        </div>
-
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex shrink-0 items-start gap-3">
         <BodyMap
           view={view}
           group={group}
           onSelect={(tag) => setGroup((g) => (g === tag ? null : tag))}
         />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            className={group == null ? "btn-primary" : "btn-secondary"}
-            onClick={() => setGroup(null)}
-          >
-            Todos
-          </button>
-          <span className="text-sm text-text-secondary">
-            Grupo: {group ? GROUP_LABELS[group] : "Todos"}
-          </span>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">Vista:</span>
+            <button
+              className={view === "front" ? "btn-primary" : "btn-secondary"}
+              aria-pressed={view === "front"}
+              onClick={() => setView("front")}
+            >
+              Frontal
+            </button>
+            <button
+              className={view === "back" ? "btn-primary" : "btn-secondary"}
+              aria-pressed={view === "back"}
+              onClick={() => setView("back")}
+            >
+              Trasera
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className={group == null ? "btn-primary" : "btn-secondary"}
+              onClick={() => setGroup(null)}
+            >
+              Todos
+            </button>
+            <span className="text-sm text-text-secondary">
+              Grupo: {group ? GROUP_LABELS[group] : "Todos"}
+            </span>
+          </div>
         </div>
+      </div>
 
-        <input
-          className="input"
-          placeholder="Buscar ejercicio"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <input
+        className="input shrink-0"
+        placeholder="Buscar ejercicio"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {picks.length === 0 ? (
           <p className="text-sm text-text-secondary">Sin ejercicios</p>
         ) : (
-          Object.entries(groups).map(([tag, list]) => (
-            <section key={tag} className="flex flex-col gap-1">
-              <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-                {GROUP_LABELS[tag] ?? tag}
-              </h3>
-              <ul className="flex flex-wrap gap-2">
-                {list.map((e) => (
-                  <li key={e.id}>
-                    <button
-                      className="btn-secondary"
-                      disabled={inDraftIds.has(e.id)}
-                      onClick={() => {
-                        if (inDraftIds.has(e.id)) return;
-                        onAdd(e);
-                      }}
-                    >
-                      {e.name}
-                      {e.kind === "strength"
-                        ? null
-                        : ` · ${KIND_LABELS[e.kind]}`}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
+          <GroupedExercises
+            exercises={picks}
+            forceOpen={q !== "" || group !== null}
+            listClassName="flex flex-wrap gap-2"
+            renderItem={(e) => (
+              <li key={e.id}>
+                <button
+                  className="btn-secondary px-2.5 py-1.5 text-sm"
+                  disabled={inDraftIds.has(e.id)}
+                  onClick={() => {
+                    if (inDraftIds.has(e.id)) return;
+                    onAdd(e);
+                  }}
+                >
+                  {e.name}
+                  {e.kind === "strength" ? null : ` · ${KIND_LABELS[e.kind]}`}
+                </button>
+              </li>
+            )}
+          />
         )}
-
-        <button className="btn-secondary self-end" onClick={onClose}>
-          Cerrar
-        </button>
       </div>
     </div>
   );
 }
 
-// --- Editor ----------------------------------------------------------------
+// --- Modal de plantilla (alta y edición) ------------------------------------
 
-function TemplateEditor({
+/** Alta/edición de plantilla en UNA sola modal: el selector de ejercicios va
+ *  embebido dentro, nunca como modal anidada. Cerrar/Escape descarta. */
+function TemplateModal({
   draft: initial,
+  title,
   submitting,
   onSave,
   onCancel,
 }: {
   draft: Draft;
+  title: string;
   submitting: boolean;
   onSave: (draft: Draft) => Promise<void>;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(initial);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const { exercises } = useExercises();
+
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
 
   const save = async () => {
     if (submitting) return;
@@ -453,190 +496,212 @@ function TemplateEditor({
   };
 
   return (
-    <div className="card flex flex-col gap-3">
-      <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-        <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-label={title}
+        className="card my-8 flex max-h-[85vh] w-full max-w-4xl flex-col gap-4 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-bold">{title}</h2>
+
+        <div className="flex flex-col gap-1 text-sm">
           <label htmlFor="tpl-name">Nombre</label>
           <input
             id="tpl-name"
+            autoFocus
             className="input"
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           />
           {nameError && <span className="text-sm text-error">{nameError}</span>}
         </div>
-      </header>
 
-      {serverError && <p className="text-sm text-error">{serverError}</p>}
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto md:grid-cols-2 md:overflow-hidden">
+          <section className="flex min-h-0 flex-col gap-2 md:overflow-hidden">
+            <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+              Ejercicios
+            </h3>
+            <ExercisePickerBody
+              exercises={exercises}
+              draftEntries={draft.entries}
+              onAdd={(e) =>
+                setDraft(
+                  addEntry(draft, {
+                    key: newEntryKey(),
+                    exerciseId: e.id,
+                    exerciseName: e.name,
+                    kind: e.kind,
+                    targetSets: null,
+                    targetRepsMin: null,
+                    targetRepsMax: null,
+                    targetDistanceKm: null,
+                    targetDurationMin: null,
+                  }),
+                )
+              }
+            />
+          </section>
 
-      <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
-        {draft.entries.map((entry, i) => (
-          <li
-            key={entry.key}
-            className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
-              i < draft.entries.length - 1 ? "border-b border-border" : ""
-            }`}
-          >
-            <Link
-              className="min-w-32 font-medium text-primary underline-offset-4 hover:underline"
-              to={`/ejercicios/${entry.exerciseId}`}
-            >
-              {entry.exerciseName}
-            </Link>
-            {entry.kind === "strength" ? (
-              <>
-                <label className="text-sm">
-                  Series
-                  <input
-                    className="input w-16"
-                    type="number"
-                    min={1}
-                    value={entry.targetSets ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetSets: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Reps mín
-                  <input
-                    className="input w-16"
-                    type="number"
-                    min={1}
-                    value={entry.targetRepsMin ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetRepsMin: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Reps máx
-                  <input
-                    className="input w-16"
-                    type="number"
-                    min={1}
-                    value={entry.targetRepsMax ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetRepsMax: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-              </>
-            ) : (
-              <>
-                <span className="badge-pending">{KIND_LABELS[entry.kind]}</span>
-                <label className="text-sm">
-                  Distancia (km)
-                  <input
-                    className="input w-20"
-                    type="number"
-                    min={0}
-                    step="0.1"
-                    value={entry.targetDistanceKm ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetDistanceKm: numAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Tiempo (min)
-                  <input
-                    className="input w-20"
-                    type="number"
-                    min={0}
-                    value={entry.targetDurationMin ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetDurationMin: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-              </>
-            )}
-            <button
-              className="btn-secondary min-h-11 min-w-11"
-              aria-label="Subir"
-              disabled={i === 0}
-              onClick={() => setDraft(moveEntry(draft, i, i - 1))}
-            >
-              ↑
-            </button>
-            <button
-              className="btn-secondary min-h-11 min-w-11"
-              aria-label="Bajar"
-              disabled={i === draft.entries.length - 1}
-              onClick={() => setDraft(moveEntry(draft, i, i + 1))}
-            >
-              ↓
-            </button>
-            <button
-              className="btn-secondary"
-              aria-label="Quitar"
-              onClick={() => setDraft(removeEntry(draft, entry.key))}
-            >
-              Quitar
-            </button>
-          </li>
-        ))}
-      </ul>
+          <section className="flex min-h-0 flex-col gap-2 md:overflow-hidden">
+            <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+              En la plantilla
+            </h3>
 
-      <button
-        className="btn-secondary self-start"
-        onClick={() => setPickerOpen(true)}
-      >
-        + Añadir ejercicio
-      </button>
+            {serverError && <p className="text-sm text-error">{serverError}</p>}
 
-      <div className="flex gap-2">
-        <button className="btn-primary" disabled={submitting} onClick={save}>
-          {submitting ? "Guardando…" : "Guardar"}
-        </button>
-        <button className="btn-secondary" onClick={onCancel}>
-          Cancelar
-        </button>
+            <ul className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-surface-muted/50">
+              {draft.entries.map((entry, i) => (
+                <li
+                  key={entry.key}
+                  className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
+                    i < draft.entries.length - 1 ? "border-b border-border" : ""
+                  }`}
+                >
+                  <Link
+                    className="min-w-32 font-medium text-primary underline-offset-4 hover:underline"
+                    to={`/ejercicios/${entry.exerciseId}`}
+                  >
+                    {entry.exerciseName}
+                  </Link>
+                  {entry.kind === "strength" ? (
+                    <>
+                      <label className="text-sm">
+                        Series
+                        <input
+                          className="input w-16"
+                          type="number"
+                          min={1}
+                          value={entry.targetSets ?? ""}
+                          onChange={(e) =>
+                            setDraft(
+                              setTargets(draft, entry.key, {
+                                targetSets: intAt(e.target.value),
+                              }),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="text-sm">
+                        Reps mín
+                        <input
+                          className="input w-16"
+                          type="number"
+                          min={1}
+                          value={entry.targetRepsMin ?? ""}
+                          onChange={(e) =>
+                            setDraft(
+                              setTargets(draft, entry.key, {
+                                targetRepsMin: intAt(e.target.value),
+                              }),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="text-sm">
+                        Reps máx
+                        <input
+                          className="input w-16"
+                          type="number"
+                          min={1}
+                          value={entry.targetRepsMax ?? ""}
+                          onChange={(e) =>
+                            setDraft(
+                              setTargets(draft, entry.key, {
+                                targetRepsMax: intAt(e.target.value),
+                              }),
+                            )
+                          }
+                        />
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      <span className="badge-pending">
+                        {KIND_LABELS[entry.kind]}
+                      </span>
+                      <label className="text-sm">
+                        Distancia (km)
+                        <input
+                          className="input w-20"
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          value={entry.targetDistanceKm ?? ""}
+                          onChange={(e) =>
+                            setDraft(
+                              setTargets(draft, entry.key, {
+                                targetDistanceKm: numAt(e.target.value),
+                              }),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="text-sm">
+                        Tiempo (min)
+                        <input
+                          className="input w-20"
+                          type="number"
+                          min={0}
+                          value={entry.targetDurationMin ?? ""}
+                          onChange={(e) =>
+                            setDraft(
+                              setTargets(draft, entry.key, {
+                                targetDurationMin: intAt(e.target.value),
+                              }),
+                            )
+                          }
+                        />
+                      </label>
+                    </>
+                  )}
+                  <button
+                    className="btn-secondary min-h-11 min-w-11"
+                    aria-label="Subir"
+                    disabled={i === 0}
+                    onClick={() => setDraft(moveEntry(draft, i, i - 1))}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    className="btn-secondary min-h-11 min-w-11"
+                    aria-label="Bajar"
+                    disabled={i === draft.entries.length - 1}
+                    onClick={() => setDraft(moveEntry(draft, i, i + 1))}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    aria-label="Quitar"
+                    onClick={() => setDraft(removeEntry(draft, entry.key))}
+                  >
+                    Quitar
+                  </button>
+                </li>
+              ))}
+              {draft.entries.length === 0 && (
+                <li className="bg-surface p-3 text-sm text-text-secondary">
+                  Aún no hay ejercicios: añádelos con el selector de la
+                  izquierda.
+                </li>
+              )}
+            </ul>
+          </section>
+        </div>
+
+        <div className="flex shrink-0 gap-2 border-t border-border pt-3">
+          <button className="btn-primary" disabled={submitting} onClick={save}>
+            {submitting ? "Guardando…" : "Guardar"}
+          </button>
+          <button className="btn-secondary" onClick={onCancel}>
+            Cancelar
+          </button>
+        </div>
       </div>
-
-      {pickerOpen && (
-        <ExercisePicker
-          exercises={exercises}
-          draftEntries={draft.entries}
-          onAdd={(e) =>
-            setDraft(
-              addEntry(draft, {
-                key: newEntryKey(),
-                exerciseId: e.id,
-                exerciseName: e.name,
-                kind: e.kind,
-                targetSets: null,
-                targetRepsMin: null,
-                targetRepsMax: null,
-                targetDistanceKm: null,
-                targetDurationMin: null,
-              }),
-            )
-          }
-          onClose={() => setPickerOpen(false)}
-        />
-      )}
     </div>
   );
 }
@@ -910,8 +975,11 @@ function SessionPicker({
           {shownExercises.length === 0 ? (
             <p className="text-sm text-text-secondary">Sin ejercicios</p>
           ) : (
-            <ul className="flex flex-col gap-1">
-              {shownExercises.map((e) => {
+            <GroupedExercises
+              exercises={shownExercises}
+              forceOpen={needle !== ""}
+              listClassName="flex flex-col gap-1"
+              renderItem={(e) => {
                 const taken = takenIds.has(e.id);
                 return (
                   <li key={e.id}>
@@ -932,8 +1000,8 @@ function SessionPicker({
                     </button>
                   </li>
                 );
-              })}
-            </ul>
+              }}
+            />
           )}
         </section>
         <button className="btn-secondary self-end" onClick={onClose}>
@@ -1392,20 +1460,6 @@ export function PlanFuerzaPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {editing && (
-          <div className="xl:col-span-2">
-            <TemplateEditor
-              draft={
-                editing.template
-                  ? toDraft(editing.template)
-                  : { name: "", entries: [] }
-              }
-              submitting={submitting}
-              onSave={save}
-              onCancel={() => setEditing(null)}
-            />
-          </div>
-        )}
         {templates.map((t) => (
           <TemplateCard
             key={t.id}
@@ -1438,6 +1492,20 @@ export function PlanFuerzaPage() {
           + Nueva plantilla
         </button>
       </div>
+
+      {editing && (
+        <TemplateModal
+          title={editing.template ? "Editar plantilla" : "Nueva plantilla"}
+          draft={
+            editing.template
+              ? toDraft(editing.template)
+              : { name: "", entries: [] }
+          }
+          submitting={submitting}
+          onSave={save}
+          onCancel={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }
