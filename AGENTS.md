@@ -123,6 +123,11 @@ responde **500** (`fail closed`) y todo lo protegido 401.
 Por separado: `pnpm dev:api` y `pnpm dev:web`. `pnpm deploy` publica los dos
 Workers (primero el SPA con la URL de producción de la API).
 
+La API lleva `--persist-to .wrangler/state` porque su config vive en `api/` y,
+sin esa bandera, wrangler usaría `api/.wrangler/state` (base de dev nueva y
+vacía). Igual en `pnpm db:migrate:local`: la base de desarrollo sigue siendo la
+de siempre, `.wrangler/state` en la raíz.
+
 ### 5. `pnpm deploy` no ejecuta el script de deploy
 
 `pnpm deploy` es un comando **interno** de pnpm (despliegue de paquetes en un

@@ -50,9 +50,13 @@ el frontal la comprueba en el guard, la API en cada `/api/*`). **Solo la API
 necesita `PASSWORD_HASH`.**
 
 ```bash
-# Clave de firma de sesión (el MISMO valor en los dos Workers; ≥32 aleatorios):
-openssl rand -base64 24 | npx wrangler secret put AUTH_SECRET -c api/wrangler.toml
-openssl rand -base64 24 | npx wrangler secret put AUTH_SECRET          # frontal
+# Clave de firma de sesión: el MISMO valor en los dos Workers. Genérala UNA vez
+# y úsala en los dos comandos (o reutiliza la que ya tenías en `esencial`:
+# dos valores distintos = el frontal y la API no coincidirían y no podrías
+# entrar).
+S=$(openssl rand -base64 24)
+printf '%s' "$S" | npx wrangler secret put AUTH_SECRET -c api/wrangler.toml
+printf '%s' "$S" | npx wrangler secret put AUTH_SECRET            # frontal
 
 # Digest PBKDF2 de TU contraseña real (solo la API lo usa):
 node --disable-warning=ExperimentalWarning api/scripts/hash-password.ts 'tu-clave' \
