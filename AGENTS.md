@@ -42,14 +42,18 @@ una:
 
 Las pantallas consumen **las primitivas** de `web/src/components/ui.tsx`
 (`Button`, `Card`, `Input`, `Textarea`, `Badge`); los iconos salen de
-`web/src/components/icons.tsx` (SVG en línea, sin dependencia). Las clases del
-punto 3 son el **detalle de implementación** de esas primitivas: una pantalla no
-las usa directamente.
+`web/src/components/icons.tsx` (SVG en línea, sin dependencia).
+
+Las clases del punto 3 son la **piel** de esas primitivas: una pantalla no las
+escribe a mano. Hay cuatro utilidades compartidas que sí se aplican tal cual,
+porque no son piel de ningún componente: `.section-label`, `.list-row`,
+`.card-interactive` (como modificador de `Card`) y `.skeleton`.
 
 **Al añadir algo nuevo:** reutiliza una primitiva existente. Si no encaja, añade
 primero el token (`:root` + `@theme inline`) y después la primitiva. **Nunca un
-valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`):
-`pnpm lint` lo detecta y falla (ver `web/scripts/check-design-tokens.ts`). Se
+valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`) ni la
+piel de una primitiva escrita a mano (`className="card"`, `btn-primary`):
+`pnpm lint` rechaza las dos cosas (ver `web/scripts/check-design-tokens.ts`). Se
 aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
 inventan una escala.
 
