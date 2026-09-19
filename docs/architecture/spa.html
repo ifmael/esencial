@@ -39,8 +39,8 @@
         <p class="lead">
           Diez rutas, un layout que las envuelve y ni una línea de estado global. Cada pantalla
           pide lo que necesita al API con su propio hook y lo pinta; el navegador nunca navega de
-          verdad entre páginas, porque el Worker le entrega el mismo <code>index.html</code> y el
-          router hace el resto.
+          verdad entre páginas, porque el Worker del frontal le entrega el mismo
+          <code>index.html</code> y el router hace el resto.
         </p>
 
         <div class="kpis">
@@ -48,14 +48,14 @@
           <div class="kpi"><b>8</b><span>ficheros de rutas</span></div>
           <div class="kpi"><b>7</b><span>hooks de datos</span></div>
           <div class="kpi"><b>0</b><span>estado global</span></div>
-          <div class="kpi"><b>22</b><span>ficheros de test web</span></div>
+          <div class="kpi"><b>24</b><span>ficheros de test web</span></div>
         </div>
 
         <figure>
           <svg
             viewBox="0 0 840 350"
             role="img"
-            aria-label="Un deep link pasa por pageGuard del Worker; si hay sesión entrega index.html, el router monta GuardedShell, que pregunta por /api/auth/status: con sesión renderiza la página, sin sesión navega al login."
+            aria-label="Un deep link pasa por el guard del Worker del frontal; si hay sesión entrega index.html, el router monta GuardedShell, que pregunta por /api/auth/status en la API: con sesión renderiza la página, sin sesión navega al login."
           >
             <defs>
               <marker
@@ -76,12 +76,12 @@
             <text x="100" y="102" class="dg-sub" text-anchor="middle">deep link o F5</text>
 
             <rect x="210" y="60" width="180" height="60" rx="10" class="dg-box" />
-            <text x="300" y="82" class="dg-text" text-anchor="middle">pageGuard</text>
-            <text x="300" y="102" class="dg-sub" text-anchor="middle">404 → index.html</text>
+            <text x="300" y="82" class="dg-text" text-anchor="middle">guard del frontal</text>
+            <text x="300" y="102" class="dg-sub" text-anchor="middle">sin sesión: 302 a /login</text>
 
             <rect x="420" y="60" width="170" height="60" rx="10" class="dg-box-strong" />
             <text x="505" y="82" class="dg-text" text-anchor="middle">index.html</text>
-            <text x="505" y="102" class="dg-sub" text-anchor="middle">SPA de single-page-application</text>
+            <text x="505" y="102" class="dg-sub" text-anchor="middle">servido por el Worker frontal</text>
 
             <rect x="620" y="60" width="200" height="60" rx="10" class="dg-box" />
             <text x="720" y="82" class="dg-text" text-anchor="middle">BrowserRouter</text>
@@ -112,10 +112,11 @@
             <text x="645" y="284" class="dg-label" text-anchor="middle">sin sesión</text>
           </svg>
           <figcaption>
-            Dos guardas, no una. El del servidor decide si te entrega la aplicación y responde con
-            un 302 antes de que exista JavaScript; el del cliente (<code>GuardedShell</code>)
-            pregunta por la sesión una vez y, mientras no sabe la respuesta, no pinta nada —eso
-            evita el parpadeo de la pantalla de login.
+            Dos guardas, no una. El del Worker del frontal decide si te entrega la aplicación y
+            responde con un 302 antes de que exista JavaScript; el del cliente
+            (<code>GuardedShell</code>) pregunta por la sesión una vez —a la API, en el otro
+            origen— y, mientras no sabe la respuesta, no pinta nada: eso evita el parpadeo de la
+            pantalla de login.
           </figcaption>
         </figure>
 
@@ -155,8 +156,8 @@
           <p>
             <strong>Hueco conocido: no hay ruta comodín.</strong> No existe
             <code>path="*"</code>, así que una URL que el router no reconoce no pinta nada: el
-            Worker entrega <code>index.html</code> y se ve una página en blanco, no un 404. Si se
-            quiere una pantalla de «no encontrado», hay que añadirla.
+            Worker del frontal entrega <code>index.html</code> y se ve una página en blanco, no un
+            404. Si se quiere una pantalla de «no encontrado», hay que añadirla.
           </p>
         </div>
 
@@ -196,8 +197,10 @@
             <p>
               <code>lib/api.ts</code> lanza <code>ApiError</code> con <code>error</code>,
               <code>field</code> y <code>status</code>; sin conexión, <code>status 0</code> y
-              mensaje «No se pudo conectar con el servidor». <code>photoSrc()</code> convierte la
-              clave de R2 en <code>/api/uploads/&lt;key&gt;</code>.
+              mensaje «No se pudo conectar con el servidor». Cada llamada sale contra el Worker de
+              la API (<code>VITE_API_URL</code>) con <code>credentials: "include"</code>, y
+              <code>photoSrc()</code> convierte la clave de R2 en
+              <code>&lt;VITE_API_URL&gt;/api/uploads/&lt;key&gt;</code>.
             </p>
           </div>
         </div>
@@ -221,8 +224,8 @@
               <tr><td>Tokens</td><td><code>--color-primary #15803d</code>, <code>--color-background #fafaf9</code>, <code>--color-surface #ffffff</code>, <code>--radius-card 12px</code>, <code>--font-sans system-ui…</code> — los mismos valores que <code>wireframes/DESIGN.md</code>.</td></tr>
               <tr><td>Tema</td><td>Solo claro: no hay <code>prefers-color-scheme</code> ni variantes <code>dark:</code> en la app.</td></tr>
               <tr><td>Accesibilidad táctil</td><td>Objetivos de 44 px (<code>min-h-11</code>/<code>min-w-11</code>) en rejillas, steppers y checkbox.</td></tr>
-              <tr><td>Build</td><td><code>tsc &amp;&amp; vite build</code> → <code>dist/</code>, que es el <code>assets.directory</code> del Worker.</td></tr>
-              <tr><td>Dev</td><td><code>vite</code> con proxy de <code>/api</code> a <code>http://localhost:8787</code> (el <code>wrangler dev</code>), para recarga en caliente.</td></tr>
+              <tr><td>Build</td><td><code>tsc &amp;&amp; vite build</code> → <code>dist/</code>, el <code>assets.directory</code> del Worker <strong>frontal</strong> (<code>directory = "./web/dist"</code> en el <code>wrangler.toml</code> de la raíz).</td></tr>
+              <tr><td>Dev</td><td><code>pnpm dev</code> (<code>api/scripts/dev.ts</code>) levanta los dos Workers: la API en el puerto <code>8789</code> (<code>WEB_ORIGIN=http://127.0.0.1:8787</code>) y el frontal en el <code>8787</code>, sirviendo el SPA construido con <code>VITE_API_URL=http://127.0.0.1:8789</code>. La SPA llama a la API por URL absoluta (<code>VITE_API_URL</code>) y con <code>credentials: "include"</code>, sin pasar por un proxy de vite.</td></tr>
             </tbody>
           </table>
         </div>
@@ -232,7 +235,8 @@
             <strong>Fuentes:</strong> <code>web/src/app.tsx</code>, <code>web/src/routes/*</code>,
             <code>web/src/components/**</code>, <code>web/src/lib/*</code>,
             <code>web/src/globals.css</code>, <code>web/package.json</code>,
-            <code>web/vite.config.ts</code>, <code>wireframes/DESIGN.md</code>. Conteos
+            <code>web/vite.config.ts</code>, <code>wrangler.toml</code>,
+            <code>api/scripts/dev.ts</code>, <code>wireframes/DESIGN.md</code>. Conteos
             verificados por lectura.
           </p>
         </div>

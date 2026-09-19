@@ -37,16 +37,17 @@
         <p class="eyebrow">Fundamentos</p>
         <h1>Stack y carpetas</h1>
         <p class="lead">
-          Un monorepo pnpm con tres paquetes que se despliegan como una sola cosa. Lo único que
-          llega a producción es el bundle del SPA (<code>web/dist</code>) y el Worker compilado;
-          las suites de test y esta documentación nunca viajan al runtime.
+          Un monorepo pnpm con tres paquetes y <strong>dos Workers</strong> desplegables. Lo único
+          que llega a producción son los assets del SPA (<code>web/dist</code>) con el Worker del
+          frontal, y el Worker de la API; las suites de test y esta documentación nunca viajan al
+          runtime.
         </p>
 
         <figure>
           <svg
             viewBox="0 0 820 340"
             role="img"
-            aria-label="De las fuentes a los artefactos: web/src se compila con vite a web/dist; api/src se empaqueta con wrangler en el Worker esencial; api/migrations se aplica con wrangler d1 a la base esencial."
+            aria-label="De las fuentes a los artefactos: web/src se compila con vite a web/dist, que sirve el Worker frontal; api/src se empaqueta con wrangler deploy -c api/wrangler.toml en el Worker esencial-api; api/migrations se aplica con wrangler d1 a la base esencial."
           >
             <defs>
               <marker
@@ -76,7 +77,7 @@
 
             <rect x="580" y="40" width="200" height="64" rx="10" class="dg-box-strong" />
             <text x="680" y="62" class="dg-text" text-anchor="middle">web/dist</text>
-            <text x="680" y="82" class="dg-sub" text-anchor="middle">binding ASSETS</text>
+            <text x="680" y="82" class="dg-sub" text-anchor="middle">binding ASSETS · frontal</text>
 
             <rect x="20" y="140" width="180" height="64" rx="10" class="dg-box" />
             <text x="110" y="162" class="dg-text" text-anchor="middle">api/src</text>
@@ -84,11 +85,11 @@
 
             <rect x="300" y="140" width="180" height="64" rx="10" class="dg-box" />
             <text x="390" y="162" class="dg-text" text-anchor="middle">wrangler deploy</text>
-            <text x="390" y="182" class="dg-sub" text-anchor="middle">empaqueta el Worker</text>
+            <text x="390" y="182" class="dg-sub" text-anchor="middle">api/wrangler.toml</text>
 
             <rect x="580" y="140" width="200" height="64" rx="10" class="dg-box-strong" />
-            <text x="680" y="162" class="dg-text" text-anchor="middle">Worker «esencial»</text>
-            <text x="680" y="182" class="dg-sub" text-anchor="middle">una URL para todo</text>
+            <text x="680" y="162" class="dg-text" text-anchor="middle">Worker «esencial-api»</text>
+            <text x="680" y="182" class="dg-sub" text-anchor="middle">Hono · /api/*</text>
 
             <rect x="20" y="240" width="180" height="64" rx="10" class="dg-box" />
             <text x="110" y="262" class="dg-text" text-anchor="middle">api/migrations</text>
@@ -110,9 +111,10 @@
             <line x1="484" y1="272" x2="574" y2="272" class="dg-line-strong" marker-end="url(#f2)" />
           </svg>
           <figcaption>
-            Tres cadenas de artefactos. El SPA y el Worker se despliegan juntos en la misma URL; el
-            esquema llega a D1 por migraciones numeradas, nunca copiando <code>schema.sql</code> a
-            mano en producción.
+            Tres cadenas de artefactos. El bundle del SPA (<code>web/dist</code>) y el Worker del
+            frontal se despliegan juntos con el <code>wrangler.toml</code> de la raíz; la API, con
+            <code>api/wrangler.toml</code>. El esquema llega a D1 por migraciones numeradas, nunca
+            copiando <code>schema.sql</code> a mano en producción.
           </figcaption>
         </figure>
 
@@ -132,9 +134,9 @@
                 <td><code>@esencial/api</code></td>
                 <td><code>api/</code></td>
                 <td>
-                  Worker Hono: <code>src/</code> (11 rutas, 11 módulos de soporte),
-                  <code>migrations/</code>, <code>schema.sql</code>, <code>scripts/</code>,
-                  <code>tests/</code>
+                  Worker de la API (Hono + D1 + R2): <code>wrangler.toml</code>, <code>src/</code>
+                  (11 rutas, 11 módulos de soporte), <code>migrations/</code>,
+                  <code>schema.sql</code>, <code>scripts/</code>, <code>tests/</code>
                 </td>
                 <td><code>test</code>, <code>typecheck</code></td>
               </tr>
@@ -142,8 +144,9 @@
                 <td><code>@esencial/web</code></td>
                 <td><code>web/</code></td>
                 <td>
-                  SPA React 19 + Vite + react-router 7 + Tailwind 4: <code>src/routes/</code>,
-                  <code>src/components/</code>, <code>src/lib/</code>, <code>tests/</code>
+                  SPA React 19 + Vite + react-router 7 + Tailwind 4, y el Worker del frontal:
+                  <code>src/routes/</code>, <code>src/components/</code>, <code>src/lib/</code>,
+                  <code>tests/</code>, <code>worker/index.ts</code>
                 </td>
                 <td><code>dev</code>, <code>build</code>, <code>test</code>, <code>typecheck</code></td>
               </tr>
@@ -151,7 +154,7 @@
                 <td><code>@esencial/e2e</code></td>
                 <td><code>e2e/</code></td>
                 <td>
-                  Playwright con servidor y base propios: <code>tests/</code>,
+                  Playwright con dos servidores y dos bases (frontal y API): <code>tests/</code>,
                   <code>playwright.config.ts</code>, <code>scripts/isolation-check.ts</code>
                 </td>
                 <td><code>test</code>, <code>isolation-check</code>, <code>typecheck</code></td>
@@ -237,16 +240,17 @@
             <tbody>
               <tr>
                 <td><code>dev</code></td>
-                <td><code>pnpm build &amp;&amp; wrangler dev</code></td>
+                <td><code>node api/scripts/dev.ts</code></td>
                 <td>
-                  Worker + SPA en local. Antes corre <code>predev</code>, que genera
-                  <code>.dev.vars</code> en la raíz.
+                  Arranca <strong>dos</strong> servidores: <code>dev:api</code> en el puerto 8789 y
+                  <code>dev:web</code> en el 8787. Antes corre <code>predev</code>, que genera los
+                  dos <code>.dev.vars</code>.
                 </td>
               </tr>
               <tr>
                 <td><code>build</code></td>
                 <td><code>pnpm --filter web build</code></td>
-                <td>Construye el SPA a <code>web/dist</code>, el asset dir del Worker.</td>
+                <td>Construye el SPA a <code>web/dist</code>, el asset dir del Worker frontal.</td>
               </tr>
               <tr>
                 <td><code>test</code></td>
@@ -256,7 +260,7 @@
               <tr>
                 <td><code>e2e</code></td>
                 <td><code>pnpm --filter @esencial/e2e test</code></td>
-                <td>Playwright con su propio servidor en el puerto 8788.</td>
+                <td>Playwright con dos servidores propios: frontal en 8788 y API en 8790.</td>
               </tr>
               <tr>
                 <td><code>typecheck</code></td>
@@ -270,20 +274,22 @@
               </tr>
               <tr>
                 <td><code>db:migrate:local</code></td>
-                <td><code>wrangler d1 migrations apply esencial --local</code></td>
-                <td>Migra la base local.</td>
+                <td><code>wrangler d1 migrations apply esencial --local -c api/wrangler.toml --persist-to .wrangler/state</code></td>
+                <td>Migra la base local: la config vive en <code>api/</code>.</td>
               </tr>
               <tr>
                 <td><code>db:migrate:remote</code></td>
-                <td><code>wrangler d1 migrations apply esencial --remote</code></td>
+                <td><code>wrangler d1 migrations apply esencial --remote -c api/wrangler.toml</code></td>
                 <td>Migra la base de producción (idempotente).</td>
               </tr>
               <tr>
                 <td><code>deploy</code></td>
-                <td><code>pnpm build &amp;&amp; wrangler deploy</code></td>
+                <td><code>pnpm build:prod &amp;&amp; wrangler deploy -c api/wrangler.toml &amp;&amp; wrangler deploy</code></td>
                 <td>
-                  Deploy manual. Ojo: hay que invocarlo como <code>pnpm run deploy</code>, porque
-                  <code>pnpm deploy</code> es un comando interno de pnpm.
+                  Build del SPA con el <code>VITE_API_URL</code> de producción, deploy de la API
+                  primero y después el frontal. Ojo: hay que invocarlo como
+                  <code>pnpm run deploy</code>, porque <code>pnpm deploy</code> es un comando interno
+                  de pnpm.
                 </td>
               </tr>
             </tbody>
@@ -292,10 +298,11 @@
 
         <h2>Mapa de carpetas</h2>
         <pre><code>esencial/
-├─ api/                 Worker Hono (backend + guardas de página)
+├─ api/                 Worker de la API (Hono + D1 + R2)
+│  ├─ wrangler.toml     config de la API (D1, R2, WEB_ORIGIN)
 │  ├─ src/
 │  │  ├─ index.ts       monta los 11 sub-routers y la cadena de middleware
-│  │  ├─ middleware.ts  securityHeaders · authGuard · pageGuard
+│  │  ├─ middleware.ts  securityHeaders · cors · authGuard
 │  │  ├─ auth.ts        PBKDF2 y cookie de sesión firmada
 │  │  ├─ http.ts        envelope JSON, fail() y dbFailure()
 │  │  ├─ validation.ts  zBody(schema) sobre Zod
@@ -306,32 +313,34 @@
 │  │  └─ routes/        11 ficheros, 38 endpoints
 │  ├─ migrations/       0001 … 0009
 │  ├─ schema.sql        estado FINAL del esquema
-│  ├─ scripts/          ensure-dev-vars.ts · hash-password.ts
-│  ├─ tests/            16 ficheros de test + helpers
-│  └─ wrangler.test.toml  config de tests (D1 test-local, secretos de prueba)
-├─ web/                 SPA
+│  ├─ scripts/          ensure-dev-vars.ts · dev.ts · hash-password.ts
+│  ├─ tests/            17 ficheros de test + helpers
+│  │  └─ wrangler.test.toml  config de tests (D1 test-local, secretos de prueba)
+├─ web/                 SPA (React) + Worker del frontal
 │  ├─ src/app.tsx       rutas y GuardedShell
 │  ├─ src/routes/       8 ficheros, 10 páginas
 │  ├─ src/components/   Shell, WeekGrid, ShoppingListSheet, RecipeEditor
 │  ├─ src/lib/          8 módulos sin JSX (api client, hooks, ISO week)
 │  ├─ src/globals.css   tokens de diseño de Tailwind 4
-│  └─ vite.config.ts    proxy /api en dev + config de vitest
+│  ├─ vite.config.ts    proxy /api en dev + config de vitest
+│  └─ worker/index.ts   Worker frontal: assets de web/dist + guard del HTML
 ├─ e2e/                 Playwright
-│  ├─ playwright.config.ts  servidor y base propios
+│  ├─ playwright.config.ts  dos servidores y bases propias (frontal y API)
 │  ├─ tests/            4 specs + setup
 │  └─ scripts/isolation-check.ts
 ├─ wireframes/          DESIGN.md y pantallas de referencia
 ├─ docs/architecture/   este sitio
 ├─ .github/workflows/ci.yml
-├─ wrangler.toml        config del Worker (assets, D1, R2)
+├─ wrangler.toml        config del Worker frontal (assets + API_ORIGIN)
 └─ package.json         scripts orquestadores + versiones de biome/husky/wrangler</code></pre>
 
         <div class="warn">
           <p>
-            <strong>Dos trampas que cuestan una tarde.</strong> <code>.dev.vars</code> va en la
-            <em>raíz</em>, no en <code>api/</code>: wrangler lo lee desde donde está
-            <code>wrangler.toml</code>, y si no lo encuentra el login responde 500 y todo lo
-            protegido, 401. Y el deploy manual es <code>pnpm run deploy</code>, porque
+            <strong>Dos trampas que cuestan una tarde.</strong> Hay <em>dos</em>
+            <code>.dev.vars</code> con el mismo contenido —la raíz para el frontal y
+            <code>api/.dev.vars</code> para la API—, ambos generados por
+            <code>api/scripts/ensure-dev-vars.ts</code>: si falta uno, ese Worker no ve los secretos
+            y el login responde 500. Y el deploy manual es <code>pnpm run deploy</code>, porque
             <code>pnpm deploy</code> lo captura pnpm como comando propio y falla.
           </p>
         </div>

@@ -39,22 +39,22 @@
         <p class="lead">
           Tres suites con tres niveles de realidad: la de API ejecuta el Worker de verdad contra
           una base D1 de miniflare, la de web monta componentes con fetch simulado, y la de e2e
-          arranca su propio servidor y su propia base, que <strong>nunca</strong> es la tuya.
+          arranca sus dos servidores y sus dos bases, que <strong>nunca</strong> son las tuyas.
         </p>
 
         <div class="kpis">
           <div class="kpi"><b>3</b><span>suites</span></div>
-          <div class="kpi"><b>16</b><span>ficheros de test API</span></div>
-          <div class="kpi"><b>22</b><span>ficheros de test web</span></div>
-          <div class="kpi"><b>23</b><span>tests e2e</span></div>
+          <div class="kpi"><b>17</b><span>ficheros de test API</span></div>
+          <div class="kpi"><b>24</b><span>ficheros de test web</span></div>
+          <div class="kpi"><b>24</b><span>tests e2e</span></div>
           <div class="kpi"><b>1</b><span>comando para todo</span></div>
         </div>
 
         <figure>
           <svg
-            viewBox="0 0 860 420"
+            viewBox="0 0 860 480"
             role="img"
-            aria-label="El desarrollo usa wrangler dev en el puerto 8787 con la base .wrangler/state; los tests e2e usan su propia cadena en el puerto 8788 con la base e2e/.state, y comprueban que la base de desarrollo no cambia."
+            aria-label="El desarrollo arranca dos wrangler dev, frontal en el puerto 8787 y API en el 8789 con la base .wrangler/state; los tests e2e arrancan otros dos, frontal en el 8788 con e2e/.state-web y API en el 8790 con e2e/.state, y comprueban que la base de desarrollo no cambia."
           >
             <defs>
               <marker
@@ -85,10 +85,11 @@
             <rect x="20" y="32" width="150" height="56" rx="10" class="dg-box" />
             <text x="95" y="62" class="dg-text" text-anchor="middle">pnpm dev</text>
             <rect x="220" y="32" width="190" height="56" rx="10" class="dg-box" />
-            <text x="315" y="62" class="dg-text" text-anchor="middle">wrangler dev · 8787</text>
+            <text x="315" y="54" class="dg-text" text-anchor="middle">dos wrangler dev</text>
+            <text x="315" y="74" class="dg-sub" text-anchor="middle">frontal 8787 · API 8789</text>
             <rect x="460" y="32" width="220" height="56" rx="10" class="dg-box" />
             <text x="570" y="54" class="dg-text" text-anchor="middle">.wrangler/state</text>
-            <text x="570" y="74" class="dg-sub" text-anchor="middle">tu base de trabajo</text>
+            <text x="570" y="74" class="dg-sub" text-anchor="middle">la base del Worker de la API</text>
             <line x1="174" y1="60" x2="216" y2="60" class="dg-line-strong" marker-end="url(#f8b)" />
             <line x1="414" y1="60" x2="456" y2="60" class="dg-line-strong" marker-end="url(#f8b)" />
 
@@ -96,10 +97,11 @@
             <rect x="20" y="136" width="150" height="56" rx="10" class="dg-box" />
             <text x="95" y="166" class="dg-text" text-anchor="middle">pnpm e2e</text>
             <rect x="220" y="136" width="190" height="56" rx="10" class="dg-box" />
-            <text x="315" y="166" class="dg-text" text-anchor="middle">wrangler dev · 8788</text>
+            <text x="315" y="158" class="dg-text" text-anchor="middle">dos wrangler dev</text>
+            <text x="315" y="178" class="dg-sub" text-anchor="middle">frontal 8788 · API 8790</text>
             <rect x="460" y="136" width="220" height="56" rx="10" class="dg-box-strong" />
-            <text x="570" y="158" class="dg-text" text-anchor="middle">e2e/.state</text>
-            <text x="570" y="178" class="dg-sub" text-anchor="middle">nace vacía en cada corrida</text>
+            <text x="570" y="158" class="dg-text" text-anchor="middle">e2e/.state-web + e2e/.state</text>
+            <text x="570" y="178" class="dg-sub" text-anchor="middle">una base por Worker</text>
             <line x1="174" y1="164" x2="216" y2="164" class="dg-line-strong" marker-end="url(#f8b)" />
             <line x1="414" y1="164" x2="456" y2="164" class="dg-line-strong" marker-end="url(#f8b)" />
 
@@ -112,37 +114,53 @@
 
             <line x1="20" y1="214" x2="840" y2="214" class="dg-line" />
 
-            <text x="20" y="238" class="dg-sub" text-anchor="start">La cadena del servidor de e2e, en orden</text>
-            <rect x="20" y="252" width="150" height="60" rx="10" class="dg-box" />
-            <text x="95" y="274" class="dg-text" text-anchor="middle">predev</text>
-            <text x="95" y="294" class="dg-sub" text-anchor="middle">.dev.vars · «hola»</text>
-            <rect x="182" y="252" width="150" height="60" rx="10" class="dg-box" />
-            <text x="257" y="274" class="dg-text" text-anchor="middle">rm -rf e2e/.state</text>
-            <text x="257" y="294" class="dg-sub" text-anchor="middle">base nueva</text>
-            <rect x="344" y="252" width="150" height="60" rx="10" class="dg-box" />
-            <text x="419" y="274" class="dg-text" text-anchor="middle">migrations apply</text>
-            <text x="419" y="294" class="dg-sub" text-anchor="middle">--persist-to e2e/.state</text>
-            <rect x="506" y="252" width="150" height="60" rx="10" class="dg-box" />
-            <text x="581" y="274" class="dg-text" text-anchor="middle">pnpm build</text>
-            <text x="581" y="294" class="dg-sub" text-anchor="middle">SPA a web/dist</text>
-            <rect x="668" y="252" width="150" height="60" rx="10" class="dg-box" />
-            <text x="743" y="274" class="dg-text" text-anchor="middle">wrangler dev</text>
-            <text x="743" y="294" class="dg-sub" text-anchor="middle">--port 8788</text>
+            <text x="20" y="238" class="dg-sub" text-anchor="start">Cadena del servidor de la API (webServer 1)</text>
+            <rect x="20" y="250" width="195" height="58" rx="10" class="dg-box" />
+            <text x="117" y="272" class="dg-text" text-anchor="middle">predev</text>
+            <text x="117" y="292" class="dg-sub" text-anchor="middle">.dev.vars · «hola»</text>
+            <rect x="228" y="250" width="195" height="58" rx="10" class="dg-box" />
+            <text x="325" y="272" class="dg-text" text-anchor="middle">rm -rf e2e/.state</text>
+            <text x="325" y="292" class="dg-sub" text-anchor="middle">base nueva de la API</text>
+            <rect x="436" y="250" width="195" height="58" rx="10" class="dg-box" />
+            <text x="533" y="272" class="dg-text" text-anchor="middle">migrations apply</text>
+            <text x="533" y="292" class="dg-sub" text-anchor="middle">--persist-to e2e/.state</text>
+            <rect x="644" y="250" width="195" height="58" rx="10" class="dg-box" />
+            <text x="741" y="272" class="dg-text" text-anchor="middle">wrangler dev · 8790</text>
+            <text x="741" y="292" class="dg-sub" text-anchor="middle">-c api/wrangler.toml</text>
 
-            <line x1="172" y1="282" x2="178" y2="282" class="dg-line-strong" marker-end="url(#f8b)" />
-            <line x1="334" y1="282" x2="340" y2="282" class="dg-line-strong" marker-end="url(#f8b)" />
-            <line x1="496" y1="282" x2="502" y2="282" class="dg-line-strong" marker-end="url(#f8b)" />
-            <line x1="658" y1="282" x2="664" y2="282" class="dg-line-strong" marker-end="url(#f8b)" />
+            <line x1="217" y1="279" x2="226" y2="279" class="dg-line-strong" marker-end="url(#f8b)" />
+            <line x1="425" y1="279" x2="434" y2="279" class="dg-line-strong" marker-end="url(#f8b)" />
+            <line x1="633" y1="279" x2="642" y2="279" class="dg-line-strong" marker-end="url(#f8b)" />
 
-            <rect x="20" y="336" width="798" height="60" rx="10" fill="none" stroke="var(--border-strong)" class="dg-dash" />
-            <text x="36" y="358" class="dg-text" text-anchor="start">pnpm e2e:check — cuenta filas D1 y objetos R2 de .wrangler/state antes y después</text>
-            <text x="36" y="380" class="dg-sub" text-anchor="start">si algo cambió, sale 1: el aislamiento está comprobado, no prometido</text>
+            <text x="20" y="330" class="dg-sub" text-anchor="start">Cadena del servidor del frontal (webServer 2)</text>
+            <rect x="20" y="342" width="195" height="58" rx="10" class="dg-box" />
+            <text x="117" y="364" class="dg-text" text-anchor="middle">predev</text>
+            <text x="117" y="384" class="dg-sub" text-anchor="middle">.dev.vars · «hola»</text>
+            <rect x="228" y="342" width="195" height="58" rx="10" class="dg-box" />
+            <text x="325" y="364" class="dg-text" text-anchor="middle">pnpm build</text>
+            <text x="325" y="384" class="dg-sub" text-anchor="middle">VITE_API_URL → 8790</text>
+            <rect x="436" y="342" width="195" height="58" rx="10" class="dg-box" />
+            <text x="533" y="364" class="dg-text" text-anchor="middle">wrangler dev · 8788</text>
+            <text x="533" y="384" class="dg-sub" text-anchor="middle">--var API_ORIGIN → 8790</text>
+            <rect x="644" y="342" width="195" height="58" rx="10" class="dg-box" />
+            <text x="741" y="364" class="dg-text" text-anchor="middle">--persist-to e2e/.state-web</text>
+            <text x="741" y="384" class="dg-sub" text-anchor="middle">su propio estado local</text>
+
+            <line x1="217" y1="371" x2="226" y2="371" class="dg-line-strong" marker-end="url(#f8b)" />
+            <line x1="425" y1="371" x2="434" y2="371" class="dg-line-strong" marker-end="url(#f8b)" />
+            <line x1="633" y1="371" x2="642" y2="371" class="dg-line-strong" marker-end="url(#f8b)" />
+
+            <rect x="20" y="418" width="819" height="56" rx="10" fill="none" stroke="var(--border-strong)" class="dg-dash" />
+            <text x="36" y="440" class="dg-text" text-anchor="start">pnpm e2e:check — cuenta filas D1 y objetos R2 de .wrangler/state antes y después</text>
+            <text x="36" y="462" class="dg-sub" text-anchor="start">si algo cambió, sale 1: el aislamiento está comprobado, no prometido</text>
           </svg>
           <figcaption>
-            La base de e2e se <em>deriva</em> de <code>api/migrations/</code> en cada corrida y vive
-            en su propio directorio de persistencia. Añadir una migración no obliga a tocar nada de
-            <code>e2e/</code>, y la suite corre en serie (<code>workers: 1</code>) porque hay un
-            servidor y una base para todos los ficheros.
+            En e2e los dos servidores son los dos <code>webServer</code> de Playwright: la API se
+            prepara su base en <code>e2e/.state</code> —migraciones incluidas— y el frontal usa
+            <code>e2e/.state-web</code>, su propio directorio de persistencia para no pisarse. Añadir
+            una migración no obliga a tocar nada de <code>e2e/</code>, y la suite corre en serie
+            (<code>workers: 1</code>) porque los servidores y las bases son compartidos por todos los
+            ficheros.
           </figcaption>
         </figure>
 
@@ -166,7 +184,7 @@
                   de miniflare. <code>fileParallelism: false</code> porque los ficheros comparten el
                   mismo namespace de base.
                 </td>
-                <td>16 ficheros · 162 <code>it()</code> estáticos, ≈199 en ejecución</td>
+                <td>17 ficheros · 165 <code>it()</code> estáticos, ≈202 en ejecución</td>
               </tr>
               <tr>
                 <td>Web</td>
@@ -175,14 +193,14 @@
                   Vitest con jsdom y Testing Library; <code>tests/setup.ts</code> stubea el
                   <code>fetch</code> y responde al sondeo de <code>/api/auth/status</code>.
                 </td>
-                <td>22 ficheros · 172 <code>it()</code> estáticos</td>
+                <td>24 ficheros · 195 <code>it()</code> estáticos</td>
               </tr>
               <tr>
                 <td>e2e</td>
                 <td><code>pnpm e2e</code></td>
                 <td>
-                  Playwright contra el servidor propio del puerto 8788, con Brave si está instalado
-                  y el chromium de Playwright si no. <code>retries: 2</code>.
+                  Playwright contra sus dos servidores propios (frontal 8788, API 8790), con Brave si
+                  está instalado y el chromium de Playwright si no. <code>retries: 2</code>.
                 </td>
                 <td>4 specs · 23 tests + 1 setup</td>
               </tr>
@@ -191,7 +209,7 @@
         </div>
         <p>
           <code>pnpm test</code> ejecuta API y web en ese orden. No incluye e2e: para eso está
-          <code>pnpm e2e</code>, que arranca su propio servidor.
+          <code>pnpm e2e</code>, que arranca sus dos servidores con sus dos bases.
         </p>
 
         <h2>El bootstrap de la suite de API</h2>
@@ -209,12 +227,15 @@
             <h3>Sesión de verdad</h3>
             <p>
               Cada instancia hace un login real con <code>test-password-123</code> (el digest vive
-              en <code>wrangler.test.toml</code>) y reutiliza la cookie. Hay builders autenticados y
-              también <code>anonGet</code>/<code>anonSend</code> para probar los 401.
+              en <code>api/tests/wrangler.test.toml</code>) y reutiliza la cookie. Hay builders
+              autenticados y también <code>anonGet</code>/<code>anonSend</code> para probar los 401.
             </p>
           </div>
         </div>
         <p>
+          La config de la suite vive en <code>api/tests/wrangler.test.toml</code>, no en
+          <code>api/wrangler.test.toml</code>: dentro de <code>api/</code>, el
+          <code>.dev.vars</code> de dev pisaría sus <code>[vars]</code> y los tests fallarían.
           <code>freshDb()</code> vacía las 18 tablas en orden hijo→padre antes de cada test, así que
           los tests no dependen del orden de ejecución.
         </p>
@@ -233,6 +254,7 @@
               <tr><td><code>auth-gate.test.ts</code></td><td>401 en rutas protegidas, 302 en páginas, y las cabeceras de seguridad (los 27 endpoints en bucle).</td></tr>
               <tr><td><code>auth.test.ts</code></td><td>Login, logout, status y el límite de 5 intentos.</td></tr>
               <tr><td><code>contract.test.ts</code></td><td>Forma del envelope de errores, health, idempotencia del esquema.</td></tr>
+              <tr><td><code>cors.test.ts</code></td><td>Preflight 204 con credenciales, <code>Vary: Origin</code> y un origen desconocido sin permiso.</td></tr>
               <tr><td><code>dates.test.ts</code></td><td>Semanas ISO y día de la semana, con entradas inválidas.</td></tr>
               <tr><td><code>day.test.ts</code></td><td>Agregación de la pantalla DÍA y fechas mal formadas.</td></tr>
               <tr><td><code>exercises.test.ts</code></td><td>CRUD de ejercicios, tags y <code>kind</code>.</td></tr>
@@ -275,16 +297,22 @@
             responde 400. Se resuelve con <code>GET /api/exercises</code> buscando por nombre. Y uso
             fechas reales (hoy, el lunes de esta semana), no desplazamientos por corrida.
           </p>
+          <p>
+            Con la API en otro origen, los helpers pegan a ella por <code>API_BASE</code> /
+            <code>apiUrl()</code> (<code>e2e/tests/helpers.ts</code>); si una petición sale del
+            navegador, necesita <code>credentials: "include"</code> para llevar la cookie.
+          </p>
         </div>
 
         <div class="note">
           <p>
             <strong>Fuentes:</strong> <code>api/vitest.config.ts</code>,
-            <code>api/tests/helpers.ts</code>, <code>api/wrangler.test.toml</code>,
+            <code>api/tests/helpers.ts</code>, <code>api/tests/wrangler.test.toml</code>,
             <code>web/vite.config.ts</code>, <code>e2e/playwright.config.ts</code>,
             <code>e2e/tests/*</code>, <code>e2e/scripts/isolation-check.ts</code>,
-            <code>package.json</code>, <code>AGENTS.md</code>. Conteos estáticos: son declaraciones
-            en el código, no ejecuciones.
+            <code>package.json</code>, <code>AGENTS.md</code>. Los conteos estáticos son
+            declaraciones en el código, no ejecuciones; el «≈202 en ejecución» de la API sí es lo
+            que reporta la suite.
           </p>
         </div>
 
