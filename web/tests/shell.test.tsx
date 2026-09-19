@@ -1,5 +1,5 @@
-// UI tests: shell navigation (active state, deep links) + Día empty states.
-// E7: App now checks /api/auth/status on mount — stub it as authenticated.
+// UI tests: shell navigation (3 secciones, submenús colapsables, active state)
+// + Día empty states. The mock API answers /api/auth/status as authenticated.
 
 import {
   cleanup,
@@ -8,25 +8,22 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
+import type { Exercise } from "../src/lib/exercises";
+import { mockApi } from "./api-mock";
 
-beforeAll(() => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => Response.json({ authenticated: true })),
-  );
-});
-afterEach(cleanup);
+const press: Exercise = {
+  id: 7,
+  name: "Press banca",
+  description: null,
+  setupCues: null,
+  techniqueUrl: null,
+  steps: null,
+  tags: ["pecho"],
+  kind: "strength",
+};
 
 function renderAt(path: string) {
   window.history.pushState({}, "", path);
@@ -40,30 +37,82 @@ function localToday(): string {
 }
 
 describe("Shell", () => {
-  it("marks the active route with aria-current", async () => {
-    renderAt("/plan-recetas");
+  beforeEach(() => {
+    mockApi({ exercises: [press] });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("muestra las 3 secciones y los submenús arrancan colapsados", async () => {
+    renderAt("/");
     // E7 guard: the shell appears once /api/auth/status resolves.
     await waitFor(() =>
-      expect(screen.getAllByText("Plan recetas").length).toBeGreaterThan(0),
+      expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
     );
-    const links = screen.getAllByText("Plan recetas");
-    expect(links.some((el) => el.getAttribute("aria-current") === "page")).toBe(
-      true,
+    expect(screen.getAllByText("Hoy").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Nutrición").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "Ejercicios" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Plantillas" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Recetas" })).toBeNull();
+  });
+
+  it("expande Deporte, lista el submenú y navega al pulsar", async () => {
+    renderAt("/");
+    await waitFor(() =>
+      expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Expandir Deporte" }));
+    const ejercicios = await screen.findByRole("link", { name: "Ejercicios" });
+    expect(ejercicios.getAttribute("href")).toBe("/ejercicios");
+    const plantillas = screen.getByRole("link", { name: "Plantillas" });
+    expect(plantillas.getAttribute("href")).toBe("/plantillas");
+
+    fireEvent.click(plantillas);
+    await waitFor(() => expect(window.location.pathname).toBe("/plantillas"));
+    expect(screen.getByRole("heading", { name: "Plantillas" })).toBeDefined();
+  });
+
+  it("colapsa la sección de nuevo", async () => {
+    renderAt("/");
+    await waitFor(() =>
+      expect(screen.getAllByText("Nutrición").length).toBeGreaterThan(0),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Expandir Nutrición" }));
+    await screen.findByRole("link", { name: "Recetas" });
+    fireEvent.click(screen.getByRole("button", { name: "Contraer Nutrición" }));
+    expect(screen.queryByRole("link", { name: "Recetas" })).toBeNull();
+  });
+
+  it("auto-expande la sección activa y marca aria-current", async () => {
+    renderAt("/ejercicios");
+    await waitFor(() =>
+      expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
+    );
+    const link = await screen.findByRole("link", { name: "Ejercicios" });
+    expect(link.getAttribute("aria-current")).toBe("page");
+    expect(
+      screen
+        .getAllByText("Deporte")
+        .some((el) => el.getAttribute("aria-current") === "page"),
+    ).toBe(true);
+  });
+
+  it("navega entre secciones con el enlace principal", async () => {
+    renderAt("/");
+    await waitFor(() =>
+      expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
     );
     expect(
       screen
         .getAllByText("Hoy")
-        .every((el) => el.getAttribute("aria-current") !== "page"),
+        .some((el) => el.getAttribute("aria-current") === "page"),
     ).toBe(true);
-  });
-
-  it("navigates between tabs client-side", async () => {
-    renderAt("/");
-    await waitFor(() =>
-      expect(screen.getAllByText("Plan fuerza").length).toBeGreaterThan(0),
-    );
-    fireEvent.click(screen.getAllByText("Plan fuerza")[0]);
-    expect(window.location.pathname).toBe("/plan-fuerza");
+    fireEvent.click(screen.getAllByText("Nutrición")[0]);
+    await waitFor(() => expect(window.location.pathname).toBe("/plan-recetas"));
+    fireEvent.click(screen.getAllByText("Deporte")[0]);
+    await waitFor(() => expect(window.location.pathname).toBe("/plan-fuerza"));
     expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
   });
 });
@@ -90,7 +139,10 @@ describe("Día (E5)", () => {
       }),
     );
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("renders navigable date header and three empty sections", async () => {
     renderAt("/");

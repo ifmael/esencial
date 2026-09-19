@@ -53,7 +53,7 @@ function SessionCell({
     return (
       <button
         onClick={onOpen}
-        className={`flex min-h-11 flex-1 flex-col items-center justify-center rounded-lg border border-dashed text-text-secondary hover:border-primary hover:text-primary ${
+        className={`flex min-h-11 flex-1 flex-col items-center justify-start rounded-lg border border-dashed pt-3 text-text-secondary hover:border-primary hover:text-primary ${
           border || "border-border"
         }`}
       >
@@ -130,7 +130,7 @@ export function WeekGrid({
   const byDate = new Map(sessions.map((s) => [s.date, s]));
 
   return (
-    <section className="card flex flex-col gap-3">
+    <section className="card flex min-h-0 flex-1 flex-col gap-3">
       <header className="flex items-center justify-between gap-2">
         <button
           aria-label="Semana anterior"
@@ -157,11 +157,11 @@ export function WeekGrid({
       {loading && sessions.length === 0 ? (
         <div className="text-text-secondary">Cargando…</div>
       ) : (
-        <div className="flex flex-col gap-3 md:grid md:grid-flow-col md:auto-cols-fr md:gap-2">
+        <div className="flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2">
           {DAYS.map((day, di) => {
             const date = dayOf(isoWeek, di);
             return (
-              <div key={day} className="flex flex-col gap-2">
+              <div key={day} className="flex flex-col gap-2 md:min-h-0">
                 <h3 className="font-semibold">
                   {day}
                   {date === today ? (

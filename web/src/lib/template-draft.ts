@@ -101,6 +101,19 @@ export function buildTemplatePayload(draft: Draft): TemplatePayload {
   };
 }
 
+// --- Entradas numéricas de los editores (plantilla y día) -------------------
+
+/** "" → null; cualquier otro valor → entero ≥ 1 (nunca NaN). */
+export const intAt = (raw: string): number | null =>
+  raw === "" ? null : Math.max(1, Math.trunc(Number(raw) || 1));
+
+/** "" o valores no finitos/negativos → null; el resto, número tal cual. */
+export function numAt(raw: string): number | null {
+  if (raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 /** "Tirón" → "Tirón (copia)", then "(copia 2)", "(copia 3)"… */
 export function nextCopyName(
   source: string,

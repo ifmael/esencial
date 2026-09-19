@@ -393,8 +393,8 @@ function AddToTemplate({
           {!pending && templates.length === 0 && (
             <span>
               No hay plantillas todavía.{" "}
-              <Link className="text-primary underline" to="/plan-fuerza">
-                Ir a Plan fuerza
+              <Link className="text-primary underline" to="/plantillas">
+                Ir a Plantillas
               </Link>
             </span>
           )}

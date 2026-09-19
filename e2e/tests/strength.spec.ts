@@ -93,7 +93,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       { exerciseId: run.id, targetDistanceKm: 10, targetDurationMin: 45 },
     ]);
 
-    await page.goto("/plan-fuerza");
+    await page.goto("/plantillas");
     const card = page.locator("section").filter({ hasText: name }).first();
     await card.getByRole("button", { name, exact: true }).click();
     await expect(card.getByText("4 series")).toBeVisible();
