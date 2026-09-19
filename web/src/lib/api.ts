@@ -12,10 +12,24 @@ export class ApiError extends Error {
   }
 }
 
+/** fetch a la API con la cookie de sesión incluida: en cross-origin el
+ *  navegador no la manda si no se pide (credentials: include). La URL sale de
+ *  VITE_API_URL (B': la API es otro Worker) y se lee en cada llamada para poder
+ *  sustituirla en tests; sin ella quedan rutas relativas. Sin envoltorio JSON,
+ *  para llamadas que gestionan la respuesta a mano. */
+export const apiFetchRaw = (
+  path: string,
+  init?: RequestInit,
+): Promise<Response> =>
+  fetch(`${import.meta.env.VITE_API_URL ?? ""}${path}`, {
+    credentials: "include",
+    ...init,
+  });
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, init);
+    res = await apiFetchRaw(path, init);
   } catch {
     throw new ApiError("No se pudo conectar con el servidor", undefined, 0);
   }
@@ -65,8 +79,11 @@ export function apiField(e: unknown): string | undefined {
 }
 
 /** DEF-6: uploads se persisten como key `recipe-<uuid>.<ext>`; el <img> necesita
- *  la URL servida. Idempotente: ya-prefijado pasa tal cual. */
-export const photoSrc = (photoPath: string) =>
-  photoPath.startsWith("/api/uploads/")
-    ? photoPath
-    : `/api/uploads/${photoPath}`;
+ *  la URL servida (B': contra el origen de la API). Idempotente: ya-prefijado
+ *  pasa tal cual. */
+export const photoSrc = (photoPath: string): string =>
+  `${import.meta.env.VITE_API_URL ?? ""}${
+    photoPath.startsWith("/api/uploads/")
+      ? photoPath
+      : `/api/uploads/${photoPath}`
+  }`;

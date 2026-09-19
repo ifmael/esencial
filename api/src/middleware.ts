@@ -25,6 +25,45 @@ export const securityHeaders = createMiddleware(async (c, next) => {
   h.set("Referrer-Policy", "strict-origin-when-cross-origin");
 });
 
+/** Origen permitido para esta petición, o null (fail closed sin WEB_ORIGIN). */
+function allowedOrigin(c: Context<{ Bindings: Env }>): string | null {
+  const origin = c.req.header("origin");
+  if (!origin) return null;
+  const list = (c.env.WEB_ORIGIN ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return list.includes(origin) ? origin : null;
+}
+
+function withCors(headers: Headers, origin: string): void {
+  headers.set("Access-Control-Allow-Origin", origin);
+  headers.set("Access-Control-Allow-Credentials", "true");
+  headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  );
+  headers.set("Access-Control-Allow-Headers", "content-type");
+  headers.append("Vary", "Origin");
+}
+
+/**
+ * B' (dos despliegues): la web y la API son Workers con orígenes distintos, así
+ * que la API autoriza los orígenes de la web declarados en WEB_ORIGIN y acepta
+ * credenciales (la cookie de sesión viaja en la petición cross-origin).
+ * El preflight se contesta antes del gate de sesión: no lleva cookie.
+ */
+export const cors = createMiddleware<{ Bindings: Env }>(async (c, next) => {
+  const origin = allowedOrigin(c);
+  if (c.req.method === "OPTIONS") {
+    const res = new Response(null, { status: 204 });
+    if (origin) withCors(res.headers, origin);
+    return res;
+  }
+  await next();
+  if (origin) withCors(c.res.headers, origin);
+});
+
 async function hasValidSession(
   c: Context<{ Bindings: Env }>,
 ): Promise<boolean> {
@@ -51,22 +90,5 @@ export const authGuard = createMiddleware<{ Bindings: Env }>(
     if (!(await hasValidSession(c)))
       return json({ error: "Unauthorized" }, 401);
     return next();
-  },
-);
-
-/**
- * Page guard (requires run_worker_first in wrangler.toml): non-API paths
- * without a session see 302 → /login?next=<path>. /login and static assets
- * (dotted paths — the JS/CSS needed to render the login card) pass through.
- * Protecting the HTML is UX; the data boundary is authGuard (design D4).
- */
-export const pageGuard = createMiddleware<{ Bindings: Env }>(
-  async (c, next) => {
-    const { pathname } = new URL(c.req.url);
-    if (pathname.startsWith("/api/")) return next();
-    if (pathname === "/login") return next();
-    if (/\.[a-z0-9]+$/i.test(pathname)) return next(); // hashed static assets
-    if (await hasValidSession(c)) return next();
-    return c.redirect(`/login?next=${encodeURIComponent(pathname)}`, 302);
   },
 );

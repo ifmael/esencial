@@ -1,12 +1,12 @@
 // Essential API — Hono app for Cloudflare Workers (CM1).
 // Mounts the 13 E1 routes under /api/*; healthcheck at /api/health.
 // Central onError emits the E1 envelope { error, field? } (design D2).
-// E7: security headers on every response, 401 gate on /api/*, page guard →
-// /login (run_worker_first makes the Worker see asset requests too).
+// E7: security headers on every response y el 401 gate en /api/*. El guard del
+// HTML (302 → /login) vive en el Worker del frontal (B', dos despliegues).
 import { Hono } from "hono";
 import type { Env } from "./db";
 import { dbFailure, json } from "./http";
-import { authGuard, pageGuard, securityHeaders } from "./middleware";
+import { authGuard, cors, securityHeaders } from "./middleware";
 import { authRoutes } from "./routes/auth";
 import { day } from "./routes/day";
 import { exercises } from "./routes/exercises";
@@ -36,16 +36,12 @@ export const api = new Hono<{ Bindings: Env }>()
 
 const app = new Hono<{ Bindings: Env }>()
   .use(securityHeaders)
+  .use(cors)
   .use(authGuard)
-  .use(pageGuard)
   .route("/api", api)
-  // Non-API paths (deep links) fall through to SPA assets; API keeps the JSON 404.
-  // The asset Response has immutable headers; re-wrap so securityHeaders can set.
-  .notFound(async (c) => {
-    if (c.req.path.startsWith("/api")) return json({ error: "Not found" }, 404);
-    const asset = await c.env.ASSETS.fetch(c.req.raw);
-    return new Response(asset.body, asset);
-  })
+  // B': este Worker solo sirve /api/*; el SPA (y su guard) vive en el Worker
+  // del frontal, así que cualquier otra ruta es un 404 JSON.
+  .notFound(() => json({ error: "Not found" }, 404))
   .onError((err) => dbFailure(err));
 
 export default app;

@@ -1,0 +1,20 @@
+# Worker de la API (B'): Hono + D1 + R2. Sin assets y sin origen compartido con
+# el SPA: el navegador llama a esta URL directamente (CORS con credenciales).
+name = "esencial-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-31"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "esencial"
+database_id = "989acff9-fbad-4ef7-a001-695d4966d264"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "esencial-photos"
+
+[vars]
+# Origen del Worker de la web autorizado para CORS (CSV). Sin valor no se
+# autoriza a nadie (fail closed).
+WEB_ORIGIN = "https://esencial.nutrirutina.workers.dev"

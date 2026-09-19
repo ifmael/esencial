@@ -7,6 +7,20 @@ export const SESSION_COOKIE = "esencial_session";
 /** 30 days — personal app; renewal is a re-login (design D3). */
 export const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 
+/**
+ * B' (dos despliegues): la web y la API son dos Workers de la misma cuenta, en
+ * subdominios distintos (`<worker>.<cuenta>.workers.dev`). En workers.dev la
+ * cookie se emite para el dominio registrable (`<cuenta>.workers.dev`) para que
+ * el Worker de la web —que hace el guard del HTML— también la vea. En cualquier
+ * otro host (127.0.0.1 en dev/e2e, dominio propio) se deja host-only.
+ */
+export function sessionCookieDomain(requestUrl: string): string | undefined {
+  const host = new URL(requestUrl).hostname;
+  return host.endsWith(".workers.dev")
+    ? host.split(".").slice(-3).join(".")
+    : undefined;
+}
+
 const PBKDF2_ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const HASH_BYTES = 32;

@@ -12,6 +12,7 @@ import {
   useLocation,
 } from "react-router";
 import { Shell } from "./components/shell";
+import { apiFetchRaw } from "./lib/api";
 import { DiaPage } from "./routes/dia";
 import { LoginPage } from "./routes/login";
 import { PlanFuerzaPage } from "./routes/plan-fuerza";
@@ -24,7 +25,7 @@ function GuardedShell() {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/auth/status")
+    apiFetchRaw("/api/auth/status")
       .then((r) => (r.ok ? r.json() : null))
       .then(
         (d: { authenticated?: boolean } | null) =>

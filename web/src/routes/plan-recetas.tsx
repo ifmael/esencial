@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
-import { photoSrc } from "../lib/api";
+import { apiFetchRaw, photoSrc } from "../lib/api";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
 export const DAYS = [
@@ -39,7 +39,7 @@ export function useMealPlan(isoWeek: string) {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    fetch(`/api/meal-plan/${isoWeek}`)
+    apiFetchRaw(`/api/meal-plan/${isoWeek}`)
       .then(async (res) => {
         const data: { slots: Slot[]; error?: string } = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Error");
@@ -58,7 +58,7 @@ export function useMealPlan(isoWeek: string) {
 
   const save = useCallback(
     async (next: Slot[]): Promise<boolean> => {
-      const res = await fetch(`/api/meal-plan/${isoWeek}`, {
+      const res = await apiFetchRaw(`/api/meal-plan/${isoWeek}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -103,7 +103,7 @@ function RecipePicker({
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    fetch("/api/recipes")
+    apiFetchRaw("/api/recipes")
       .then(async (res) => {
         const all: RecipeSummary[] = await res.json();
         // El backend devuelve recetas completas; solo se necesita id + nombre.

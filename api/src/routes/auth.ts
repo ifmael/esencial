@@ -8,6 +8,7 @@ import {
   readSessionToken,
   SESSION_COOKIE,
   SESSION_MAX_AGE_S,
+  sessionCookieDomain,
   verifyPassword,
 } from "../auth";
 import type { Env } from "../db";
@@ -19,12 +20,15 @@ import { createLoginLimiter, type LoginLimiter } from "../rate-limit";
 // plain-http consumers (wrangler dev on 127.0.0.1, non-browser HTTP clients)
 // get a cookie their cookie jars actually store — browsers treat http://127.0.0.1
 // as trustworthy either way.
-const cookieOpts = (secure: boolean) => ({
+// `domain` (B') solo se fija en workers.dev: es lo que comparte la sesión con
+// el Worker de la web. Sin dominio, la cookie es host-only.
+const cookieOpts = (secure: boolean, domain?: string) => ({
   path: "/",
   httpOnly: true,
   secure,
   sameSite: "Lax" as const,
   maxAge: SESSION_MAX_AGE_S,
+  ...(domain ? { domain } : {}),
 });
 
 export interface AuthDeps {
@@ -83,15 +87,20 @@ export function authRoutes(deps: AuthDeps = {}) {
         SESSION_COOKIE,
         String(exp),
         secret,
-        cookieOpts(new URL(c.req.url).protocol === "https:"),
+        cookieOpts(
+          new URL(c.req.url).protocol === "https:",
+          sessionCookieDomain(c.req.url),
+        ),
       );
       return c.json({ ok: true });
     })
     .post("/logout", (c) => {
+      const domain = sessionCookieDomain(c.req.url);
       deleteCookie(c, SESSION_COOKIE, {
         path: "/",
         secure: true,
         sameSite: "Lax",
+        ...(domain ? { domain } : {}),
       });
       return c.json({ ok: true });
     })
