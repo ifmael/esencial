@@ -1,4 +1,5 @@
-// /plan-fuerza — rejilla semanal + editor del día (sesión) en modal. Cada día
+// /plan-fuerza — rejilla semanal + editor del día (sesión) en un único modal:
+// lateral con lo ya añadido al día y selector de plantillas/ejercicios. Cada día
 // es una sesión con nombre, compuesta de ejercicios copiados desde plantillas
 // (que se expanden y desaparecen) y/o sueltos, sin duplicados. El CRUD de
 // plantillas vive en /plantillas.
@@ -87,8 +88,8 @@ function expandNote(added: number, skipped: number): string {
   return parts.join(" · ");
 }
 
-/** Modal de añadir al día: plantillas (se expanden) y ejercicios sueltos. */
-function SessionPicker({
+/** Selector del día: plantillas (se expanden) y ejercicios sueltos. */
+function DayPicker({
   templates,
   exercises,
   takenIds,
@@ -97,7 +98,6 @@ function SessionPicker({
   onRetryTemplates,
   onPickTemplate,
   onPickExercise,
-  onClose,
 }: {
   templates: Template[];
   exercises: Exercise[];
@@ -107,7 +107,6 @@ function SessionPicker({
   onRetryTemplates: () => void;
   onPickTemplate: (t: Template) => void;
   onPickExercise: (e: Exercise) => void;
-  onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
@@ -119,35 +118,29 @@ function SessionPicker({
     : exercises;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-label="Añadir al día"
-        className="card flex max-h-[80vh] w-full max-w-md flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-bold">Añadir al día</h2>
-        <input
-          type="text"
-          autoFocus
-          placeholder="Buscar plantilla o ejercicio…"
-          aria-label="Buscar"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="min-h-11 rounded-lg border border-border px-3"
-        />
-        {note && (
-          <p role="status" className="text-sm text-text-secondary">
-            {note}
-          </p>
-        )}
-        <section className="flex min-h-0 flex-col gap-1 overflow-y-auto">
-          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+    <section aria-label="Añadir al día" className="flex min-h-0 flex-col gap-2">
+      <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+        Añadir al día
+      </h3>
+      <input
+        type="text"
+        autoFocus
+        placeholder="Buscar plantilla o ejercicio…"
+        aria-label="Buscar"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className="min-h-11 rounded-lg border border-border px-3"
+      />
+      {note && (
+        <p role="status" className="text-sm text-text-secondary">
+          {note}
+        </p>
+      )}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        <section className="flex flex-col gap-1">
+          <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
             Plantillas
-          </h3>
+          </h4>
           {templatesError ? (
             <p className="text-sm text-error">
               {templatesError}{" "}
@@ -189,10 +182,10 @@ function SessionPicker({
             </ul>
           )}
         </section>
-        <section className="flex min-h-0 flex-col gap-1 overflow-y-auto">
-          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+        <section className="flex flex-col gap-1">
+          <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
             Ejercicios
-          </h3>
+          </h4>
           {shownExercises.length === 0 ? (
             <p className="text-sm text-text-secondary">Sin ejercicios</p>
           ) : (
@@ -222,15 +215,12 @@ function SessionPicker({
             </ul>
           )}
         </section>
-        <button className="btn-secondary self-end" onClick={onClose}>
-          Cerrar
-        </button>
       </div>
-    </div>
+    </section>
   );
 }
 
-/** Modal del día: nombre + ejercicios (series/reps o distancia/tiempo). */
+/** Modal único del día: lateral con lo añadido + selector para sumar más. */
 function SessionEditor({
   date,
   session,
@@ -258,19 +248,17 @@ function SessionEditor({
 }) {
   const [name, setName] = useState(session?.name ?? "");
   const [rows, setRows] = useState<DayRow[]>(() => rowsFrom(session));
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const takenIds = new Set(rows.map((r) => r.exerciseId));
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      // Con el picker abierto, Escape lo cierra a él (su propio listener).
-      if (ev.key === "Escape" && !pickerOpen) onCancel();
+      if (ev.key === "Escape") onCancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel, pickerOpen]);
+  }, [onCancel]);
 
   const patchRow = (key: string, patch: Partial<DayRow>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -321,7 +309,7 @@ function SessionEditor({
       role="dialog"
       aria-modal="true"
       aria-labelledby="day-editor-title"
-      className="card flex flex-col gap-3"
+      className="card flex max-h-[85vh] flex-col gap-3"
     >
       <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
         <h2 id="day-editor-title" className="text-lg font-bold">
@@ -341,126 +329,142 @@ function SessionEditor({
 
       {serverError && <p className="text-sm text-error">{serverError}</p>}
 
-      <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
-        {rows.map((row, i) => (
-          <li
-            key={row.key}
-            className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
-              i < rows.length - 1 ? "border-b border-border" : ""
-            }`}
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:grid-rows-1">
+        <section className="flex min-h-0 flex-col gap-2">
+          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+            Ejercicios del día
+          </h3>
+          <ul
+            aria-label="Ejercicios del día"
+            className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-surface-muted/50"
           >
-            <span className="min-w-32 font-medium">{row.exerciseName}</span>
-            {row.kind === "strength" ? (
-              <>
-                <label className="text-sm">
-                  Series
-                  <input
-                    className="input w-16"
-                    type="number"
-                    min={1}
-                    aria-label={`${row.exerciseName} series`}
-                    value={row.targetSets ?? ""}
-                    onChange={(e) =>
-                      patchRow(row.key, { targetSets: intAt(e.target.value) })
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Reps mín
-                  <input
-                    className="input w-16"
-                    type="number"
-                    min={1}
-                    aria-label={`${row.exerciseName} reps mín`}
-                    value={row.targetRepsMin ?? ""}
-                    onChange={(e) =>
-                      patchRow(row.key, {
-                        targetRepsMin: intAt(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Reps máx
-                  <input
-                    className="input w-16"
-                    type="number"
-                    min={1}
-                    aria-label={`${row.exerciseName} reps máx`}
-                    value={row.targetRepsMax ?? ""}
-                    onChange={(e) =>
-                      patchRow(row.key, {
-                        targetRepsMax: intAt(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-              </>
-            ) : (
-              <>
-                <span className="badge-pending">{KIND_LABELS[row.kind]}</span>
-                <label className="text-sm">
-                  Distancia (km)
-                  <input
-                    className="input w-20"
-                    type="number"
-                    min={0}
-                    step="0.1"
-                    aria-label={`${row.exerciseName} distancia (km)`}
-                    value={row.targetDistanceKm ?? ""}
-                    onChange={(e) =>
-                      patchRow(row.key, {
-                        targetDistanceKm: numAt(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Tiempo (min)
-                  <input
-                    className="input w-20"
-                    type="number"
-                    min={0}
-                    aria-label={`${row.exerciseName} tiempo (min)`}
-                    value={row.targetDurationMin ?? ""}
-                    onChange={(e) =>
-                      patchRow(row.key, {
-                        targetDurationMin: intAt(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-              </>
+            {rows.map((row, i) => (
+              <li
+                key={row.key}
+                className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
+                  i < rows.length - 1 ? "border-b border-border" : ""
+                }`}
+              >
+                <span className="min-w-32 font-medium">{row.exerciseName}</span>
+                {row.kind === "strength" ? (
+                  <>
+                    <label className="text-sm">
+                      Series
+                      <input
+                        className="input w-16"
+                        type="number"
+                        min={1}
+                        aria-label={`${row.exerciseName} series`}
+                        value={row.targetSets ?? ""}
+                        onChange={(e) =>
+                          patchRow(row.key, {
+                            targetSets: intAt(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="text-sm">
+                      Reps mín
+                      <input
+                        className="input w-16"
+                        type="number"
+                        min={1}
+                        aria-label={`${row.exerciseName} reps mín`}
+                        value={row.targetRepsMin ?? ""}
+                        onChange={(e) =>
+                          patchRow(row.key, {
+                            targetRepsMin: intAt(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="text-sm">
+                      Reps máx
+                      <input
+                        className="input w-16"
+                        type="number"
+                        min={1}
+                        aria-label={`${row.exerciseName} reps máx`}
+                        value={row.targetRepsMax ?? ""}
+                        onChange={(e) =>
+                          patchRow(row.key, {
+                            targetRepsMax: intAt(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <span className="badge-pending">
+                      {KIND_LABELS[row.kind]}
+                    </span>
+                    <label className="text-sm">
+                      Distancia (km)
+                      <input
+                        className="input w-20"
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        aria-label={`${row.exerciseName} distancia (km)`}
+                        value={row.targetDistanceKm ?? ""}
+                        onChange={(e) =>
+                          patchRow(row.key, {
+                            targetDistanceKm: numAt(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="text-sm">
+                      Tiempo (min)
+                      <input
+                        className="input w-20"
+                        type="number"
+                        min={0}
+                        aria-label={`${row.exerciseName} tiempo (min)`}
+                        value={row.targetDurationMin ?? ""}
+                        onChange={(e) =>
+                          patchRow(row.key, {
+                            targetDurationMin: intAt(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                  </>
+                )}
+                <button
+                  className="btn-secondary ml-auto"
+                  aria-label={`Quitar ${row.exerciseName}`}
+                  onClick={() =>
+                    setRows((rs) => rs.filter((r) => r.key !== row.key))
+                  }
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+            {rows.length === 0 && (
+              <li className="bg-surface p-3 text-text-secondary">
+                Sin ejercicios todavía. Añade una plantilla o ejercicios
+                sueltos.
+              </li>
             )}
-            <button
-              className="btn-secondary ml-auto"
-              aria-label={`Quitar ${row.exerciseName}`}
-              onClick={() =>
-                setRows((rs) => rs.filter((r) => r.key !== row.key))
-              }
-            >
-              Quitar
-            </button>
-          </li>
-        ))}
-        {rows.length === 0 && (
-          <li className="bg-surface p-3 text-text-secondary">
-            Sin ejercicios todavía. Añade una plantilla o ejercicios sueltos.
-          </li>
-        )}
-      </ul>
+          </ul>
+        </section>
 
-      <button
-        className="btn-secondary self-start"
-        onClick={() => {
-          setNote(null);
-          setPickerOpen(true);
-        }}
-      >
-        + Añadir
-      </button>
+        <DayPicker
+          templates={templates}
+          exercises={exercises}
+          takenIds={takenIds}
+          note={note}
+          templatesError={templatesError}
+          onRetryTemplates={onRetryTemplates}
+          onPickTemplate={pickTemplate}
+          onPickExercise={pickExercise}
+        />
+      </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 border-t border-border pt-3">
         <button
           className="btn-primary"
           disabled={saving || rows.length === 0}
@@ -494,20 +498,6 @@ function SessionEditor({
             </button>
           ))}
       </div>
-
-      {pickerOpen && (
-        <SessionPicker
-          templates={templates}
-          exercises={exercises}
-          takenIds={takenIds}
-          note={note}
-          templatesError={templatesError}
-          onRetryTemplates={onRetryTemplates}
-          onPickTemplate={pickTemplate}
-          onPickExercise={pickExercise}
-          onClose={() => setPickerOpen(false)}
-        />
-      )}
     </section>
   );
 }
@@ -624,12 +614,12 @@ export function PlanFuerzaPage() {
 
       {day && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setDay(null);
           }}
         >
-          <div className="my-8 w-full max-w-2xl">
+          <div className="w-full max-w-4xl">
             <SessionEditor
               key={`${day.date}-${day.session?.id ?? "nueva"}`}
               date={day.date}

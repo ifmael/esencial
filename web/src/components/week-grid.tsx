@@ -1,7 +1,8 @@
 // Rejilla semanal de fuerza (Lunes→Domingo). Presentacional: la página es dueña
 // del hook usePlanWeek, del picker y del editor del día. Celdas: vacía →
-// "+ añadir"; planned → nombre + badge Pendiente + ✕ con confirmación inline;
-// logged → badge Hecho y tap hacia la pantalla de sesión (solo lectura).
+// "+ añadir"; planned → nombre + "+" para añadir más + badge Pendiente + ✕ con
+// confirmación inline; logged → badge Hecho y tap hacia la pantalla de sesión
+// (solo lectura).
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toISODate } from "../lib/day";
@@ -84,13 +85,22 @@ function SessionCell({
           {session.name ?? "Sesión"}
         </button>
         {logged ? null : (
-          <button
-            aria-label={`Desprogramar sesión del ${date}`}
-            onClick={() => setConfirming(true)}
-            className="min-h-11 px-2 text-text-secondary hover:text-error"
-          >
-            ✕
-          </button>
+          <>
+            <button
+              aria-label={`Añadir ejercicios al ${date}`}
+              onClick={onOpen}
+              className="min-h-11 px-2 text-text-secondary hover:text-primary"
+            >
+              +
+            </button>
+            <button
+              aria-label={`Desprogramar sesión del ${date}`}
+              onClick={() => setConfirming(true)}
+              className="min-h-11 px-2 text-text-secondary hover:text-error"
+            >
+              ✕
+            </button>
+          </>
         )}
       </div>
       {badge}

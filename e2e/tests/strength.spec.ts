@@ -125,23 +125,28 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       page.getByText(new RegExp(`Nueva sesión · ${date}`)),
     ).toBeVisible();
 
+    // Un único modal: el selector ya está a la vista, sin botón ni segundo modal.
+    const dialog = page.getByRole("dialog", {
+      name: new RegExp(`Nueva sesión · ${date}`),
+    });
+    await expect(page.getByRole("dialog")).toHaveCount(1);
     // Expandir las dos plantillas: solo entra el ejercicio nuevo, sin duplicar.
-    await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Añadir al día" });
     await dialog
       .getByRole("button", { name: new RegExp(escapeRe(tplB)) })
       .click();
     await dialog
       .getByRole("button", { name: new RegExp(escapeRe(tplA)) })
       .click();
-    // El aviso se ve dentro del selector y la plantilla ya cubierta queda marcada.
+    // El aviso se ve dentro del propio modal y la plantilla cubierta queda marcada.
     await expect(
       dialog.getByText(/1 ejercicio ya estaba en el día/),
     ).toBeVisible();
     await expect(
       dialog.getByRole("button", { name: new RegExp(escapeRe(tplB)) }),
     ).toBeDisabled();
-    await dialog.getByRole("button", { name: "Cerrar" }).click();
+    await expect(
+      dialog.getByRole("list", { name: "Ejercicios del día" }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Quitar" })).toHaveCount(2);
 
     await page.getByRole("button", { name: "Guardar" }).click();
@@ -153,6 +158,58 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     const dayList = page.getByRole("list", { name: `Ejercicios del ${date}` });
     await expect(dayList.getByText("Press banca")).toBeVisible();
     await expect(dayList.getByText("Remo con barra")).toBeVisible();
+  });
+
+  test("añadir un ejercicio a una sesión que ya tiene ejercicios", async ({
+    page,
+  }) => {
+    const pressName = "Press banca";
+    const remoName = "Remo con barra";
+    const press = await seededExercise(page.request, pressName);
+    const remo = await seededExercise(page.request, remoName);
+    const week = weekOf(49);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3, targetRepsMin: 8 }],
+      "Sesión con ejercicios",
+    );
+
+    await page.goto(`/plan-fuerza?week=${week}`);
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    // Modal único: el lateral lista lo que ya tiene el día y el selector está a la vista.
+    const dialog = page.getByRole("dialog", {
+      name: new RegExp(`Editar sesión · ${date}`),
+    });
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(
+      dialog
+        .getByRole("list", { name: "Ejercicios del día" })
+        .getByText(pressName),
+    ).toBeVisible();
+
+    // Añadir sin botón intermedio ni segundo modal.
+    await dialog.getByRole("button", { name: remoName, exact: true }).click();
+    await expect(
+      dialog.getByRole("button", { name: `Quitar ${remoName}` }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await expect(page.getByText("Pendiente").first()).toBeVisible();
+
+    // Reabrir con el botón "+" de la celda poblada: el añadido persiste.
+    await page
+      .getByRole("button", { name: `Añadir ejercicios al ${date}` })
+      .click();
+    await expect(
+      page.getByRole("button", { name: `Quitar ${pressName}` }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `Quitar ${remoName}` }),
+    ).toBeVisible();
   });
 
   test("editar la sesión cambia las series y persiste", async ({ page }) => {
@@ -314,12 +371,9 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     await page.goto(`/plan-fuerza?week=${weekOf(35)}`);
     await page.getByRole("button", { name: "+ añadir" }).first().click();
-    await page.getByRole("button", { name: "+ Añadir", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Añadir al día" });
-    await dialog
+    await page
       .getByRole("button", { name: new RegExp(escapeRe(name)) })
       .click();
-    await dialog.getByRole("button", { name: "Cerrar" }).click();
     await page.getByRole("button", { name: "Guardar" }).click();
     await expect(page.getByText("Ya hay una sesión ese día")).toBeVisible();
   });

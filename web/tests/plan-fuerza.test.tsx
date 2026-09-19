@@ -117,13 +117,16 @@ afterEach(() => {
 async function openPlan() {
   renderAt("/plan-fuerza?week=2026-W36");
   await screen.findByText("2026-W36"); // la rejilla cargó la semana
+  // La cabecera pinta la semana antes de que el hook dispare el GET: espera.
+  await waitFor(() =>
+    expect(api.calls.some((c) => c.url === "/api/plan-sessions")).toBe(true),
+  );
 }
 
 describe("plan screen", () => {
   it("renders header and the week grid; plantillas no aparecen listadas", async () => {
     await openPlan();
     expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
-    expect(api.calls.some((c) => c.url === "/api/plan-sessions")).toBe(true); // la rejilla carga la semana
     expect(
       screen.queryByRole("button", { name: "+ Nueva plantilla" }),
     ).toBeNull();
@@ -222,6 +225,46 @@ describe("plan screen", () => {
     expect(within(list).getByText("Remo")).toBeDefined();
   });
 
+  it("la celda con sesión ofrece añadir más ejercicios", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            {
+              id: 51,
+              exerciseId: 7,
+              exerciseName: "Press banca",
+              kind: "strength",
+              position: 0,
+              targetSets: 3,
+              targetRepsMin: 8,
+              targetRepsMax: 8,
+              targetDistanceKm: null,
+              targetDurationMin: null,
+            },
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Añadir ejercicios al 2026-08-31",
+      }),
+    );
+    expect(
+      await screen.findByRole("dialog", {
+        name: /Editar sesión · 2026-08-31/,
+      }),
+    ).toBeDefined();
+  });
+
   it("celda logged → tap navega a /sesion/:date", async () => {
     vi.unstubAllGlobals();
     api = mockApi({
@@ -258,10 +301,22 @@ describe("editor del día (sesión) en modal", () => {
     return { dialog, name: () => screen.getByLabelText("Nombre") };
   }
 
-  it("clic en un día vacío abre la modal; Cancelar cierra sin guardar", async () => {
+  it("clic en un día vacío abre un único modal con el lateral y el selector", async () => {
     const { dialog } = await openFirstDay();
+    // Un solo diálogo: ni botón intermedio ni segundo modal apilado.
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(
-      within(dialog).getByRole("button", { name: "+ Añadir" }),
+      within(dialog).queryByRole("button", { name: "+ Añadir" }),
+    ).toBeNull();
+    // El lateral del día y el selector de plantillas/ejercicios ya están a la vista.
+    expect(
+      within(dialog).getByRole("list", { name: "Ejercicios del día" }),
+    ).toBeDefined();
+    expect(
+      within(dialog).getByRole("button", { name: "Press banca" }),
+    ).toBeDefined();
+    expect(
+      within(dialog).getByRole("button", { name: /A — Empuje/ }),
     ).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -270,17 +325,18 @@ describe("editor del día (sesión) en modal", () => {
 
   it("día vacío: expandir plantilla (fuerza + cardio) y guardar → POST", async () => {
     const { dialog, name } = await openFirstDay();
-    fireEvent.click(within(dialog).getByRole("button", { name: "+ Añadir" }));
-    const picker = await screen.findByRole("dialog", { name: "Añadir al día" });
-    fireEvent.click(within(picker).getByRole("button", { name: /A — Empuje/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
     // nombre sugerido por la primera plantilla
     expect((name() as HTMLInputElement).value).toBe("A — Empuje");
-    expect(screen.getAllByText("Press banca").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
+    const day = within(dialog).getByRole("list", {
+      name: "Ejercicios del día",
+    });
+    expect(within(day).getByText("Press banca")).toBeDefined();
+    // el cardio entra con sus campos propios (y su nombre en la etiqueta)
     expect(screen.getByLabelText(/^running distancia \(km\)$/i)).toBeDefined();
     // el mismo ejercicio ya no se puede volver a añadir
-    const pressBtn = within(picker).getByRole("button", {
-      name: /Press banca/,
+    const pressBtn = within(dialog).getByRole("button", {
+      name: /^Press banca/,
     });
     expect(pressBtn.hasAttribute("disabled")).toBe(true);
 
@@ -330,31 +386,93 @@ describe("editor del día (sesión) en modal", () => {
     expect(within(dayList).getByText("Running")).toBeDefined();
   });
 
-  it("elegir plantilla avisa dentro del selector y la marca como añadida", async () => {
+  it("elegir plantilla avisa en el propio modal y la marca como añadida", async () => {
     const { dialog } = await openFirstDay();
-    fireEvent.click(within(dialog).getByRole("button", { name: "+ Añadir" }));
-    const picker = await screen.findByRole("dialog", { name: "Añadir al día" });
-    fireEvent.click(within(picker).getByRole("button", { name: /A — Empuje/ }));
-    // el aviso se ve en el propio selector, no detrás del overlay
-    expect(within(picker).getByText("Añadidos 3 ejercicios")).toBeDefined();
-    const tplBtn = within(picker).getByRole("button", { name: /A — Empuje/ });
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
+    expect(within(dialog).getByText("Añadidos 3 ejercicios")).toBeDefined();
+    const tplBtn = within(dialog).getByRole("button", { name: /A — Empuje/ });
     expect(tplBtn).toHaveProperty("disabled", true);
     expect(within(tplBtn).getByText("ya añadida")).toBeDefined();
   });
 
   it("plantilla con ejercicios ya en el día cuenta los que ya estaban", async () => {
     const { dialog } = await openFirstDay();
-    fireEvent.click(within(dialog).getByRole("button", { name: "+ Añadir" }));
-    const picker = await screen.findByRole("dialog", { name: "Añadir al día" });
     fireEvent.click(
-      within(picker).getByRole("button", { name: "Press banca" }),
+      within(dialog).getByRole("button", { name: "Press banca" }),
     );
-    fireEvent.click(within(picker).getByRole("button", { name: /A — Empuje/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
     expect(
-      within(picker).getByText(
+      within(dialog).getByText(
         "Añadidos 2 ejercicios · 1 ejercicio ya estaba en el día",
       ),
     ).toBeDefined();
+  });
+
+  it("sesión con ejercicios: se añaden más desde el modal y persisten → PUT", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press, remo],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            {
+              id: 51,
+              exerciseId: 7,
+              exerciseName: "Press banca",
+              kind: "strength",
+              position: 0,
+              targetSets: 3,
+              targetRepsMin: 8,
+              targetRepsMax: 8,
+              targetDistanceKm: null,
+              targetDurationMin: null,
+            },
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /editar sesión del 2026-08-31/i,
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: /Editar sesión · 2026-08-31/,
+    });
+    // el lateral muestra los ejercicios que ya tiene la sesión
+    const day = within(dialog).getByRole("list", {
+      name: "Ejercicios del día",
+    });
+    expect(within(day).getByText("Press banca")).toBeDefined();
+    // y se añade otro sin botón intermedio
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remo" }));
+    expect(within(day).getByText("Remo")).toBeDefined();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(api.state.sessions[0].exercises).toHaveLength(2),
+    );
+    const put = mutations().find((c) => c.method === "PUT");
+    expect(put?.body?.items).toHaveLength(2);
+
+    // reabrir: el añadido persiste junto al que ya estaba
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /editar sesión del 2026-08-31/i,
+      }),
+    );
+    const reopened = await screen.findByRole("dialog", {
+      name: /Editar sesión · 2026-08-31/,
+    });
+    const rows = within(reopened).getByRole("list", {
+      name: "Ejercicios del día",
+    });
+    expect(within(rows).getByText("Press banca")).toBeDefined();
+    expect(within(rows).getByText("Remo")).toBeDefined();
   });
 
   it("día con sesión: editar series → PUT; eliminar → DELETE", async () => {
@@ -427,15 +545,12 @@ describe("editor del día (sesión) en modal", () => {
     ).toBe(true);
   });
 
-  it("ejercicio suelto repetido queda deshabilitado en el picker", async () => {
+  it("ejercicio suelto repetido queda deshabilitado en el selector", async () => {
     const { dialog } = await openFirstDay();
-    fireEvent.click(within(dialog).getByRole("button", { name: "+ Añadir" }));
-    const picker = await screen.findByRole("dialog", { name: "Añadir al día" });
-    fireEvent.click(within(picker).getByRole("button", { name: /Remo/ }));
-    expect(within(picker).getByRole("button", { name: /Remo/ })).toHaveProperty(
-      "disabled",
-      true,
-    );
-    expect(within(picker).getByText("ya añadido")).toBeDefined();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remo" }));
+    expect(
+      within(dialog).getByRole("button", { name: /^Remo/ }),
+    ).toHaveProperty("disabled", true);
+    expect(within(dialog).getByText("ya añadido")).toBeDefined();
   });
 });
