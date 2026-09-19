@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — Deploy</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Operación</p>
+        <h1>Deploy</h1>
+        <p class="lead">
+          Un Worker, dos bindings y dos secretos. El deploy lo hace Cloudflare, no GitHub: un push a
+          <code>main</code> dispara Workers Builds, que construye el SPA y publica el Worker. GitHub
+          Actions corre en paralelo y solo verifica — nunca despliega, y el deploy no espera su
+          resultado.
+        </p>
+
+        <div class="kpis">
+          <div class="kpi"><b>1</b><span>Worker</span></div>
+          <div class="kpi"><b>2</b><span>bindings: D1 y R2</span></div>
+          <div class="kpi"><b>2</b><span>secretos</span></div>
+          <div class="kpi"><b>9</b><span>migraciones</span></div>
+          <div class="kpi"><b>5</b><span>comprobaciones post-deploy</span></div>
+        </div>
+
+        <figure>
+          <svg
+            viewBox="0 0 860 430"
+            role="img"
+            aria-label="Un push a main dispara dos cosas en paralelo: GitHub Actions que verifica con typecheck, test, e2e y lint sin desplegar, y Workers Builds que construye el SPA y despliega el Worker. Aparte, los secretos se ponen una vez y las migraciones se aplican a D1 a mano."
+          >
+            <defs>
+              <marker
+                id="f9"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <rect x="20" y="150" width="160" height="60" rx="10" class="dg-box" />
+            <text x="100" y="172" class="dg-text" text-anchor="middle">push a main</text>
+            <text x="100" y="192" class="dg-sub" text-anchor="middle">git push origin main</text>
+
+            <rect x="246" y="40" width="250" height="64" rx="10" class="dg-box" />
+            <text x="371" y="62" class="dg-text" text-anchor="middle">GitHub Actions · CI</text>
+            <text x="371" y="82" class="dg-sub" text-anchor="middle">typecheck · test · e2e · lint</text>
+
+            <rect x="246" y="250" width="250" height="64" rx="10" class="dg-box" />
+            <text x="371" y="272" class="dg-text" text-anchor="middle">Cloudflare Workers Builds</text>
+            <text x="371" y="292" class="dg-sub" text-anchor="middle">build del SPA + wrangler deploy</text>
+
+            <rect x="596" y="150" width="244" height="64" rx="10" class="dg-box-strong" />
+            <text x="718" y="172" class="dg-text" text-anchor="middle">Worker «esencial»</text>
+            <text x="718" y="192" class="dg-sub" text-anchor="middle">SPA + API en una URL</text>
+
+            <rect x="596" y="40" width="244" height="64" rx="10" class="dg-box" />
+            <text x="718" y="62" class="dg-text" text-anchor="middle">wrangler secret put</text>
+            <text x="718" y="82" class="dg-sub" text-anchor="middle">una vez · y al rotar</text>
+
+            <rect x="246" y="356" width="250" height="56" rx="10" class="dg-box" />
+            <text x="371" y="378" class="dg-text" text-anchor="middle">pnpm db:migrate:remote</text>
+            <text x="371" y="398" class="dg-sub" text-anchor="middle">a mano, tras el deploy si toca esquema</text>
+
+            <rect x="596" y="356" width="244" height="56" rx="10" class="dg-box-strong" />
+            <text x="718" y="378" class="dg-text" text-anchor="middle">D1 «esencial»</text>
+            <text x="718" y="398" class="dg-sub" text-anchor="middle">la base no se toca al revertir</text>
+
+            <polyline
+              points="180,180 215,180 215,72 242,72"
+              class="dg-line-strong"
+              marker-end="url(#f9)"
+            />
+            <polyline
+              points="180,180 215,180 215,282 242,282"
+              class="dg-line-strong"
+              marker-end="url(#f9)"
+            />
+            <polyline
+              points="496,282 560,282 560,182 592,182"
+              class="dg-line-strong"
+              marker-end="url(#f9)"
+            />
+            <line x1="718" y1="104" x2="718" y2="146" class="dg-line-strong" marker-end="url(#f9)" />
+            <line x1="496" y1="388" x2="592" y2="388" class="dg-line-strong" marker-end="url(#f9)" />
+
+            <text x="371" y="160" class="dg-sub" text-anchor="middle">corren en paralelo:</text>
+            <text x="371" y="178" class="dg-sub" text-anchor="middle">el deploy no espera a CI</text>
+          </svg>
+          <figcaption>
+            Los dos caminos salen del mismo push y no se esperan entre sí: un CI en rojo no detiene
+            el deploy, y un deploy roto no cancela el CI. Los secretos y las migraciones son pasos
+            manuales puntuales, fuera del flujo automático.
+          </figcaption>
+        </figure>
+
+        <h2>La configuración del Worker</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Clave de <code>wrangler.toml</code></th>
+                <th>Valor</th>
+                <th>Por qué</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>main</code></td><td><code>api/src/index.ts</code></td><td>El Worker es el único punto de entrada.</td></tr>
+              <tr><td><code>[assets] directory</code></td><td><code>./web/dist</code></td><td>Sirve el SPA construido, sin servidor aparte.</td></tr>
+              <tr><td><code>[assets] binding</code></td><td><code>ASSETS</code></td><td>El Worker lee los assets con <code>env.ASSETS.fetch</code>.</td></tr>
+              <tr><td><code>run_worker_first</code></td><td><code>true</code></td><td>Sin esto el Worker no vería las peticiones de páginas y <code>pageGuard</code> sería inútil.</td></tr>
+              <tr><td><code>not_found_handling</code></td><td><code>single-page-application</code></td><td>Los deep links caen a <code>index.html</code> y routeriza el SPA.</td></tr>
+              <tr><td><code>[[d1_databases]]</code></td><td>binding <code>DB</code> → <code>esencial</code></td><td>Base de datos; <code>migrations_dir = "api/migrations"</code>.</td></tr>
+              <tr><td><code>[[r2_buckets]]</code></td><td>binding <code>PHOTOS</code> → <code>esencial-photos</code></td><td>Fotos de recetas; sin el bucket creado, el deploy falla.</td></tr>
+              <tr><td><code>compatibility_date</code></td><td><code>2026-08-31</code></td><td>Fija el comportamiento del runtime.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          No hay <code>[vars]</code>: los secretos no viven en el repositorio. En producción entran
+          por <code>wrangler secret put</code>; en local, por <code>.dev.vars</code> en la raíz, que
+          está ignorado por git y lo genera <code>predev</code>.
+        </p>
+
+        <h2>Los pasos, en orden</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cuándo</th>
+                <th>Qué</th>
+                <th>Cómo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Una vez</td>
+                <td>Autenticar wrangler y crear la base</td>
+                <td><code>npx wrangler login</code> · <code>npx wrangler d1 create esencial</code></td>
+              </tr>
+              <tr>
+                <td>Una vez</td>
+                <td>Crear el bucket de fotos</td>
+                <td><code>npx wrangler r2 bucket create esencial-photos</code></td>
+              </tr>
+              <tr>
+                <td>Una vez, y al rotar</td>
+                <td>Secretos de acceso</td>
+                <td>
+                  <code>openssl rand -base64 24 | npx wrangler secret put AUTH_SECRET</code><br />
+                  <code>node api/scripts/hash-password.ts 'tu-clave' | npx wrangler secret put PASSWORD_HASH</code>
+                </td>
+              </tr>
+              <tr>
+                <td>Cada deploy</td>
+                <td>Publicar</td>
+                <td>Push a <code>main</code> (automático) o <code>pnpm run deploy</code> (manual)</td>
+              </tr>
+              <tr>
+                <td>Si cambia el esquema</td>
+                <td>Aplicar migraciones</td>
+                <td><code>pnpm db:migrate:remote</code> — <strong>justo después</strong> del deploy</td>
+              </tr>
+              <tr>
+                <td>Post-deploy</td>
+                <td>Comprobar</td>
+                <td>Los cinco <code>curl</code> de abajo</td>
+              </tr>
+              <tr>
+                <td>Si algo va mal</td>
+                <td>Revertir</td>
+                <td><code>npx wrangler rollback</code> o el botón «Rollback» del deployment</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="danger">
+          <p>
+            <strong>El deploy no aplica el esquema.</strong> Publicar código y migrar la base son
+            dos operaciones distintas, y el orden importa:
+            <code>0009_fuerza_v2</code> <em>recrea</em> las tablas de planificación de fuerza, así
+            que se pierde el histórico de sesiones y entrenamientos. Se ejecuta justo después del
+            deploy, cuando ya no queda nadie escribiendo en el esquema viejo.
+          </p>
+        </div>
+
+        <h2>Verificación en dos minutos</h2>
+        <pre><code># 1. sin sesión, la raíz redirige al login
+curl -i https://esencial.&lt;sub&gt;.workers.dev/                     # → 302 a /login?next=%2F
+
+# 2. la sonda de salud está abierta
+curl https://esencial.&lt;sub&gt;.workers.dev/api/health             # → 200 { ok: true }
+
+# 3. la API sin cookie cierra la puerta
+curl -i https://esencial.&lt;sub&gt;.workers.dev/api/recipes          # → 401 { error: "Unauthorized" }
+
+# 4. en el navegador: /login → entra con tu contraseña → carga el DÍA
+# 5. «Cerrar sesión» → vuelve a /login, y con la cookie vieja los curl dan 401</code></pre>
+
+        <h2>Rollback</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>Qué revierte</h3>
+            <p>
+              Solo el código del Worker: vuelve a la versión anterior. La base de datos no se toca,
+              porque el esquema es aditivo e idempotente — salvo las migraciones marcadas como
+              destructivas, que no tienen vuelta atrás.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Cerrar el acceso ya</h3>
+            <p>
+              Rotando <code>AUTH_SECRET</code>: todas las cookies emitidas dejan de verificar al
+              instante, sin desplegar nada. Es el interruptor de emergencia.
+            </p>
+          </div>
+        </div>
+
+        <div class="note">
+          <p>
+            <strong>Fuentes:</strong> <code>wrangler.toml</code>, <code>DEPLOY.md</code> (pasos 1-7
+            y rollback), <code>package.json</code>, <code>AGENTS.md</code> §1, §4 y §5,
+            <code>.github/workflows/ci.yml</code>. Los pasos manuales son los que describe
+            <code>DEPLOY.md</code>; el id de la base y el nombre del bucket están en el
+            <code>wrangler.toml</code> del repositorio.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>

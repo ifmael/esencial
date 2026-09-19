@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — API (Hono)</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Backend</p>
+        <h1>API (Hono)</h1>
+        <p class="lead">
+          38 endpoints en 11 ficheros de rutas, todos detrás de la misma cadena de middleware. La
+          API no decide quién entra: eso lo decide la cadena, antes de que el router vea la
+          petición. Por eso una ruta nueva no puede nacer desprotegida.
+        </p>
+
+        <div class="kpis">
+          <div class="kpi"><b>38</b><span>endpoints</span></div>
+          <div class="kpi"><b>11</b><span>ficheros de rutas</span></div>
+          <div class="kpi"><b>3</b><span>middlewares globales</span></div>
+          <div class="kpi"><b>11</b><span>códigos de estado</span></div>
+          <div class="kpi"><b>17</b><span>esquemas Zod</span></div>
+        </div>
+
+        <figure>
+          <svg
+            viewBox="0 0 920 780"
+            role="img"
+            aria-label="Ladder de las seis fases por las que pasa una petición: securityHeaders, authGuard, pageGuard, los once sub-routers de Hono, notFound y onError. Cada fase se explica con lo que es y con el motivo por el que está en ese punto de la cadena."
+          >
+            <defs>
+              <marker
+                id="f3"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <text x="159" y="22" class="dg-label" text-anchor="middle">Fase</text>
+            <text x="276" y="22" class="dg-label" text-anchor="start">Qué es</text>
+            <text x="616" y="22" class="dg-label" text-anchor="start">Por qué está aquí</text>
+
+            <circle cx="40" cy="92" r="13" class="dg-accent" />
+            <text x="40" y="92" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">1</text>
+            <rect x="64" y="48" width="190" height="88" rx="10" class="dg-box" />
+            <text x="159" y="82" class="dg-text" text-anchor="middle">securityHeaders</text>
+            <text x="159" y="106" class="dg-sub" text-anchor="middle">api/src/middleware.ts:18</text>
+            <text x="276" y="84" class="dg-sub" text-anchor="start">Fija las tres cabeceras de seguridad de cada</text>
+            <text x="276" y="106" class="dg-sub" text-anchor="start">respuesta: CSP, nosniff y Referrer-Policy.</text>
+            <text x="616" y="84" class="dg-sub" text-anchor="start">Escribe al volver de next(), así que sella también</text>
+            <text x="616" y="106" class="dg-sub" text-anchor="start">los 401, el 302 del login y los assets: nada sale sin CSP.</text>
+
+            <circle cx="40" cy="198" r="13" class="dg-accent" />
+            <text x="40" y="198" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">2</text>
+            <rect x="64" y="154" width="190" height="88" rx="10" class="dg-box" />
+            <text x="159" y="188" class="dg-text" text-anchor="middle">authGuard</text>
+            <text x="159" y="212" class="dg-sub" text-anchor="middle">api/src/middleware.ts:44</text>
+            <text x="276" y="190" class="dg-sub" text-anchor="start">Gate de /api/*: exige cookie firmada válida.</text>
+            <text x="276" y="212" class="dg-sub" text-anchor="start">Exentos: GET /api/health y /api/auth/*.</text>
+            <text x="616" y="190" class="dg-sub" text-anchor="start">Corre antes del router, así que una ruta que no existe</text>
+            <text x="616" y="212" class="dg-sub" text-anchor="start">responde 401 y no 404: no se pueden sondear rutas.</text>
+
+            <circle cx="40" cy="304" r="13" class="dg-accent" />
+            <text x="40" y="304" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">3</text>
+            <rect x="64" y="260" width="190" height="88" rx="10" class="dg-box" />
+            <text x="159" y="294" class="dg-text" text-anchor="middle">pageGuard</text>
+            <text x="159" y="318" class="dg-sub" text-anchor="middle">api/src/middleware.ts:63</text>
+            <text x="276" y="296" class="dg-sub" text-anchor="start">Protege el HTML: sin sesión, 302 a</text>
+            <text x="276" y="318" class="dg-sub" text-anchor="start">/login?next=…; /login y los assets pasan.</text>
+            <text x="616" y="296" class="dg-sub" text-anchor="start">Un 401 rompería la navegación: el navegador necesita</text>
+            <text x="616" y="318" class="dg-sub" text-anchor="start">una redirección. Solo funciona con run_worker_first.</text>
+
+            <circle cx="40" cy="410" r="13" class="dg-accent" />
+            <text x="40" y="410" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">4</text>
+            <rect x="64" y="366" width="190" height="88" rx="10" class="dg-box-strong" />
+            <text x="159" y="400" class="dg-text" text-anchor="middle">11 sub-routers</text>
+            <text x="159" y="424" class="dg-sub" text-anchor="middle">api/src/index.ts:41</text>
+            <text x="276" y="402" class="dg-sub" text-anchor="start">Un fichero por recurso, con zBody(Zod) por</text>
+            <text x="276" y="424" class="dg-sub" text-anchor="start">ruta y respuestas json() / fail() uniformes.</text>
+            <text x="616" y="402" class="dg-sub" text-anchor="start">Cuando el router ve la petición, el acceso ya está</text>
+            <text x="616" y="424" class="dg-sub" text-anchor="start">decidido: cada recurso vive con sus propios tests.</text>
+
+            <circle cx="40" cy="516" r="13" class="dg-accent" />
+            <text x="40" y="516" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">5</text>
+            <rect x="64" y="472" width="190" height="88" rx="10" class="dg-box" />
+            <text x="159" y="506" class="dg-text" text-anchor="middle">notFound</text>
+            <text x="159" y="530" class="dg-sub" text-anchor="middle">api/src/index.ts:44</text>
+            <text x="276" y="508" class="dg-sub" text-anchor="start">Bajo /api → 404 JSON. El resto →</text>
+            <text x="276" y="530" class="dg-sub" text-anchor="start">env.ASSETS.fetch, re-envuelto.</text>
+            <text x="616" y="508" class="dg-sub" text-anchor="start">Separa «no autorizado» de «no existe» y sirve el SPA</text>
+            <text x="616" y="530" class="dg-sub" text-anchor="start">en deep links; los headers de assets son inmutables.</text>
+
+            <circle cx="40" cy="622" r="13" class="dg-accent" />
+            <text x="40" y="622" fill="var(--on-primary)" font-size="12" font-weight="600" text-anchor="middle">6</text>
+            <rect x="64" y="578" width="190" height="88" rx="10" class="dg-box" />
+            <text x="159" y="612" class="dg-text" text-anchor="middle">onError → dbFailure</text>
+            <text x="159" y="636" class="dg-sub" text-anchor="middle">api/src/http.ts:57</text>
+            <text x="276" y="614" class="dg-sub" text-anchor="start">Traduce errores de SQLite: UNIQUE → 400</text>
+            <text x="276" y="636" class="dg-sub" text-anchor="start">con field; FK → 400; lo demás → 500.</text>
+            <text x="616" y="614" class="dg-sub" text-anchor="start">Un único traductor: ningún handler lleva try/catch</text>
+            <text x="616" y="636" class="dg-sub" text-anchor="start">y ningún mensaje de SQL llega al cliente.</text>
+
+            <line x1="159" y1="136" x2="159" y2="150" class="dg-line-strong" marker-end="url(#f3)" />
+            <line x1="159" y1="242" x2="159" y2="256" class="dg-line-strong" marker-end="url(#f3)" />
+            <line x1="159" y1="348" x2="159" y2="362" class="dg-line-strong" marker-end="url(#f3)" />
+            <line x1="159" y1="454" x2="159" y2="468" class="dg-line-strong" marker-end="url(#f3)" />
+            <line x1="159" y1="560" x2="159" y2="574" class="dg-line-strong" marker-end="url(#f3)" />
+
+            <rect x="20" y="684" width="880" height="76" rx="10" fill="none" stroke="var(--border-strong)" class="dg-dash" />
+            <text x="36" y="708" class="dg-sub" text-anchor="start">El orden es la garantía: lo que envuelve toda respuesta va primero, lo que corta el acceso corre antes del router y lo que</text>
+            <text x="36" y="732" class="dg-sub" text-anchor="start">traduce errores queda al final. Una ruta nueva hereda las tres fases sin escribir una línea de seguridad.</text>
+          </svg>
+          <figcaption>
+            La cadena tiene seis fases y cada una existe por una razón concreta: la primera
+            envuelve la respuesta, las dos siguientes pueden cortar la petición, la cuarta ya solo
+            sirve, y las dos últimas cierran los casos que no cubre nadie. El orden no es
+            decorativo: <code>authGuard</code> responde 401 en lugar de 404 para no revelar qué
+            rutas existen, y <code>pageGuard</code> redirige en lugar de responder 401 porque quien
+            pregunta es un navegador, no un cliente de API.
+          </figcaption>
+        </figure>
+
+        <p>
+          Añadir un endpoint nuevo es añadir un fichero en <code>api/src/routes/</code> y montarlo:
+          hereda las tres fases de seguridad sin tocar ninguna. Por eso hay 3 middlewares globales
+          para 38 endpoints y no 38 comprobaciones de sesión repetidas.
+        </p>
+
+        <h2>Los 38 endpoints</h2>
+        <p>
+          Acceso: <span class="pill">Sesión</span> exige cookie firmada válida;
+          <span class="pill pending">Público</span> pasa sin ella.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Método</th>
+                <th>Ruta</th>
+                <th>Acceso</th>
+                <th>Qué hace</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="m get">GET</td><td><code>/api/health</code></td><td><span class="pill pending">Público</span></td><td>Sonda de deploy: <code>{ ok: true }</code>.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/auth/login</code></td><td><span class="pill pending">Público</span></td><td>Valida la contraseña y emite la cookie; 429 si se abusa.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/auth/logout</code></td><td><span class="pill pending">Público</span></td><td>Borra la cookie.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/auth/status</code></td><td><span class="pill pending">Público</span></td><td><code>{ authenticated }</code>; lo usa el guard del SPA.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/recipes</code></td><td><span class="pill">Sesión</span></td><td>Lista de recetas con hijos, orden por nombre.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/recipes</code></td><td><span class="pill">Sesión</span></td><td>Crea receta e hijos en un batch atómico; valida la foto contra R2.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/recipes/:id</code></td><td><span class="pill">Sesión</span></td><td>Receta completa o 404.</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/recipes/:id</code></td><td><span class="pill">Sesión</span></td><td>Reemplaza la receta entera y sus hijos.</td></tr>
+              <tr><td class="m del">DEL</td><td><code>/api/recipes/:id</code></td><td><span class="pill">Sesión</span></td><td>Desasigna la receta de los huecos y la borra → 204.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/exercises</code></td><td><span class="pill">Sesión</span></td><td>Catálogo, con filtro opcional <code>?tag=</code>.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/exercises</code></td><td><span class="pill">Sesión</span></td><td>Crea ejercicio con tags; <code>steps</code> se guarda como JSON.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/exercises/:id</code></td><td><span class="pill">Sesión</span></td><td>Ejercicio con tags.</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/exercises/:id</code></td><td><span class="pill">Sesión</span></td><td>Actualiza y reemplaza tags.</td></tr>
+              <tr><td class="m del">DEL</td><td><code>/api/exercises/:id</code></td><td><span class="pill">Sesión</span></td><td>Borra → 204, o 404 si no existía.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/exercises/:id/last</code></td><td><span class="pill">Sesión</span></td><td>Última serie con peso o reps registrada.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/templates</code></td><td><span class="pill">Sesión</span></td><td>Plantillas con sus entradas ordenadas.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/templates</code></td><td><span class="pill">Sesión</span></td><td>Crea plantilla; rechaza ejercicios repetidos.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/templates/:id</code></td><td><span class="pill">Sesión</span></td><td>Plantilla o 404.</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/templates/:id</code></td><td><span class="pill">Sesión</span></td><td>Reemplaza el orden y los targets de las entradas.</td></tr>
+              <tr><td class="m del">DEL</td><td><code>/api/templates/:id</code></td><td><span class="pill">Sesión</span></td><td>Borra → 204, o 404.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/meal-plan/:week</code></td><td><span class="pill">Sesión</span></td><td>Huecos de la semana ISO; semana inválida → 400.</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/meal-plan/:week</code></td><td><span class="pill">Sesión</span></td><td>Reemplaza los 21 huecos en un batch; duplicado día|comida → 400.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/plan-sessions</code></td><td><span class="pill">Sesión</span></td><td>Sesiones planificadas ordenadas por fecha.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/plan-sessions</code></td><td><span class="pill">Sesión</span></td><td>Crea el día; 409 si ya hay sesión esa fecha.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/plan-sessions/:id</code></td><td><span class="pill">Sesión</span></td><td>Día con sus ejercicios expandidos y ordenados.</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/plan-sessions/:id</code></td><td><span class="pill">Sesión</span></td><td>Edita nombre y ejercicios; 409 si el día ya está registrado.</td></tr>
+              <tr><td class="m del">DEL</td><td><code>/api/plan-sessions/:id</code></td><td><span class="pill">Sesión</span></td><td>Desprograma el día; 409 si ya está registrado.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/workout-logs/:date</code></td><td><span class="pill">Sesión</span></td><td>Registro del día en modo lectura.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/workout-logs/:date</code></td><td><span class="pill">Sesión</span></td><td>Cierra la sesión: series, cardio, esfuerzo y estado <code>logged</code>.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/notes/:date</code></td><td><span class="pill">Sesión</span></td><td>Nota del día (vacía si no hay fila).</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/notes/:date</code></td><td><span class="pill">Sesión</span></td><td>Upsert de la nota del día.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/shopping-list/:week</code></td><td><span class="pill">Sesión</span></td><td>Agrega ingredientes planificados + ítems manuales por sección.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/shopping-list/:week/items</code></td><td><span class="pill">Sesión</span></td><td>Solo los ítems manuales.</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/shopping-list/:week/items</code></td><td><span class="pill">Sesión</span></td><td>Reemplaza los ítems manuales conservando posiciones.</td></tr>
+              <tr><td class="m put">PATCH</td><td><code>/api/shopping-list/:week/items/:id</code></td><td><span class="pill">Sesión</span></td><td>Actualiza solo los campos presentes (típicamente <code>checked</code>).</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/day/:date</code></td><td><span class="pill">Sesión</span></td><td>Pantalla DÍA en una llamada: comidas, sesión y nota.</td></tr>
+              <tr><td class="m post">POST</td><td><code>/api/uploads</code></td><td><span class="pill">Sesión</span></td><td>Sube una imagen a R2 y devuelve la clave <code>recipe-&lt;uuid&gt;.&lt;ext&gt;</code>.</td></tr>
+              <tr><td class="m get">GET</td><td><code>/api/uploads/:key</code></td><td><span class="pill">Sesión</span></td><td>Sirve la foto desde R2 con caché inmutable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Validación y errores</h2>
+        <p>
+          Todo error es JSON con la misma forma: <code>{ error, field? }</code>. El
+          <code>field</code> apunta a la pieza concreta que falló, y el SPA lo usa para pintar el
+          error en el campo correcto.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Situación</th>
+                <th>Respuesta</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>JSON inválido en el body</td><td><code>400 { error: "Invalid JSON body", field: "body" }</code></td></tr>
+              <tr><td>Falla un esquema Zod</td><td><code>400 { error: &lt;mensaje&gt;, field: "&lt;ruta&gt;" }</code> (primer issue)</td></tr>
+              <tr><td>Nombre repetido (UNIQUE)</td><td><code>400 { error: "Already exists", field: "&lt;columna&gt;" }</code></td></tr>
+              <tr><td>Clave foránea rota</td><td><code>400 { error: "References a missing or in-use record", field: "reference" }</code></td></tr>
+              <tr><td>Cualquier otro fallo de D1</td><td><code>500 { error: "Internal server error" }</code> — sin filtrar SQL</td></tr>
+              <tr><td>Sin sesión en <code>/api/*</code></td><td><code>401 { error: "Unauthorized" }</code> (lo pone el gate, no el handler)</td></tr>
+              <tr><td>Regla de negocio del día</td><td><code>409 { error: "Ya hay una sesión ese día", field: "date" }</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          La traducción de errores de SQLite vive en un solo sitio (<code>dbFailure</code> en
+          <code>api/src/http.ts</code>), así que ninguna ruta necesita envolver sus consultas en
+          <code>try/catch</code> ni inventarse un formato de error.
+        </p>
+
+        <h2>Subida de fotos</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>El contrato</h3>
+            <p>
+              <code>POST /api/uploads</code> con multipart, campo <code>file</code>. Solo
+              <code>image/png</code>, <code>image/jpeg</code> e <code>image/webp</code>, hasta
+              5&nbsp;MB. Responde <code>200 { photo_path }</code>; demasiado grande es
+              <code>413</code>, tipo fuera de la lista, <code>400</code>.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Por qué no se puede mentir en la foto</h3>
+            <p>
+              Al guardar una receta, la API comprueba que <code>photo_path</code> case con el patrón
+              de clave y que el objeto exista de verdad en R2 (<code>PHOTOS.head</code>). Si no,
+              <code>400</code> en el campo <code>photo_path</code>.
+            </p>
+          </div>
+        </div>
+        <p>
+          Las fotos se sirven por <code>GET /api/uploads/:key</code> detrás del mismo gate que el
+          resto: no hay bucket público ni URLs adivinables.
+        </p>
+
+        <div class="note">
+          <p>
+            <strong>Fuentes:</strong> <code>api/src/index.ts</code>,
+            <code>api/src/middleware.ts</code>, <code>api/src/http.ts</code>,
+            <code>api/src/validation.ts</code>, <code>api/src/routes/*</code> (11 ficheros),
+            <code>api/src/api-validation.ts</code>, <code>wrangler.toml</code>. Números verificados
+            por lectura directa del código.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>
