@@ -83,11 +83,22 @@ Escala vigente — todo lo demás sale de aquí:
 
 `/plan-fuerza` y `/plan-recetas` van sin cabecera: el calendario es el
 protagonista y ocupa la altura de la ventana en escritorio (sin scroll de
-página), con un hueco vacío reservado abajo para acciones futuras. El submenú de
-su sección vive en la barra lateral y, en móvil —donde no hay barra lateral—, en
-una fila de chips sobre el calendario. Las dos rutas están en `CALENDAR_ROUTES`
-(`web/src/components/shell.tsx`): añadir una ahí le da el mismo trato (sin
-título, alto completo, hueco inferior, chips en móvil).
+página), con un hueco vacío reservado abajo para acciones futuras. Las dos rutas
+están en `CALENDAR_ROUTES` (`web/src/components/shell.tsx`): añadir una ahí le da
+el mismo trato (sin título, alto completo, hueco inferior).
+
+En esas rutas **la barra lateral se colapsa a un raíl de iconos** (`w-18` = 72px,
+iconos con el nombre en `aria-label`/`title`, sin desplegables) y su ancho es
+para la rejilla; el submenú de la sección queda como **fila de chips sobre el
+calendario**, en escritorio y en móvil (donde no hay raíl). El `main` de estas
+rutas es `max-w-calendar` —el token `--container-calendar`, 110rem = 1760 px—
+con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
+1280×800: columna de día **152,84 px** (antes 124,28 con la barra de 256px) y
+espacio de texto por nombre ~2,2× (título de sesión 36→75 px, ejercicio 15→54 px,
+receta 29→68 px), sin scroll de página ni horizontal. Techo del ancho: a 1280 no
+cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracteres)
+el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
+celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
 
 Las dos pantallas comparten la **rejilla semanal** (`web/src/components/week-grid.tsx`):
 un único contenedor con la navegación de semana y las siete columnas, con la

@@ -63,11 +63,53 @@ test.describe("CALENDARIO — alto de ventana", () => {
         1,
       );
 
-      // La fila fina es solo de móvil: en escritorio los mismos enlaces viven
-      // en el menú lateral.
+      // El submenú de la sección vive sobre el calendario, también en escritorio
+      // (la barra lateral va en raíl y no lo despliega).
       await expect(
         page.getByRole("navigation", { name: /Deporte|Nutrición/ }),
-      ).toHaveCount(0);
+      ).toBeVisible();
+    }
+  });
+
+  test("escritorio: cada columna de día mide ≥150px a 1280×800", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    for (const route of ROUTES) {
+      await page.goto(route);
+      // La rejilla está montada (los siete encabezados de día a la vista).
+      await expect(page.locator("main section h3")).toHaveCount(7);
+
+      const geom = await page.evaluate(() => {
+        const panel = document.querySelector("main section");
+        const grid = panel
+          ? [...panel.querySelectorAll("div")]
+              .reverse()
+              .find((d) => d.children.length === 7)
+          : undefined;
+        const cols = grid
+          ? [...grid.children].map((c) => c.getBoundingClientRect().width)
+          : [];
+        const el = document.scrollingElement ?? document.documentElement;
+        return {
+          count: cols.length,
+          width: Math.min(...cols),
+          pageOverflowX: el.scrollWidth - window.innerWidth,
+          pageOverflowY: el.scrollHeight - window.innerHeight,
+        };
+      });
+      expect(geom.count, `${route}: siete columnas de día`).toBe(7);
+      expect(
+        geom.width,
+        `${route}: ancho de la columna más estrecha`,
+      ).toBeGreaterThanOrEqual(150);
+      expect(
+        geom.pageOverflowX,
+        `${route}: sin scroll horizontal`,
+      ).toBeLessThan(1);
+      expect(geom.pageOverflowY, `${route}: sin scroll de página`).toBeLessThan(
+        1,
+      );
     }
   });
 
@@ -88,22 +130,40 @@ test.describe("CALENDARIO — alto de ventana", () => {
     }
   });
 
-  test("escritorio: el menú lateral conserva los enlaces de la sección", async ({
+  test("escritorio: el raíl conserva las secciones y el submenú vive sobre el calendario", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    const sidebar = page.locator("aside");
+    const rail = page.locator("aside");
 
+    for (const route of ["/plan-fuerza", "/plan-recetas"] as const) {
+      await page.goto(route);
+      // Raíl: ancho de icono, con los destinos accesibles por su nombre.
+      const width = await rail.evaluate(
+        (el) => el.getBoundingClientRect().width,
+      );
+      expect(width, `${route}: ancho del raíl`).toBeLessThanOrEqual(80);
+      for (const name of ["Hoy", "Deporte", "Nutrición", "Sistema de diseño"]) {
+        await expect(
+          rail.getByRole("link", { name }),
+          `${route}: ${name}`,
+        ).toBeVisible();
+      }
+      // Sin desplegables: el submenú de la sección está en la fila de chips.
+      await expect(rail.locator("button[aria-expanded]")).toHaveCount(0);
+    }
+
+    const chips = page.getByRole("navigation", { name: "Deporte" });
     await page.goto("/plan-fuerza");
-    await expect(
-      sidebar.getByRole("link", { name: "Ejercicios" }),
-    ).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Plantillas" }),
-    ).toBeVisible();
+    await expect(chips.getByRole("link", { name: "Ejercicios" })).toBeVisible();
+    await expect(chips.getByRole("link", { name: "Plantillas" })).toBeVisible();
 
     await page.goto("/plan-recetas");
-    await expect(sidebar.getByRole("link", { name: "Recetas" })).toBeVisible();
+    await expect(
+      page
+        .getByRole("navigation", { name: "Nutrición" })
+        .getByRole("link", { name: "Recetas" }),
+    ).toBeVisible();
   });
 
   test("escritorio: con un día cargado, el desborde queda dentro del calendario", async ({
@@ -182,5 +242,54 @@ test.describe("CALENDARIO — alto de ventana", () => {
     ).toBeVisible();
     // La misma cabecera de rejilla que Deporte: sin título de página.
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
+  });
+
+  test("escritorio: el calendario se estira con un tope amplio de 1760px", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    for (const route of ROUTES) {
+      await page.goto(route);
+      await expect(
+        page.getByRole("button", { name: "Semana siguiente" }),
+      ).toBeVisible();
+      // La rejilla está montada: sin esto se mediría el «Cargando…».
+      await expect(page.locator("main section h3")).toHaveCount(7);
+
+      const geom = await page.evaluate(() => {
+        const main = document.querySelector("main") as HTMLElement;
+        const panel = document.querySelector("main section");
+        const grid = panel
+          ? [...panel.querySelectorAll("div")]
+              .reverse()
+              .find((d) => d.children.length === 7)
+          : undefined;
+        const cols = grid
+          ? [...grid.children].map((c) => c.getBoundingClientRect().width)
+          : [];
+        const el = document.scrollingElement ?? document.documentElement;
+        return {
+          maxWidth: getComputedStyle(main).maxWidth,
+          width: main.getBoundingClientRect().width,
+          column: cols.length ? Math.min(...cols) : 0,
+          overflowX: el.scrollWidth - window.innerWidth,
+        };
+      });
+      expect(geom.maxWidth, `${route}: tope del contenedor`).toBe("1760px");
+      expect(geom.width, `${route}: ancho usado`).toBe(1760);
+      expect(geom.column, `${route}: columna más estrecha`).toBeGreaterThan(
+        200,
+      );
+      expect(geom.overflowX, `${route}: sin scroll horizontal`).toBeLessThan(1);
+
+      // Ultrapanorámica: el tope muerde y el calendario no se estira sin fin.
+      await page.setViewportSize({ width: 2560, height: 1440 });
+      const wide = await page.evaluate(() => {
+        const main = document.querySelector("main") as HTMLElement;
+        return main.getBoundingClientRect().width;
+      });
+      expect(wide, `${route}: tope en ultrapanorámica`).toBe(1760);
+      await page.setViewportSize({ width: 1920, height: 1080 });
+    }
   });
 });
