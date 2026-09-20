@@ -1,12 +1,30 @@
 // /plantillas — CRUD de plantillas (agrupaciones semánticas de ejercicios y/o
 // cardio, sin rotación). Vivían al pie de /plan-fuerza; ahora tienen su página
 // y el planificador solo las usa para expandirlas en un día.
+//
+// Crear y editar viven en una modal con URL propia (`/plantillas/nueva` y
+// `/plantillas/:id/editar`, rutas bajo la lista): el borrador se compone dentro
+// de un único `role=dialog` —ejercicios a la izquierda, selector con mapa
+// muscular a la derecha— y se persiste de una sola vez al guardar.
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { type ReactNode, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, Navigate, useMatch, useNavigate } from "react-router";
 import {
   GROUP_LABELS,
   GroupedExercises,
 } from "../components/grouped-exercises";
+import {
+  DRAG_INSTRUCTIONS,
+  GripIcon,
+  sortableAnnouncements,
+  useDragSensors,
+} from "../components/sortable";
 import { Badge, Button, Card, cardClass, Input } from "../components/ui";
 import { apiField } from "../lib/api";
 import {
@@ -27,6 +45,7 @@ import {
   numAt,
   removeEntry,
   setTargets,
+  type Targets,
 } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 
@@ -250,30 +269,23 @@ function BodyMap({
   );
 }
 
-// --- Añadir ejercicio (modal) ------------------------------------------------
+// --- Añadir ejercicio (columna de la modal) ----------------------------------
 
+/** Selector de ejercicios embebido: vista de mapa corporal, búsqueda y lista
+ *  agrupada por músculo. Sin overlay ni `role=dialog` propios — la modal de
+ *  plantilla es el único diálogo abierto. */
 function ExercisePicker({
   exercises,
   draftEntries,
   onAdd,
-  onClose,
 }: {
   exercises: Exercise[];
   draftEntries: DraftEntry[];
   onAdd: (e: Exercise) => void;
-  onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState<string | null>(null);
   const [view, setView] = useState<BodyView>("front");
-
-  useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const q = search.trim().toLowerCase();
   const picks = exercises.filter((e) => {
@@ -291,18 +303,15 @@ function ExercisePicker({
   const inDraftIds = new Set(draftEntries.map((en) => en.exerciseId));
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      onClick={onClose}
+    <section
+      aria-label="Añadir ejercicio"
+      className="flex min-h-0 flex-col gap-2"
     >
-      <Card
-        role="dialog"
-        aria-label="Añadir ejercicio"
-        className="my-8 flex w-full max-w-xl flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-bold">Añadir ejercicio</h2>
+      <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+        Añadir ejercicio
+      </h3>
 
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-medium">Vista:</span>
           <Button
@@ -348,56 +357,190 @@ function ExercisePicker({
         {picks.length === 0 ? (
           <p className="text-sm text-text-secondary">Sin ejercicios</p>
         ) : (
-          <div className="flex max-h-[45vh] flex-col gap-3 overflow-y-auto">
-            <GroupedExercises
-              exercises={picks}
-              forceOpen={q !== "" || group !== null}
-              listClassName="flex flex-col gap-1"
-              renderItem={(e) => (
-                <li key={e.id}>
-                  <button
-                    className="min-h-9 w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-surface-muted disabled:text-text-secondary"
-                    disabled={inDraftIds.has(e.id)}
-                    onClick={() => {
-                      if (inDraftIds.has(e.id)) return;
-                      onAdd(e);
-                    }}
-                  >
-                    {e.name}
-                    {e.kind === "strength" ? null : ` · ${KIND_LABELS[e.kind]}`}
-                  </button>
-                </li>
-              )}
-            />
-          </div>
+          <GroupedExercises
+            exercises={picks}
+            forceOpen={q !== "" || group !== null}
+            listClassName="flex flex-col gap-1"
+            renderItem={(e) => (
+              <li key={e.id}>
+                <button
+                  className="min-h-9 w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-surface-muted disabled:text-text-secondary"
+                  disabled={inDraftIds.has(e.id)}
+                  onClick={() => {
+                    if (inDraftIds.has(e.id)) return;
+                    onAdd(e);
+                  }}
+                >
+                  {e.name}
+                  {e.kind === "strength" ? null : ` · ${KIND_LABELS[e.kind]}`}
+                </button>
+              </li>
+            )}
+          />
         )}
-
-        <Button variant="secondary" className="self-end" onClick={onClose}>
-          Cerrar
-        </Button>
-      </Card>
-    </div>
+      </div>
+    </section>
   );
 }
 
 // --- Editor ----------------------------------------------------------------
 
-function TemplateEditor({
+/** Fila arrastrable del borrador: asa para reordenar (ratón, táctil o
+ *  teclado), objetivos de fuerza o cardio, y quitar. */
+function EntryRow({
+  entry,
+  onPatch,
+  onRemove,
+}: {
+  entry: DraftEntry;
+  onPatch: (key: string, targets: Partial<Targets>) => void;
+  onRemove: (key: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: entry.key });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
+        isDragging ? "relative z-10 opacity-70" : ""
+      }`}
+    >
+      <button
+        type="button"
+        className="cursor-grab touch-none rounded-md p-1 text-text-secondary hover:bg-surface-muted active:cursor-grabbing"
+        aria-label={`Mover ${entry.exerciseName}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripIcon />
+      </button>
+      <Link
+        className="min-w-32 font-medium text-primary underline-offset-4 hover:underline"
+        to={`/ejercicios/${entry.exerciseId}`}
+      >
+        {entry.exerciseName}
+      </Link>
+      {entry.kind === "strength" ? (
+        <>
+          <label className="text-sm">
+            Series
+            <Input
+              className="w-16"
+              type="number"
+              min={1}
+              value={entry.targetSets ?? ""}
+              onChange={(e) =>
+                onPatch(entry.key, { targetSets: intAt(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            Reps mín
+            <Input
+              className="w-16"
+              type="number"
+              min={1}
+              value={entry.targetRepsMin ?? ""}
+              onChange={(e) =>
+                onPatch(entry.key, { targetRepsMin: intAt(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            Reps máx
+            <Input
+              className="w-16"
+              type="number"
+              min={1}
+              value={entry.targetRepsMax ?? ""}
+              onChange={(e) =>
+                onPatch(entry.key, { targetRepsMax: intAt(e.target.value) })
+              }
+            />
+          </label>
+        </>
+      ) : (
+        <>
+          <Badge tone="pending">{KIND_LABELS[entry.kind]}</Badge>
+          <label className="text-sm">
+            Distancia (km)
+            <Input
+              className="w-20"
+              type="number"
+              min={0}
+              step="0.1"
+              value={entry.targetDistanceKm ?? ""}
+              onChange={(e) =>
+                onPatch(entry.key, { targetDistanceKm: numAt(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            Tiempo (min)
+            <Input
+              className="w-20"
+              type="number"
+              min={0}
+              value={entry.targetDurationMin ?? ""}
+              onChange={(e) =>
+                onPatch(entry.key, {
+                  targetDurationMin: intAt(e.target.value),
+                })
+              }
+            />
+          </label>
+        </>
+      )}
+      <Button
+        variant="secondary"
+        aria-label="Quitar"
+        onClick={() => onRemove(entry.key)}
+      >
+        Quitar
+      </Button>
+    </li>
+  );
+}
+
+/** Modal de plantilla: un único diálogo con el nombre, la lista ordenable de
+ *  ejercicios y el selector embebido. Guardar persiste el borrador completo;
+ *  Cancelar, Escape o el fondo cierran sin llamadas a la API. */
+function TemplateDialog({
   draft: initial,
+  title,
   submitting,
   onSave,
   onCancel,
 }: {
   draft: Draft;
+  title: string;
   submitting: boolean;
   onSave: (draft: Draft) => Promise<void>;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(initial);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const sensors = useDragSensors();
   const { exercises } = useExercises();
+
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      // Escape cancela el arrastre de teclado (dnd-kit marca el evento como
+      // gestionado); solo cerramos la modal si nadie lo consumió antes.
+      if (ev.key === "Escape" && !ev.defaultPrevented) onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
 
   const save = async () => {
     if (submitting) return;
@@ -416,194 +559,129 @@ function TemplateEditor({
     }
   };
 
+  const announcements = sortableAnnouncements(
+    (id) => draft.entries.find((e) => e.key === id)?.exerciseName ?? "",
+    (id) => draft.entries.findIndex((e) => e.key === id) + 1,
+  );
+
+  /** El orden del borrador es el de `position` en el payload. */
+  const moveRow = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = draft.entries.findIndex((e) => e.key === active.id);
+    const to = draft.entries.findIndex((e) => e.key === over.id);
+    if (from < 0 || to < 0) return;
+    setDraft(moveEntry(draft, from, to));
+  };
+
+  const add = (e: Exercise) =>
+    setDraft(
+      addEntry(draft, {
+        key: newEntryKey(),
+        exerciseId: e.id,
+        exerciseName: e.name,
+        kind: e.kind,
+        targetSets: null,
+        targetRepsMin: null,
+        targetRepsMax: null,
+        targetDistanceKm: null,
+        targetDurationMin: null,
+      }),
+    );
+
   return (
-    <Card className="flex flex-col gap-3">
-      <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-        <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
-          <label htmlFor="tpl-name">Nombre</label>
-          <Input
-            id="tpl-name"
-            value={draft.name}
-            onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-          />
-          {nameError && <span className="text-sm text-error">{nameError}</span>}
-        </div>
-      </header>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div className="w-full max-w-4xl">
+        <Card
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tpl-editor-title"
+          className="flex max-h-[85vh] flex-col gap-3"
+        >
+          <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
+            <h2 id="tpl-editor-title" className="text-lg font-bold">
+              {title}
+            </h2>
+            <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
+              <label htmlFor="tpl-name">Nombre</label>
+              <Input
+                id="tpl-name"
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
+              {nameError && (
+                <span className="text-sm text-error">{nameError}</span>
+              )}
+            </div>
+          </header>
 
-      {serverError && <p className="text-sm text-error">{serverError}</p>}
+          {serverError && <p className="text-sm text-error">{serverError}</p>}
 
-      <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
-        {draft.entries.map((entry, i) => (
-          <li
-            key={entry.key}
-            className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
-              i < draft.entries.length - 1 ? "border-b border-border" : ""
-            }`}
-          >
-            <Link
-              className="min-w-32 font-medium text-primary underline-offset-4 hover:underline"
-              to={`/ejercicios/${entry.exerciseId}`}
-            >
-              {entry.exerciseName}
-            </Link>
-            {entry.kind === "strength" ? (
-              <>
-                <label className="text-sm">
-                  Series
-                  <Input
-                    className="w-16"
-                    type="number"
-                    min={1}
-                    value={entry.targetSets ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetSets: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Reps mín
-                  <Input
-                    className="w-16"
-                    type="number"
-                    min={1}
-                    value={entry.targetRepsMin ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetRepsMin: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Reps máx
-                  <Input
-                    className="w-16"
-                    type="number"
-                    min={1}
-                    value={entry.targetRepsMax ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetRepsMax: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-              </>
-            ) : (
-              <>
-                <Badge tone="pending">{KIND_LABELS[entry.kind]}</Badge>
-                <label className="text-sm">
-                  Distancia (km)
-                  <Input
-                    className="w-20"
-                    type="number"
-                    min={0}
-                    step="0.1"
-                    value={entry.targetDistanceKm ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetDistanceKm: numAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-                <label className="text-sm">
-                  Tiempo (min)
-                  <Input
-                    className="w-20"
-                    type="number"
-                    min={0}
-                    value={entry.targetDurationMin ?? ""}
-                    onChange={(e) =>
-                      setDraft(
-                        setTargets(draft, entry.key, {
-                          targetDurationMin: intAt(e.target.value),
-                        }),
-                      )
-                    }
-                  />
-                </label>
-              </>
-            )}
-            <Button
-              variant="secondary"
-              className="min-h-11 min-w-11"
-              aria-label="Subir"
-              disabled={i === 0}
-              onClick={() => setDraft(moveEntry(draft, i, i - 1))}
-            >
-              ↑
+          <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 md:grid-cols-2 md:grid-rows-1">
+            <section className="flex min-h-0 flex-col gap-2">
+              <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
+                Ejercicios de la plantilla
+              </h3>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={moveRow}
+                accessibility={{
+                  screenReaderInstructions: DRAG_INSTRUCTIONS,
+                  announcements,
+                }}
+              >
+                <SortableContext
+                  items={draft.entries.map((e) => e.key)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <ul
+                    aria-label="Ejercicios de la plantilla"
+                    className="min-h-0 flex-1 divide-y divide-border overflow-y-auto rounded-lg border border-border bg-surface-muted/50"
+                  >
+                    {draft.entries.map((entry) => (
+                      <EntryRow
+                        key={entry.key}
+                        entry={entry}
+                        onPatch={(key, targets) =>
+                          setDraft(setTargets(draft, key, targets))
+                        }
+                        onRemove={(key) => setDraft(removeEntry(draft, key))}
+                      />
+                    ))}
+                    {draft.entries.length === 0 && (
+                      <li className="bg-surface p-3 text-text-secondary">
+                        Aún no hay ejercicios. Añádelos desde la lista de la
+                        derecha.
+                      </li>
+                    )}
+                  </ul>
+                </SortableContext>
+              </DndContext>
+            </section>
+
+            <ExercisePicker
+              exercises={exercises}
+              draftEntries={draft.entries}
+              onAdd={add}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+            <Button disabled={submitting} onClick={save}>
+              {submitting ? "Guardando…" : "Guardar"}
             </Button>
-            <Button
-              variant="secondary"
-              className="min-h-11 min-w-11"
-              aria-label="Bajar"
-              disabled={i === draft.entries.length - 1}
-              onClick={() => setDraft(moveEntry(draft, i, i + 1))}
-            >
-              ↓
+            <Button variant="secondary" onClick={onCancel}>
+              Cancelar
             </Button>
-            <Button
-              variant="secondary"
-              aria-label="Quitar"
-              onClick={() => setDraft(removeEntry(draft, entry.key))}
-            >
-              Quitar
-            </Button>
-          </li>
-        ))}
-      </ul>
-
-      <Button
-        variant="secondary"
-        className="self-start"
-        onClick={() => setPickerOpen(true)}
-      >
-        + Añadir ejercicio
-      </Button>
-
-      <div className="flex gap-2">
-        <Button disabled={submitting} onClick={save}>
-          {submitting ? "Guardando…" : "Guardar"}
-        </Button>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancelar
-        </Button>
+          </div>
+        </Card>
       </div>
-
-      {pickerOpen && (
-        <ExercisePicker
-          exercises={exercises}
-          draftEntries={draft.entries}
-          onAdd={(e) =>
-            setDraft(
-              addEntry(draft, {
-                key: newEntryKey(),
-                exerciseId: e.id,
-                exerciseName: e.name,
-                kind: e.kind,
-                targetSets: null,
-                targetRepsMin: null,
-                targetRepsMax: null,
-                targetDistanceKm: null,
-                targetDurationMin: null,
-              }),
-            )
-          }
-          onClose={() => setPickerOpen(false)}
-        />
-      )}
-    </Card>
+    </div>
   );
 }
 
@@ -738,21 +816,28 @@ export function PlantillasPage() {
     updateTemplate,
     deleteTemplate,
   } = useTemplates();
+  const navigate = useNavigate();
+  const nueva = useMatch("/plantillas/nueva");
+  const editando = useMatch("/plantillas/:id/editar");
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [editing, setEditing] = useState<{ template: Template | null } | null>(
-    null,
-  );
   const [submitting, setSubmitting] = useState(false);
+
+  // La modal sale de la URL: recargar la reabre y «atrás» la cierra.
+  const editing = editando
+    ? templates.find((t) => t.id === Number(editando.params.id))
+    : undefined;
+
+  const close = () => navigate("/plantillas");
 
   const save = async (draft: Draft) => {
     setSubmitting(true);
     try {
       const payload = buildTemplatePayload(draft);
-      const saved = editing?.template
-        ? await updateTemplate(editing.template.id, payload)
+      const saved = editing
+        ? await updateTemplate(editing.id, payload)
         : await createTemplate(payload);
       setExpanded((x) => ({ ...x, [saved.id]: true }));
-      setEditing(null);
+      close();
     } finally {
       setSubmitting(false);
     }
@@ -794,27 +879,13 @@ export function PlantillasPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {editing && (
-          <div className="xl:col-span-2">
-            <TemplateEditor
-              draft={
-                editing.template
-                  ? toDraft(editing.template)
-                  : { name: "", entries: [] }
-              }
-              submitting={submitting}
-              onSave={save}
-              onCancel={() => setEditing(null)}
-            />
-          </div>
-        )}
         {templates.map((t) => (
           <TemplateCard
             key={t.id}
             template={t}
             expanded={Boolean(expanded[t.id])}
             onToggle={() => setExpanded((x) => ({ ...x, [t.id]: !x[t.id] }))}
-            onEdit={() => setEditing({ template: t })}
+            onEdit={() => navigate(`/plantillas/${t.id}/editar`)}
             onDuplicate={() => void duplicate(t)}
             onDelete={async () => {
               try {
@@ -831,11 +902,27 @@ export function PlantillasPage() {
       <div className="flex justify-center">
         <button
           className="rounded-full bg-primary-container px-6 py-3 font-bold text-on-primary shadow-sm hover:bg-primary-dark"
-          onClick={() => setEditing({ template: null })}
+          onClick={() => navigate("/plantillas/nueva")}
         >
           + Nueva plantilla
         </button>
       </div>
+
+      {(nueva || editing) && (
+        <TemplateDialog
+          key={editing ? `t${editing.id}` : "nueva"}
+          title={editing ? "Editar plantilla" : "Nueva plantilla"}
+          draft={editing ? toDraft(editing) : { name: "", entries: [] }}
+          submitting={submitting}
+          onSave={save}
+          onCancel={close}
+        />
+      )}
+
+      {/* Enlace directo a una plantilla que ya no existe: de vuelta a la lista. */}
+      {editando && !editing && !pending && (
+        <Navigate to="/plantillas" replace />
+      )}
     </div>
   );
 }

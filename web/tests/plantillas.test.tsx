@@ -224,17 +224,19 @@ describe("template editor", () => {
   async function openEditor() {
     await openPlantillas();
     fireEvent.click(screen.getByRole("button", { name: "+ Nueva plantilla" }));
-    return screen.findByLabelText("Nombre");
+    const name = await screen.findByLabelText("Nombre");
+    expect(window.location.pathname).toBe("/plantillas/nueva");
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    return name;
   }
 
-  it("create: valid save → single POST 201, card appears, editor closes", async () => {
+  it("create: valid save → single POST 201, card appears, modal closes", async () => {
     await openEditor();
     fireEvent.change(screen.getByLabelText("Nombre"), {
       target: { value: "D — Movilidad" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
-    const dialog = await screen.findByRole("dialog");
-    const dlg = within(dialog);
+    // El selector vive dentro de la propia modal: no hay un segundo diálogo.
+    const dlg = within(screen.getByRole("dialog"));
     const searchesBefore = api.calls.filter(
       (c) => c.url === "/api/exercises",
     ).length;
@@ -246,7 +248,6 @@ describe("template editor", () => {
       searchesBefore,
     ); // search hit no network
     fireEvent.click(dlg.getByRole("button", { name: /^Sentadilla$/ }));
-    fireEvent.click(dlg.getByRole("button", { name: "Cerrar" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
@@ -261,19 +262,17 @@ describe("template editor", () => {
       },
     ]);
     await screen.findByText("D — Movilidad");
-    expect(screen.queryByLabelText("Nombre")).toBeNull();
+    await waitFor(() => expect(screen.queryByLabelText("Nombre")).toBeNull());
+    expect(window.location.pathname).toBe("/plantillas");
   });
 
   it("cardio en plantilla: el picker lo lista con su tipo y acepta distancia/tiempo", async () => {
     await openEditor();
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
-    const dialog = await screen.findByRole("dialog");
-    const dlg = within(dialog);
+    const dlg = within(screen.getByRole("dialog"));
     fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
       target: { value: "running" },
     });
     fireEvent.click(dlg.getByRole("button", { name: /Running · Running/ }));
-    fireEvent.click(dlg.getByRole("button", { name: "Cerrar" }));
     fireEvent.change(screen.getByLabelText(/^distancia \(km\)$/i), {
       target: { value: "12" },
     });
@@ -299,9 +298,7 @@ describe("template editor", () => {
 
   it("body map: selecting a muscle group filters the list; Todos resets; empty group shows state", async () => {
     await openEditor();
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
-    const dialog = await screen.findByRole("dialog");
-    const dlg = within(dialog);
+    const dlg = within(screen.getByRole("dialog"));
     // Grupos plegables: se despliegan al pulsar su cabecera.
     fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
     expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
@@ -331,16 +328,16 @@ describe("template editor", () => {
     expect(dlg.getByText(/sin ejercicios/i)).toBeDefined();
   });
 
-  it("edit: pre-filled; rename + reorder + targets → single PUT", async () => {
+  it("edit: pre-filled; rename + targets → single PUT", async () => {
     await openPlantillas();
     fireEvent.click(
       within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
     );
+    expect(window.location.pathname).toBe("/plantillas/1/editar");
     const name = await screen.findByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("A — Empuje");
     fireEvent.change(name, { target: { value: "A — Empuje y núcleo" } });
-    fireEvent.click(screen.getAllByRole("button", { name: "Bajar" })[0]); // Press moves down
-    fireEvent.change(screen.getAllByLabelText("Series")[1], {
+    fireEvent.change(screen.getAllByLabelText("Series")[0], {
       target: { value: "4" },
     }); // Press row
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
@@ -352,9 +349,11 @@ describe("template editor", () => {
     expect(put.url).toBe("/api/templates/1");
     const body = put.body as unknown as TemplatePayload;
     expect(body.name).toBe("A — Empuje y núcleo");
-    expect(body.exercises.map((e) => e.exerciseId)).toEqual([8, 7, 10]); // displaced swap, no gaps/dupes
-    expect(body.exercises[1].targetSets).toBe(4);
+    // El orden del borrador viaja en `position`, sin huecos ni duplicados.
+    expect(body.exercises.map((e) => e.exerciseId)).toEqual([7, 8, 10]);
+    expect(body.exercises[0].targetSets).toBe(4);
     await screen.findByText("A — Empuje y núcleo");
+    expect(window.location.pathname).toBe("/plantillas");
   });
 
   it("cancel discards the draft with zero mutation calls", async () => {
@@ -489,7 +488,7 @@ describe("exercise picker modal", () => {
       within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
     );
     await screen.findByLabelText("Nombre");
-    fireEvent.click(screen.getByRole("button", { name: "+ Añadir ejercicio" }));
+    expect(window.location.pathname).toBe("/plantillas/1/editar");
     return screen.findByRole("dialog");
   }
 
@@ -537,27 +536,51 @@ describe("exercise picker modal", () => {
     expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(4);
   });
 
-  it("closing with Cerrar preserves the draft", async () => {
-    const dialog = await openPicker();
+  it("Cancelar cierra la modal, vuelve a la lista y descarta el borrador", async () => {
+    await openPicker();
     fireEvent.change(screen.getByLabelText("Nombre"), {
-      target: { value: "A — Empuje 2" },
+      target: { value: "basura" },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Cerrar" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe(
-      "A — Empuje 2",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(window.location.pathname).toBe("/plantillas");
+    expect(mutations()).toHaveLength(0);
+    expect(api.state.templates[0].name).toBe("A — Empuje");
   });
 
-  it("closing with Escape preserves the draft", async () => {
+  it("Escape cierra la modal sin guardar", async () => {
     await openPicker();
     fireEvent.change(screen.getByLabelText("Nombre"), {
       target: { value: "A — Empuje 3" },
     });
     fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(window.location.pathname).toBe("/plantillas");
+    expect(mutations()).toHaveLength(0);
+  });
+});
+
+describe("modal de plantilla con URL propia", () => {
+  it("entrar directo a /plantillas/1/editar abre la modal precargada", async () => {
+    renderAt("/plantillas/1/editar");
+    const name = await screen.findByLabelText("Nombre");
+    expect((name as HTMLInputElement).value).toBe("A — Empuje");
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    // La lista sigue detrás: las otras tarjetas se ven.
+    expect(screen.getByText("B — Tirón")).toBeDefined();
+  });
+
+  it("entrar directo a /plantillas/nueva abre la modal vacía", async () => {
+    renderAt("/plantillas/nueva");
+    const name = await screen.findByLabelText("Nombre");
+    expect((name as HTMLInputElement).value).toBe("");
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
+  it("una plantilla inexistente devuelve a la lista", async () => {
+    renderAt("/plantillas/99/editar");
+    await screen.findByText("B — Tirón");
+    await waitFor(() => expect(window.location.pathname).toBe("/plantillas"));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect((screen.getByLabelText("Nombre") as HTMLInputElement).value).toBe(
-      "A — Empuje 3",
-    );
   });
 });

@@ -115,6 +115,18 @@ casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo e
 `text-caption`. Con muchas filas el mínimo manda y el desborde sigue quedando
 dentro del calendario (lo cubre `calendar-layout.spec.ts`).
 
+### Modal de plantillas (crear y editar)
+
+`app.tsx` registra **`/plantillas/*`** y `PlantillasPage` decide con `useMatch`
+si además pinta la modal, así que la lista nunca se desmonta: `/plantillas/nueva`
+y `/plantillas/:id/editar` funcionan al recargar, y «atrás» o Escape vuelven a
+`/plantillas`. Dentro hay un **único** `role=dialog`: a la izquierda el borrador
+con los ejercicios ordenables por asa (`web/src/components/sortable.tsx`, ratón,
+táctil y teclado) y a la derecha el selector **embebido** (búsqueda, mapa
+muscular y grupos plegables) — nunca una segunda modal encima. Guardar manda un
+solo POST (crear) o PUT (editar) con las posiciones 0..n-1; Cancelar, Escape o el
+fondo descartan el borrador sin llamadas a la API.
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |
@@ -216,6 +228,14 @@ La API lleva `--persist-to .wrangler/state` porque su config vive en `api/` y,
 sin esa bandera, wrangler usaría `api/.wrangler/state` (base de dev nueva y
 vacía). Igual en `pnpm db:migrate:local`: la base de desarrollo sigue siendo la
 de siempre, `.wrangler/state` en la raíz.
+
+El origen de dev es **`http://127.0.0.1:8787` y nada más**: el Worker del frontal
+redirige `localhost:8787` a `127.0.0.1:8787` conservando ruta y query. El
+navegador trata los dos nombres como sitios distintos y la cookie de sesión
+(`SameSite=Lax`, emitida en `127.0.0.1`) no viaja de uno al otro, así que con
+`localhost` el login parece ignorarse: la petición responde 200 y la app se
+queda en `/login` sin error visible. Se arregla con un origen canónico en vez de
+duplicar `WEB_ORIGIN` (CORS) y `API_ORIGIN` (CSP) para los dos nombres.
 
 ### 5. `pnpm deploy` no ejecuta el script de deploy
 
