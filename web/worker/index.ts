@@ -37,6 +37,17 @@ async function hasValidSession(env: WebEnv, req: Request): Promise<boolean> {
 }
 
 const app = new Hono<{ Bindings: WebEnv }>()
+  // Dev: el navegador trata `localhost` y `127.0.0.1` como dos sitios distintos,
+  // y la cookie de sesión (SameSite=Lax, la emite la API en 127.0.0.1) no viaja
+  // de uno al otro: el login se quedaría en /login sin decir nada. En vez de
+  // duplicar CORS (WEB_ORIGIN) y CSP (API_ORIGIN) para los dos nombres, se fija
+  // un origen canónico. En producción el host nunca es `localhost`.
+  .use(async (c, next) => {
+    const url = new URL(c.req.url);
+    if (url.hostname !== "localhost") return next();
+    url.hostname = "127.0.0.1";
+    return c.redirect(url.toString(), 302);
+  })
   // Cabeceras en TODAS las respuestas (200, 302 y assets).
   .use(async (c, next) => {
     await next();

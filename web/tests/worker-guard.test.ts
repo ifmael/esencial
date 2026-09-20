@@ -49,6 +49,22 @@ describe("guard del HTML en el Worker de la web", () => {
     expect((await get("/assets/index-abc123.js")).status).toBe(200);
   });
 
+  // Dev: el navegador ve `localhost` y `127.0.0.1` como dos sitios distintos, y
+  // la cookie de sesión (SameSite=Lax) no viaja de uno al otro. Un solo origen
+  // canónico evita duplicar CORS y CSP en el Worker de la API.
+  it("localhost se redirige a 127.0.0.1 conservando ruta y query", async () => {
+    const res = await app.request(
+      "http://localhost:8787/login?next=%2Fplantillas",
+      {},
+      env,
+    );
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe(
+      "http://127.0.0.1:8787/login?next=%2Fplantillas",
+    );
+  });
+
   // B': la API es otro Worker. Si un /api/* llega al frontal (una URL vieja, un
   // sondeo de salud), tiene que fallar en claro y no colarse por el fallback del
   // SPA devolviendo HTML con 200.
