@@ -1,4 +1,4 @@
-// Iconos de línea (24px, trazo `currentColor`). Son diez formas: una librería
+// Iconos de línea (24px, trazo `currentColor`). Son once formas: una librería
 // entera no se justifica. Trazo 1.75 redondeado para que aguanten a 18-20px.
 import type { ComponentProps, ReactNode } from "react";
 
@@ -105,6 +105,18 @@ export function LeafIcon(props: IconProps) {
     <Icon {...props}>
       <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
       <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+    </Icon>
+  );
+}
+
+/** Muestras de color: el enlace al catálogo del sistema de diseño. */
+export function SwatchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
     </Icon>
   );
 }

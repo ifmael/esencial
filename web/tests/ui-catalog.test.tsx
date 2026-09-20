@@ -48,9 +48,9 @@ describe("catálogo del sistema de diseño", () => {
     expect(screen.getByRole("textbox", { name: "Área de texto" })).toBeTruthy();
   });
 
-  it("expone los diez iconos", () => {
+  it("expone los once iconos", () => {
     render(<UiPage />);
     const set = screen.getByTestId("icon-set");
-    expect(set.querySelectorAll("svg")).toHaveLength(10);
+    expect(set.querySelectorAll("svg")).toHaveLength(11);
   });
 });

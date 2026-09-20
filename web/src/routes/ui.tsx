@@ -1,8 +1,8 @@
 // Catálogo del sistema de diseño (AGENTS.md § "Sistema de diseño").
 //
 // Todas las variantes de las primitivas en un sitio: es lo que se mira antes de
-// inventar una pieza. Vive fuera del menú a propósito — es una referencia para
-// quien construye, no una pantalla del producto.
+// inventar una pieza. Se llega por el enlace «Sistema de diseño» del menú — es
+// una referencia para quien construye, no una pantalla del producto.
 import type { ReactNode } from "react";
 import {
   CalendarIcon,
@@ -14,6 +14,7 @@ import {
   DumbbellIcon,
   LeafIcon,
   LogoutIcon,
+  SwatchIcon,
   UtensilsIcon,
 } from "../components/icons";
 import { Badge, Button, Card, Input, Select, Textarea } from "../components/ui";
@@ -157,7 +158,7 @@ export function UiPage() {
 
       <Block
         title="Iconos"
-        hint="Diez trazos de 24px, sin librería: no se justifica por diez formas."
+        hint="Once trazos de 24px; once formas no justifican una librería."
       >
         <div
           data-testid="icon-set"
@@ -173,6 +174,7 @@ export function UiPage() {
           <CloudIcon />
           <CheckIcon />
           <LeafIcon />
+          <SwatchIcon />
         </div>
       </Block>
 

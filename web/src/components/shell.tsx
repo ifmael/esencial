@@ -14,6 +14,7 @@ import {
   DumbbellIcon,
   LeafIcon,
   LogoutIcon,
+  SwatchIcon,
   UtensilsIcon,
 } from "./icons";
 
@@ -72,6 +73,42 @@ const rowBox = (active: boolean) =>
     "transition-colors duration-150 ease-out-quart",
     active ? "bg-primary-soft" : "",
   ].join(" ");
+
+/** Ítem de la barra inferior: icono + etiqueta, 44px de alto. `active` pinta la
+ * pastilla; `current` marca `aria-current` (una sección con un submenú activo se
+ * resalta, pero su href no es la página actual). */
+function BarItem({
+  href,
+  label,
+  icon: Icon,
+  active,
+  current = active,
+}: {
+  href: string;
+  label: string;
+  icon: NavSection["icon"];
+  active: boolean;
+  current?: boolean;
+}) {
+  return (
+    <Link
+      to={href}
+      aria-current={current ? "page" : undefined}
+      className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel px-1 py-1 text-micro font-semibold transition-colors duration-150 ease-out-quart ${
+        active ? "text-primary" : "text-text-secondary"
+      }`}
+    >
+      <span
+        className={`grid size-9 place-items-center rounded-panel transition-colors duration-200 ease-out-quart ${
+          active ? "bg-primary-soft" : ""
+        }`}
+      >
+        <Icon />
+      </span>
+      {label}
+    </Link>
+  );
+}
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
@@ -182,14 +219,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         <nav className="flex flex-1 flex-col gap-1">{nav}</nav>
 
-        <button
-          type="button"
-          onClick={logout}
-          className="flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text"
-        >
-          <LogoutIcon />
-          Cerrar sesión
-        </button>
+        <div className="flex flex-col gap-1">
+          <Link
+            to="/ui"
+            aria-current={isActive(pathname, "/ui") ? "page" : undefined}
+            className={`flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text ${
+              isActive(pathname, "/ui") ? "text-primary" : "text-text-secondary"
+            }`}
+          >
+            <SwatchIcon />
+            Sistema de diseño
+          </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text"
+          >
+            <LogoutIcon />
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:px-8 lg:py-8 lg:pb-8">
@@ -199,31 +248,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Móvil: barra inferior */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-up backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-lg items-stretch px-2 py-1.5">
-          {NAV.map((section) => {
-            const SectionIcon = section.icon;
-            const active = sectionActive(pathname, section);
-            return (
-              <Link
-                key={section.href}
-                to={section.href}
-                aria-current={
-                  isActive(pathname, section.href) ? "page" : undefined
-                }
-                className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel px-1 py-1 text-micro font-semibold transition-colors duration-150 ease-out-quart ${
-                  active ? "text-primary" : "text-text-secondary"
-                }`}
-              >
-                <span
-                  className={`grid size-9 place-items-center rounded-panel transition-colors duration-200 ease-out-quart ${
-                    active ? "bg-primary-soft" : ""
-                  }`}
-                >
-                  <SectionIcon />
-                </span>
-                {section.label}
-              </Link>
-            );
-          })}
+          {NAV.map((section) => (
+            <BarItem
+              key={section.href}
+              href={section.href}
+              label={section.label}
+              icon={section.icon}
+              active={sectionActive(pathname, section)}
+              current={isActive(pathname, section.href)}
+            />
+          ))}
+          <BarItem
+            href="/ui"
+            label="UI"
+            icon={SwatchIcon}
+            active={isActive(pathname, "/ui")}
+          />
           <button
             type="button"
             onClick={logout}

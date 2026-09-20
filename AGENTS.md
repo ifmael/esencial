@@ -71,8 +71,8 @@ Escala vigente — todo lo demás sale de aquí:
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
   la vez, sin estado duplicado en una clase aparte.
 - Todo lo animado se neutraliza con `prefers-reduced-motion`.
-- Catálogo de variantes en la ruta **`/ui`** (fuera del menú): míralo antes de
-  inventar una pieza.
+- Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
+  sesión»): míralo antes de inventar una pieza.
 - `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
   `globals.css`, manda `globals.css`.
 
