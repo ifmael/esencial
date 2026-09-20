@@ -45,6 +45,10 @@
   --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
   --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
 
+  /* Ancho de página: el calendario semanal es el caso ancho. Tope amplio, para
+     que en pantallas ultrapanorámicas no se estire sin fin. */
+  --container-calendar: 110rem; /* 1760px */
+
   /* Radios: control < panel < tarjeta */
   --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
   --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
@@ -109,6 +113,9 @@
   --spacing-section: var(--spacing-section);
   --spacing-stack: var(--spacing-stack);
   --spacing-gutter: var(--spacing-gutter);
+
+  /* Ancho del calendario: `max-w-calendar` */
+  --container-calendar: var(--container-calendar);
 
   --radius-control: var(--radius-control);
   --radius-panel: var(--radius-panel);

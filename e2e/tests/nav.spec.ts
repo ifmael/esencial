@@ -30,14 +30,55 @@ test.describe("MENÚ — secciones colapsables", () => {
       page.getByRole("heading", { name: "Plantillas", exact: true }),
     ).toBeVisible();
 
-    // La sección de la ruta activa se auto-expande.
+    // Raíl en las rutas de calendario: la sección activa no despliega submenú
+    // (sus enlaces viven en la fila de chips sobre el calendario).
     await page.goto("/plan-fuerza");
     await expect(
-      sidebar.getByRole("link", { name: "Ejercicios" }),
+      page
+        .getByRole("navigation", { name: "Deporte" })
+        .getByRole("link", { name: "Ejercicios" }),
     ).toBeVisible();
+    await expect(sidebar.getByRole("link", { name: "Ejercicios" })).toHaveCount(
+      0,
+    );
+    await expect(
+      sidebar.getByRole("button", { name: "Expandir Deporte" }),
+    ).toHaveCount(0);
     // Y la página ya no lista plantillas.
     await expect(
       page.getByRole("button", { name: "+ Nueva plantilla" }),
     ).toHaveCount(0);
+  });
+
+  test("plegar/desplegar el menú lateral y recordar la elección", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const aside = page.locator("aside");
+    const width = () =>
+      aside.evaluate((el) => el.getBoundingClientRect().width);
+
+    await expect(aside.getByRole("link", { name: "Hoy" })).toBeVisible();
+    await expect.poll(width).toBeGreaterThan(200); // menú completo
+
+    await aside.getByRole("button", { name: "Ocultar menú" }).click();
+    await expect.poll(width).toBeLessThanOrEqual(80); // raíl de iconos
+    await expect(aside.getByRole("link", { name: "Hoy" })).toBeVisible();
+
+    // Recargar conserva la preferencia (localStorage), no solo el estado vivo.
+    await page.reload();
+    await expect.poll(width).toBeLessThanOrEqual(80);
+    await expect(aside.getByRole("link", { name: "Hoy" })).toBeVisible();
+
+    await aside.getByRole("button", { name: "Mostrar menú" }).click();
+    await expect.poll(width).toBeGreaterThan(200);
+
+    // La elección manda también en las rutas de calendario, que arrancan en raíl.
+    await page.goto("/plan-fuerza");
+    await expect(
+      page.getByRole("button", { name: "Semana siguiente" }),
+    ).toBeVisible();
+    await expect.poll(width).toBeGreaterThan(200);
   });
 });

@@ -13,7 +13,8 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
   }) => {
     await page.goto("/plan-recetas");
 
-    const weekHeading = page.getByRole("heading", { level: 1 });
+    // La cabecera de semana es la de la rejilla compartida (h2), no un h1.
+    const weekHeading = page.getByRole("heading", { name: /^\d{4}-W\d{2}$/ });
     const baseWeek = await weekHeading.textContent();
     expect(baseWeek).toMatch(/^\d{4}-W\d{2}$/);
 
@@ -47,7 +48,7 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
 
     await page.goto("/plan-recetas");
     const baseWeek = await page
-      .getByRole("heading", { level: 1 })
+      .getByRole("heading", { name: /^\d{4}-W\d{2}$/ })
       .textContent();
 
     // Shift the base ISO week +1 client-side; same math as web/src/lib/iso-week.ts.
@@ -161,7 +162,9 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     );
 
     await page.goto("/plan-recetas");
-    const week = await page.getByRole("heading", { level: 1 }).textContent();
+    const week = await page
+      .getByRole("heading", { name: /^\d{4}-W\d{2}$/ })
+      .textContent();
 
     // API-level 400: two slots with the same day|meal → {error, field:"slots"}.
     const res = await page.request.put(apiUrl(`/api/meal-plan/${week}`), {

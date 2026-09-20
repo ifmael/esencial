@@ -146,6 +146,32 @@ describe("rejilla 7×3", () => {
   });
 });
 
+describe("una sola rejilla semanal", () => {
+  // Convergencia con /plan-fuerza: el chrome de la semana (contenedor, título y
+  // navegación) es el mismo y envuelve a los siete días. El contenido de cada
+  // columna sigue siendo el de comidas.
+  it("los 7 días comparten contenedor con la cabecera de la semana dentro", async () => {
+    renderAt("/plan-recetas?week=2026-W36");
+    await screen.findAllByText("+ añadir");
+    const main = within(screen.getByRole("main"));
+    const cards = [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+      "Domingo",
+    ].map((day) => main.getByText(day).closest(".card"));
+    expect(cards[0]).not.toBeNull();
+    expect(new Set(cards).size).toBe(1);
+    expect(main.getByText("2026-W36").closest(".card")).toBe(cards[0]);
+    expect(
+      main.getByRole("button", { name: "Semana siguiente" }).closest(".card"),
+    ).toBe(cards[0]);
+  });
+});
+
 describe("navegación de semana", () => {
   it("‹ y › cambian la semana pedida y el query ?week=", async () => {
     renderAt("/plan-recetas?week=2026-W36");
@@ -290,9 +316,13 @@ describe("acceso a la lista de la compra", () => {
 });
 
 describe("acceso al recetario", () => {
-  it("enlace 'Recetario' abre el libro de recetas", async () => {
+  it("el enlace del recetario vive en la fila de la sección, no en una cabecera", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    const link = await screen.findByRole("link", { name: "Recetario" });
-    expect(link.getAttribute("href")).toBe("/recetario");
+    const subnav = within(
+      await screen.findByRole("navigation", { name: "Nutrición" }),
+    );
+    expect(
+      subnav.getByRole("link", { name: "Recetas" }).getAttribute("href"),
+    ).toBe("/recetario");
   });
 });

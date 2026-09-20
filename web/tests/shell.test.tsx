@@ -38,6 +38,9 @@ function localToday(): string {
 
 describe("Shell", () => {
   beforeEach(() => {
+    // La preferencia del menú lateral vive en localStorage: que ningún test
+    // herede el estado que dejó otro.
+    window.localStorage.clear();
     mockApi({ exercises: [press] });
   });
   afterEach(() => {
@@ -99,6 +102,75 @@ describe("Shell", () => {
     ).toBe(true);
   });
 
+  it("en las rutas de calendario la barra lateral es un raíl de iconos", async () => {
+    renderAt("/plan-fuerza");
+    // El submenú de la sección vive sobre el calendario (misma fila que en móvil).
+    const chips = await screen.findByRole("navigation", { name: "Deporte" });
+    expect(chips.textContent).toContain("Ejercicios");
+    expect(chips.textContent).toContain("Plantillas");
+
+    const aside = document.querySelector("aside") as HTMLElement;
+    const deporte = aside.querySelector('a[aria-label="Deporte"]');
+    // Los destinos siguen ahí, con su nombre accesible, pero sin texto visible.
+    expect(deporte?.getAttribute("href")).toBe("/plan-fuerza");
+    expect(aside.textContent).not.toContain("Deporte");
+    expect(aside.textContent).not.toContain("Sistema de diseño");
+    expect(aside.textContent).not.toContain("Cerrar sesión");
+    // Sin desplegables: en el raíl no caben y su submenú ya está sobre la rejilla.
+    expect(aside.querySelector("button[aria-expanded]")).toBeNull();
+  });
+
+  it("en el resto de rutas la barra lateral mantiene etiquetas y submenús", async () => {
+    renderAt("/ejercicios");
+    await waitFor(() =>
+      expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
+    );
+    const aside = document.querySelector("aside") as HTMLElement;
+    expect(aside.textContent).toContain("Sistema de diseño");
+    expect(aside.querySelector('a[aria-label="Deporte"]')).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Contraer Deporte" }),
+    ).toBeDefined();
+  });
+
+  it("el botón oculta el menú lateral y la elección se recuerda al remontar", async () => {
+    renderAt("/");
+    await waitFor(() =>
+      expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
+    );
+    const aside = () => document.querySelector("aside") as HTMLElement;
+    expect(aside().textContent).toContain("Sistema de diseño");
+
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar menú" }));
+    expect(aside().textContent).not.toContain("Sistema de diseño");
+    expect(aside().textContent).not.toContain("Cerrar sesión");
+
+    // Remontar equivale a recargar: la preferencia del usuario se restaura.
+    cleanup();
+    renderAt("/");
+    await screen.findByRole("button", { name: "Mostrar menú" });
+    expect(aside().textContent).not.toContain("Sistema de diseño");
+  });
+
+  it("en las rutas de calendario el menú arranca en raíl y el botón lo despliega", async () => {
+    renderAt("/plan-fuerza");
+    // El submenú de la sección sigue viviendo sobre el calendario.
+    const chips = await screen.findByRole("navigation", { name: "Deporte" });
+    expect(chips.textContent).toContain("Ejercicios");
+
+    const aside = () => document.querySelector("aside") as HTMLElement;
+    expect(aside().textContent).not.toContain("Sistema de diseño");
+
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar menú" }));
+    expect(aside().textContent).toContain("Sistema de diseño");
+    expect(aside().textContent).toContain("Cerrar sesión");
+
+    cleanup();
+    renderAt("/plan-fuerza");
+    await screen.findByRole("button", { name: "Ocultar menú" });
+    expect(aside().textContent).toContain("Sistema de diseño");
+  });
+
   it("navega entre secciones con el enlace principal", async () => {
     renderAt("/");
     await waitFor(() =>
@@ -113,7 +185,10 @@ describe("Shell", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/plan-recetas"));
     fireEvent.click(screen.getAllByText("Deporte")[0]);
     await waitFor(() => expect(window.location.pathname).toBe("/plan-fuerza"));
-    expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
+    // La página no tiene título: se reconoce por su rejilla semanal.
+    expect(
+      await screen.findByRole("button", { name: "Semana siguiente" }),
+    ).toBeDefined();
   });
 });
 

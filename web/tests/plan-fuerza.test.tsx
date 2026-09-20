@@ -124,24 +124,49 @@ async function openPlan() {
 }
 
 describe("plan screen", () => {
-  it("renders header and the week grid; plantillas no aparecen listadas", async () => {
+  it("sin cabecera: el calendario es el protagonista; plantillas no aparecen listadas", async () => {
     await openPlan();
-    expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
+    const main = within(screen.getByRole("main"));
+    // Ni título de página ni botones sobre el calendario.
+    expect(main.queryByRole("heading", { level: 1 })).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "+ Nueva plantilla" }),
+      main.queryByRole("button", { name: "+ Nueva plantilla" }),
     ).toBeNull();
     expect(screen.queryByText("A — Empuje")).toBeNull();
     expect(screen.queryByText(/primera plantilla/i)).toBeNull();
   });
 
-  it("cabecera: enlaces a Ejercicios y Plantillas", async () => {
+  it("la semana entera comparte un único contenedor (rejilla compartida)", async () => {
     await openPlan();
     const main = within(screen.getByRole("main"));
+    const cards = [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+      "Domingo",
+    ].map((day) => main.getByText(day).closest(".card"));
+    expect(cards[0]).not.toBeNull();
+    expect(new Set(cards).size).toBe(1);
+    expect(main.getByText("2026-W36").closest(".card")).toBe(cards[0]);
     expect(
-      main.getByRole("link", { name: "Ejercicios" }).getAttribute("href"),
+      main.getByRole("button", { name: "Semana siguiente" }).closest(".card"),
+    ).toBe(cards[0]);
+  });
+
+  it("los enlaces retirados de la cabecera son la fila fina de la sección", async () => {
+    await openPlan();
+    const main = within(screen.getByRole("main"));
+    const subnav = within(
+      await main.findByRole("navigation", { name: "Deporte" }),
+    );
+    expect(
+      subnav.getByRole("link", { name: "Ejercicios" }).getAttribute("href"),
     ).toBe("/ejercicios");
     expect(
-      main.getByRole("link", { name: "Plantillas" }).getAttribute("href"),
+      subnav.getByRole("link", { name: "Plantillas" }).getAttribute("href"),
     ).toBe("/plantillas");
   });
 
@@ -178,7 +203,7 @@ describe("plan screen", () => {
     expect(screen.getByText("Cardio suave")).toBeDefined();
   });
 
-  it("la celda del día desglosa los ejercicios de la sesión", async () => {
+  it("la celda del día desglosa los ejercicios y los reparte por la columna", async () => {
     vi.unstubAllGlobals();
     api = mockApi({
       exercises: [press, remo],
@@ -223,6 +248,21 @@ describe("plan screen", () => {
     });
     expect(within(list).getByText("Press banca")).toBeDefined();
     expect(within(list).getByText("Remo")).toBeDefined();
+
+    // Los ejercicios llenan la columna: la lista se queda con la altura libre y
+    // cada fila se estira con ella (con un tope táctil por debajo).
+    expect(list.className).toContain("flex-1");
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.className).toContain("flex-1");
+      expect(row.className).toContain("min-h-11");
+      expect(row.className).toContain("bg-surface-muted");
+      expect(row.className).toContain("rounded-panel");
+    }
+    expect(within(rows[0]).getByText("Press banca").className).toContain(
+      "text-body",
+    );
   });
 
   it("la celda con sesión ofrece añadir más ejercicios", async () => {

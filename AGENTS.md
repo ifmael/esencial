@@ -79,6 +79,42 @@ Escala vigente — todo lo demás sale de aquí:
   el sitio de arquitectura: `docs/architecture/diseno.html`, que se abre con
   doble clic, sin build.
 
+### Pantallas de calendario (fuerza y comidas)
+
+`/plan-fuerza` y `/plan-recetas` van sin cabecera: el calendario es el
+protagonista y ocupa la altura de la ventana en escritorio (sin scroll de
+página), con un hueco vacío reservado abajo para acciones futuras. Las dos rutas
+están en `CALENDAR_ROUTES` (`web/src/components/shell.tsx`): añadir una ahí le da
+el mismo trato (sin título, alto completo, hueco inferior).
+
+En esas rutas **la barra lateral se colapsa a un raíl de iconos** (`w-18` = 72px,
+iconos con el nombre en `aria-label`/`title`, sin desplegables) y su ancho es
+para la rejilla; el submenú de la sección queda como **fila de chips sobre el
+calendario**, en escritorio y en móvil (donde no hay raíl). El `main` de estas
+rutas es `max-w-calendar` —el token `--container-calendar`, 110rem = 1760 px—
+con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
+1280×800: columna de día **152,84 px** (antes 124,28 con la barra de 256px) y
+espacio de texto por nombre ~2,2× (título de sesión 36→75 px, ejercicio 15→54 px,
+receta 29→68 px), sin scroll de página ni horizontal. Techo del ancho: a 1280 no
+cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracteres)
+el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
+celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
+
+Las dos pantallas comparten la **rejilla semanal** (`web/src/components/week-grid.tsx`):
+un único contenedor con la navegación de semana y las siete columnas, con la
+columna de «hoy» marcada. El componente no sabe nada del dominio: cada página
+inyecta el contenido de sus días por el render prop (`children`), que es lo
+único que difiere (sesiones en fuerza, tomas en comidas).
+
+En la columna de un día de fuerza (`SessionCell`, `web/src/routes/plan-fuerza.tsx`)
+los ejercicios **se reparten la altura de la columna** en vez de quedarse
+apiñados arriba: la lista (`<ol>`) se queda con el espacio libre y cada fila
+(`flex-1`, `min-h-11`) es un bloque `bg-surface-muted` con el nombre en
+`text-body` —hasta dos líneas (`line-clamp-2`), así que cabe el nombre entero de
+casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo en
+`text-caption`. Con muchas filas el mínimo manda y el desborde sigue quedando
+dentro del calendario (lo cubre `calendar-layout.spec.ts`).
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |
