@@ -203,7 +203,7 @@ describe("plan screen", () => {
     expect(screen.getByText("Cardio suave")).toBeDefined();
   });
 
-  it("la celda del día desglosa los ejercicios de la sesión", async () => {
+  it("la celda del día desglosa los ejercicios y los reparte por la columna", async () => {
     vi.unstubAllGlobals();
     api = mockApi({
       exercises: [press, remo],
@@ -248,6 +248,21 @@ describe("plan screen", () => {
     });
     expect(within(list).getByText("Press banca")).toBeDefined();
     expect(within(list).getByText("Remo")).toBeDefined();
+
+    // Los ejercicios llenan la columna: la lista se queda con la altura libre y
+    // cada fila se estira con ella (con un tope táctil por debajo).
+    expect(list.className).toContain("flex-1");
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.className).toContain("flex-1");
+      expect(row.className).toContain("min-h-11");
+      expect(row.className).toContain("bg-surface-muted");
+      expect(row.className).toContain("rounded-panel");
+    }
+    expect(within(rows[0]).getByText("Press banca").className).toContain(
+      "text-body",
+    );
   });
 
   it("la celda con sesión ofrece añadir más ejercicios", async () => {

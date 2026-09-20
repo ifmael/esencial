@@ -604,14 +604,14 @@ function CellRow({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-1 ${
+      className={`flex min-h-11 flex-1 items-center gap-1.5 rounded-panel bg-surface-muted px-2 py-2 ${
         isDragging ? "relative z-10 opacity-70" : ""
       }`}
     >
       {sortable ? (
         <button
           type="button"
-          className="cursor-grab touch-none px-1 text-text-secondary hover:text-primary active:cursor-grabbing"
+          className="cursor-grab touch-none text-text-secondary hover:text-primary active:cursor-grabbing"
           aria-label={`Mover ${exercise.exerciseName}`}
           onClick={(e) => e.stopPropagation()}
           {...attributes}
@@ -620,8 +620,14 @@ function CellRow({
           <GripIcon />
         </button>
       ) : null}
-      <span className="min-w-0 truncate">{exercise.exerciseName}</span>
-      {info ? <span className="ml-auto shrink-0 text-xs">{info}</span> : null}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="line-clamp-2 text-body text-text">
+          {exercise.exerciseName}
+        </span>
+        {info ? (
+          <span className="text-caption text-text-secondary">{info}</span>
+        ) : null}
+      </span>
     </li>
   );
 }
@@ -650,7 +656,7 @@ function SessionCell({
     return (
       <button
         onClick={onOpen}
-        className={`flex min-h-11 flex-1 flex-col items-center justify-start rounded-lg border border-dashed pt-3 text-text-secondary hover:border-primary hover:text-primary ${
+        className={`flex min-h-11 flex-1 flex-col items-center justify-start rounded-panel border border-dashed pt-3 text-text-secondary hover:border-primary hover:text-primary ${
           border || "border-border"
         }`}
       >
@@ -684,7 +690,7 @@ function SessionCell({
 
   return (
     <div
-      className={`flex min-h-11 flex-1 cursor-pointer flex-col gap-1 rounded-lg border border-border bg-surface p-2 ${border}`}
+      className={`flex min-h-11 flex-1 cursor-pointer flex-col gap-1 rounded-panel border border-border bg-surface p-2 ${border}`}
       onClick={() => (logged ? navigate(`/sesion/${date}`) : onOpen())}
     >
       <div className="flex items-center gap-2">
@@ -746,7 +752,7 @@ function SessionCell({
           >
             <ol
               aria-label={`Ejercicios del ${date}`}
-              className="list-decimal pl-4 text-sm text-text-secondary"
+              className="flex flex-1 flex-col gap-1"
             >
               {order.map((e) => (
                 <CellRow key={e.exerciseId} exercise={e} sortable={!logged} />

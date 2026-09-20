@@ -106,6 +106,15 @@ columna de «hoy» marcada. El componente no sabe nada del dominio: cada página
 inyecta el contenido de sus días por el render prop (`children`), que es lo
 único que difiere (sesiones en fuerza, tomas en comidas).
 
+En la columna de un día de fuerza (`SessionCell`, `web/src/routes/plan-fuerza.tsx`)
+los ejercicios **se reparten la altura de la columna** en vez de quedarse
+apiñados arriba: la lista (`<ol>`) se queda con el espacio libre y cada fila
+(`flex-1`, `min-h-11`) es un bloque `bg-surface-muted` con el nombre en
+`text-body` —hasta dos líneas (`line-clamp-2`), así que cabe el nombre entero de
+casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo en
+`text-caption`. Con muchas filas el mínimo manda y el desborde sigue quedando
+dentro del calendario (lo cubre `calendar-layout.spec.ts`).
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |
