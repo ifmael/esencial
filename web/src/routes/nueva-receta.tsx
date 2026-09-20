@@ -8,7 +8,7 @@ import {
   type RecipeInput,
   useRecipes,
 } from "../components/recipes/use-recipes";
-
+import { Button, buttonClass, Card, Input, Select } from "../components/ui";
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -37,7 +37,6 @@ const chip = (active: boolean) =>
   `rounded-full border border-border px-3 py-1 text-sm transition-colors ${
     active ? "bg-primary-container text-white" : "bg-surface-muted"
   }`;
-const field = "w-full rounded-lg border border-border bg-surface px-3 py-2";
 const small = "rounded-lg border border-border bg-surface px-2 py-1";
 const label = "mb-1 block text-sm font-medium text-text-secondary";
 
@@ -222,14 +221,9 @@ export function NuevaRecetaPage() {
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Nueva receta</h1>
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={api.saving || uploading}
-          onClick={save}
-        >
+        <Button disabled={api.saving || uploading} onClick={save}>
           {api.saving || uploading ? "Guardando…" : "Guardar"}
-        </button>
+        </Button>
       </header>
 
       {api.fieldError && api.fieldError.field !== "name" && (
@@ -251,7 +245,7 @@ export function NuevaRecetaPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section>
           <h3 className="mb-2 font-semibold">Foto principal</h3>
-          <div className="card">
+          <Card>
             {draft.photo_path ? (
               <>
                 <img
@@ -259,13 +253,13 @@ export function NuevaRecetaPage() {
                   alt="Vista previa de la foto"
                   className="h-40 w-full rounded-lg object-cover"
                 />
-                <button
-                  type="button"
-                  className="btn-secondary mt-2"
+                <Button
+                  variant="secondary"
+                  className="mt-2"
                   onClick={removePhoto}
                 >
                   Quitar foto
-                </button>
+                </Button>
               </>
             ) : (
               <div className="flex h-40 items-center justify-center rounded-lg bg-surface-muted text-sm text-text-secondary">
@@ -280,19 +274,18 @@ export function NuevaRecetaPage() {
             {uploadError && (
               <div className="mt-2 flex items-center gap-3" role="alert">
                 <p className="text-sm text-error">{uploadError}</p>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={discardPendingUpload}
-                >
+                <Button variant="secondary" onClick={discardPendingUpload}>
                   Descartar
-                </button>
+                </Button>
               </div>
             )}
             <label
-              className={`btn-secondary mt-2 inline-block cursor-pointer ${
-                uploading ? "opacity-50 pointer-events-none" : ""
-              }`}
+              className={buttonClass({
+                variant: "secondary",
+                className: `mt-2 inline-block cursor-pointer ${
+                  uploading ? "opacity-50 pointer-events-none" : ""
+                }`,
+              })}
             >
               Elegir foto
               <input
@@ -308,14 +301,14 @@ export function NuevaRecetaPage() {
                 }}
               />
             </label>
-          </div>
+          </Card>
         </section>
 
         <section>
           <h3 className="mb-2 font-semibold">Nombre</h3>
-          <input
+          <Input
             aria-label="Nombre"
-            className={field}
+            className="w-full"
             value={draft.name}
             onChange={(e) => set("name", e.target.value)}
           />
@@ -355,19 +348,18 @@ export function NuevaRecetaPage() {
               ))}
           </ul>
           <div className="mt-2 flex gap-2">
-            <input
+            <Input
               aria-label="Nueva categoría"
-              className={field}
+              className="w-full"
               value={tag}
               onChange={(e) => setTag(e.target.value)}
             />
-            <button
-              type="button"
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() => addChip("tags", tag, () => setTag(""))}
             >
               Añadir categoría
-            </button>
+            </Button>
           </div>
         </section>
 
@@ -396,21 +388,20 @@ export function NuevaRecetaPage() {
             ))}
           </ul>
           <div className="flex gap-2">
-            <input
+            <Input
               aria-label="Nuevo material"
-              className={field}
+              className="w-full"
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
             />
-            <button
-              type="button"
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() =>
                 addChip("materials", material, () => setMaterial(""))
               }
             >
               Añadir material
-            </button>
+            </Button>
           </div>
         </section>
 
@@ -419,9 +410,9 @@ export function NuevaRecetaPage() {
           <ul className="flex flex-col gap-2">
             {draft.ingredients.map((row, i) => (
               <li key={i} className="flex gap-2">
-                <input
+                <Input
                   aria-label={`Ingrediente ${i + 1} alimento`}
-                  className={`${field} flex-1`}
+                  className="flex-1"
                   placeholder="alimento"
                   value={row.food}
                   onChange={(e) =>
@@ -431,9 +422,9 @@ export function NuevaRecetaPage() {
                     )
                   }
                 />
-                <input
+                <Input
                   aria-label={`Ingrediente ${i + 1} cantidad`}
-                  className={`${small} w-20`}
+                  className="w-20"
                   type="number"
                   placeholder="cant."
                   value={row.quantity}
@@ -446,9 +437,8 @@ export function NuevaRecetaPage() {
                     )
                   }
                 />
-                <select
+                <Select
                   aria-label={`Ingrediente ${i + 1} unidad`}
-                  className={small}
                   value={row.unit}
                   onChange={(e) =>
                     set(
@@ -461,7 +451,7 @@ export function NuevaRecetaPage() {
                   <option value="gr">gr</option>
                   <option value="ml">ml</option>
                   <option value="ud">ud</option>
-                </select>
+                </Select>
                 <button
                   type="button"
                   aria-label={`Quitar ingrediente ${i + 1}`}
@@ -478,9 +468,9 @@ export function NuevaRecetaPage() {
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            className="btn-secondary mt-2"
+          <Button
+            variant="secondary"
+            className="mt-2"
             onClick={() =>
               set("ingredients", [
                 ...draft.ingredients,
@@ -489,7 +479,7 @@ export function NuevaRecetaPage() {
             }
           >
             Añadir ingrediente
-          </button>
+          </Button>
         </section>
 
         <section>
@@ -500,9 +490,9 @@ export function NuevaRecetaPage() {
                 <span className="pt-2 font-semibold text-text-secondary">
                   {i + 1}.
                 </span>
-                <input
+                <Input
                   aria-label={`Paso ${i + 1}`}
-                  className={`${field} flex-1`}
+                  className="flex-1"
                   value={text}
                   onChange={(e) =>
                     set(
@@ -547,13 +537,13 @@ export function NuevaRecetaPage() {
               </li>
             ))}
           </ol>
-          <button
-            type="button"
-            className="btn-secondary mt-2"
+          <Button
+            variant="secondary"
+            className="mt-2"
             onClick={() => set("steps", [...draft.steps, ""])}
           >
             Añadir paso
-          </button>
+          </Button>
         </section>
       </div>
     </div>

@@ -2,6 +2,7 @@
 // call; save POSTs/PUTs the whole draft; field errors render beside the field.
 import { useRef, useState } from "react";
 import { ApiError, apiFetch, photoSrc } from "../../lib/api";
+import { Button, buttonClass, Card, Input, Textarea } from "../ui";
 import type { Recipe, RecipeInput, RecipesApi } from "./use-recipes";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -34,7 +35,6 @@ const fromRecipe = (r: Recipe): Draft => ({
   tags: [...r.tags],
 });
 
-const field = "w-full rounded-lg border border-border bg-surface px-3 py-2";
 const small = "rounded-lg border border-border bg-surface px-2 py-1";
 const label = "mb-1 block text-sm font-medium text-text-secondary";
 
@@ -228,10 +228,10 @@ export function RecipeEditor({
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
       onClick={cancel}
     >
-      <div
+      <Card
         role="dialog"
         aria-label={title}
-        className="card my-8 w-full max-w-xl"
+        className="my-8 w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-xl font-bold">{title}</h2>
@@ -257,10 +257,10 @@ export function RecipeEditor({
             <label className={label} htmlFor="recipe-name">
               Nombre
             </label>
-            <input
+            <Input
               id="recipe-name"
               aria-label="Nombre"
-              className={field}
+              className="w-full"
               value={draft.name}
               onChange={(e) => set("name", e.target.value)}
             />
@@ -275,10 +275,10 @@ export function RecipeEditor({
             <label className={label} htmlFor="recipe-desc">
               Descripción
             </label>
-            <textarea
+            <Textarea
               id="recipe-desc"
               aria-label="Descripción"
-              className={field}
+              className="w-full"
               value={draft.description}
               onChange={(e) => set("description", e.target.value)}
             />
@@ -289,12 +289,12 @@ export function RecipeEditor({
               <label className={label} htmlFor="recipe-servings">
                 Comensales
               </label>
-              <input
+              <Input
                 id="recipe-servings"
                 aria-label="Comensales"
                 type="number"
                 min={1}
-                className={field}
+                className="w-full"
                 value={draft.servings}
                 onChange={(e) => set("servings", e.target.value)}
               />
@@ -308,19 +308,21 @@ export function RecipeEditor({
                     alt="Foto actual"
                     className="h-12 w-12 rounded-lg object-cover"
                   />
-                  <button
-                    type="button"
-                    className="btn-secondary"
+                  <Button
+                    variant="secondary"
                     onClick={() => set("photo_path", "")}
                   >
                     Quitar
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <label
-                  className={`btn-secondary inline-block cursor-pointer ${
-                    uploading ? "opacity-50 pointer-events-none" : ""
-                  }`}
+                  className={buttonClass({
+                    variant: "secondary",
+                    className: `inline-block cursor-pointer ${
+                      uploading ? "opacity-50 pointer-events-none" : ""
+                    }`,
+                  })}
                 >
                   Subir foto
                   <input
@@ -341,13 +343,9 @@ export function RecipeEditor({
               {uploadError && (
                 <div className="mt-2 flex items-center gap-3" role="alert">
                   <p className="text-sm text-error">{uploadError}</p>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={discardPendingUpload}
-                  >
+                  <Button variant="secondary" onClick={discardPendingUpload}>
                     Descartar
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -358,9 +356,9 @@ export function RecipeEditor({
             <ul className="flex flex-col gap-2">
               {draft.ingredients.map((row, i) => (
                 <li key={i} className="flex gap-2">
-                  <input
+                  <Input
                     aria-label={`Ingrediente ${i + 1} alimento`}
-                    className={`${field} flex-1`}
+                    className="flex-1"
                     placeholder="alimento"
                     value={row.food}
                     onChange={(e) =>
@@ -372,9 +370,9 @@ export function RecipeEditor({
                       )
                     }
                   />
-                  <input
+                  <Input
                     aria-label={`Ingrediente ${i + 1} cantidad`}
-                    className={`${small} w-20`}
+                    className="w-20"
                     type="number"
                     placeholder="cant."
                     value={row.quantity}
@@ -387,9 +385,9 @@ export function RecipeEditor({
                       )
                     }
                   />
-                  <input
+                  <Input
                     aria-label={`Ingrediente ${i + 1} unidad`}
-                    className={`${small} w-20`}
+                    className="w-20"
                     placeholder="unidad"
                     value={row.unit}
                     onChange={(e) =>
@@ -417,9 +415,9 @@ export function RecipeEditor({
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              className="btn-secondary mt-2"
+            <Button
+              variant="secondary"
+              className="mt-2"
               onClick={() =>
                 set("ingredients", [
                   ...draft.ingredients,
@@ -428,7 +426,7 @@ export function RecipeEditor({
               }
             >
               Añadir ingrediente
-            </button>
+            </Button>
           </section>
 
           <section>
@@ -439,9 +437,9 @@ export function RecipeEditor({
                   <span className="pt-2 font-semibold text-text-secondary">
                     {i + 1}.
                   </span>
-                  <input
+                  <Input
                     aria-label={`Paso ${i + 1}`}
-                    className={`${field} flex-1`}
+                    className="flex-1"
                     value={text}
                     onChange={(e) =>
                       set(
@@ -488,13 +486,13 @@ export function RecipeEditor({
                 </li>
               ))}
             </ol>
-            <button
-              type="button"
-              className="btn-secondary mt-2"
+            <Button
+              variant="secondary"
+              className="mt-2"
               onClick={() => set("steps", [...draft.steps, ""])}
             >
               Añadir paso
-            </button>
+            </Button>
           </section>
 
           <section>
@@ -522,21 +520,20 @@ export function RecipeEditor({
               ))}
             </ul>
             <div className="flex gap-2">
-              <input
+              <Input
                 aria-label="Nuevo material"
-                className={field}
+                className="w-full"
                 value={material}
                 onChange={(e) => setMaterial(e.target.value)}
               />
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
                 onClick={() =>
                   addChip("materials", material, () => setMaterial(""))
                 }
               >
                 Añadir material
-              </button>
+              </Button>
             </div>
           </section>
 
@@ -565,37 +562,31 @@ export function RecipeEditor({
               ))}
             </ul>
             <div className="flex gap-2">
-              <input
+              <Input
                 aria-label="Nueva etiqueta"
-                className={field}
+                className="w-full"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
               />
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
                 onClick={() => addChip("tags", tag, () => setTag(""))}
               >
                 Añadir etiqueta
-              </button>
+              </Button>
             </div>
           </section>
 
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn-secondary" onClick={cancel}>
+            <Button variant="secondary" onClick={cancel}>
               Cancelar
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={api.saving || uploading}
-              onClick={save}
-            >
+            </Button>
+            <Button disabled={api.saving || uploading} onClick={save}>
               {api.saving || uploading ? "Guardando…" : "Guardar"}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

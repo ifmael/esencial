@@ -7,6 +7,14 @@ import { Link, useNavigate, useParams } from "react-router";
 import { filterRecipes } from "../components/recipes/filter";
 import { RecipeEditor } from "../components/recipes/recipe-editor";
 import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
+import {
+  Badge,
+  Button,
+  buttonClass,
+  Card,
+  cardClass,
+  Input,
+} from "../components/ui";
 import { photoSrc } from "../lib/api";
 
 let flashMessage: string | null = null;
@@ -40,15 +48,17 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
   return (
     <Link
       to={`/recetario/${recipe.id}`}
-      className="card flex items-center gap-4 md:flex-col md:items-stretch"
+      className={cardClass(
+        "flex items-center gap-4 md:flex-col md:items-stretch",
+      )}
     >
       <Thumb recipe={recipe} big />
       <div className="min-w-0">
         <div className="truncate font-semibold">{recipe.name}</div>
         <ul className="mt-1 flex flex-wrap gap-1">
           {recipe.tags.map((t) => (
-            <li key={t} className="badge-done">
-              {t}
+            <li key={t}>
+              <Badge tone="done">{t}</Badge>
             </li>
           ))}
         </ul>
@@ -65,12 +75,12 @@ function ErrorBanner({
   onRetry: () => void;
 }) {
   return (
-    <div className="card text-error" role="alert">
+    <Card className="text-error" role="alert">
       <p>{message}</p>
-      <button type="button" className="btn-secondary mt-2" onClick={onRetry}>
+      <Button variant="secondary" className="mt-2" onClick={onRetry}>
         Reintentar
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }
 
@@ -86,19 +96,15 @@ export function RecetarioPage() {
     <>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Recetario</h1>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => navigate("/recetario/nueva")}
-        >
+        <Button onClick={() => navigate("/recetario/nueva")}>
           + Nueva receta
-        </button>
+        </Button>
       </header>
-      <input
+      <Input
         aria-label="Buscar recetas"
         type="search"
         placeholder="Buscar por nombre o etiqueta…"
-        className="mb-4 w-full rounded-lg border border-border bg-surface px-3 py-2"
+        className="mb-4 w-full"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -112,19 +118,19 @@ export function RecetarioPage() {
       )}
 
       {api.loading ? (
-        <div className="card bg-pending-bg text-pending-text" role="status">
+        <Card className="bg-pending-bg text-pending-text" role="status">
           Cargando recetario…
-        </div>
+        </Card>
       ) : api.error ? (
         <ErrorBanner message={api.error} onRetry={api.retry} />
       ) : api.list.length === 0 ? (
-        <div className="card text-text-secondary">
+        <Card className="text-text-secondary">
           Aún no hay recetas. ¡Crea la primera!
-        </div>
+        </Card>
       ) : visible.length === 0 ? (
-        <div className="card text-text-secondary">
+        <Card className="text-text-secondary">
           Ninguna receta coincide con la búsqueda.
-        </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {visible.map((r) => (
@@ -153,21 +159,21 @@ export function RecetarioDetallePage() {
 
   if (api.loading)
     return (
-      <div className="card bg-pending-bg text-pending-text" role="status">
+      <Card className="bg-pending-bg text-pending-text" role="status">
         Cargando recetario…
-      </div>
+      </Card>
     );
   if (api.error) return <ErrorBanner message={api.error} onRetry={api.retry} />;
 
   const recipe = api.list.find((r) => String(r.id) === id);
   if (!recipe)
     return (
-      <div className="card">
+      <Card>
         <h1 className="mb-2 text-2xl font-bold">Receta no encontrada</h1>
-        <Link to="/recetario" className="btn-secondary">
+        <Link to="/recetario" className={buttonClass({ variant: "secondary" })}>
           Volver al recetario
         </Link>
-      </div>
+      </Card>
     );
 
   const remove = async () => {
@@ -183,7 +189,11 @@ export function RecetarioDetallePage() {
       <Link
         to="/recetario"
         aria-label="Volver al recetario"
-        className="btn-secondary mb-3 inline-flex min-h-11 min-w-11 items-center justify-center"
+        className={buttonClass({
+          variant: "secondary",
+          size: "icon",
+          className: "mb-3",
+        })}
       >
         ←
       </Link>
@@ -200,14 +210,15 @@ export function RecetarioDetallePage() {
             Sin foto
           </div>
         )}
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="icon"
           aria-label="Editar receta"
-          className="btn-secondary absolute right-3 top-3 min-h-11 min-w-11 bg-surface/90"
+          className="absolute right-3 top-3 bg-surface/90"
           onClick={() => setEditing(true)}
         >
           ✏️
-        </button>
+        </Button>
         {/* Un solo <h1>: superpuesto a la foto en móvil, bajo ella en desktop. */}
         <h1 className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 text-2xl font-bold text-white md:static md:mt-4 md:bg-none md:p-0 md:text-text">
           {recipe.name}
@@ -225,7 +236,7 @@ export function RecetarioDetallePage() {
         <div className="flex flex-col gap-6">
           <section>
             <h2 className="mb-2 text-lg font-semibold">Ingredientes</h2>
-            <ul className="card flex flex-col gap-1">
+            <ul className={cardClass("flex flex-col gap-1")}>
               {recipe.ingredients.map((ing) => (
                 <li key={ing.id} className="flex items-center gap-2">
                   <input
@@ -262,7 +273,7 @@ export function RecetarioDetallePage() {
 
         <section>
           <h2 className="mb-2 text-lg font-semibold">Elaboración</h2>
-          <ol className="card flex flex-col gap-2">
+          <ol className={cardClass("flex flex-col gap-2")}>
             {recipe.steps.map((s) => (
               <li key={s.id} aria-label={`paso ${s.step}`}>
                 {s.step}. {s.text}
@@ -275,24 +286,24 @@ export function RecetarioDetallePage() {
       {recipe.tags.length > 0 && (
         <ul className="mt-6 flex flex-wrap gap-2">
           {recipe.tags.map((t) => (
-            <li key={t} className="badge-done">
-              {t}
+            <li key={t}>
+              <Badge tone="done">{t}</Badge>
             </li>
           ))}
         </ul>
       )}
 
       <div className="mt-8 border-t border-border pt-4">
-        <button
-          type="button"
-          className="btn-secondary text-error"
+        <Button
+          variant="secondary"
+          className="text-error"
           onClick={() => setConfirming(true)}
         >
           Eliminar
-        </button>
+        </Button>
         {confirming && (
-          <div
-            className="card mt-3 border-error"
+          <Card
+            className="mt-3 border-error"
             role="alertdialog"
             aria-label="Confirmar eliminación"
           >
@@ -300,23 +311,18 @@ export function RecetarioDetallePage() {
               ¿Seguro que quieres eliminar «{recipe.name}»?
             </p>
             <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setConfirming(false)}
-              >
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
                 Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn-primary bg-error"
+              </Button>
+              <Button
+                className="bg-error"
                 disabled={api.saving}
                 onClick={remove}
               >
                 {api.saving ? "Eliminando…" : "Eliminar receta"}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
       </div>
 

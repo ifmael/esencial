@@ -27,6 +27,58 @@ tarea lo requiere.
 - **Propón alternativas con tradeoffs** cuando haya un cruce real de diseño.
 - La UI y los datos van en **español**; nombres de ejercicios/recetas en español.
 
+## Sistema de diseño (UI)
+
+**La fuente única es `web/src/globals.css`.** Tres capas, con un solo dueño cada
+una:
+
+1. `:root` — valores crudos (colores, escala tipográfica, ritmo de espaciado,
+   radios, sombras, movimiento) y los pocos derivados (`--color-primary-soft`,
+   `--color-ring`).
+2. `@theme inline` — el puente a Tailwind: convierte esos tokens en utilidades
+   (`text-lead`, `p-card`, `gap-section`, `rounded-card`, `shadow-raised`…).
+3. `@layer components` — la piel de las piezas reutilizables (`.card`, `.btn-*`,
+   `.input`, `.badge-*`, `.section-label`, `.list-row`, `.skeleton`).
+
+Las pantallas consumen **las primitivas** de `web/src/components/ui.tsx`
+(`Button`, `Card`, `Input`, `Textarea`, `Badge`); los iconos salen de
+`web/src/components/icons.tsx` (SVG en línea, sin dependencia).
+
+Las clases del punto 3 son la **piel** de esas primitivas: una pantalla no las
+escribe a mano. Hay cuatro utilidades compartidas que sí se aplican tal cual,
+porque no son piel de ningún componente: `.section-label`, `.list-row`,
+`.card-interactive` (como modificador de `Card`) y `.skeleton`.
+
+**Al añadir algo nuevo:** reutiliza una primitiva existente. Si no encaja, añade
+primero el token (`:root` + `@theme inline`) y después la primitiva. **Nunca un
+valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`) ni la
+piel de una primitiva escrita a mano (`className="card"`, `btn-primary`):
+`pnpm lint` rechaza las dos cosas (ver `web/scripts/check-design-tokens.ts`). Se
+aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
+inventan una escala.
+
+Escala vigente — todo lo demás sale de aquí:
+
+| Familia | Tokens |
+| --- | --- |
+| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
+| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
+| Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
+| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
+| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+
+- Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
+  campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
+  la vez, sin estado duplicado en una clase aparte.
+- Todo lo animado se neutraliza con `prefers-reduced-motion`.
+- Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
+  sesión»): míralo antes de inventar una pieza.
+- `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
+  `globals.css`, manda `globals.css`.
+- El sistema explicado con muestras en vivo (colores, escala, movimiento) vive en
+  el sitio de arquitectura: `docs/architecture/diseno.html`, que se abre con
+  doble clic, sin build.
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |
@@ -140,6 +192,27 @@ monorepo) y tiene prioridad sobre el script del `package.json`, así que falla c
 Ojo: cualquier push a `main` ya dispara Workers Builds, que construye y despliega
 solo. El comando manual solo hace falta para publicar sin push, y deja una
 versión más en el historial de Deployments de Cloudflare.
+
+### 6. `pnpm e2e` reescribe `web/dist`, que es lo que sirve el frontal en dev
+
+El `webServer` de Playwright construye el SPA con
+`VITE_API_URL=http://127.0.0.1:8790` y escribe en el **mismo** `web/dist` que el
+Worker del frontal sirve en dev (`[assets] directory = "./web/dist"`). Si dejas
+`pnpm dev` levantado mientras corre la suite, el frontal de dev pasa a servir un
+build que apunta a la API de e2e; al acabar la suite esa API ya no está, así que
+**la app de dev se queda sin backend** aunque el servidor siga vivo.
+
+**Solución:** vuelve a arrancar `pnpm dev` después de la suite: al arrancar
+reconstruye `web/dist` con la URL buena (8789). Para saber a qué API apunta lo
+que se está sirviendo:
+
+```bash
+node -e "const fs=require('fs');for(const f of fs.readdirSync('web/dist/assets').filter(f=>f.endsWith('.js')))console.log(f,[...new Set([...fs.readFileSync('web/dist/assets/'+f,'utf8').matchAll(/127\.0\.0\.1:(\d+)/g)].map(x=>x[1]))])"
+```
+
+Nota relacionada: `api/scripts/dev.ts` arranca y para los dos servidores juntos,
+así que matar a mano cualquiera de los dos (por ejemplo el que ocupa 8787)
+termina el `pnpm dev` entero con el código de salida del hijo.
 
 ## Tests e2e — base de datos propia
 

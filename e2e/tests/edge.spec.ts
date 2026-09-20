@@ -95,7 +95,11 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     // Debounce is 800ms; the save can complete before we observe Guardando…,
     // so assert the final state (Guardado) — the debounce window itself is
     // exercised by the flush-on-unmount test below.
-    await expect(page.getByText("Guardado")).toBeVisible({ timeout: 5_000 });
+    // «Guardado» exacto: el estado reposo dice «Autoguardado» y contiene la
+    // misma subcadena, así que un match laxo pasaría antes de que guarde.
+    await expect(page.getByText("Guardado", { exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Persisted server-side
     await page.reload();

@@ -3,6 +3,15 @@
 // el estado logged es solo lectura desde GET /api/workout-logs/:date.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import {
+  Badge,
+  Button,
+  buttonClass,
+  Card,
+  cardClass,
+  Input,
+  Textarea,
+} from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import type { PlanSession, SessionExercise } from "../lib/plan-week";
 import {
@@ -329,7 +338,10 @@ function Header({
         <Link
           to="/"
           aria-label="Volver al día"
-          className="btn-secondary min-h-11 min-w-11"
+          className={buttonClass({
+            variant: "secondary",
+            className: "min-h-11 min-w-11",
+          })}
         >
           ←
         </Link>
@@ -339,7 +351,7 @@ function Header({
       </div>
       <div className="flex items-center gap-2">
         <span className="font-semibold">{name}</span>
-        {logged && <span className="badge-done">Registrado</span>}
+        {logged && <Badge tone="done">Registrado</Badge>}
       </div>
     </header>
   );
@@ -360,30 +372,30 @@ function Stepper({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <button
-        type="button"
+      <Button
         aria-label={`Reducir ${label}`}
-        className="btn-secondary min-h-11 min-w-11"
+        variant="secondary"
+        className="min-h-11 min-w-11"
         onClick={() => onStep(-step)}
       >
         −
-      </button>
-      <input
+      </Button>
+      <Input
         type="number"
         inputMode="decimal"
         aria-label={label}
-        className="min-h-11 w-20 rounded-lg border border-border bg-surface px-2 text-center"
+        className="w-20 text-center"
         value={value === null ? "" : String(value)}
         onChange={(e) => onValue(e.target.value)}
       />
-      <button
-        type="button"
+      <Button
         aria-label={`Aumentar ${label}`}
-        className="btn-secondary min-h-11 min-w-11"
+        variant="secondary"
+        className="min-h-11 min-w-11"
         onClick={() => onStep(step)}
       >
         +
-      </button>
+      </Button>
     </div>
   );
 }
@@ -414,9 +426,7 @@ function EffortDots({
               data-filled={String(filled)}
               className={`min-h-11 min-w-11 rounded-full border-2 ${filled ? "border-primary bg-primary" : "border-border bg-surface"}`}
             />
-            <span className="text-[10px] leading-tight text-text-secondary">
-              {label}
-            </span>
+            <span className="text-micro text-text-secondary">{label}</span>
             {onSelect && (
               <input
                 type="radio"
@@ -445,10 +455,16 @@ export function SesionPage() {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-bold">Fecha no válida</h1>
-        <div className="card text-text-secondary">
+        <Card className="text-text-secondary">
           La dirección debe terminar en una fecha con formato AAAA-MM-DD.
-        </div>
-        <Link to="/" className="btn-secondary self-start">
+        </Card>
+        <Link
+          to="/"
+          className={buttonClass({
+            variant: "secondary",
+            className: "self-start",
+          })}
+        >
           ← Volver al día
         </Link>
       </div>
@@ -460,13 +476,22 @@ export function SesionPage() {
         <h1 className="text-2xl font-bold capitalize">
           {isValidDateStr(date) ? formatDateEs(parseDateEs(date)) : "Día"}
         </h1>
-        <div className="card text-text-secondary">
+        <Card className="text-text-secondary">
           Sin sesión asignada para este día.
-        </div>
-        <Link to="/plan-fuerza" className="btn-primary self-start">
+        </Card>
+        <Link
+          to="/plan-fuerza"
+          className={buttonClass({ className: "self-start" })}
+        >
           Planificar en Plan fuerza
         </Link>
-        <Link to="/" className="btn-secondary self-start">
+        <Link
+          to="/"
+          className={buttonClass({
+            variant: "secondary",
+            className: "self-start",
+          })}
+        >
           ← Volver al día
         </Link>
       </div>
@@ -476,24 +501,24 @@ export function SesionPage() {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-bold">Error</h1>
-        <div role="alert" className="card text-error">
+        <Card role="alert" className="text-error">
           {view.message}
-        </div>
-        <button
-          type="button"
-          className="btn-secondary self-start"
+        </Card>
+        <Button
+          variant="secondary"
+          className="self-start"
           onClick={() => void day.reload()}
         >
           Reintentar
-        </button>
+        </Button>
       </div>
     );
 
   if (view.kind === "loading")
     return (
-      <div className="card text-text-secondary" role="status">
+      <Card className="text-text-secondary" role="status">
         Cargando…
-      </div>
+      </Card>
     );
 
   if (view.kind === "logged") {
@@ -514,7 +539,7 @@ export function SesionPage() {
         />
         <div className="flex flex-col gap-3">
           {Object.entries(byExercise).map(([seId, sets]) => (
-            <section key={seId} className="card">
+            <section key={seId} className={cardClass()}>
               <h2 className="mb-2 font-semibold">{sets[0].exerciseName}</h2>
               <ul className="flex flex-col gap-1">
                 {sets.map((s) => (
@@ -537,7 +562,7 @@ export function SesionPage() {
             </section>
           ))}
           {view.log.cardio.map((c) => (
-            <section key={c.planSessionExerciseId} className="card">
+            <section key={c.planSessionExerciseId} className={cardClass()}>
               <h2 className="mb-2 font-semibold">{c.exerciseName}</h2>
               <p className="flex items-center gap-3">
                 <span
@@ -554,7 +579,7 @@ export function SesionPage() {
               </p>
             </section>
           ))}
-          <section className="card flex flex-col gap-3">
+          <section className={cardClass("flex flex-col gap-3")}>
             <h2 className="font-semibold">Esfuerzo percibido</h2>
             <EffortDots effort={view.log.effort} />
             {view.log.note && (
@@ -572,22 +597,22 @@ export function SesionPage() {
     <div>
       <Header date={date} name={v.session.name ?? "Sesión"} logged={false} />
       {v.historyFailed && (
-        <div role="status" className="card mb-3 text-pending-text">
+        <Card role="status" className="mb-3 text-pending-text">
           No se pudo cargar el histórico de últimos pesos; puedes registrarlo
           igualmente a mano.
-        </div>
+        </Card>
       )}
       {v.submitError && (
-        <div role="alert" className="card mb-3 text-error">
+        <Card role="alert" className="mb-3 text-error">
           {v.submitError}
-        </div>
+        </Card>
       )}
       <div className="flex flex-col gap-3">
         {v.exercises.map((ex) => {
           const open = !!day.expanded[ex.se.id];
           const helper = formatLast(ex.last);
           return (
-            <section key={ex.se.id} className="card">
+            <section key={ex.se.id} className={cardClass()}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Link
@@ -596,14 +621,14 @@ export function SesionPage() {
                   >
                     {ex.se.exerciseName}
                   </Link>
-                  <button
-                    type="button"
+                  <Button
                     aria-label={`Series de ${ex.se.exerciseName}`}
-                    className="btn-secondary min-h-11"
+                    variant="secondary"
+                    className="min-h-11"
                     onClick={() => day.toggleExpand(ex.se.id)}
                   >
                     {open ? "Ocultar" : "Registrar series"}
-                  </button>
+                  </Button>
                   {helper && (
                     <span className="text-sm text-text-secondary">
                       {helper}
@@ -668,7 +693,7 @@ export function SesionPage() {
         })}
 
         {v.cardio.map((c) => (
-          <section key={c.se.id} className="card">
+          <section key={c.se.id} className={cardClass()}>
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 to={`/ejercicios/${c.se.exerciseId}`}
@@ -722,26 +747,25 @@ export function SesionPage() {
           </section>
         ))}
 
-        <section className="card flex flex-col gap-3">
+        <section className={cardClass("flex flex-col gap-3")}>
           <h2 className="font-semibold">Esfuerzo percibido</h2>
           <EffortDots effort={v.effort} onSelect={day.setEffort} />
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Nota</span>
-            <textarea
+            <Textarea
               aria-label="Nota de la sesión"
-              className="min-h-24 rounded-lg border border-border bg-surface p-2"
+              className="min-h-24"
               value={v.note}
               onChange={(e) => day.setNote(e.target.value)}
             />
           </label>
-          <button
-            type="button"
-            className="btn-primary min-h-11 disabled:opacity-50"
+          <Button
+            className="min-h-11 disabled:opacity-50"
             disabled={v.effort === null || v.pending}
             onClick={day.close}
           >
             {v.pending ? "Cerrando…" : "Cerrar sesión"}
-          </button>
+          </Button>
         </section>
       </div>
     </div>

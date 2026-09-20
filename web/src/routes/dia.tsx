@@ -2,8 +2,28 @@
 // Header navegable con "Hoy" decidido en cliente; secciones RECETA / FUERZA /
 // NOTAS con estados vacíos + CTA; autosave de notas (debounce 800 ms, flush al
 // cambiar de fecha vía desmontaje del editor keyed por fecha).
+//
+// Variante A (acabado): misma estructura —mismos bloques, mismo orden, misma
+// rejilla de 3 columnas en escritorio— con el sistema aplicado: etiquetas de
+// sección en micro-mayúsculas, tarjetas de 16px, filas con hover y entrada
+// escalonada de las tres columnas.
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import {
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloudIcon,
+  UtensilsIcon,
+} from "../components/icons";
+import {
+  Badge,
+  Button,
+  Card,
+  cardClass,
+  Input,
+  Textarea,
+} from "../components/ui";
 import { apiFetchRaw, photoSrc } from "../lib/api";
 import { type DayData, type DaySession, toISODate, useDay } from "../lib/day";
 import { KIND_LABELS } from "../lib/exercises";
@@ -31,52 +51,92 @@ export function DayHeader({
 }) {
   const isToday = toISODate(date) === toISODate(new Date());
   return (
-    <header className="mb-6">
-      <div className="flex items-center justify-between gap-2">
-        <button
-          aria-label="Día anterior"
-          className="btn-secondary min-h-11 min-w-11"
-          onClick={() => onChange(addDays(date, -1))}
-        >
-          ←
-        </button>
-        <h1 className="text-2xl font-bold capitalize">
+    <header className="mb-section flex flex-col items-start gap-3">
+      {/* El título abre en el mismo borde que la rejilla de abajo: los
+          controles de fecha van detrás, nunca por delante del texto. */}
+      <div className="flex w-full items-center gap-2">
+        <h1 className="min-w-0 flex-1 text-balance text-title leading-tight font-bold first-letter:uppercase lg:text-display">
           {isToday ? "Hoy — " : ""}
           {formatDateEs(date)}
         </h1>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Día anterior"
+          className="text-text"
+          onClick={() => onChange(addDays(date, -1))}
+        >
+          <ChevronLeftIcon width={22} height={22} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label="Día siguiente"
-          className="btn-secondary min-h-11 min-w-11"
+          className="text-text"
           onClick={() => onChange(addDays(date, 1))}
         >
-          →
-        </button>
+          <ChevronRightIcon width={22} height={22} />
+        </Button>
       </div>
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-        <button
-          aria-label="Ir a hoy"
-          className="btn-secondary"
-          onClick={() => onChange(new Date())}
-        >
-          Hoy
-        </button>
-        {/* ponytail: input nativo; un picker con librería si saltar fechas fine. */}
-        <input
-          type="date"
-          aria-label="Ir a una fecha"
-          className="min-h-11 rounded-lg border border-border bg-surface px-2"
-          value={toISODate(date)}
-          onChange={(e) => {
-            if (e.target.value)
-              onChange(new Date(`${e.target.value}T00:00:00`));
-          }}
-        />
+
+      {/* Una fila, dos naturalezas: el control de fecha (con caja) a la
+          izquierda y la navegación a los planes (sin caja) a la derecha. */}
+      <div className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {/* Un solo control de fecha: "Hoy" y el selector comparten caja, así
+            que hay una sola affordance de calendario y un solo borde. */}
+        <div className="inline-flex h-9 items-center rounded-control border border-border bg-surface p-0.5">
+          {/* Radio interior: el de fuera (control) menos el borde de 1px y el
+              relleno de 2px. Es la resta de esquinas anidadas, no un valor suelto. */}
+          <button
+            type="button"
+            aria-label="Ir a hoy"
+            onClick={() => onChange(new Date())}
+            className="grid h-8 place-items-center rounded-[calc(var(--radius-control)-3px)] px-2.5 text-caption font-semibold text-primary transition-colors duration-150 ease-out-quart hover:bg-primary-soft"
+          >
+            Hoy
+          </button>
+          <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
+          {/* ponytail: input nativo; un picker con librería si saltar fechas fine. */}
+          <Input
+            type="date"
+            aria-label="Ir a una fecha"
+            className="h-8 min-h-0 w-auto border-0 bg-transparent px-1.5 text-caption shadow-none"
+            value={toISODate(date)}
+            onChange={(e) => {
+              if (e.target.value)
+                onChange(new Date(`${e.target.value}T00:00:00`));
+            }}
+          />
+        </div>
+
+        <nav className="flex flex-wrap items-center gap-1">
+          <QuickLink to="/plan-recetas">Plan recetas</QuickLink>
+          <QuickLink to="/plan-fuerza">Plan fuerza</QuickLink>
+        </nav>
       </div>
-      <nav className="mt-2 flex justify-center gap-4 text-sm font-medium text-primary">
-        <Link to="/plan-recetas">Plan recetas</Link>
-        <Link to="/plan-fuerza">Plan fuerza</Link>
-      </nav>
     </header>
+  );
+}
+
+function QuickLink({
+  to,
+  children,
+}: {
+  to: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      to={to}
+      className="group inline-flex h-9 items-center rounded-control pr-2.5 pl-3 text-caption font-semibold text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-primary-soft hover:text-primary"
+    >
+      {children}
+      <ChevronRightIcon
+        width={16}
+        height={16}
+        className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5"
+      />
+    </Link>
   );
 }
 
@@ -88,10 +148,36 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <h2 className="mb-2 text-lg font-semibold">{title}</h2>
+    <section className="flex min-w-0 flex-col gap-3">
+      <h2 className="section-label">{title}</h2>
       {children}
     </section>
+  );
+}
+
+/** Estado vacío de una sección: mismo molde para receta y fuerza. */
+function EmptyState({
+  text,
+  action,
+}: {
+  text: string;
+  action: { to: string; label: string };
+}) {
+  return (
+    <Card className="flex min-h-28 flex-col justify-center items-start gap-2">
+      <p className="text-body text-text-secondary">{text}</p>
+      <Link
+        to={action.to}
+        className="group inline-flex items-center gap-1 text-body font-semibold text-primary transition-colors duration-150 ease-out-quart hover:text-primary-dark"
+      >
+        {action.label}
+        <ChevronRightIcon
+          width={16}
+          height={16}
+          className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5"
+        />
+      </Link>
+    </Card>
   );
 }
 
@@ -101,15 +187,10 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
   if (planned.length === 0) {
     return (
       <Section title="RECETA">
-        <div className="card text-text-secondary">
-          <p>Aún no has planificado comidas para este día</p>
-          <Link
-            to="/plan-recetas"
-            className="mt-2 inline-block font-semibold text-primary"
-          >
-            Ir al plan semanal
-          </Link>
-        </div>
+        <EmptyState
+          text="Aún no has planificado comidas para este día"
+          action={{ to: "/plan-recetas", label: "Ir al plan semanal" }}
+        />
       </Section>
     );
   }
@@ -118,26 +199,38 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
       <div className="flex flex-col gap-2">
         {planned.map((m) => (
           <button
+            type="button"
             key={m.meal}
-            className="card flex min-h-11 items-center gap-3 text-left"
+            className={cardClass(
+              "card-interactive group flex w-full items-center gap-3 p-3 text-left",
+            )}
             onClick={() => navigate(`/recetario/${m.recipeId}`)}
           >
             {m.recipePhoto ? (
               <img
                 src={photoSrc(m.recipePhoto)}
                 alt=""
-                className="size-12 shrink-0 rounded-lg object-cover"
+                className="size-14 shrink-0 rounded-panel object-cover"
               />
             ) : (
               <span
                 aria-hidden
-                className="size-12 shrink-0 rounded-lg bg-surface-muted"
-              />
+                className="grid size-14 shrink-0 place-items-center rounded-panel bg-surface-muted text-text-secondary"
+              >
+                <UtensilsIcon />
+              </span>
             )}
-            <span className="min-w-0 flex-1 truncate font-semibold">
-              {m.recipeName}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="section-label">{m.meal}</span>
+              <span className="line-clamp-2 text-lead font-semibold">
+                {m.recipeName}
+              </span>
             </span>
-            <span className="text-sm text-text-secondary">{m.meal}</span>
+            <ChevronRightIcon
+              width={18}
+              height={18}
+              className="shrink-0 text-text-secondary transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5"
+            />
           </button>
         ))}
       </div>
@@ -154,55 +247,82 @@ function StrengthSection({
 }) {
   const navigate = useNavigate();
   const openWorkout = () => navigate(`/sesion/${date}`);
-  return (
-    <Section title="FUERZA">
-      {!session ? (
-        <div className="card text-text-secondary">
-          <p>Sin sesión asignada</p>
-          <Link
-            to="/plan-fuerza"
-            className="mt-2 inline-block font-semibold text-primary"
-          >
-            Ver el plan de fuerza
-          </Link>
-        </div>
-      ) : session.status === "logged" && session.summary ? (
-        <button className="card w-full text-left" onClick={openWorkout}>
-          <div className="flex items-center gap-2">
-            <span className="badge-done">Hecho</span>
-            <span className="font-semibold">{session.name ?? "Sesión"}</span>
+  if (!session) {
+    return (
+      <Section title="FUERZA">
+        <EmptyState
+          text="Sin sesión asignada"
+          action={{ to: "/plan-fuerza", label: "Ver el plan de fuerza" }}
+        />
+      </Section>
+    );
+  }
+  if (session.status === "logged" && session.summary) {
+    return (
+      <Section title="FUERZA">
+        <button
+          type="button"
+          className={cardClass(
+            "card-interactive flex w-full flex-col gap-2 text-left",
+          )}
+          onClick={openWorkout}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="min-w-0 truncate text-lead font-semibold">
+              {session.name ?? "Sesión"}
+            </span>
+            <Badge tone="done">Hecho</Badge>
           </div>
-          <p className="mt-1 text-sm text-done-text">
+          <p className="text-caption text-done-text">
             Sesión completada · {session.summary.exercises} ejercicios ·{" "}
             {session.summary.sets} series · esfuerzo {session.summary.effort}/5
           </p>
         </button>
-      ) : (
-        <div className="card">
-          <div className="flex items-center gap-2">
-            <span className="badge-pending">Pendiente</span>
-            <span className="font-semibold">{session.name ?? "Sesión"}</span>
+      </Section>
+    );
+  }
+  const exercises = session.exercises ?? [];
+  const sets = exercises.reduce((sum, e) => sum + (e.targetSets ?? 0), 0);
+  return (
+    <Section title="FUERZA">
+      <Card className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="truncate text-lead font-semibold">
+              {session.name ?? "Sesión"}
+            </span>
+            {exercises.length > 0 && (
+              <span className="text-caption text-text-secondary">
+                {exercises.length} ejercicios · {sets} series
+              </span>
+            )}
           </div>
-          {session.status === "planned" && session.exercises?.length ? (
-            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
-              {session.exercises.map((e) => (
-                <li key={e.exerciseId}>
+          <Badge tone="pending">Pendiente</Badge>
+        </div>
+        {exercises.length > 0 && (
+          <ol className="flex flex-col rounded-panel bg-surface-muted p-1">
+            {exercises.map((e, i) => (
+              <li
+                key={e.exerciseId}
+                className="flex items-center gap-3 rounded-panel px-2 py-2"
+              >
+                <span className="grid size-6 shrink-0 place-items-center rounded-chip bg-surface text-micro font-bold text-text-secondary">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-body">
                   {e.exerciseName}
                   {e.kind === "strength"
                     ? null
                     : ` · ${KIND_LABELS[e.kind].toLowerCase()}`}
-                </li>
-              ))}
-            </ol>
-          ) : null}
-          <button
-            className="btn-primary mt-3 min-h-11 w-full"
-            onClick={openWorkout}
-          >
-            Registrar sesión
-          </button>
-        </div>
-      )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+        <Button className="w-full" onClick={openWorkout}>
+          Registrar sesión
+        </Button>
+      </Card>
     </Section>
   );
 }
@@ -267,23 +387,38 @@ export function NoteEditor({
   );
 
   return (
-    <div className="card">
-      <textarea
-        className="min-h-28 w-full rounded-lg border border-border bg-background p-2"
+    <Card className="flex flex-col gap-2 p-3">
+      <Textarea
+        className="min-h-44 w-full bg-background p-3"
         placeholder="Escribe algo sobre hoy"
         value={text}
         onChange={(e) => onChange(e.target.value)}
       />
-      <div aria-live="polite" className="mt-1 flex items-center gap-2 text-sm">
+      <div
+        aria-live="polite"
+        className="flex min-h-5 items-center gap-2 px-1 text-caption"
+      >
+        {status === "idle" && (
+          <>
+            <CloudIcon width={16} height={16} className="text-text-secondary" />
+            <span className="text-text-secondary">Autoguardado</span>
+          </>
+        )}
         {status === "saving" && (
           <span className="text-text-secondary">Guardando…</span>
         )}
-        {status === "saved" && <span className="text-done-text">Guardado</span>}
+        {status === "saved" && (
+          <>
+            <CheckIcon width={16} height={16} className="text-done-text" />
+            <span className="text-done-text">Guardado</span>
+          </>
+        )}
         {status === "error" && (
           <>
             <span className="text-error">No guardado</span>
             <button
-              className="font-semibold text-primary"
+              type="button"
+              className="font-semibold text-primary underline-offset-2 transition-colors duration-150 ease-out-quart hover:underline"
               onClick={() => void save(text)}
             >
               Reintentar guardar
@@ -291,19 +426,26 @@ export function NoteEditor({
           </>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
 function Skeleton() {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true">
+    <div
+      className="grid grid-cols-1 gap-x-gutter gap-y-section lg:grid-cols-3"
+      aria-busy="true"
+    >
       {[0, 1, 2].map((i) => (
         <div
           key={i}
           data-testid="skeleton"
-          className="card h-24 animate-pulse bg-surface-muted"
-        />
+          className="flex flex-col gap-3"
+          style={{ animationDelay: `${i * 60}ms` }}
+        >
+          <span className="skeleton block h-4 w-24" />
+          <span className="skeleton block h-44 w-full" />
+        </div>
       ))}
     </div>
   );
@@ -319,19 +461,29 @@ export function DiaPage() {
       {loading ? (
         <Skeleton />
       ) : error ? (
-        <div className="card">
-          <p className="text-error">{error}</p>
-          <button className="btn-primary mt-2" onClick={reload}>
+        <Card className="flex flex-col items-start gap-3">
+          <p className="text-body text-error">{error}</p>
+          <Button variant="secondary" onClick={reload}>
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Card>
       ) : data ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <MealsSection meals={data.meals ?? []} />
-          <StrengthSection session={data.session} date={iso} />
-          <Section title="NOTAS DEL DÍA">
-            <NoteEditor key={iso} date={iso} initial={data.note?.text ?? ""} />
-          </Section>
+        <div className="grid grid-cols-1 gap-x-gutter gap-y-section lg:grid-cols-3">
+          <div className="animate-rise">
+            <MealsSection meals={data.meals ?? []} />
+          </div>
+          <div className="animate-rise" style={{ animationDelay: "60ms" }}>
+            <StrengthSection session={data.session} date={iso} />
+          </div>
+          <div className="animate-rise" style={{ animationDelay: "120ms" }}>
+            <Section title="NOTAS DEL DÍA">
+              <NoteEditor
+                key={iso}
+                date={iso}
+                initial={data.note?.text ?? ""}
+              />
+            </Section>
+          </div>
         </div>
       ) : null}
     </>

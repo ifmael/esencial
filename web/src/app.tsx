@@ -59,6 +59,7 @@ import { PlantillasPage } from "./routes/plantillas";
 import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
 
 import { SesionPage } from "./routes/sesion";
+import { UiPage } from "./routes/ui";
 
 export function App() {
   return (
@@ -78,6 +79,9 @@ export function App() {
           <Route path="/plantillas" element={<PlantillasPage />} />
 
           <Route path="/sesion/:date" element={<SesionPage />} />
+
+          {/* Referencia del sistema de diseño: fuera del menú, para consultarla. */}
+          <Route path="/ui" element={<UiPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

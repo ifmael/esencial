@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
-/* Esencial design tokens — from wireframes/DESIGN.md */
+/* ==========================================================================
+   Esencial — capa de sistema (variante A "acabado sistémico")
+   Base: wireframes/DESIGN.md. Aquí viven SOLO decisiones transversales:
+   escala tipográfica, ritmo de espaciado, radios, superficies/elevación y
+   movimiento. Las pantallas no inventan valores: consumen estos tokens.
+   ========================================================================== */
+
 :root {
+  /* Marca y superficies — wireframes/DESIGN.md */
   --color-primary: #15803d;
   --color-primary-dark: #166534;
   --color-primary-container: #15803d;
@@ -19,6 +26,39 @@
   --color-text: #1c1917;
   --color-text-secondary: #78716c;
   --color-border: #e7e5e4;
+  /* Derivados: estados suaves (activo de menú, hover de controles) */
+  --color-primary-soft: #e9f3ed;
+  --color-primary-soft-strong: #d8ebdf;
+  --color-border-strong: #d6d3d1;
+  --color-ring: rgb(21 128 61 / 0.32);
+
+  /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
+     para todo lo que reacciona al usuario. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Espaciado semántico (ritmo) */
+  --spacing-card: 1.25rem; /* 20px — padding interno de tarjeta */
+  --spacing-section: 1.75rem; /* 28px — separación entre secciones */
+  --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
+  --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
+
+  /* Radios: control < panel < tarjeta */
+  --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
+  --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
+  --radius-card: 1rem; /* 16px — tarjetas y superficies grandes */
+  --radius-chip: 999px;
+
+  /* Elevación: dos sombras compuestas, nunca una sola difusa fuerte */
+  --shadow-card:
+    0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
+  --shadow-raised:
+    0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
+  --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
+  /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
+  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
 }
 
 @theme inline {
@@ -26,6 +66,8 @@
   --color-primary-dark: var(--color-primary-dark);
   --color-primary-container: var(--color-primary-container);
   --color-on-primary: var(--color-on-primary);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-primary-soft-strong: var(--color-primary-soft-strong);
   --color-secondary: var(--color-secondary);
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);
@@ -39,61 +81,298 @@
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
   --color-border: var(--color-border);
-  --radius-card: 12px;
+  --color-border-strong: var(--color-border-strong);
+  --color-ring: var(--color-ring);
+
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Escala tipográfica: 6 pasos con line-height pareja. Nada de saltos de
+     14→16→18 sin criterio: micro/caption para metadatos, body para lectura,
+     lead para el dato de una fila, title/display para jerarquía de pantalla. */
+  --text-micro: 0.6875rem; /* 11px — etiquetas en mayúsculas */
+  --text-micro--line-height: 1rem;
+  --text-micro--letter-spacing: 0.08em;
+  --text-caption: 0.8125rem; /* 13px — metadatos y ayudas */
+  --text-caption--line-height: 1.125rem;
+  --text-body: 0.9375rem; /* 15px — texto de interfaz */
+  --text-body--line-height: 1.45;
+  --text-lead: 1.0625rem; /* 17px — dato principal de una fila */
+  --text-lead--line-height: 1.35;
+  --text-title: 1.25rem; /* 20px — título de bloque */
+  --text-title--line-height: 1.3;
+  --text-display: 1.5rem; /* 24px — título de pantalla */
+  --text-display--line-height: 1.2;
+  --text-display--letter-spacing: -0.02em;
+
+  /* Ritmo de espaciado: `p-card`, `gap-section`, `gap-stack`, `gap-gutter` */
+  --spacing-card: var(--spacing-card);
+  --spacing-section: var(--spacing-section);
+  --spacing-stack: var(--spacing-stack);
+  --spacing-gutter: var(--spacing-gutter);
+
+  --radius-control: var(--radius-control);
+  --radius-panel: var(--radius-panel);
+  --radius-card: var(--radius-card);
+  --radius-chip: var(--radius-chip);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-inset: var(--shadow-inset);
+  --shadow-up: var(--shadow-up);
+
+  --ease-out-quart: var(--ease-out-quart);
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-text);
+@layer base {
+  body {
+    background: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Un solo anillo de foco para toda la app, visible sobre cualquier superficie. */
+  :where(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [tabindex]
+  ):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-primary-soft-strong);
+  }
 }
 
 @layer components {
+  /* --- Superficies ------------------------------------------------------ */
+
   .card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-card);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    padding: 1rem;
+    box-shadow: var(--shadow-card);
+    padding: var(--spacing-card);
   }
+
+  /* Tarjeta que además se pulsa: se levanta al pasar por encima. */
+  .card-interactive {
+    transition:
+      transform var(--duration-base) var(--ease-out-quart),
+      box-shadow var(--duration-base) var(--ease-out-quart),
+      border-color var(--duration-base) var(--ease-out-quart);
+  }
+  .card-interactive:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-raised);
+  }
+  .card-interactive:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA) */
+  .section-label {
+    font-size: var(--text-micro);
+    line-height: var(--text-micro--line-height);
+    letter-spacing: var(--text-micro--letter-spacing);
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  /* Loader: barrido suave en lugar del pulso de opacidad clásico. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-surface-muted);
+    border-radius: var(--radius-panel);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.75),
+      transparent
+    );
+    animation: shimmer 1.6s var(--ease-out-quart) infinite;
+  }
+
+  /* --- Botones ---------------------------------------------------------- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-control);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      background-color var(--duration-fast) var(--ease-out-quart),
+      background-image var(--duration-fast) var(--ease-out-quart),
+      border-color var(--duration-fast) var(--ease-out-quart),
+      color var(--duration-fast) var(--ease-out-quart),
+      box-shadow var(--duration-base) var(--ease-out-quart),
+      transform var(--duration-fast) var(--ease-out-quart);
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* El hover oscurece con una capa encima: así sigue funcionando cuando el
+     consumidor pinta el botón de otro color (p. ej. `bg-error`). */
   .btn-primary {
     background: var(--color-primary);
-    color: #fff;
-    border-radius: 8px;
-    padding: 0.625rem 1rem;
-    font-weight: 600;
+    color: var(--color-on-primary);
+    box-shadow: 0 1px 2px rgb(22 101 52 / 0.25);
   }
+  .btn-primary:hover:not(:disabled) {
+    background-image: linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08));
+  }
+
   .btn-secondary {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+    background-image: linear-gradient(
+      rgb(28 25 23 / 0.04),
+      rgb(28 25 23 / 0.04)
+    );
+  }
+
+  .btn-ghost {
     background: transparent;
-    border: 1px solid var(--color-primary);
-    color: var(--color-primary);
-    border-radius: 8px;
-    padding: 0.625rem 1rem;
-    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-surface-muted);
+    color: var(--color-text);
+  }
+
+  /* --- Campos ----------------------------------------------------------- */
+
+  .input {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 0.625rem 0.875rem;
+    min-height: 2.75rem;
+    color: var(--color-text);
+    transition:
+      border-color var(--duration-fast) var(--ease-out-quart),
+      box-shadow var(--duration-base) var(--ease-out-quart);
+  }
+  .input::placeholder {
+    color: var(--color-text-secondary);
+  }
+  .input:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-ring);
+  }
+  .input-error,
+  .input[aria-invalid="true"] {
+    border-color: var(--color-error);
+  }
+  .input-error:focus,
+  .input[aria-invalid="true"]:focus {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px rgb(185 28 28 / 0.2);
+  }
+
+  /* --- Insignias -------------------------------------------------------- */
+
+  :where(.badge-pending, .badge-done, .badge-neutral) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-chip);
+    font-size: var(--text-micro);
+    line-height: var(--text-micro--line-height);
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.3125rem 0.625rem;
   }
   .badge-pending {
     background: var(--color-pending-bg);
     color: var(--color-pending-text);
-    border-radius: 999px;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    font-weight: 700;
-    padding: 0.125rem 0.5rem;
   }
   .badge-done {
     background: var(--color-done-bg);
     color: var(--color-done-text);
-    border-radius: 999px;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    font-weight: 700;
-    padding: 0.125rem 0.5rem;
   }
-  .input {
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-surface);
-    min-height: 2.75rem;
+  .badge-neutral {
+    background: var(--color-surface-muted);
+    color: var(--color-text-secondary);
+  }
+
+  /* --- Fila de lista ---------------------------------------------------- */
+
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-stack);
+    border-radius: var(--radius-panel);
+    transition: background-color var(--duration-fast) var(--ease-out-quart);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Entrada de contenido: una sola vez, corta y desplazada. */
+.animate-rise {
+  animation: rise var(--duration-slow) var(--ease-out-quart) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
