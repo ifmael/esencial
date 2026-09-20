@@ -76,7 +76,9 @@ export function App() {
           <Route path="/recetario/:id" element={<RecetarioDetallePage />} />
           <Route path="/ejercicios" element={<EjerciciosPage />} />
           <Route path="/ejercicios/:id" element={<EjercicioDetailPage />} />
-          <Route path="/plantillas" element={<PlantillasPage />} />
+          {/* La lista también sirve /plantillas/nueva y /plantillas/:id/editar:
+              la modal sale de la URL y la lista queda detrás, montada. */}
+          <Route path="/plantillas/*" element={<PlantillasPage />} />
 
           <Route path="/sesion/:date" element={<SesionPage />} />
 
