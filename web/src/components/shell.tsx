@@ -51,6 +51,15 @@ const NAV: NavSection[] = [
 const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+/** Rutas de calendario (fuerza y comidas): el calendario manda, así que la
+ * página se queda sin cabecera y ocupa la ventana entera. Su submenú vive en el
+ * menú lateral y, en móvil —donde no hay barra lateral—, en una fila fina sobre
+ * la rejilla; abajo queda un hueco reservado para acciones futuras. */
+const CALENDAR_ROUTES: Record<string, true> = {
+  "/plan-fuerza": true,
+  "/plan-recetas": true,
+};
+
 const sectionActive = (pathname: string, section: NavSection) =>
   isActive(pathname, section.href) ||
   (section.children ?? []).some((child) => isActive(pathname, child.href));
@@ -116,6 +125,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // null = decide por ruta (auto-expandir la sección activa); true/false = el
   // usuario la colapsó/desplegó a mano.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const fullHeight = CALENDAR_ROUTES[pathname] === true;
+  // Sección dueña de la ruta de calendario: su submenú es la fila fina de móvil.
+  const navSection = NAV.find((section) => section.href === pathname);
 
   const logout = async () => {
     await apiFetchRaw("/api/auth/logout", { method: "POST" });
@@ -197,9 +209,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className="flex min-h-dvh flex-col lg:flex-row">
+    <div
+      className={`flex min-h-dvh flex-col lg:flex-row ${
+        fullHeight ? "lg:h-dvh" : ""
+      }`}
+    >
       {/* Escritorio: barra lateral fija */}
-      <aside className="hidden w-64 shrink-0 flex-col gap-6 border-r border-border bg-surface px-4 py-6 lg:flex">
+      <aside
+        className={`hidden w-64 shrink-0 flex-col gap-6 border-r border-border bg-surface px-4 py-6 lg:flex ${
+          fullHeight ? "lg:overflow-y-auto" : ""
+        }`}
+      >
         <Link
           to="/"
           className="flex items-center gap-3 rounded-control px-2 py-1 transition-colors duration-150 ease-out-quart hover:bg-surface-muted"
@@ -241,8 +261,36 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:px-8 lg:py-8 lg:pb-8">
+      <main
+        className={`mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:px-8 lg:py-8 ${
+          fullHeight ? "flex flex-col gap-4 lg:min-h-0" : ""
+        }`}
+      >
+        {/* En móvil no hay barra lateral: los enlaces de la sección quedan
+            como fila fina sobre el calendario. */}
+        {fullHeight && navSection?.children ? (
+          <nav
+            aria-label={navSection.label}
+            className="flex flex-wrap gap-1 lg:hidden"
+          >
+            {navSection.children.map((child) => (
+              <Link
+                key={child.href}
+                to={child.href}
+                className="rounded-chip bg-surface-muted px-3 py-1 text-caption font-semibold text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-primary-soft hover:text-primary"
+              >
+                {child.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+
         {children}
+
+        {fullHeight ? (
+          // Hueco inferior reservado (acciones futuras del calendario).
+          <div aria-hidden="true" className="hidden h-14 shrink-0 lg:block" />
+        ) : null}
       </main>
 
       {/* Móvil: barra inferior */}

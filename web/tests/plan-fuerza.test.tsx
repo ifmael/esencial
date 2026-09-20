@@ -124,24 +124,29 @@ async function openPlan() {
 }
 
 describe("plan screen", () => {
-  it("renders header and the week grid; plantillas no aparecen listadas", async () => {
+  it("sin cabecera: el calendario es el protagonista; plantillas no aparecen listadas", async () => {
     await openPlan();
-    expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
+    const main = within(screen.getByRole("main"));
+    // Ni título de página ni botones sobre el calendario.
+    expect(main.queryByRole("heading", { level: 1 })).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "+ Nueva plantilla" }),
+      main.queryByRole("button", { name: "+ Nueva plantilla" }),
     ).toBeNull();
     expect(screen.queryByText("A — Empuje")).toBeNull();
     expect(screen.queryByText(/primera plantilla/i)).toBeNull();
   });
 
-  it("cabecera: enlaces a Ejercicios y Plantillas", async () => {
+  it("los enlaces retirados de la cabecera son la fila fina de la sección", async () => {
     await openPlan();
     const main = within(screen.getByRole("main"));
+    const subnav = within(
+      await main.findByRole("navigation", { name: "Deporte" }),
+    );
     expect(
-      main.getByRole("link", { name: "Ejercicios" }).getAttribute("href"),
+      subnav.getByRole("link", { name: "Ejercicios" }).getAttribute("href"),
     ).toBe("/ejercicios");
     expect(
-      main.getByRole("link", { name: "Plantillas" }).getAttribute("href"),
+      subnav.getByRole("link", { name: "Plantillas" }).getAttribute("href"),
     ).toBe("/plantillas");
   });
 

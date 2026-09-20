@@ -79,6 +79,16 @@ Escala vigente — todo lo demás sale de aquí:
   el sitio de arquitectura: `docs/architecture/diseno.html`, que se abre con
   doble clic, sin build.
 
+### Pantallas de calendario (fuerza y comidas)
+
+`/plan-fuerza` y `/plan-recetas` van sin cabecera: el calendario es el
+protagonista y ocupa la altura de la ventana en escritorio (sin scroll de
+página), con un hueco vacío reservado abajo para acciones futuras. El submenú de
+su sección vive en la barra lateral y, en móvil —donde no hay barra lateral—, en
+una fila de chips sobre el calendario. Las dos rutas están en `CALENDAR_ROUTES`
+(`web/src/components/shell.tsx`): añadir una ahí le da el mismo trato (sin
+título, alto completo, hueco inferior, chips en móvil).
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |

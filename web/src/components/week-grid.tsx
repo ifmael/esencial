@@ -288,7 +288,7 @@ export function WeekGrid({
       {loading && sessions.length === 0 ? (
         <div className="text-text-secondary">Cargando…</div>
       ) : (
-        <div className="flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2">
+        <div className="flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2 md:overflow-y-auto">
           {DAYS.map((day, di) => {
             const date = dayOf(isoWeek, di);
             return (

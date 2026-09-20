@@ -113,7 +113,10 @@ describe("Shell", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/plan-recetas"));
     fireEvent.click(screen.getAllByText("Deporte")[0]);
     await waitFor(() => expect(window.location.pathname).toBe("/plan-fuerza"));
-    expect(screen.getByRole("heading", { name: "Plan fuerza" })).toBeDefined();
+    // La página no tiene título: se reconoce por su rejilla semanal.
+    expect(
+      await screen.findByRole("button", { name: "Semana siguiente" }),
+    ).toBeDefined();
   });
 });
 

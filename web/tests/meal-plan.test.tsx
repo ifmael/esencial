@@ -290,9 +290,13 @@ describe("acceso a la lista de la compra", () => {
 });
 
 describe("acceso al recetario", () => {
-  it("enlace 'Recetario' abre el libro de recetas", async () => {
+  it("el enlace del recetario vive en la fila de la sección, no en una cabecera", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    const link = await screen.findByRole("link", { name: "Recetario" });
-    expect(link.getAttribute("href")).toBe("/recetario");
+    const subnav = within(
+      await screen.findByRole("navigation", { name: "Nutrición" }),
+    );
+    expect(
+      subnav.getByRole("link", { name: "Recetas" }).getAttribute("href"),
+    ).toBe("/recetario");
   });
 });

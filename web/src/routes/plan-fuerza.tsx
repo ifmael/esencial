@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { GroupedExercises } from "../components/grouped-exercises";
 import {
   DRAG_INSTRUCTIONS,
@@ -25,7 +25,7 @@ import {
   sortableAnnouncements,
   useDragSensors,
 } from "../components/sortable";
-import { Badge, Button, buttonClass, Card, Input } from "../components/ui";
+import { Badge, Button, Card, Input } from "../components/ui";
 import { WeekGrid } from "../components/week-grid";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
@@ -666,22 +666,6 @@ export function PlanFuerzaPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <section className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold">Plan fuerza</h1>
-        <Link
-          to="/ejercicios"
-          className={buttonClass({ variant: "secondary" })}
-        >
-          Ejercicios
-        </Link>
-        <Link
-          to="/plantillas"
-          className={buttonClass({ variant: "secondary" })}
-        >
-          Plantillas
-        </Link>
-      </section>
-
       <WeekGrid
         isoWeek={isoWeek}
         sessions={week.sessions}

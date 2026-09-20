@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
-import { Button, buttonClass, Card, cardClass, Input } from "../components/ui";
+import { Button, Card, cardClass, Input } from "../components/ui";
 import { apiFetchRaw, photoSrc } from "../lib/api";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
@@ -254,35 +254,24 @@ export function PlanRecetasPage() {
     ]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3">
-        <header className="flex items-center justify-between gap-2">
-          <Button
-            variant="secondary"
-            aria-label="Semana anterior"
-            onClick={() => gotoWeek(shiftIsoWeek(isoWeek, -1))}
-          >
-            ‹
-          </Button>
-          <h1 className="text-2xl font-bold">{isoWeek}</h1>
-          <Button
-            variant="secondary"
-            aria-label="Semana siguiente"
-            onClick={() => gotoWeek(shiftIsoWeek(isoWeek, 1))}
-          >
-            ›
-          </Button>
-        </header>
-        <Link
-          to="/recetario"
-          className={buttonClass({
-            variant: "secondary",
-            className: "self-start",
-          })}
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <header className="flex items-center justify-between gap-2">
+        <Button
+          variant="secondary"
+          aria-label="Semana anterior"
+          onClick={() => gotoWeek(shiftIsoWeek(isoWeek, -1))}
         >
-          Recetario
-        </Link>
-      </div>
+          ‹
+        </Button>
+        <h1 className="text-2xl font-bold">{isoWeek}</h1>
+        <Button
+          variant="secondary"
+          aria-label="Semana siguiente"
+          onClick={() => gotoWeek(shiftIsoWeek(isoWeek, 1))}
+        >
+          ›
+        </Button>
+      </header>
 
       {error ? (
         <Card role="alert" className="border-error/40 text-error">
@@ -296,7 +285,7 @@ export function PlanRecetasPage() {
       {slots === null && !error ? (
         <Card className="text-text-secondary">Cargando…</Card>
       ) : (
-        <div className="flex flex-col gap-3 md:grid md:grid-flow-col md:auto-cols-fr md:gap-2">
+        <div className="flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2 md:overflow-y-auto">
           {DAYS.map((day, di) => (
             <section key={day} className={cardClass("flex flex-col gap-2 p-3")}>
               <h2 className="font-semibold">{day}</h2>
