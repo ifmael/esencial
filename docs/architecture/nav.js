@@ -19,7 +19,10 @@ const SECCIONES = [
   },
   {
     grupo: "Frontend",
-    paginas: [{ href: "spa.html", titulo: "SPA (React)" }],
+    paginas: [
+      { href: "spa.html", titulo: "SPA (React)" },
+      { href: "diseno.html", titulo: "Sistema de diseño (UI)" },
+    ],
   },
   {
     grupo: "Operación",

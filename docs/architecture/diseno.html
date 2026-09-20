@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arquitectura de Esencial — Sistema de diseño</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      try {
+        const pref = localStorage.getItem("esencial-arquitectura-tema") ?? "auto";
+        const sistema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = pref === "auto" ? sistema : pref;
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <script src="nav.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">E</span>
+          <span>
+            <span class="brand-name">Esencial</span>
+            <span class="brand-sub">Arquitectura</span>
+          </span>
+        </a>
+        <nav data-nav></nav>
+        <p class="nav-foot">
+          Abre esta página con doble clic (<code>file://</code>). Sin servidor, sin build.
+        </p>
+        <div data-tema></div>
+      </aside>
+
+      <main class="main">
+        <p class="eyebrow">Frontend</p>
+        <h1>Sistema de diseño</h1>
+        <p class="lead">
+          Una sola fuente de verdad —<code>web/src/globals.css</code>—, cuatro capas en cadena y
+          una regla que lo sostiene todo: <strong>ninguna pantalla inventa un valor</strong>. El
+          lint lo comprueba por ti, así que la regla no depende de que alguien se acuerde.
+        </p>
+
+        <div class="kpis">
+          <div class="kpi"><b>3</b><span>capas de tokens</span></div>
+          <div class="kpi"><b>6</b><span>primitivas</span></div>
+          <div class="kpi"><b>6</b><span>pasos de texto</span></div>
+          <div class="kpi"><b>11</b><span>iconos</span></div>
+          <div class="kpi"><b>0</b><span>dependencias de UI</span></div>
+        </div>
+
+        <h2>El problema que resuelve</h2>
+        <p>
+          Durante mucho tiempo cada pantalla eligió sus propios números. Eso no se ve «roto»: se ve
+          <em>distinto en cada sitio</em>, que es peor porque nadie sabe qué arreglar. Dos ejemplos
+          reales, medidos en el navegador:
+        </p>
+        <ul>
+          <li>
+            El botón principal de <code>/recetario</code> medía <strong>24 px de alto, radio 0 y
+            peso 400</strong>, mientras los de al lado medían 44 px de alto, radio 10 y peso 600.
+            Su piel estaba partida en dos clases y esa pantalla solo aplicaba media.
+          </li>
+          <li>
+            Dos buscadores casi idénticos no coincidían: uno medía <strong>46 px, radio 10 y
+            encendía un halo verde</strong> al enfocarlo; el otro, 42 px, radio 8 y
+            <strong>ninguna señal</strong> al hacer clic dentro.
+          </li>
+        </ul>
+        <p>
+          La capa de sistema existe para que eso deje de ser posible: un valor se decide una vez y
+          las pantallas lo consumen en vez de reinterpretarlo.
+        </p>
+
+        <h2>Una sola fuente de verdad</h2>
+        <p>
+          Los valores viven en <code>globals.css</code> y bajan por cuatro escalones. Cada escalón
+          tiene un dueño y una forma de escribirse; el siguiente no añade valores nuevos, solo
+          nombres.
+        </p>
+
+        <figure>
+          <svg
+            viewBox="0 0 860 430"
+            role="img"
+            aria-label="Cadena de cuatro capas: los valores crudos en :root se convierten con @theme inline en utilidades de Tailwind; esas utilidades son la piel que aplican las clases de @layer components; y esas clases son el cuerpo de las primitivas de components/ui.tsx, que es lo único que consumen las pantallas."
+          >
+            <defs>
+              <marker
+                id="fd1"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <polygon points="0,0 10,5 0,10" class="dg-accent" />
+              </marker>
+            </defs>
+
+            <text x="236" y="62" class="dg-sub" text-anchor="end">El valor se</text>
+            <text x="236" y="80" class="dg-sub" text-anchor="end">decide una vez…</text>
+
+            <rect x="250" y="40" width="360" height="60" rx="10" class="dg-box-strong" />
+            <text x="430" y="62" class="dg-text" text-anchor="middle">globals.css · :root</text>
+            <text x="430" y="82" class="dg-sub" text-anchor="middle">colores, escala de texto, ritmo, radios, sombras, tiempos</text>
+
+            <line x1="430" y1="104" x2="430" y2="136" class="dg-line-strong" marker-end="url(#fd1)" />
+            <text x="444" y="124" class="dg-label" text-anchor="start">@theme inline</text>
+
+            <rect x="250" y="140" width="360" height="60" rx="10" class="dg-box" />
+            <text x="430" y="162" class="dg-text" text-anchor="middle">utilidades de Tailwind</text>
+            <text x="430" y="182" class="dg-sub" text-anchor="middle">text-lead · p-card · gap-section · rounded-card · shadow-card</text>
+
+            <line x1="430" y1="204" x2="430" y2="236" class="dg-line-strong" marker-end="url(#fd1)" />
+            <text x="444" y="224" class="dg-label" text-anchor="start">@layer components</text>
+
+            <rect x="250" y="240" width="360" height="60" rx="10" class="dg-box" />
+            <text x="430" y="262" class="dg-text" text-anchor="middle">la piel de cada pieza</text>
+            <text x="430" y="282" class="dg-sub" text-anchor="middle">.card · .btn-primary · .input · .badge-done</text>
+
+            <line x1="430" y1="304" x2="430" y2="336" class="dg-line-strong" marker-end="url(#fd1)" />
+            <text x="444" y="324" class="dg-label" text-anchor="start">components/ui.tsx</text>
+
+            <rect x="250" y="340" width="360" height="60" rx="10" class="dg-box-strong" />
+            <text x="430" y="362" class="dg-text" text-anchor="middle">primitivas</text>
+            <text x="430" y="382" class="dg-sub" text-anchor="middle">&lt;Card&gt; · &lt;Button&gt; · &lt;Input&gt; · &lt;Badge&gt;</text>
+
+            <text x="640" y="356" class="dg-sub" text-anchor="start">…y la pantalla,</text>
+            <text x="640" y="374" class="dg-sub" text-anchor="start">al final de la cadena,</text>
+            <text x="640" y="392" class="dg-sub" text-anchor="start">solo escribe JSX.</text>
+          </svg>
+          <figcaption>
+            Los tres primeros escalones son CSS; el cuarto es React. Si mañana cambia el radio de
+            las tarjetas, cambia en <code>:root</code> y baja solo hasta la última pantalla sin
+            tocar ni un componente.
+          </figcaption>
+        </figure>
+
+        <div class="note">
+          <p>
+            <strong>Las clases del tercer escalón son un detalle interno.</strong> Existen para que
+            la piel se escriba una sola vez, no para que las pantallas las usen: una pantalla pide
+            <code>&lt;Card&gt;</code>, no <code>className="card"</code>. La excepción son cuatro
+            utilidades que no son piel de nada y sí se aplican tal cual:
+            <code>.section-label</code>, <code>.list-row</code>, <code>.card-interactive</code> y
+            <code>.skeleton</code>.
+          </p>
+        </div>
+
+        <h2>La escala</h2>
+        <p>
+          Estos son los valores que existen. Si algo no encaja en ninguno, la respuesta no es
+          inventar un número: es añadir el peldaño que falta al token y volver a bajar la cadena.
+        </p>
+
+        <h3>Texto</h3>
+        <p>Seis pasos, cada uno con su interlineado y —en los extremos— su <em>tracking</em>.</p>
+        <div class="scale">
+          <div class="scale-row">
+            <span class="spec">display · 24px · −0.02em</span>
+            <span style="font-size: 24px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 600">Hoy, 20 de septiembre</span>
+          </div>
+          <div class="scale-row">
+            <span class="spec">title · 20px</span>
+            <span style="font-size: 20px; line-height: 1.3; font-weight: 600">Título de bloque</span>
+          </div>
+          <div class="scale-row">
+            <span class="spec">lead · 17px</span>
+            <span style="font-size: 17px; line-height: 1.35">El dato principal de una fila: Avena con frutos rojos</span>
+          </div>
+          <div class="scale-row">
+            <span class="spec">body · 15px</span>
+            <span style="font-size: 15px; line-height: 1.45">Texto de interfaz, el que se lee de corrido.</span>
+          </div>
+          <div class="scale-row">
+            <span class="spec">caption · 13px</span>
+            <span style="font-size: 13px; line-height: 1.4">Metadatos y ayudas: «4 ejercicios · 13 series».</span>
+          </div>
+          <div class="scale-row">
+            <span class="spec">micro · 11px · 0.08em</span>
+            <span style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700">Receta · Fuerza · Notas del día</span>
+          </div>
+        </div>
+
+        <h3>Espaciado, radios y elevación</h3>
+        <div class="demos">
+          <div class="demo">
+            <b>ritmo de espaciado</b>
+            <div class="bar" style="width: 12px"></div>
+            <div class="bar" style="width: 16px"></div>
+            <div class="bar" style="width: 20px"></div>
+            <div class="bar" style="width: 28px"></div>
+            <div style="margin-top: 8px">stack 12 · gutter 16 · card 20 · section 28 px</div>
+          </div>
+          <div class="demo">
+            <b>radios</b>
+            <div style="display: flex; gap: 10px">
+              <div class="box" style="width: 44px; height: 44px; border-radius: 10px"></div>
+              <div class="box" style="width: 44px; height: 44px; border-radius: 12px"></div>
+              <div class="box" style="width: 44px; height: 44px; border-radius: 16px"></div>
+            </div>
+            <div style="margin-top: 8px">control 10 · panel 12 · card 16 px (chip: 999)</div>
+          </div>
+          <div class="demo">
+            <b>elevación</b>
+            <div
+              style="
+                height: 44px;
+                border-radius: 12px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                box-shadow: 0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
+              "
+            ></div>
+            <div style="margin-top: 8px">card arriba (reposo) · raised al pasar el ratón · inset para paneles hundidos</div>
+          </div>
+        </div>
+
+        <h3>Movimiento</h3>
+        <p>
+          Tres duraciones y <strong>un solo</strong> <em>easing</em> para todo lo que reacciona al
+          usuario. Pasa el ratón por encima de la tarjeta:
+        </p>
+        <div class="demos">
+          <div class="demo">
+            <b>180 ms · cubic-bezier(0.22, 1, 0.36, 1)</b>
+            <div class="lift"></div>
+          </div>
+          <div class="demo">
+            <b>fast 120 · base 180 · slow 280</b>
+            <div>120 ms para color y borde, 180 ms para movimiento y sombra, 280 ms para la entrada de una página.</div>
+          </div>
+        </div>
+        <div class="note">
+          <p>
+            Todo lo animado se neutraliza con <code>prefers-reduced-motion: reduce</code>. Y no
+            hay animaciones de altura: el panel de un submenú aparece o desaparece, porque animar
+            <code>height</code> es caro y se ve peor.
+          </p>
+        </div>
+
+        <h2>La paleta</h2>
+        <p>
+          Los mismos colores que <code>wireframes/DESIGN.md</code>. Las muestras de abajo se pintan
+          con los hex reales de la app, así que <strong>no cambian</strong> al conmutar el tema de
+          este sitio: la app solo tiene tema claro.
+        </p>
+        <div class="swatches">
+          <div class="swatch"><span style="background: #15803d"></span><b>--color-primary</b><i>#15803D · acciones</i></div>
+          <div class="swatch"><span style="background: #166534"></span><b>--color-primary-dark</b><i>#166534 · pulsado</i></div>
+          <div class="swatch"><span style="background: #e9f3ed"></span><b>--color-primary-soft</b><i>#E9F3ED · activo del menú</i></div>
+          <div class="swatch"><span style="background: #4d7c0f"></span><b>--color-secondary</b><i>#4D7C0F · acentos</i></div>
+          <div class="swatch"><span style="background: #fafaf9"></span><b>--color-background</b><i>#FAFAF9 · fondo de página</i></div>
+          <div class="swatch"><span style="background: #ffffff"></span><b>--color-surface</b><i>#FFFFFF · tarjetas</i></div>
+          <div class="swatch"><span style="background: #f5f5f4"></span><b>--color-surface-muted</b><i>#F5F5F4 · bloques hundidos</i></div>
+          <div class="swatch"><span style="background: #d6d3d1"></span><b>--color-border-strong</b><i>#D6D3D1 · borde al pasar</i></div>
+          <div class="swatch"><span style="background: #e7e5e4"></span><b>--color-border</b><i>#E7E5E4 · líneas</i></div>
+          <div class="swatch"><span style="background: #1c1917"></span><b>--color-text</b><i>#1C1917 · texto</i></div>
+          <div class="swatch"><span style="background: #78716c"></span><b>--color-text-secondary</b><i>#78716C · metadatos</i></div>
+          <div class="swatch"><span style="background: #d97706"></span><b>--color-pending</b><i>#D97706 · pendiente</i></div>
+          <div class="swatch"><span style="background: #fef3c7"></span><b>--color-pending-bg</b><i>#FEF3C7 · con #92400E</i></div>
+          <div class="swatch"><span style="background: #dcfce7"></span><b>--color-done-bg</b><i>#DCFCE7 · con #166534</i></div>
+          <div class="swatch"><span style="background: #b91c1c"></span><b>--color-error</b><i>#B91C1C · solo errores</i></div>
+          <div class="swatch"><span style="background: #15803d"></span><b>--color-ring</b><i>rgb(21 128 61 / 0.32) · el verde al 32 %</i></div>
+        </div>
+        <p>
+          Las tres primeras filas de arriba explican por qué la paleta tiene tantos grises casi
+          iguales: no son el mismo gris. <code>background</code> es el papel,
+          <code>surface</code> es lo que se apoya encima (tarjetas) y
+          <code>surface-muted</code> es un bloque hundido dentro de una tarjeta. La diferencia es
+          pequeña a propósito: se nota al lado del otro, no mirando uno solo.
+        </p>
+        <div class="demos">
+          <div class="demo" style="background: #fafaf9">
+            <b style="color: #1c1917">Los tres, juntos</b>
+            <div
+              style="
+                background: #ffffff;
+                border: 1px solid #e7e5e4;
+                border-radius: 12px;
+                padding: 12px;
+                color: #1c1917;
+                font-size: 13px;
+              "
+            >
+              <span style="font-family: var(--mono); font-size: 11px">--color-surface · la tarjeta</span>
+              <div style="margin-top: 8px; background: #f5f5f4; border-radius: 8px; padding: 10px; color: #78716c">
+                --color-surface-muted · un bloque hundido dentro
+              </div>
+            </div>
+          </div>
+          <div class="demo">
+            <b>por qué hay tres</b>
+            El papel casi nunca se ve: siempre hay una tarjeta encima. Y el hundido existe para
+            meter algo dentro de la tarjeta —una lista, un panel— sin añadir otro borde.
+          </div>
+        </div>
+        <div class="note">
+          <p>
+            <strong>El rojo no se usa para decorar.</strong> Es el color de lo que falla o de lo
+            que se descarta; si aparece en otro sitio, deja de significar algo.
+          </p>
+        </div>
+
+        <h2>Las primitivas</h2>
+        <p>
+          Seis piezas en <code>web/src/components/ui.tsx</code>. Su piel no está escrita aquí: la
+          aplican desde las clases del tercer escalón, así que las pantallas que las usan no
+          repiten ni un <code>padding</code>.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Primitiva</th>
+                <th>Formas</th>
+                <th>Para qué</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>&lt;Button&gt;</code></td>
+                <td><code>primary</code> · <code>secondary</code> · <code>ghost</code> × <code>sm</code> · <code>md</code> · <code>icon</code></td>
+                <td>Acciones. <code>type="button"</code> por defecto (un botón suelto no envía formularios sin querer) y <code>md</code> con 44 px de alto.</td>
+              </tr>
+              <tr>
+                <td><code>&lt;Card&gt;</code></td>
+                <td>superficie</td>
+                <td>El bloque con borde, radio 16 y sombra. Si tiene que ser un enlace, un botón o una lista, se pide solo la piel con <code>cardClass()</code>.</td>
+              </tr>
+              <tr>
+                <td><code>&lt;Input&gt;</code> · <code>&lt;Textarea&gt;</code> · <code>&lt;Select&gt;</code></td>
+                <td>campo</td>
+                <td>Los tres campos comparten piel: mismo alto, mismo radio y el mismo halo al enfocar. El error se marca con <code>aria-invalid</code>, que es a la vez el gancho de estilo y lo que anuncia el lector de pantalla.</td>
+              </tr>
+              <tr>
+                <td><code>&lt;Badge&gt;</code></td>
+                <td><code>pending</code> · <code>done</code> · <code>neutral</code></td>
+                <td>Estados cortos en mayúsculas: «Pendiente», «Hecho».</td>
+              </tr>
+              <tr>
+                <td><code>buttonClass()</code> · <code>cardClass()</code></td>
+                <td>clases</td>
+                <td>Para lo que no puede ser un <code>&lt;div&gt;</code>: un <code>&lt;Link&gt;</code> que parece un botón o una <code>&lt;ul&gt;</code> que parece una tarjeta. Sin esto, esas piezas se quedarían fuera del sistema.</td>
+              </tr>
+              <tr>
+                <td><code>icons.tsx</code></td>
+                <td>11 trazos de 24 px</td>
+                <td>Iconos en línea, <code>currentColor</code>. Once formas no justifican una librería.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note">
+          <p>
+            <strong>El catálogo vive en la app</strong>, en la ruta <code>/ui</code>, y se llega
+            desde el menú, en «Sistema de diseño», junto a «Cerrar sesión». Muestra todas las
+            variantes de una vez: es lo que se mira antes de inventar una pieza.
+          </p>
+        </div>
+
+        <h2>El guardarraíl</h2>
+        <p>
+          Una regla que solo está escrita se rompe sola. <code>pnpm lint</code> ejecuta
+          <code>web/scripts/check-design-tokens.ts</code>, que recorre <code>web/src</code> y falla
+          si encuentra las dos formas de saltarse el sistema:
+        </p>
+        <div class="grid two">
+          <div class="card">
+            <h3>Esto falla</h3>
+            <pre><code>&lt;div className="rounded-[7px] px-3"&gt;
+&lt;span className="badge-pending"&gt;Pendiente&lt;/span&gt;
+&lt;button className="btn-primary"&gt;Guardar&lt;/button&gt;</code></pre>
+            <p>
+              Un valor inventado (<code>7px</code> no está en la escala), y dos clases de piel
+              escritas a mano en vez de pedir la primitiva.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Esto pasa</h3>
+            <pre><code>&lt;Card className="rounded-card p-card"&gt;
+&lt;Badge tone="pending"&gt;Pendiente&lt;/Badge&gt;
+&lt;Button&gt;Guardar&lt;/Button&gt;</code></pre>
+            <p>
+              Tokens de la escala y primitivas. El <code>type="button"</code> y el tamaño de 44 px
+              vienen puestos.
+            </p>
+          </div>
+        </div>
+        <p>
+          Los valores <em>derivados</em> sí se aceptan, porque no inventan una escala: se calculan
+          a partir de ella o del entorno. Por ejemplo, el botón «Hoy» que vive dentro de la caja
+          del control de fecha pide su radio como
+          <code>calc(var(--radius-control) - 3px)</code> — el radio de fuera menos el borde de 1 px
+          y el relleno de 2 px—, que es la resta de esquinas anidadas y no un número suelto.
+        </p>
+
+        <h2>Dónde vive cada cosa</h2>
+        <div class="table-wrap">
+          <table class="paths">
+            <thead>
+              <tr>
+                <th>Fichero</th>
+                <th>Contenido</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>web/src/globals.css</code></td><td>La fuente única: los tokens crudos en <code>:root</code>, el puente a Tailwind en <code>@theme inline</code> y la piel en <code>@layer components</code>.</td></tr>
+              <tr><td><code>web/src/components/ui.tsx</code></td><td>Las primitivas de React y los dos ayudantes de clases.</td></tr>
+              <tr><td><code>web/src/components/icons.tsx</code></td><td>Los 11 iconos en línea.</td></tr>
+              <tr><td><code>web/src/routes/ui.tsx</code></td><td>El catálogo: la ruta <code>/ui</code> de la app.</td></tr>
+              <tr><td><code>web/scripts/check-design-tokens.ts</code></td><td>El guardarraíl que corre dentro de <code>pnpm lint</code>, con sus tests en <code>web/tests/design-tokens.test.ts</code>.</td></tr>
+              <tr><td><code>AGENTS.md</code> § «Sistema de diseño»</td><td>Las reglas para quien escribe código nuevo, en el fichero que todo agente lee primero.</td></tr>
+              <tr><td><code>wireframes/DESIGN.md</code></td><td>La descripción del sistema para generar maquetas. Donde discrepe de <code>globals.css</code>, manda <code>globals.css</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Añadir una pieza nueva</h2>
+        <p>La receta, en orden. Los dos primeros pasos son los que se saltan cuando hay prisa, y son los que evitan el desorden seis meses después.</p>
+        <ol>
+          <li>
+            <strong>Busca antes de crear.</strong> Mira el catálogo (<code>/ui</code>) y
+            <code>ui.tsx</code>: puede que la pieza ya exista con otro nombre.
+          </li>
+          <li>
+            <strong>Decide si falta un valor.</strong> Si la pieza necesita una medida que no está
+            en la escala, añade el token en <code>:root</code> y expónlo en
+            <code>@theme inline</code>. Un peldaño nuevo se justifica; un número suelto, no.
+          </li>
+          <li>
+            <strong>Escribe la piel una vez</strong> en <code>@layer components</code>, con los
+            tokens. Si la pieza reacciona al ratón, usa las duraciones y el <em>easing</em>
+            existentes.
+          </li>
+          <li>
+            <strong>Envuelve la piel en una primitiva</strong> si va a usarse en más de un sitio,
+            tipando sus variantes para que un valor inválido no compile.
+          </li>
+          <li>
+            <strong>Añádela al catálogo</strong> con sus variantes. Lo que no está en
+            <code>/ui</code> no existe para quien venga detrás.
+          </li>
+          <li><strong>Pasa el lint.</strong> Si el guardarraíl se queja, casi siempre tiene razón.</li>
+        </ol>
+
+        <div class="note">
+          <p>
+            <strong>Fuentes:</strong> <code>web/src/globals.css</code>,
+            <code>web/src/components/ui.tsx</code>, <code>web/src/components/icons.tsx</code>,
+            <code>web/src/routes/ui.tsx</code>, <code>web/scripts/check-design-tokens.ts</code>,
+            <code>AGENTS.md</code>, <code>wireframes/DESIGN.md</code>. Los hex, píxeles y
+            milisegundos de esta página están copiados de los tokens, y los dos ejemplos del
+            principio se midieron en el navegador sobre la app en marcha.
+          </p>
+        </div>
+
+        <nav class="pager" data-pager></nav>
+      </main>
+    </div>
+  </body>
+</html>

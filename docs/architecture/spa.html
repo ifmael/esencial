@@ -172,11 +172,11 @@
             </thead>
             <tbody>
               <tr><td><code>src/routes/</code></td><td>8 ficheros y 10 páginas. Casi todo el UI vive aquí: <code>plan-fuerza.tsx</code> (1.443 líneas) y <code>sesion.tsx</code> (753) son los grandes.</td></tr>
-              <tr><td><code>src/components/</code></td><td>4 componentes exportados: <code>Shell</code> (layout con sidebar y barra móvil), <code>WeekGrid</code>, <code>ShoppingListSheet</code>, <code>RecipeEditor</code>.</td></tr>
+              <tr><td><code>src/components/</code></td><td>Los componentes de layout (<code>Shell</code>, <code>WeekGrid</code>, <code>ShoppingListSheet</code>, <code>RecipeEditor</code>) y el sistema de diseño: <code>ui.tsx</code> con las primitivas e <code>icons.tsx</code> con los iconos.</td></tr>
               <tr><td><code>src/components/recipes/</code></td><td><code>useRecipes</code> (dueño de los accesos a <code>/api/recipes</code>), el editor y el filtro puro de búsqueda.</td></tr>
               <tr><td><code>src/lib/</code></td><td>8 módulos sin JSX: cliente HTTP, tipos por recurso, semanas ISO, hooks de datos y lógica pura de borrador y de sesión.</td></tr>
               <tr><td><code>src/app.tsx</code></td><td>Rutas, <code>GuardedShell</code> y el único <code>fetch</code> de sesión.</td></tr>
-              <tr><td><code>src/globals.css</code></td><td>Tokens de diseño y clases base (<code>.card</code>, <code>.btn-primary</code>, <code>.input</code>, badges).</td></tr>
+              <tr><td><code>src/globals.css</code></td><td>El sistema de diseño completo: tokens en <code>:root</code>, su puente a Tailwind y la piel de las piezas. Ver <a href="diseno.html">Sistema de diseño</a>.</td></tr>
             </tbody>
           </table>
         </div>
@@ -221,7 +221,7 @@
             </thead>
             <tbody>
               <tr><td>Tailwind</td><td>v4 «CSS-first»: <code>@import "tailwindcss"</code> en <code>globals.css</code> y plugin de Vite. No existe <code>tailwind.config.*</code>.</td></tr>
-              <tr><td>Tokens</td><td><code>--color-primary #15803d</code>, <code>--color-background #fafaf9</code>, <code>--color-surface #ffffff</code>, <code>--radius-card 12px</code>, <code>--font-sans system-ui…</code> — los mismos valores que <code>wireframes/DESIGN.md</code>.</td></tr>
+              <tr><td>Tokens</td><td>Los de <code>web/src/globals.css</code> —color, escala de texto, ritmo de espaciado, radios (<code>--radius-card 16px</code>), sombras y tiempos de movimiento—, que son la fuente única. El detalle, con muestras en vivo, está en <a href="diseno.html">Sistema de diseño</a>.</td></tr>
               <tr><td>Tema</td><td>Solo claro: no hay <code>prefers-color-scheme</code> ni variantes <code>dark:</code> en la app.</td></tr>
               <tr><td>Accesibilidad táctil</td><td>Objetivos de 44 px (<code>min-h-11</code>/<code>min-w-11</code>) en rejillas, steppers y checkbox.</td></tr>
               <tr><td>Build</td><td><code>tsc &amp;&amp; vite build</code> → <code>dist/</code>, el <code>assets.directory</code> del Worker <strong>frontal</strong> (<code>directory = "./web/dist"</code> en el <code>wrangler.toml</code> de la raíz).</td></tr>
