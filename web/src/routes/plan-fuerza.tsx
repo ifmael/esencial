@@ -143,14 +143,13 @@ function DayPicker({
       <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
         Añadir al día
       </h3>
-      <input
+      <Input
         type="text"
         autoFocus
         placeholder="Buscar plantilla o ejercicio…"
         aria-label="Buscar"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="min-h-11 rounded-lg border border-border px-3"
       />
       {note && (
         <p role="status" className="text-sm text-text-secondary">

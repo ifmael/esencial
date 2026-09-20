@@ -7,7 +7,14 @@ import { Link, useNavigate, useParams } from "react-router";
 import { filterRecipes } from "../components/recipes/filter";
 import { RecipeEditor } from "../components/recipes/recipe-editor";
 import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
-import { Badge, Button, buttonClass, Card, cardClass } from "../components/ui";
+import {
+  Badge,
+  Button,
+  buttonClass,
+  Card,
+  cardClass,
+  Input,
+} from "../components/ui";
 import { photoSrc } from "../lib/api";
 
 let flashMessage: string | null = null;
@@ -93,11 +100,11 @@ export function RecetarioPage() {
           + Nueva receta
         </Button>
       </header>
-      <input
+      <Input
         aria-label="Buscar recetas"
         type="search"
         placeholder="Buscar por nombre o etiqueta…"
-        className="mb-4 w-full rounded-lg border border-border bg-surface px-3 py-2"
+        className="mb-4 w-full"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />

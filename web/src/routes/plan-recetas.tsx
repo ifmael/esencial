@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
-import { Button, buttonClass, Card, cardClass } from "../components/ui";
+import { Button, buttonClass, Card, cardClass, Input } from "../components/ui";
 import { apiFetchRaw, photoSrc } from "../lib/api";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
@@ -131,14 +131,13 @@ function RecipePicker({
         className="flex max-h-[80vh] w-full max-w-md flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <input
+        <Input
           type="text"
           autoFocus
           placeholder="Buscar receta…"
           aria-label="Buscar receta"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="min-h-11 rounded-lg border border-border px-3"
         />
         <ul className="flex flex-col gap-1 overflow-y-auto">
           {recipes === null ? (

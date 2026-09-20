@@ -2,7 +2,7 @@
 // call; save POSTs/PUTs the whole draft; field errors render beside the field.
 import { useRef, useState } from "react";
 import { ApiError, apiFetch, photoSrc } from "../../lib/api";
-import { Button, buttonClass, Card } from "../ui";
+import { Button, buttonClass, Card, Input, Textarea } from "../ui";
 import type { Recipe, RecipeInput, RecipesApi } from "./use-recipes";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -35,7 +35,6 @@ const fromRecipe = (r: Recipe): Draft => ({
   tags: [...r.tags],
 });
 
-const field = "w-full rounded-lg border border-border bg-surface px-3 py-2";
 const small = "rounded-lg border border-border bg-surface px-2 py-1";
 const label = "mb-1 block text-sm font-medium text-text-secondary";
 
@@ -258,10 +257,10 @@ export function RecipeEditor({
             <label className={label} htmlFor="recipe-name">
               Nombre
             </label>
-            <input
+            <Input
               id="recipe-name"
               aria-label="Nombre"
-              className={field}
+              className="w-full"
               value={draft.name}
               onChange={(e) => set("name", e.target.value)}
             />
@@ -276,10 +275,10 @@ export function RecipeEditor({
             <label className={label} htmlFor="recipe-desc">
               Descripción
             </label>
-            <textarea
+            <Textarea
               id="recipe-desc"
               aria-label="Descripción"
-              className={field}
+              className="w-full"
               value={draft.description}
               onChange={(e) => set("description", e.target.value)}
             />
@@ -290,12 +289,12 @@ export function RecipeEditor({
               <label className={label} htmlFor="recipe-servings">
                 Comensales
               </label>
-              <input
+              <Input
                 id="recipe-servings"
                 aria-label="Comensales"
                 type="number"
                 min={1}
-                className={field}
+                className="w-full"
                 value={draft.servings}
                 onChange={(e) => set("servings", e.target.value)}
               />
@@ -357,9 +356,9 @@ export function RecipeEditor({
             <ul className="flex flex-col gap-2">
               {draft.ingredients.map((row, i) => (
                 <li key={i} className="flex gap-2">
-                  <input
+                  <Input
                     aria-label={`Ingrediente ${i + 1} alimento`}
-                    className={`${field} flex-1`}
+                    className="flex-1"
                     placeholder="alimento"
                     value={row.food}
                     onChange={(e) =>
@@ -371,9 +370,9 @@ export function RecipeEditor({
                       )
                     }
                   />
-                  <input
+                  <Input
                     aria-label={`Ingrediente ${i + 1} cantidad`}
-                    className={`${small} w-20`}
+                    className="w-20"
                     type="number"
                     placeholder="cant."
                     value={row.quantity}
@@ -386,9 +385,9 @@ export function RecipeEditor({
                       )
                     }
                   />
-                  <input
+                  <Input
                     aria-label={`Ingrediente ${i + 1} unidad`}
-                    className={`${small} w-20`}
+                    className="w-20"
                     placeholder="unidad"
                     value={row.unit}
                     onChange={(e) =>
@@ -438,9 +437,9 @@ export function RecipeEditor({
                   <span className="pt-2 font-semibold text-text-secondary">
                     {i + 1}.
                   </span>
-                  <input
+                  <Input
                     aria-label={`Paso ${i + 1}`}
-                    className={`${field} flex-1`}
+                    className="flex-1"
                     value={text}
                     onChange={(e) =>
                       set(
@@ -521,9 +520,9 @@ export function RecipeEditor({
               ))}
             </ul>
             <div className="flex gap-2">
-              <input
+              <Input
                 aria-label="Nuevo material"
-                className={field}
+                className="w-full"
                 value={material}
                 onChange={(e) => setMaterial(e.target.value)}
               />
@@ -563,9 +562,9 @@ export function RecipeEditor({
               ))}
             </ul>
             <div className="flex gap-2">
-              <input
+              <Input
                 aria-label="Nueva etiqueta"
-                className={field}
+                className="w-full"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
               />

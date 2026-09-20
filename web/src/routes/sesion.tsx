@@ -3,7 +3,15 @@
 // el estado logged es solo lectura desde GET /api/workout-logs/:date.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { Badge, Button, buttonClass, Card, cardClass } from "../components/ui";
+import {
+  Badge,
+  Button,
+  buttonClass,
+  Card,
+  cardClass,
+  Input,
+  Textarea,
+} from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import type { PlanSession, SessionExercise } from "../lib/plan-week";
 import {
@@ -372,11 +380,11 @@ function Stepper({
       >
         −
       </Button>
-      <input
+      <Input
         type="number"
         inputMode="decimal"
         aria-label={label}
-        className="min-h-11 w-20 rounded-lg border border-border bg-surface px-2 text-center"
+        className="w-20 text-center"
         value={value === null ? "" : String(value)}
         onChange={(e) => onValue(e.target.value)}
       />
@@ -744,9 +752,9 @@ export function SesionPage() {
           <EffortDots effort={v.effort} onSelect={day.setEffort} />
           <label className="flex flex-col gap-1">
             <span className="font-semibold">Nota</span>
-            <textarea
+            <Textarea
               aria-label="Nota de la sesión"
-              className="min-h-24 rounded-lg border border-border bg-surface p-2"
+              className="min-h-24"
               value={v.note}
               onChange={(e) => day.setNote(e.target.value)}
             />
