@@ -190,6 +190,23 @@ Ojo: cualquier push a `main` ya dispara Workers Builds, que construye y desplieg
 solo. El comando manual solo hace falta para publicar sin push, y deja una
 versión más en el historial de Deployments de Cloudflare.
 
+### 6. `pnpm e2e` reconstruye `web/dist` y descoloca el `pnpm dev`
+
+El `webServer` de Playwright construye el SPA con
+`VITE_API_URL=http://127.0.0.1:8790` y escribe en el **mismo** `web/dist` que sirve
+el Worker del frontal en dev. Si dejas `pnpm dev` levantado mientras corre la
+suite, el frontal de dev pasa a servir un build que apunta a la API de e2e; al
+acabar la suite esa API desaparece, la app de dev se queda sin backend y el
+servidor de dev puede caerse (`exit 1`, sin más traza que `[ELIFECYCLE]`).
+
+**Solución:** vuelve a arrancar `pnpm dev` después de la suite — al arrancar
+reconstruye `web/dist` con la URL buena (8789) y queda todo en su sitio. Para
+comprobarlo:
+
+```bash
+node -e "const fs=require('fs');for(const f of fs.readdirSync('web/dist/assets').filter(f=>f.endsWith('.js')))console.log(f,[...new Set([...fs.readFileSync('web/dist/assets/'+f,'utf8').matchAll(/127\.0\.0\.1:(\d+)/g)].map(x=>x[1]))])"
+```
+
 ## Tests e2e — base de datos propia
 
 `pnpm e2e` **NUNCA** toca la base de desarrollo (`.wrangler/state`). El
