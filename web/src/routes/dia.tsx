@@ -85,11 +85,13 @@ export function DayHeader({
         {/* Un solo control de fecha: "Hoy" y el selector comparten caja, así
             que hay una sola affordance de calendario y un solo borde. */}
         <div className="inline-flex h-9 items-center rounded-control border border-border bg-surface p-0.5">
+          {/* Radio interior: el de fuera (control) menos el borde de 1px y el
+              relleno de 2px. Es la resta de esquinas anidadas, no un valor suelto. */}
           <button
             type="button"
             aria-label="Ir a hoy"
             onClick={() => onChange(new Date())}
-            className="grid h-8 place-items-center rounded-[calc(var(--radius-control)-2px)] px-2.5 text-caption font-semibold text-primary transition-colors duration-150 ease-out-quart hover:bg-primary-soft"
+            className="grid h-8 place-items-center rounded-[calc(var(--radius-control)-3px)] px-2.5 text-caption font-semibold text-primary transition-colors duration-150 ease-out-quart hover:bg-primary-soft"
           >
             Hoy
           </button>
