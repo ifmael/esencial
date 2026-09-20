@@ -136,6 +136,26 @@ describe("plan screen", () => {
     expect(screen.queryByText(/primera plantilla/i)).toBeNull();
   });
 
+  it("la semana entera comparte un único contenedor (rejilla compartida)", async () => {
+    await openPlan();
+    const main = within(screen.getByRole("main"));
+    const cards = [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+      "Domingo",
+    ].map((day) => main.getByText(day).closest(".card"));
+    expect(cards[0]).not.toBeNull();
+    expect(new Set(cards).size).toBe(1);
+    expect(main.getByText("2026-W36").closest(".card")).toBe(cards[0]);
+    expect(
+      main.getByRole("button", { name: "Semana siguiente" }).closest(".card"),
+    ).toBe(cards[0]);
+  });
+
   it("los enlaces retirados de la cabecera son la fila fina de la sección", async () => {
     await openPlan();
     const main = within(screen.getByRole("main"));

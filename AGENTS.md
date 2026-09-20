@@ -89,6 +89,12 @@ una fila de chips sobre el calendario. Las dos rutas están en `CALENDAR_ROUTES`
 (`web/src/components/shell.tsx`): añadir una ahí le da el mismo trato (sin
 título, alto completo, hueco inferior, chips en móvil).
 
+Las dos pantallas comparten la **rejilla semanal** (`web/src/components/week-grid.tsx`):
+un único contenedor con la navegación de semana y las siete columnas, con la
+columna de «hoy» marcada. El componente no sabe nada del dominio: cada página
+inyecta el contenido de sus días por el render prop (`children`), que es lo
+único que difiere (sesiones en fuerza, tomas en comidas).
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |

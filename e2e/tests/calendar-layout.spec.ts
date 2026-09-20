@@ -71,6 +71,23 @@ test.describe("CALENDARIO — alto de ventana", () => {
     }
   });
 
+  test("escritorio: la semana entera vive en un único contenedor en ambas rutas", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    for (const route of ROUTES) {
+      await page.goto(route);
+      await expect(
+        page.getByRole("button", { name: "Semana siguiente" }),
+      ).toBeVisible();
+      // Fuerza y comidas convergen en el contenedor grande: un solo panel con
+      // las siete columnas de día dentro.
+      const grid = page.locator("main .card");
+      await expect(grid).toHaveCount(1);
+      await expect(grid.locator("h3")).toHaveCount(7);
+    }
+  });
+
   test("escritorio: el menú lateral conserva los enlaces de la sección", async ({
     page,
   }) => {
@@ -163,5 +180,7 @@ test.describe("CALENDARIO — alto de ventana", () => {
         .getByRole("navigation", { name: "Nutrición" })
         .getByRole("link", { name: "Recetas" }),
     ).toBeVisible();
+    // La misma cabecera de rejilla que Deporte: sin título de página.
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
   });
 });
