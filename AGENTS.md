@@ -75,6 +75,9 @@ Escala vigente — todo lo demás sale de aquí:
   sesión»): míralo antes de inventar una pieza.
 - `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
   `globals.css`, manda `globals.css`.
+- El sistema explicado con muestras en vivo (colores, escala, movimiento) vive en
+  el sitio de arquitectura: `docs/architecture/diseno.html`, que se abre con
+  doble clic, sin build.
 
 ## Despliegue: dos Workers (B')
 
