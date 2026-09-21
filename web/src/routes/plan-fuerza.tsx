@@ -582,13 +582,19 @@ function SessionEditor({
 
 // --- Celdas de la rejilla ----------------------------------------------------
 
-/** Fila de la celda: asa (días planned) + nombre + info del objetivo. */
+/** Fila de la celda: asa (días planned) + nombre + info del objetivo. La ✕
+ *  desprograma el ejercicio: la fila se convierte en su propio «¿Quitar?» con
+ *  Confirmar/Cancelar, sin abrir el editor del día. */
 function CellRow({
   exercise,
   sortable,
+  removable,
+  onRemove,
 }: {
   exercise: SessionExercise;
   sortable: boolean;
+  removable: boolean;
+  onRemove: () => void;
 }) {
   const {
     attributes,
@@ -598,6 +604,7 @@ function CellRow({
     transition,
     isDragging,
   } = useSortable({ id: exercise.exerciseId, disabled: !sortable });
+  const [confirming, setConfirming] = useState(false);
   const info = targetSummary(exercise);
 
   return (
@@ -608,26 +615,78 @@ function CellRow({
         isDragging ? "relative z-10 opacity-70" : ""
       }`}
     >
-      {sortable ? (
-        <button
-          type="button"
-          className="cursor-grab touch-none text-text-secondary hover:text-primary active:cursor-grabbing"
-          aria-label={`Mover ${exercise.exerciseName}`}
-          onClick={(e) => e.stopPropagation()}
-          {...attributes}
-          {...listeners}
-        >
-          <GripIcon />
-        </button>
-      ) : null}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="line-clamp-2 text-body text-text">
-          {exercise.exerciseName}
-        </span>
-        {info ? (
-          <span className="text-caption text-text-secondary">{info}</span>
-        ) : null}
-      </span>
+      {confirming ? (
+        <>
+          {/* Una sola línea: la columna mide ~152px y dos botones anchos se
+              salían de la fila (tapaban el día siguiente). El nombre trunca. */}
+          <span
+            className="min-w-0 flex-1 truncate text-caption text-text-secondary"
+            title={exercise.exerciseName}
+          >
+            {exercise.exerciseName}
+          </span>
+          <Button
+            size="sm"
+            className="min-h-11 shrink-0 bg-error"
+            aria-label={`Confirmar quitar ${exercise.exerciseName}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(false);
+              onRemove();
+            }}
+          >
+            Sí
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="min-h-11 shrink-0"
+            aria-label={`Cancelar quitar ${exercise.exerciseName}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(false);
+            }}
+          >
+            No
+          </Button>
+        </>
+      ) : (
+        <>
+          {sortable ? (
+            <button
+              type="button"
+              className="cursor-grab touch-none text-text-secondary hover:text-primary active:cursor-grabbing"
+              aria-label={`Mover ${exercise.exerciseName}`}
+              onClick={(e) => e.stopPropagation()}
+              {...attributes}
+              {...listeners}
+            >
+              <GripIcon />
+            </button>
+          ) : null}
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="line-clamp-2 text-body text-text">
+              {exercise.exerciseName}
+            </span>
+            {info ? (
+              <span className="text-caption text-text-secondary">{info}</span>
+            ) : null}
+          </span>
+          {removable ? (
+            <button
+              type="button"
+              className="min-h-11 px-1 text-caption text-text-secondary hover:text-error"
+              aria-label={`Desprogramar ${exercise.exerciseName}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirming(true);
+              }}
+            >
+              ✕
+            </button>
+          ) : null}
+        </>
+      )}
     </li>
   );
 }
@@ -638,14 +697,14 @@ function SessionCell({
   isToday,
   onOpen,
   onRemove,
-  onReorder,
+  onSaveItems,
 }: {
   date: string;
   session: PlanSession | undefined;
   isToday: boolean;
   onOpen: () => void;
   onRemove: (id: number) => void;
-  onReorder: (session: PlanSession, exercises: SessionExercise[]) => void;
+  onSaveItems: (session: PlanSession, exercises: SessionExercise[]) => void;
 }) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
@@ -685,7 +744,7 @@ function SessionCell({
     const from = order.findIndex((e) => e.exerciseId === active.id);
     const to = order.findIndex((e) => e.exerciseId === over.id);
     if (from === -1 || to === -1) return;
-    onReorder(session, arrayMove(order, from, to));
+    onSaveItems(session, arrayMove(order, from, to));
   };
 
   return (
@@ -755,23 +814,50 @@ function SessionCell({
               className="flex flex-1 flex-col gap-1"
             >
               {order.map((e) => (
-                <CellRow key={e.exerciseId} exercise={e} sortable={!logged} />
+                <CellRow
+                  key={e.exerciseId}
+                  exercise={e}
+                  sortable={!logged}
+                  removable={!logged}
+                  onRemove={() => {
+                    // Quitar el último deja el día sin items, y sin items no hay
+                    // sesión (la API exige ≥1): eso es desprogramar el día, que
+                    // es justo lo que hace la ✕ de la sesión.
+                    if (order.length === 1) return onRemove(session.id);
+                    onSaveItems(
+                      session,
+                      order.filter((x) => x.exerciseId !== e.exerciseId),
+                    );
+                  }}
+                />
               ))}
             </ol>
           </SortableContext>
         </DndContext>
       ) : null}
       {confirming ? (
-        <Button
-          className="min-h-11 bg-error text-xs"
-          onClick={(e) => {
-            e.stopPropagation();
-            setConfirming(false);
-            onRemove(session.id);
-          }}
-        >
-          Confirmar desprogramar
-        </Button>
+        <>
+          <Button
+            className="min-h-11 bg-error text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(false);
+              onRemove(session.id);
+            }}
+          >
+            Confirmar desprogramar
+          </Button>
+          <Button
+            variant="secondary"
+            className="min-h-11 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(false);
+            }}
+          >
+            Cancelar
+          </Button>
+        </>
       ) : null}
     </div>
   );
@@ -880,8 +966,8 @@ export function PlanFuerzaPage() {
             isToday={isToday}
             onOpen={() => void openDay(date)}
             onRemove={(id) => void week.remove(id)}
-            onReorder={(session, exercises) =>
-              void week.reorder(session, exercises)
+            onSaveItems={(session, exercises) =>
+              void week.saveItems(session, exercises)
             }
           />
         )}

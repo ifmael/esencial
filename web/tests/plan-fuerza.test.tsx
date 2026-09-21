@@ -203,6 +203,44 @@ describe("plan screen", () => {
     expect(screen.getByText("Cardio suave")).toBeDefined();
   });
 
+  it("la ✕ del día pide confirmación y se puede cancelar sin desprogramar", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Desprogramar sesión del 2026-08-31",
+      }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Confirmar desprogramar" }),
+    ).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(
+      screen.queryByRole("button", { name: "Confirmar desprogramar" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "Desprogramar sesión del 2026-08-31",
+      }),
+    ).toBeDefined();
+    expect(api.state.sessions).toHaveLength(1);
+    expect(api.calls.some((c) => c.method === "DELETE")).toBe(false);
+  });
+
   it("la celda del día desglosa los ejercicios y los reparte por la columna", async () => {
     vi.unstubAllGlobals();
     api = mockApi({
@@ -263,6 +301,154 @@ describe("plan screen", () => {
     expect(within(rows[0]).getByText("Press banca").className).toContain(
       "text-body",
     );
+  });
+
+  it("la fila del día desprograma un ejercicio con confirmación en línea", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press, run],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            {
+              id: 51,
+              exerciseId: 7,
+              exerciseName: "Press banca",
+              kind: "strength",
+              position: 0,
+              targetSets: 3,
+              targetRepsMin: 8,
+              targetRepsMax: 8,
+              targetDistanceKm: null,
+              targetDurationMin: null,
+            },
+            {
+              // Cardio en la misma celda: la ✕ es de la fila, no del tipo.
+              id: 52,
+              exerciseId: 10,
+              exerciseName: "Running",
+              kind: "running",
+              position: 1,
+              targetSets: null,
+              targetRepsMin: null,
+              targetRepsMax: null,
+              targetDistanceKm: 10,
+              targetDurationMin: 45,
+            },
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    await screen.findByRole("list", { name: "Ejercicios del 2026-08-31" });
+    const list = () =>
+      screen.getByRole("list", { name: "Ejercicios del 2026-08-31" });
+    expect(
+      within(list()).getByRole("button", { name: "Desprogramar Press banca" }),
+    ).toBeDefined();
+
+    // La ✕ de la fila confirma en la propia fila y NO abre el editor del día.
+    fireEvent.click(
+      within(list()).getByRole("button", { name: "Desprogramar Running" }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Confirmar quitar Running" }),
+    ).toBeDefined();
+
+    // Cancelar sale del paso de confirmación sin llamar a la API.
+    fireEvent.click(
+      screen.getByRole("button", { name: "Cancelar quitar Running" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Confirmar quitar Running" }),
+    ).toBeNull();
+    expect(mutations()).toHaveLength(0);
+    expect(within(list()).getByText("Running")).toBeDefined();
+    expect(api.state.sessions[0].exercises).toHaveLength(2);
+
+    // Confirmar quita SOLO ese ejercicio del día y lo persiste.
+    fireEvent.click(
+      within(list()).getByRole("button", { name: "Desprogramar Running" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmar quitar Running" }),
+    );
+    await waitFor(() =>
+      expect(
+        api.state.sessions[0].exercises.map((e) => e.exerciseName),
+      ).toEqual(["Press banca"]),
+    );
+    const itemsSent = mutations()
+      .filter((c) => c.method === "PUT")
+      .map((c) =>
+        ((c.body ?? {}).items as { exerciseId: number }[]).map(
+          (i) => i.exerciseId,
+        ),
+      );
+    expect(itemsSent).toEqual([[7]]);
+    await waitFor(() =>
+      expect(within(list()).queryByText("Running")).toBeNull(),
+    );
+    expect(within(list()).getByText("Press banca")).toBeDefined();
+  });
+
+  it("el último ejercicio del día también se quita y deja el día vacío", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            {
+              id: 51,
+              exerciseId: 7,
+              exerciseName: "Press banca",
+              kind: "strength",
+              position: 0,
+              targetSets: 3,
+              targetRepsMin: 8,
+              targetRepsMax: 8,
+              targetDistanceKm: null,
+              targetDurationMin: null,
+            },
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    const list = await screen.findByRole("list", {
+      name: "Ejercicios del 2026-08-31",
+    });
+
+    fireEvent.click(
+      within(list).getByRole("button", { name: "Desprogramar Press banca" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmar quitar Press banca" }),
+    );
+
+    // Sin items no hay sesión (la API exige ≥1): el día se desprograma entero.
+    await waitFor(() => expect(api.state.sessions).toHaveLength(0));
+    expect(mutations().map((c) => c.method)).toEqual(["DELETE"]);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("list", { name: "Ejercicios del 2026-08-31" }),
+      ).toBeNull(),
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: "Desprogramar sesión del 2026-08-31",
+      }),
+    ).toBeNull();
   });
 
   it("la celda con sesión ofrece añadir más ejercicios", async () => {
