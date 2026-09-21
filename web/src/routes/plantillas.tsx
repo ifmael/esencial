@@ -13,8 +13,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useMatch, useNavigate } from "react-router";
+import { BodyMap, type BodyView } from "../components/body-map/body-map";
 import {
   GROUP_LABELS,
   GroupedExercises,
@@ -64,211 +65,6 @@ const toDraft = (t: Template): Draft => ({
   })),
 });
 
-// --- Mapa corporal ---------------------------------------------------------
-
-type BodyView = "front" | "back";
-type MuscleRegion = { tag: string; label: string; shapes: ReactNode };
-
-const FRONT_REGIONS: MuscleRegion[] = [
-  {
-    tag: "hombro",
-    label: "Hombro",
-    shapes: (
-      <>
-        <ellipse cx="58" cy="60" rx="15" ry="12" />
-        <ellipse cx="142" cy="60" rx="15" ry="12" />
-      </>
-    ),
-  },
-  {
-    tag: "pecho",
-    label: "Pecho",
-    shapes: <rect x="74" y="58" width="52" height="42" rx="8" />,
-  },
-  {
-    tag: "core",
-    label: "Core",
-    shapes: <rect x="74" y="104" width="52" height="46" rx="8" />,
-  },
-  {
-    tag: "bíceps",
-    label: "Bíceps",
-    shapes: (
-      <>
-        <rect x="40" y="62" width="20" height="36" rx="8" />
-        <rect x="140" y="62" width="20" height="36" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "antebrazo",
-    label: "Antebrazo",
-    shapes: (
-      <>
-        <rect x="40" y="102" width="20" height="50" rx="8" />
-        <rect x="140" y="102" width="20" height="50" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "pierna",
-    label: "Pierna",
-    shapes: (
-      <>
-        <rect x="76" y="164" width="20" height="76" rx="8" />
-        <rect x="104" y="164" width="20" height="76" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "gemelo",
-    label: "Gemelo",
-    shapes: (
-      <>
-        <rect x="76" y="246" width="20" height="62" rx="8" />
-        <rect x="104" y="246" width="20" height="62" rx="8" />
-      </>
-    ),
-  },
-];
-
-const BACK_REGIONS: MuscleRegion[] = [
-  {
-    tag: "espalda",
-    label: "Espalda",
-    shapes: <rect x="74" y="56" width="52" height="86" rx="8" />,
-  },
-  {
-    tag: "hombro",
-    label: "Hombro",
-    shapes: (
-      <>
-        <ellipse cx="58" cy="60" rx="15" ry="12" />
-        <ellipse cx="142" cy="60" rx="15" ry="12" />
-      </>
-    ),
-  },
-  {
-    tag: "tríceps",
-    label: "Tríceps",
-    shapes: (
-      <>
-        <rect x="40" y="62" width="20" height="36" rx="8" />
-        <rect x="140" y="62" width="20" height="36" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "antebrazo",
-    label: "Antebrazo",
-    shapes: (
-      <>
-        <rect x="40" y="102" width="20" height="50" rx="8" />
-        <rect x="140" y="102" width="20" height="50" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "glúteo",
-    label: "Glúteo",
-    shapes: (
-      <>
-        <rect x="76" y="150" width="20" height="30" rx="8" />
-        <rect x="104" y="150" width="20" height="30" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "pierna",
-    label: "Pierna",
-    shapes: (
-      <>
-        <rect x="76" y="184" width="20" height="60" rx="8" />
-        <rect x="104" y="184" width="20" height="60" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "gemelo",
-    label: "Gemelo",
-    shapes: (
-      <>
-        <rect x="76" y="246" width="20" height="62" rx="8" />
-        <rect x="104" y="246" width="20" height="62" rx="8" />
-      </>
-    ),
-  },
-];
-
-function BodySilhouette() {
-  return (
-    <g
-      fill="var(--color-surface-muted)"
-      stroke="var(--color-border)"
-      strokeWidth="1.5"
-    >
-      <circle cx="100" cy="22" r="17" />
-      <rect x="92" y="39" width="16" height="13" rx="3" />
-      <path d="M72 52 L128 52 L132 160 L68 160 Z" />
-      <rect x="38" y="56" width="24" height="104" rx="10" />
-      <rect x="138" y="56" width="24" height="104" rx="10" />
-      <rect x="74" y="160" width="24" height="172" rx="9" />
-      <rect x="102" y="160" width="24" height="172" rx="9" />
-    </g>
-  );
-}
-
-function BodyMap({
-  view,
-  group,
-  onSelect,
-}: {
-  view: BodyView;
-  group: string | null;
-  onSelect: (tag: string) => void;
-}) {
-  const regions = view === "front" ? FRONT_REGIONS : BACK_REGIONS;
-  return (
-    <svg
-      viewBox="0 0 200 400"
-      className="h-80 w-56"
-      aria-label={`Vista ${view === "front" ? "frontal" : "trasera"}`}
-    >
-      <BodySilhouette />
-      {regions.map((r) => (
-        <g
-          key={r.tag}
-          role="button"
-          tabIndex={0}
-          aria-label={r.label}
-          aria-pressed={group === r.tag}
-          className="cursor-pointer"
-          fill={
-            group === r.tag ? "var(--color-primary)" : "var(--color-pending-bg)"
-          }
-          stroke={
-            group === r.tag
-              ? "var(--color-primary-dark)"
-              : "var(--color-pending)"
-          }
-          strokeWidth="1.5"
-          strokeDasharray={group === r.tag ? undefined : "4 3"}
-          onClick={() => onSelect(r.tag)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              onSelect(r.tag);
-            }
-          }}
-        >
-          <title>{r.label}</title>
-          {r.shapes}
-        </g>
-      ))}
-    </svg>
-  );
-}
-
 // --- Añadir ejercicio (columna de la modal) ----------------------------------
 
 /** Selector de ejercicios embebido: vista de mapa corporal, búsqueda y lista
@@ -312,40 +108,44 @@ function ExercisePicker({
       </h3>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">Vista:</span>
-          <Button
-            variant={view === "front" ? "primary" : "secondary"}
-            aria-pressed={view === "front"}
-            onClick={() => setView("front")}
-          >
-            Frontal
-          </Button>
-          <Button
-            variant={view === "back" ? "primary" : "secondary"}
-            aria-pressed={view === "back"}
-            onClick={() => setView("back")}
-          >
-            Trasera
-          </Button>
-        </div>
+        <div className="flex flex-wrap items-start gap-3">
+          <BodyMap
+            view={view}
+            group={group}
+            onSelect={(tag) => setGroup((g) => (g === tag ? null : tag))}
+          />
 
-        <BodyMap
-          view={view}
-          group={group}
-          onSelect={(tag) => setGroup((g) => (g === tag ? null : tag))}
-        />
+          <div className="flex min-w-36 flex-1 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium">Vista:</span>
+              <Button
+                variant={view === "front" ? "primary" : "secondary"}
+                aria-pressed={view === "front"}
+                onClick={() => setView("front")}
+              >
+                Frontal
+              </Button>
+              <Button
+                variant={view === "back" ? "primary" : "secondary"}
+                aria-pressed={view === "back"}
+                onClick={() => setView("back")}
+              >
+                Trasera
+              </Button>
+            </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant={group == null ? "primary" : "secondary"}
-            onClick={() => setGroup(null)}
-          >
-            Todos
-          </Button>
-          <span className="text-sm text-text-secondary">
-            Grupo: {group ? GROUP_LABELS[group] : "Todos"}
-          </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={group == null ? "primary" : "secondary"}
+                onClick={() => setGroup(null)}
+              >
+                Todos
+              </Button>
+              <span className="text-sm text-text-secondary">
+                Grupo: {group ? GROUP_LABELS[group] : "Todos"}
+              </span>
+            </div>
+          </div>
         </div>
 
         <Input

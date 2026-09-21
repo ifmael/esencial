@@ -138,6 +138,24 @@ muscular y grupos plegables) — nunca una segunda modal encima. Guardar manda u
 solo POST (crear) o PUT (editar) con las posiciones 0..n-1; Cancelar, Escape o el
 fondo descartan el borrador sin llamadas a la API.
 
+El **mapa muscular** del selector vive en `web/src/components/body-map/`: 89
+regiones anatómicas entre las dos vistas (frontal y trasera), cada una con su
+nombre en español y su grupo de la taxonomía
+(`hombro`, `pecho`, `core`, `bíceps`, `antebrazo`, `espalda`, `tríceps`,
+`glúteo`, `pierna`, `gemelo`) o marcada sin grupo, que es anatomía de relleno
+(cabeza, manos, pies, articulaciones). Las regiones de un grupo van en **un solo
+`<g role="button">`**, así que la rejilla de teclado es la misma que antes (un
+botón por grupo) por mucho detalle que tenga el dibujo.
+
+Los `path` no son nuestros: proceden de `body-muscles` (Ivan Vulović,
+**Apache-2.0**) y se conservan tal cual; los `LICENSE` y `NOTICE` de esa licencia
+viven junto a ellos, en la misma carpeta, y **hay que mantenerlos**. Lo que sí es
+nuestro es el mapeo músculo→grupo, las etiquetas en español y los colores (los
+tokens `--color-muscle` / `--color-muscle-strong` de `globals.css`, más
+`--color-primary` para el grupo elegido); el fichero
+`web/src/components/body-map/data.ts` es generado a partir del original y lo dice
+en su cabecera.
+
 ## Despliegue: dos Workers (B')
 
 | Worker | Config | Qué sirve | URL |
