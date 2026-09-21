@@ -89,9 +89,10 @@ export function usePlanWeek(isoWeek: string) {
     [load],
   );
 
-  /** Guarda el orden de un día: el PUT borra y reinserta con position = índice.
-   *  Optimista: la celda reacciona al soltar; el PUT confirma o revierte (load). */
-  const reorder = useCallback(
+  /** Guarda los items del día (reordenar, o quitar uno): el PUT borra y
+   *  reinserta con position = índice. Optimista: la celda reacciona al soltar;
+   *  el PUT confirma o revierte (load). */
+  const saveItems = useCallback(
     async (session: PlanSession, exercises: SessionExercise[]) => {
       setSessions((all) =>
         all.map((s) =>
@@ -125,7 +126,7 @@ export function usePlanWeek(isoWeek: string) {
     [load],
   );
 
-  return { sessions, loading, error, reload, remove, reorder };
+  return { sessions, loading, error, reload, remove, saveItems };
 }
 
 /** ISO week ("YYYY-Www") of a "YYYY-MM-DD" date (UTC, no clock). */

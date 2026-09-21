@@ -115,6 +115,17 @@ casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo e
 `text-caption`. Con muchas filas el mínimo manda y el desborde sigue quedando
 dentro del calendario (lo cubre `calendar-layout.spec.ts`).
 
+Cada fila lleva su propia **✕ para desprogramar ese ejercicio** sin abrir el
+modal: la fila se convierte en su confirmación en línea (nombre truncado +
+**Sí/No**, con el nombre completo en el `aria-label`) y, al confirmar, el día se
+guarda con el mismo PUT de los items que usa el arrastre (`usePlanWeek.saveItems`,
+optimista y con recarga). Los dos botones van en **una sola línea** a propósito:
+la columna mide ~152 px y dos botones de texto largo (`size="sm"` = `px-3` +
+`text-caption`, ~86 y ~77 px) se salían de la fila y quedaban tapados por el día
+siguiente — de ahí las etiquetas cortas. Quitar el **último** ejercicio deja el
+día sin items, que no es representable (la API exige ≥1): desprograma la sesión
+(DELETE) y el día vuelve a su «+ añadir», igual que con la ✕ de la sesión.
+
 ### Modal de plantillas (crear y editar)
 
 `app.tsx` registra **`/plantillas/*`** y `PlantillasPage` decide con `useMatch`

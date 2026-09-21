@@ -351,6 +351,17 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       name: "Confirmar desprogramar",
     });
     await expect(confirmar).toBeVisible();
+
+    // Cancelar sale del paso de confirmación sin desprogramar la sesión.
+    await page.getByRole("button", { name: "Cancelar" }).click();
+    await expect(confirmar).toHaveCount(0);
+    await expect(desprogramar).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `Editar sesión del ${date}` }),
+    ).toBeVisible();
+
+    await desprogramar.click();
+    await expect(confirmar).toBeVisible();
     await confirmar.click();
 
     await expect(desprogramar).toHaveCount(0);
@@ -674,6 +685,103 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "Cancelar" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("desprogramar un ejercicio desde la celda (confirmación en línea)", async ({
+    page,
+  }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const dominadas = await seededExercise(page.request, "Dominadas");
+    const week = weekOf(84);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const session = await createSession(
+      page.request,
+      date,
+      [
+        { exerciseId: press.id, targetSets: 3 },
+        { exerciseId: remo.id, targetSets: 4 },
+        { exerciseId: dominadas.id, targetSets: 3 },
+      ],
+      "Sesión a recortar",
+    );
+
+    await page.goto(`/plan-fuerza?week=${week}`);
+    const dayList = page.getByRole("list", { name: `Ejercicios del ${date}` });
+    await expect(dayList.getByText("Remo con barra")).toBeVisible();
+
+    // La ✕ de la fila pide confirmación sin abrir el editor del día.
+    await dayList
+      .getByRole("button", { name: "Desprogramar Remo con barra" })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Confirmar quitar Remo con barra" }),
+    ).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    // Cancelar no desprograma nada.
+    await page
+      .getByRole("button", { name: "Cancelar quitar Remo con barra" })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Confirmar quitar Remo con barra" }),
+    ).toHaveCount(0);
+    await expect(dayList.getByText("Remo con barra")).toBeVisible();
+
+    // Confirmar quita SOLO ese ejercicio del día.
+    await dayList
+      .getByRole("button", { name: "Desprogramar Remo con barra" })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirmar quitar Remo con barra" })
+      .click();
+    await expect(dayList.getByText("Remo con barra")).toHaveCount(0);
+    await expect(dayList.getByText("Press banca")).toBeVisible();
+    await expect
+      .poll(async () => {
+        const detail = await apiRequest<{
+          exercises: { exerciseName: string }[];
+        }>(page.request, "GET", `/api/plan-sessions/${session.id}`);
+        return detail.exercises.map((e) => e.exerciseName);
+      })
+      .toEqual(["Press banca", "Dominadas"]);
+
+    // …y sigue fuera tras recargar.
+    await page.reload();
+    await expect(dayList.getByText("Press banca")).toBeVisible();
+    await expect(dayList.getByText("Remo con barra")).toHaveCount(0);
+
+    // El último ejercicio del día también se quita: sin items no hay sesión,
+    // así que el día vuelve a su «+ añadir».
+    await dayList
+      .getByRole("button", { name: "Desprogramar Dominadas" })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirmar quitar Dominadas" })
+      .click();
+    await expect(dayList.getByText("Press banca")).toBeVisible();
+    await dayList
+      .getByRole("button", { name: "Desprogramar Press banca" })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirmar quitar Press banca" })
+      .click();
+
+    await expect(dayList).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: `Desprogramar sesión del ${date}` }),
+    ).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const sessions = await apiRequest<{ date: string }[]>(
+          page.request,
+          "GET",
+          "/api/plan-sessions",
+        );
+        return sessions.filter((s) => s.date === date).length;
+      })
+      .toBe(0);
   });
 
   test("el selector del día agrupa por músculo y la búsqueda despliega", async ({
