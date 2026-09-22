@@ -24,6 +24,7 @@ const press: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pecho"],
+  regions: ["chest-lower"],
   kind: "strength",
 };
 const remo: Exercise = {
@@ -34,6 +35,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
+  regions: ["lats-mid"],
   kind: "strength",
 };
 const sent: Exercise = {
@@ -44,6 +46,7 @@ const sent: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
+  regions: ["quads"],
   kind: "strength",
 };
 const run: Exercise = {
@@ -54,6 +57,7 @@ const run: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["cardio"],
+  regions: [],
   kind: "running",
 };
 
@@ -243,11 +247,11 @@ describe("template editor", () => {
     fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
       target: { value: "sent" },
     });
-    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull(); // client-side filter
+    expect(dlg.queryByRole("button", { name: /^Press banca\b/ })).toBeNull(); // client-side filter
     expect(api.calls.filter((c) => c.url === "/api/exercises").length).toBe(
       searchesBefore,
     ); // search hit no network
-    fireEvent.click(dlg.getByRole("button", { name: /^Sentadilla$/ }));
+    fireEvent.click(dlg.getByRole("button", { name: /^Sentadilla\b/ }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.templates).toHaveLength(4));
     expect(api.calls.filter((c) => c.method === "POST")).toHaveLength(1);
@@ -296,33 +300,36 @@ describe("template editor", () => {
     ]);
   });
 
-  it("body map: selecting a muscle group filters the list; Todos resets; empty group shows state", async () => {
+  it("filtro por grupo padre: fichas, búsqueda dentro del filtro y estado vacío", async () => {
     await openEditor();
     const dlg = within(screen.getByRole("dialog"));
     // Grupos plegables: se despliegan al pulsar su cabecera.
     fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
-    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    expect(dlg.getByRole("button", { name: /^Press banca\b/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo\b/ })).toBeNull();
 
+    // Ficha de grupo: deja solo los ejercicios de ese grupo y se anuncia.
     fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
-    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
-    expect(dlg.queryByRole("button", { name: /^Sentadilla$/ })).toBeNull();
+    expect(dlg.getByText("Grupo: Pecho")).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Press banca\b/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo\b/ })).toBeNull();
+    expect(dlg.queryByRole("button", { name: /^Sentadilla\b/ })).toBeNull();
 
     // search refines within the selected group
     fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
       target: { value: "zzz" },
     });
-    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(dlg.queryByRole("button", { name: /^Press banca\b/ })).toBeNull();
     expect(dlg.getByText(/sin ejercicios/i)).toBeDefined();
     fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
       target: { value: "" },
     });
 
     fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
+    expect(dlg.getByText("Grupo: Todos")).toBeDefined();
     // Vuelven a estar plegados: se despliega Espalda para ver Remo.
     fireEvent.click(dlg.getByRole("button", { name: /^Espalda \(1\)/ }));
-    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Remo\b/ })).toBeDefined();
 
     fireEvent.click(dlg.getByRole("button", { name: "Core" }));
     expect(dlg.getByText(/sin ejercicios/i)).toBeDefined();
@@ -499,38 +506,68 @@ describe("exercise picker modal", () => {
     expect(dlg.getByRole("button", { name: /^Pecho \(1\)/ })).toBeDefined();
     expect(dlg.getByRole("button", { name: /^Espalda \(1\)/ })).toBeDefined();
     expect(dlg.getByRole("button", { name: /^Pierna \(1\)/ })).toBeDefined();
-    expect(dlg.queryByRole("button", { name: /^Press banca$/ })).toBeNull();
+    expect(dlg.queryByRole("button", { name: /^Press banca\b/ })).toBeNull();
     // Desplegar un grupo muestra sus ejercicios (los otros siguen cerrados).
     fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
-    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
-    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
+    expect(dlg.getByRole("button", { name: /^Press banca\b/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo\b/ })).toBeNull();
   });
 
-  it("muscle filter narrows the picker list; Todos resets", async () => {
+  it("mapa: la sub-región filtra fino, el grupo padre las agrupa y Todos limpia", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      templates: [tplA(), tplB(), tplC()],
+      exercises: [
+        press,
+        { ...press, id: 21, name: "Aperturas", regions: ["chest-upper"] },
+        remo,
+      ],
+    });
     const dialog = await openPicker();
     const dlg = within(dialog);
+
+    // Sub-región del mapa: solo el ejercicio que la trabaja.
+    fireEvent.click(
+      dlg.getByRole("button", { name: "Pecho inferior (esternal)" }),
+    );
+    expect(dlg.getByText("Músculo: Pecho inferior (esternal)")).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Press banca\b/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Aperturas\b/ })).toBeNull();
+
+    // Otra sub-región del mismo grupo es otro filtro.
+    fireEvent.click(
+      dlg.getByRole("button", { name: "Pecho superior (clavicular)" }),
+    );
+    expect(dlg.getByRole("button", { name: /^Aperturas\b/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Press banca\b/ })).toBeNull();
+
+    // El grupo padre devuelve las dos sub-regiones.
     fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
-    expect(dlg.queryByRole("button", { name: /^Remo$/ })).toBeNull();
-    expect(dlg.getByRole("button", { name: /^Press banca$/ })).toBeDefined();
+    expect(dlg.getByText("Grupo: Pecho")).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Aperturas\b/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Press banca\b/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Remo\b/ })).toBeNull();
+
+    // Todos limpia los dos niveles y vuelve a plegar los grupos.
     fireEvent.click(dlg.getByRole("button", { name: "Todos" }));
-    // Sin filtro vuelven a estar plegados.
+    expect(dlg.getByText("Grupo: Todos")).toBeDefined();
     fireEvent.click(dlg.getByRole("button", { name: /^Espalda \(1\)/ }));
-    expect(dlg.getByRole("button", { name: /^Remo$/ })).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Remo\b/ })).toBeDefined();
   });
 
   it("draft exercises are disabled; re-adding is impossible", async () => {
     const dialog = await openPicker();
     const dlg = within(dialog);
     fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
-    const pressBtn = dlg.getByRole("button", { name: /^Press banca$/ });
+    const pressBtn = dlg.getByRole("button", { name: /^Press banca\b/ });
     expect(pressBtn.hasAttribute("disabled")).toBe(true);
     fireEvent.click(pressBtn);
     fireEvent.click(dlg.getByRole("button", { name: /^Espalda \(1\)/ }));
-    fireEvent.click(dlg.getByRole("button", { name: /^Remo$/ }));
+    fireEvent.click(dlg.getByRole("button", { name: /^Remo\b/ }));
     // plantilla A = Press banca + Remo + Running: siguen siendo 3 filas
     expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(3);
     fireEvent.click(dlg.getByRole("button", { name: /^Pierna \(1\)/ }));
-    const sentadilla = dlg.getByRole("button", { name: /^Sentadilla$/ });
+    const sentadilla = dlg.getByRole("button", { name: /^Sentadilla\b/ });
     expect(sentadilla.hasAttribute("disabled")).toBe(false);
     fireEvent.click(sentadilla);
     expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(4);

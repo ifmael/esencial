@@ -240,6 +240,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           techniqueUrl?: string | null;
           steps?: string[] | null;
           tags: string[];
+          regions?: string[];
           kind?: "strength" | "running" | "bike";
         };
         const bad = validate(b);
@@ -254,6 +255,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           techniqueUrl: b.techniqueUrl ?? null,
           steps: b.steps ?? null,
           tags: b.tags,
+          regions: b.regions ?? [],
           kind: b.kind ?? "strength",
         };
         api.state.exercises.push(ex);
@@ -276,6 +278,7 @@ export function mockApi(seed: Seed = {}): MockApi {
             techniqueUrl: b.techniqueUrl ?? null,
             steps: b.steps ?? null,
             tags: b.tags,
+            regions: b.regions ?? [],
             kind: b.kind ?? "strength",
           });
           return json(ex);

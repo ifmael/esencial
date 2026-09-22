@@ -42,6 +42,8 @@ export type Exercise = {
   techniqueUrl: string | null;
   steps: string[] | null;
   tags: string[];
+  /** Sub-regiones del mapa anatómico (`web/src/components/body-map/regions`). */
+  regions: string[];
   kind: ExerciseKind;
 };
 
@@ -52,6 +54,7 @@ export type ExerciseInput = {
   techniqueUrl?: string | null;
   steps?: string[] | null;
   tags: string[];
+  regions?: string[];
   /** Ausente = el servidor aplica "strength". */
   kind?: ExerciseKind;
 };

@@ -1,15 +1,16 @@
 // Mapa muscular: 89 regiones anatómicas entre las dos vistas. Cada músculo
-// pertenece a uno de los grupos de `GROUP_LABELS` (o es anatomía de relleno,
-// sin filtro); las regiones de un grupo van en **un solo `<g role="button">`**,
-// así que la rejilla de teclado no crece con el detalle del dibujo.
+// pertenece a una sub-región (`MUSCLE_REGIONS`) y las dos mitades — izquierda y
+// derecha — van en **un solo `<g role="button">`**, así que hay un botón por
+// músculo, no por pieza dibujada. La anatomía de relleno (cabeza, manos, pies,
+// articulaciones) se dibuja y no se pulsa.
 //
 // Los `path` son de `body-muscles` (Apache-2.0; `LICENSE` y `NOTICE` en esta
 // carpeta). Los colores no son los del original, salen del sistema de diseño:
 // músculo en reposo `--color-muscle`, bajo el ratón `--color-muscle-strong`,
-// grupo elegido `--color-primary`, anatomía sin filtro `--color-border-strong`
+// músculo elegido `--color-primary`, anatomía sin filtro `--color-border-strong`
 // y el trazo que separa las piezas, el de la superficie.
-import { GROUP_LABELS } from "../grouped-exercises";
 import { BACK_REGIONS, type BodyRegion, FRONT_REGIONS } from "./data";
+import { canonicalRegionId, MUSCLE_REGIONS, regionLabel } from "./regions";
 
 export type BodyView = "front" | "back";
 
@@ -27,26 +28,29 @@ const VIEW_LABEL: Record<BodyView, string> = {
 
 export function BodyMap({
   view,
-  group,
+  region,
   onSelect,
 }: {
   view: BodyView;
-  group: string | null;
-  onSelect: (tag: string) => void;
+  /** Sub-región elegida (`MUSCLE_REGIONS`), o `null` si no hay filtro. */
+  region: string | null;
+  onSelect: (region: string) => void;
 }) {
   const regions = view === "front" ? FRONT_REGIONS : BACK_REGIONS;
-  const layers: Record<string, BodyRegion[]> = {};
-  for (const region of regions) {
-    if (!region.tag) continue;
-    layers[region.tag] ??= [];
-    layers[region.tag].push(region);
+  const layers = new Map<string, BodyRegion[]>();
+  for (const r of regions) {
+    if (!r.tag) continue;
+    const id = canonicalRegionId(r.id);
+    const list = layers.get(id);
+    if (list) list.push(r);
+    else layers.set(id, [r]);
   }
 
   return (
     <svg
       viewBox={VIEWBOX[view]}
       aria-label={VIEW_LABEL[view]}
-      className="h-64 w-auto shrink-0 md:h-80"
+      className="h-64 w-auto md:h-full"
     >
       {/* Relleno: cabeza, manos, pies y articulaciones. Se dibujan, no se pulsan. */}
       <g className="fill-border-strong">
@@ -56,23 +60,25 @@ export function BodyMap({
             <Muscle key={r.id} region={r} />
           ))}
       </g>
-      {Object.entries(layers).map(([tag, list]) => {
-        const active = group === tag;
+      {MUSCLE_REGIONS.map(({ id }) => {
+        const list = layers.get(id);
+        if (!list) return null;
+        const active = region === id;
         return (
           <g
-            key={tag}
+            key={id}
             role="button"
             tabIndex={0}
             aria-pressed={active}
-            aria-label={GROUP_LABELS[tag] ?? tag}
+            aria-label={regionLabel(id)}
             className={`cursor-pointer transition-colors duration-150 ease-out-quart ${
               active ? "fill-primary" : "fill-muscle hover:fill-muscle-strong"
             }`}
-            onClick={() => onSelect(tag)}
+            onClick={() => onSelect(id)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                onSelect(tag);
+                onSelect(id);
               }
             }}
           >

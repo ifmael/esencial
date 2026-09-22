@@ -138,14 +138,22 @@ muscular y grupos plegables) — nunca una segunda modal encima. Guardar manda u
 solo POST (crear) o PUT (editar) con las posiciones 0..n-1; Cancelar, Escape o el
 fondo descartan el borrador sin llamadas a la API.
 
+La modal mide **siempre lo mismo** (`h-[88vh]`, `max-w-6xl`; nada de `max-h`), así
+que no se redimensiona al cambiar el borrador ni la lista del selector. Desde
+`md`, dentro de la columna derecha el **mapa muscular se lleva el alto libre**
+(`md:h-full`, `w-auto`: crece y encoge con la ventana) y la lista de ejercicios
+tiene su propio scroll. En móvil las dos piezas se apilan y el conjunto se
+desplaza, como antes. Medido a 1280×800: la modal pasa de 896×680 a 1152×704 y el
+mapa de 120×320 a 176×468 (área ×2,1), sin scroll de página ni recorte; el músculo
+más estrecho de la vista frontal mide 33×55 px, así que todos los del dibujo se
+pulsan con holgura.
+
 El **mapa muscular** del selector vive en `web/src/components/body-map/`: 89
 regiones anatómicas entre las dos vistas (frontal y trasera), cada una con su
-nombre en español y su grupo de la taxonomía
-(`hombro`, `pecho`, `core`, `bíceps`, `antebrazo`, `espalda`, `tríceps`,
-`glúteo`, `pierna`, `gemelo`) o marcada sin grupo, que es anatomía de relleno
-(cabeza, manos, pies, articulaciones). Las regiones de un grupo van en **un solo
-`<g role="button">`**, así que la rejilla de teclado es la misma que antes (un
-botón por grupo) por mucho detalle que tenga el dibujo.
+nombre en español y su grupo de la taxonomía (`hombro`, `pecho`, `core`,
+`bíceps`, `antebrazo`, `espalda`, `tríceps`, `glúteo`, `pierna`, `gemelo`) o
+marcada sin grupo, que es anatomía de relleno (cabeza, manos, pies,
+articulaciones).
 
 Los `path` no son nuestros: proceden de `body-muscles` (Ivan Vulović,
 **Apache-2.0**) y se conservan tal cual; los `LICENSE` y `NOTICE` de esa licencia
@@ -155,6 +163,37 @@ tokens `--color-muscle` / `--color-muscle-strong` de `globals.css`, más
 `--color-primary` para el grupo elegido); el fichero
 `web/src/components/body-map/data.ts` es generado a partir del original y lo dice
 en su cabecera.
+
+## Taxonomía muscular: dos niveles
+
+El músculo fino manda al filtrar; el grupo padre lo agrupa. Es lo que se usa en
+el selector de ejercicios (mapa + fichas de grupo) y en el editor.
+
+- **Nivel 1 — grupos (`exercise_tags`, 10).** Sin cambios: es lo que agrupa las
+  listas (`GroupedExercises`), lo que se edita como «tag» y lo que usan las
+  fichas de grupo del selector.
+- **Nivel 2 — sub-regiones (`exercise_regions`, 35).** El músculo concreto del
+  mapa, **sin lado** (izquierda y derecha son la misma sub-región) y sin
+  anatomía de relleno. **Toda sub-región cuelga de un grupo que el ejercicio ya
+  tiene como tag**: lo valida la API (400 `{field:'regions'}`) y lo comprueba el
+  e2e, así que filtrar por el grupo padre siempre devuelve sus sub-regiones.
+- El vocabulario son **dos espejos que un test ata**:
+  `api/src/muscle-regions.ts` (lo que valida la API) y
+  `web/src/components/body-map/regions.ts` (derivado del dibujo, con las
+  etiquetas en español). `web/tests/muscle-regions.test.ts` falla si divergen.
+  Dos regiones (`tibialis-anterior`, `lower-back-ql`) no las trabaja ningún
+  ejercicio del catálogo: se dibujan y se filtran, y devuelven lista vacía.
+- **El mapa se pulsa por músculo, no por grupo**: cada sub-región es **un solo
+  `<g role="button">`** con sus dos mitades dentro, así que la rejilla de teclado
+  tiene un botón por músculo (14 en la vista frontal, 21 en la trasera) en lugar
+  de uno por grupo. El selector anuncia el músculo elegido («Músculo: …») y cada
+  fila de ejercicio lleva sus músculos como **descripción**
+  (`aria-describedby`, no pegados al nombre accesible). Las fichas de grupo van
+  en un `role="group"` con la etiqueta «Grupo:».
+- En el editor de ejercicios los músculos se eligen por grupo y solo aparecen los
+  de los grupos ya elegidos como tag (el invariante de arriba): elegir un músculo
+  añade su grupo si falta, quitar un grupo se lleva sus músculos, y guardar exige
+  al menos uno.
 
 ## Despliegue: dos Workers (B')
 
@@ -193,6 +232,10 @@ viven en `0002`+; los deltas de **reestructuración** (p. ej. `0009_fuerza_v2`
 recrea `plan_sessions` con `plan_session_exercises` y `cardio_logs`) viven en
 su propio número y NO se añaden al bootstrap de tests (schema.sql ya los
 refleja).
+- `0010_exercise_regions.sql` es **aditivo**: crea `exercise_regions` y siembra
+las 237 sub-regiones de los 91 ejercicios. La tabla está en `schema.sql` y en la
+lista `TABLES` del bootstrap de tests (`api/tests/helpers.ts`) — el resto del
+sembrado no va al bootstrap, igual que `0004`/`0006`.
 - En remoto el baseline ya está aplicado en la D1 de producción; pero cada delta
 nuevo hay que aplicarlo tras el deploy (`pnpm db:migrate:remote`; 0009 destruye
 el histórico de planificación — ver `DEPLOY.md` §4).
@@ -349,6 +392,12 @@ Todos los vídeos del catálogo son en **español** (auditado con yt-dlp en e8;
 faltantes/reemplazos viven en `0007` y `0008`).
 Los pasos solo faltan en ejercicios creados a mano — rellenarlos desde el
 editor (textarea "Pasos de ejecución", un paso por línea).
+
+Las **sub-regiones** de esos 91 ejercicios vienen en
+`0010_exercise_regions.sql`: 237 filas, 33 de las 35 regiones del vocabulario
+usadas, 0 ejercicios sembrados sin sub-región y 0 regiones que no cuelguen de un
+grupo ya presente en sus tags (las dos sin uso son `tibialis-anterior` y
+`lower-back-ql`).
 
 ## Fotos de recetas (R2)
 

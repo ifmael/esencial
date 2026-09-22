@@ -25,10 +25,10 @@ test.describe("AUTH-DIA", () => {
     await page.getByLabel("Contraseña").fill("hola");
     await page.getByRole("button", { name: "Entrar" }).click();
 
-    await page.waitForURL(`${baseURL!}/`);
+    await page.waitForURL("/");
     // Session survives reload
     await page.reload();
-    await page.waitForURL(`${baseURL!}/`);
+    await page.waitForURL("/");
     await expect(
       page.getByRole("heading", { name: /Hoy|RECETA/ }).first(),
     ).toBeVisible();

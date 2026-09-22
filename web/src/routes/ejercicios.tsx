@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
+  type MuscleRegion,
+  regionLabel,
+  regionsOfGroup,
+} from "../components/body-map/regions";
+import { GROUP_LABELS } from "../components/grouped-exercises";
+import {
   Badge,
   Button,
   buttonClass,
@@ -53,6 +59,7 @@ type Draft = {
   techniqueUrl: string;
   steps: string;
   tags: string[];
+  regions: string[];
   kind: ExerciseKind;
 };
 
@@ -63,6 +70,7 @@ const emptyDraft = (): Draft => ({
   techniqueUrl: "",
   steps: "",
   tags: [],
+  regions: [],
   kind: "strength",
 });
 
@@ -73,6 +81,7 @@ const toDraft = (x: Exercise): Draft => ({
   techniqueUrl: x.techniqueUrl ?? "",
   steps: x.steps?.join("\n") ?? "",
   tags: [...x.tags],
+  regions: [...x.regions],
   kind: x.kind,
 });
 
@@ -88,11 +97,17 @@ const toInput = (d: Draft): ExerciseInput => {
     techniqueUrl: d.techniqueUrl || null,
     steps: steps.length ? steps : null,
     tags: d.tags,
+    regions: d.regions,
     kind: d.kind,
   };
 };
 
-type FieldErrors = { name?: string; tags?: string; techniqueUrl?: string };
+type FieldErrors = {
+  name?: string;
+  tags?: string;
+  regions?: string;
+  techniqueUrl?: string;
+};
 
 function ExerciseEditor({
   initial,
@@ -115,11 +130,36 @@ function ExerciseEditor({
     setTagText("");
   };
 
+  const toggleRegion = (region: MuscleRegion) => {
+    const on = draft.regions.includes(region.id);
+    setDraft({
+      ...draft,
+      regions: on
+        ? draft.regions.filter((x) => x !== region.id)
+        : [...draft.regions, region.id],
+      // Toda sub-región cuelga de su grupo: elegirla añade el tag si falta.
+      tags: draft.tags.includes(region.group)
+        ? draft.tags
+        : [...draft.tags, region.group],
+    });
+  };
+
+  /** Quitar un grupo se lleva sus músculos: sin él no colgarían de nada. */
+  const removeTag = (tag: string) => {
+    const orphans = new Set(regionsOfGroup(tag).map((r) => r.id));
+    setDraft({
+      ...draft,
+      tags: draft.tags.filter((x) => x !== tag),
+      regions: draft.regions.filter((id) => !orphans.has(id)),
+    });
+  };
+
   const save = async () => {
     if (submitting) return;
     const errs: FieldErrors = {};
     if (!draft.name.trim()) errs.name = "El nombre es obligatorio";
     if (draft.tags.length < 1) errs.tags = "Al menos un tag es obligatorio";
+    if (draft.regions.length < 1) errs.regions = "Elige al menos un músculo";
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setSubmitting(true);
@@ -129,7 +169,10 @@ function ExerciseEditor({
       // Envelope-driven (D6): el mensaje del servidor va junto al campo que falló.
       const field = apiField(e);
       setErrors(
-        field === "techniqueUrl" || field === "name" || field === "tags"
+        field === "techniqueUrl" ||
+          field === "name" ||
+          field === "tags" ||
+          field === "regions"
           ? { [field]: errorMessage(e) }
           : {},
       );
@@ -230,13 +273,47 @@ function ExerciseEditor({
           <button
             key={t}
             className="text-left text-xs text-text-secondary"
-            onClick={() =>
-              setDraft({ ...draft, tags: draft.tags.filter((x) => x !== t) })
-            }
+            onClick={() => removeTag(t)}
           >
             Quitar tag {t}
           </button>
         ))}
+      </div>
+      <div className="flex flex-col gap-1 text-sm">
+        <span id="ex-regions-label">Músculos</span>
+        {errors.regions && (
+          <span className="text-sm text-error">{errors.regions}</span>
+        )}
+        {draft.tags.every((t) => regionsOfGroup(t).length === 0) ? (
+          <span className="text-text-secondary">
+            Añade arriba un grupo muscular para elegir sus músculos.
+          </span>
+        ) : (
+          draft.tags.map((t) => {
+            const options = regionsOfGroup(t);
+            if (options.length === 0) return null;
+            return (
+              <div key={t} className="flex flex-wrap items-center gap-1">
+                <span className="text-text-secondary">
+                  {GROUP_LABELS[t] ?? t}:
+                </span>
+                {options.map((r) => (
+                  <Button
+                    key={r.id}
+                    size="sm"
+                    variant={
+                      draft.regions.includes(r.id) ? "primary" : "secondary"
+                    }
+                    aria-pressed={draft.regions.includes(r.id)}
+                    onClick={() => toggleRegion(r)}
+                  >
+                    {r.label}
+                  </Button>
+                ))}
+              </div>
+            );
+          })
+        )}
       </div>
       <div className="flex gap-2">
         <Button disabled={submitting} onClick={save}>
@@ -474,7 +551,22 @@ export function EjercicioDetailPage() {
           </div>
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl font-bold">{exercise.name}</h1>
-            <TagChips tags={exercise.tags} />
+            <div className="flex flex-col gap-1">
+              <span className="section-label">Grupos</span>
+              <TagChips tags={exercise.tags} />
+            </div>
+            {exercise.regions.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <span className="section-label">Músculos</span>
+                <ul className="flex flex-wrap gap-1" aria-label="músculos">
+                  {exercise.regions.map((id) => (
+                    <li key={id}>
+                      <Badge tone="pending">{regionLabel(id)}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
         {exercise.description && <p>{exercise.description}</p>}
