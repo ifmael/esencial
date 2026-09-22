@@ -61,6 +61,11 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
     await expect(
       dialog.getByText("Músculo: Pecho superior (clavicular)"),
     ).toBeVisible();
+    // El ratón no deja foco en el músculo: si lo dejara, el navegador pintaría
+    // su anillo de foco (un recuadro redondeado) y taparía la señal de color.
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.tagName))
+      .not.toBe("g");
     await expect(
       dialog.getByRole("button", {
         name: "Press banca inclinado",
@@ -149,6 +154,13 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
       "quads",
     ]);
     expect(byName.get("Elevación de gemelos de pie")?.regions).toEqual([
+      "calves-gastroc-lateral",
+      "calves-gastroc-medial",
+      "calves-soleus",
+    ]);
+    // Corregida en `0011`: la prensa no bloquea la rodilla, así que el sóleo
+    // también entra, como en las otras dos variantes de pie.
+    expect(byName.get("Elevación de gemelos en prensa")?.regions).toEqual([
       "calves-gastroc-lateral",
       "calves-gastroc-medial",
       "calves-soleus",

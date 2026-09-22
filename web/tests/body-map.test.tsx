@@ -73,6 +73,16 @@ describe("BodyMap", () => {
     ]);
   });
 
+  it("el ratón no roba el foco: al pulsar no queda anillo de foco", () => {
+    render(<BodyMap view="front" region={null} onSelect={() => {}} />);
+    const quads = screen.getByRole("button", { name: "Cuádriceps" });
+    // `fireEvent` devuelve `false` cuando el manejador cancela el evento por
+    // defecto. Eso es lo que impide que el navegador pinte al pulsar su anillo
+    // de foco (un recuadro redondeado sobre el músculo), así que la única señal
+    // de «elegido» con el ratón es el color; el teclado conserva su anillo.
+    expect(fireEvent.mouseDown(quads)).toBe(false);
+  });
+
   it("cada músculo del dibujo tiene nombre, grupo y sub-región filtrable", () => {
     for (const region of ALL_REGIONS) {
       expect(region.label.trim().length, region.id).toBeGreaterThan(0);

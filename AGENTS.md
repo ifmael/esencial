@@ -190,6 +190,13 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
   fila de ejercicio lleva sus músculos como **descripción**
   (`aria-describedby`, no pegados al nombre accesible). Las fichas de grupo van
   en un `role="group"` con la etiqueta «Grupo:».
+- **El ratón no roba el foco al pulsar el dibujo** (`onMouseDown` cancela el
+  evento): sin eso el navegador deja el foco en el `<g>` y pinta su anillo —un
+  **recuadro redondeado** alrededor de las piezas del músculo— que tapa la señal
+  de color («el músculo no aparece redondeado, cambia de color»). La selección se
+  ve entonces solo por color (`--color-primary` sobre el verde en reposo
+  `--color-muscle`), y el teclado conserva su anillo de foco (2 px
+  `--color-primary`) al tabular y pulsar Enter o espacio.
 - En el editor de ejercicios los músculos se eligen por grupo y solo aparecen los
   de los grupos ya elegidos como tag (el invariante de arriba): elegir un músculo
   añade su grupo si falta, quitar un grupo se lleva sus músculos, y guardar exige
@@ -236,6 +243,11 @@ refleja).
 las 237 sub-regiones de los 91 ejercicios. La tabla está en `schema.sql` y en la
 lista `TABLES` del bootstrap de tests (`api/tests/helpers.ts`) — el resto del
 sembrado no va al bootstrap, igual que `0004`/`0006`.
+- `0011_exercise_regions_semilla.sql` es la **corrección de datos** de esa
+siembra (una fila: el sóleo que faltaba en `Elevación de gemelos en prensa`).
+`0010` se queda congelada como sembrado histórico; cualquier arreglo de datos
+posterior va en su propio número. Los tests de la API **no** ven estas filas (su
+bootstrap no siembra regiones), así que lo verifica el e2e.
 - En remoto el baseline ya está aplicado en la D1 de producción; pero cada delta
 nuevo hay que aplicarlo tras el deploy (`pnpm db:migrate:remote`; 0009 destruye
 el histórico de planificación — ver `DEPLOY.md` §4).
@@ -397,7 +409,13 @@ Las **sub-regiones** de esos 91 ejercicios vienen en
 `0010_exercise_regions.sql`: 237 filas, 33 de las 35 regiones del vocabulario
 usadas, 0 ejercicios sembrados sin sub-región y 0 regiones que no cuelguen de un
 grupo ya presente en sus tags (las dos sin uso son `tibialis-anterior` y
-`lower-back-ql`).
+`lower-back-ql`). La auditoría de esos 91 ejercicios (2026-09-22, tres revisiones
+independientes + comprobación SQL) dejó **una** corrección, en
+`0011_exercise_regions_semilla.sql`: el sóleo de `Elevación de gemelos en prensa`
+—238 filas en total—. El resto de candidatos eran discusiones de grado de
+participación (cabeza larga del tríceps en los presses por encima de la cabeza,
+isquios en el hip thrust, `traps-mid` en los encogimientos), no errores de
+participación: no se tocan.
 
 ## Fotos de recetas (R2)
 

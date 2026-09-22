@@ -74,6 +74,11 @@ export function BodyMap({
             className={`cursor-pointer transition-colors duration-150 ease-out-quart ${
               active ? "fill-primary" : "fill-muscle hover:fill-muscle-strong"
             }`}
+            // El ratón no roba el foco: si lo robara, el navegador pintaría su
+            // anillo de foco (un recuadro redondeado) sobre el músculo, que es
+            // justo lo que no debe verse. La señal de "elegido" es el color, y
+            // el teclado conserva su anillo al tabular.
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(id)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
