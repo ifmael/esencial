@@ -19,6 +19,11 @@ export const GROUP_LABELS: Record<string, string> = {
 /** Cotejador alfabético español (acentos y mayúsculas sin peso). */
 const collator = new Intl.Collator("es", { sensitivity: "base" });
 
+/** Los diez grupos musculares en orden alfabético español (fichas de filtro). */
+export const MUSCLE_GROUPS = Object.keys(GROUP_LABELS).sort((a, b) =>
+  collator.compare(GROUP_LABELS[a], GROUP_LABELS[b]),
+);
+
 /** Grupos por primer tag (músculo): grupos y ejercicios en orden alfabético;
  *  los ejercicios sin tag caen en «otro». */
 function groupByMuscle(list: Exercise[]): [string, Exercise[]][] {

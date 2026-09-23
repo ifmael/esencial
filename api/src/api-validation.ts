@@ -1,5 +1,6 @@
 // Zod schemas for every API mutation (spec: fail closed, 400 {error, field}).
 import { z } from "zod";
+import { MUSCLE_REGION_GROUPS } from "./muscle-regions";
 
 // --- Recipes ---------------------------------------------------------------
 
@@ -30,22 +31,41 @@ export type RecipeInput = z.infer<typeof recipeSchema>;
 
 export const KINDS = ["strength", "running", "bike"] as const;
 
-export const exerciseSchema = z.object({
-  name: z.string().min(1, "Exercise name is required"),
-  description: z.string().optional().nullable(),
-  setupCues: z.string().optional().nullable(),
-  techniqueUrl: z
-    .url("technique_url must be a valid URL")
-    .optional()
-    .nullable(),
-  steps: z
-    .array(z.string().min(1, "Each step must be non-empty"))
-    .max(40)
-    .optional()
-    .nullable(),
-  tags: z.array(z.string().min(1)).min(1, "At least one tag is required"),
-  kind: z.enum(KINDS).default("strength"),
-});
+export const exerciseSchema = z
+  .object({
+    name: z.string().min(1, "Exercise name is required"),
+    description: z.string().optional().nullable(),
+    setupCues: z.string().optional().nullable(),
+    techniqueUrl: z
+      .url("technique_url must be a valid URL")
+      .optional()
+      .nullable(),
+    steps: z
+      .array(z.string().min(1, "Each step must be non-empty"))
+      .max(40)
+      .optional()
+      .nullable(),
+    tags: z.array(z.string().min(1)).min(1, "At least one tag is required"),
+    // Sub-regiones del mapa anatómico (opcionales: un ejercicio puede quedarse
+    // en el nivel del grupo).
+    regions: z.array(z.string().min(1)).optional().default([]),
+    kind: z.enum(KINDS).default("strength"),
+  })
+  .superRefine((v, ctx) => {
+    // Fail closed: la sub-región tiene que existir y colgar de un grupo que el
+    // ejercicio ya tenga como tag, o filtrar por el grupo padre dejaría de
+    // encontrarlo (los dos niveles se contradirían).
+    for (const region of v.regions) {
+      const parent = MUSCLE_REGION_GROUPS[region];
+      if (parent && v.tags.includes(parent)) continue;
+      ctx.addIssue({
+        code: "custom",
+        path: ["regions"],
+        message: `region ${region} must hang from one of the exercise tags`,
+      });
+      return;
+    }
+  });
 export type ExerciseInput = z.infer<typeof exerciseSchema>;
 
 // --- Templates -------------------------------------------------------------

@@ -81,6 +81,13 @@ export async function loadExercise(
       id,
     )
   ).map((t) => String(t.tag));
+  head.regions = (
+    await rows(
+      db,
+      "SELECT region FROM exercise_regions WHERE exercise_id = ? ORDER BY region",
+      id,
+    )
+  ).map((r) => String(r.region));
   return head;
 }
 

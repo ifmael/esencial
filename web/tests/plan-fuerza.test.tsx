@@ -24,6 +24,7 @@ const press: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pecho"],
+  regions: ["chest-lower"],
   kind: "strength",
 };
 const remo: Exercise = {
@@ -34,6 +35,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
+  regions: ["lats-mid"],
   kind: "strength",
 };
 const run: Exercise = {
@@ -44,6 +46,7 @@ const run: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["cardio"],
+  regions: [],
   kind: "running",
 };
 

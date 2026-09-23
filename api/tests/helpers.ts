@@ -47,6 +47,7 @@ const TABLES = [
   "week_plans",
   "template_exercises",
   "session_templates",
+  "exercise_regions",
   "exercise_tags",
   "exercises",
   "recipe_ingredients",

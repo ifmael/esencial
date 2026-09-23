@@ -24,6 +24,7 @@ const press: Exercise = {
     "Baja controlado y sube empujando.",
   ],
   tags: ["pecho", "tríceps"],
+  regions: ["chest-lower", "triceps-lateral"],
   kind: "strength",
 };
 const remo: Exercise = {
@@ -34,6 +35,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
+  regions: ["lats-mid"],
   kind: "strength",
 };
 const peso: Exercise = {
@@ -44,6 +46,7 @@ const peso: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
+  regions: ["quads"],
   kind: "strength",
 };
 
@@ -158,6 +161,12 @@ describe("catalog", () => {
     fireEvent.keyDown(screen.getByPlaceholderText(/añadir tag/i), {
       key: "Enter",
     });
+    // El grupo abre sus músculos, y sin elegir uno no se guarda.
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    expect(screen.getByText(/elige al menos un músculo/i)).toBeDefined();
+    expect(api.calls.some((c) => c.method === "POST")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Glúteo mayor" }));
+
     fireEvent.change(screen.getByLabelText(/técnica/i), {
       target: { value: "https://youtu.be/ht" },
     });
@@ -168,13 +177,14 @@ describe("catalog", () => {
     await waitFor(() => expect(api.state.exercises).toHaveLength(4));
     await screen.findByRole("heading", { name: "Hip thrust" });
     expect(screen.getByText("glúteo")).toBeDefined();
+    expect(screen.getByText("Glúteo mayor")).toBeDefined();
     const post = api.calls.find(
       (c) => c.method === "POST" && c.url === "/api/exercises",
     )!;
-    expect((post.body as { steps: string[] | null }).steps).toEqual([
-      "Paso uno",
-      "Paso dos",
-    ]);
+    // `post.body` es el JSON que mandó el cliente al mock: es lo que se comprueba.
+    const body = post.body as { steps: string[] | null; regions: string[] };
+    expect(body.steps).toEqual(["Paso uno", "Paso dos"]);
+    expect(body.regions).toEqual(["gluteus-maximus"]);
   });
 });
 

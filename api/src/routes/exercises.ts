@@ -21,6 +21,20 @@ function tagStatements(
   );
 }
 
+function regionStatements(
+  name: string,
+  regions: readonly string[],
+  db: D1Database,
+): D1PreparedStatement[] {
+  return [...new Set(regions)].map((r) =>
+    db
+      .prepare(
+        `INSERT INTO exercise_regions (exercise_id, region) VALUES ((SELECT id FROM exercises WHERE name = ?), ?)`,
+      )
+      .bind(name, r),
+  );
+}
+
 export const exercises = new Hono<{ Bindings: Env }>()
   .get("/", (c) =>
     guard(async () => {
@@ -60,6 +74,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
             input.kind,
           ),
         ...tagStatements(name, input.tags, db),
+        ...regionStatements(name, input.regions, db),
       ]);
       return json(
         await loadExercise(db, Number(results[0].meta.last_row_id)),
@@ -104,6 +119,8 @@ export const exercises = new Hono<{ Bindings: Env }>()
           ),
         db.prepare("DELETE FROM exercise_tags WHERE exercise_id=?").bind(id),
         ...tagStatements(name, input.tags, db),
+        db.prepare("DELETE FROM exercise_regions WHERE exercise_id=?").bind(id),
+        ...regionStatements(name, input.regions, db),
       ]);
       return json(await loadExercise(db, id));
     }),

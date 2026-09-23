@@ -31,6 +31,11 @@
   --color-primary-soft-strong: #d8ebdf;
   --color-border-strong: #d6d3d1;
   --color-ring: rgb(21 128 61 / 0.32);
+  /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
+     ratón. Un tono medio para que la silueta no se lave sobre la tarjeta; el
+     grupo elegido va en `--color-primary`. */
+  --color-muscle: #8fb59d;
+  --color-muscle-strong: #6e9c81;
 
   /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
      para todo lo que reacciona al usuario. */
@@ -87,6 +92,8 @@
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
   --color-ring: var(--color-ring);
+  --color-muscle: var(--color-muscle);
+  --color-muscle-strong: var(--color-muscle-strong);
 
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 

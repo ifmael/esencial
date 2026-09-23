@@ -48,6 +48,14 @@ CREATE TABLE IF NOT EXISTS exercise_tags (
   PRIMARY KEY (exercise_id, tag)
 );
 
+-- Segundo nivel de la taxonomía muscular: la región del mapa anatómico que
+-- trabaja el ejercicio, más fina que su grupo (`exercise_tags`).
+CREATE TABLE IF NOT EXISTS exercise_regions (
+  exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+  region      TEXT NOT NULL,
+  PRIMARY KEY (exercise_id, region)
+);
+
 CREATE TABLE IF NOT EXISTS session_templates (
   id   INTEGER PRIMARY KEY,
   name TEXT NOT NULL UNIQUE

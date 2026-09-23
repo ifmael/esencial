@@ -13,11 +13,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useMatch, useNavigate } from "react-router";
+import { BodyMap, type BodyView } from "../components/body-map/body-map";
+import { regionLabel } from "../components/body-map/regions";
 import {
   GROUP_LABELS,
   GroupedExercises,
+  MUSCLE_GROUPS,
 } from "../components/grouped-exercises";
 import {
   DRAG_INSTRUCTIONS,
@@ -64,216 +67,12 @@ const toDraft = (t: Template): Draft => ({
   })),
 });
 
-// --- Mapa corporal ---------------------------------------------------------
-
-type BodyView = "front" | "back";
-type MuscleRegion = { tag: string; label: string; shapes: ReactNode };
-
-const FRONT_REGIONS: MuscleRegion[] = [
-  {
-    tag: "hombro",
-    label: "Hombro",
-    shapes: (
-      <>
-        <ellipse cx="58" cy="60" rx="15" ry="12" />
-        <ellipse cx="142" cy="60" rx="15" ry="12" />
-      </>
-    ),
-  },
-  {
-    tag: "pecho",
-    label: "Pecho",
-    shapes: <rect x="74" y="58" width="52" height="42" rx="8" />,
-  },
-  {
-    tag: "core",
-    label: "Core",
-    shapes: <rect x="74" y="104" width="52" height="46" rx="8" />,
-  },
-  {
-    tag: "bíceps",
-    label: "Bíceps",
-    shapes: (
-      <>
-        <rect x="40" y="62" width="20" height="36" rx="8" />
-        <rect x="140" y="62" width="20" height="36" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "antebrazo",
-    label: "Antebrazo",
-    shapes: (
-      <>
-        <rect x="40" y="102" width="20" height="50" rx="8" />
-        <rect x="140" y="102" width="20" height="50" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "pierna",
-    label: "Pierna",
-    shapes: (
-      <>
-        <rect x="76" y="164" width="20" height="76" rx="8" />
-        <rect x="104" y="164" width="20" height="76" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "gemelo",
-    label: "Gemelo",
-    shapes: (
-      <>
-        <rect x="76" y="246" width="20" height="62" rx="8" />
-        <rect x="104" y="246" width="20" height="62" rx="8" />
-      </>
-    ),
-  },
-];
-
-const BACK_REGIONS: MuscleRegion[] = [
-  {
-    tag: "espalda",
-    label: "Espalda",
-    shapes: <rect x="74" y="56" width="52" height="86" rx="8" />,
-  },
-  {
-    tag: "hombro",
-    label: "Hombro",
-    shapes: (
-      <>
-        <ellipse cx="58" cy="60" rx="15" ry="12" />
-        <ellipse cx="142" cy="60" rx="15" ry="12" />
-      </>
-    ),
-  },
-  {
-    tag: "tríceps",
-    label: "Tríceps",
-    shapes: (
-      <>
-        <rect x="40" y="62" width="20" height="36" rx="8" />
-        <rect x="140" y="62" width="20" height="36" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "antebrazo",
-    label: "Antebrazo",
-    shapes: (
-      <>
-        <rect x="40" y="102" width="20" height="50" rx="8" />
-        <rect x="140" y="102" width="20" height="50" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "glúteo",
-    label: "Glúteo",
-    shapes: (
-      <>
-        <rect x="76" y="150" width="20" height="30" rx="8" />
-        <rect x="104" y="150" width="20" height="30" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "pierna",
-    label: "Pierna",
-    shapes: (
-      <>
-        <rect x="76" y="184" width="20" height="60" rx="8" />
-        <rect x="104" y="184" width="20" height="60" rx="8" />
-      </>
-    ),
-  },
-  {
-    tag: "gemelo",
-    label: "Gemelo",
-    shapes: (
-      <>
-        <rect x="76" y="246" width="20" height="62" rx="8" />
-        <rect x="104" y="246" width="20" height="62" rx="8" />
-      </>
-    ),
-  },
-];
-
-function BodySilhouette() {
-  return (
-    <g
-      fill="var(--color-surface-muted)"
-      stroke="var(--color-border)"
-      strokeWidth="1.5"
-    >
-      <circle cx="100" cy="22" r="17" />
-      <rect x="92" y="39" width="16" height="13" rx="3" />
-      <path d="M72 52 L128 52 L132 160 L68 160 Z" />
-      <rect x="38" y="56" width="24" height="104" rx="10" />
-      <rect x="138" y="56" width="24" height="104" rx="10" />
-      <rect x="74" y="160" width="24" height="172" rx="9" />
-      <rect x="102" y="160" width="24" height="172" rx="9" />
-    </g>
-  );
-}
-
-function BodyMap({
-  view,
-  group,
-  onSelect,
-}: {
-  view: BodyView;
-  group: string | null;
-  onSelect: (tag: string) => void;
-}) {
-  const regions = view === "front" ? FRONT_REGIONS : BACK_REGIONS;
-  return (
-    <svg
-      viewBox="0 0 200 400"
-      className="h-80 w-56"
-      aria-label={`Vista ${view === "front" ? "frontal" : "trasera"}`}
-    >
-      <BodySilhouette />
-      {regions.map((r) => (
-        <g
-          key={r.tag}
-          role="button"
-          tabIndex={0}
-          aria-label={r.label}
-          aria-pressed={group === r.tag}
-          className="cursor-pointer"
-          fill={
-            group === r.tag ? "var(--color-primary)" : "var(--color-pending-bg)"
-          }
-          stroke={
-            group === r.tag
-              ? "var(--color-primary-dark)"
-              : "var(--color-pending)"
-          }
-          strokeWidth="1.5"
-          strokeDasharray={group === r.tag ? undefined : "4 3"}
-          onClick={() => onSelect(r.tag)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              onSelect(r.tag);
-            }
-          }}
-        >
-          <title>{r.label}</title>
-          {r.shapes}
-        </g>
-      ))}
-    </svg>
-  );
-}
-
 // --- Añadir ejercicio (columna de la modal) ----------------------------------
 
-/** Selector de ejercicios embebido: vista de mapa corporal, búsqueda y lista
- *  agrupada por músculo. Sin overlay ni `role=dialog` propios — la modal de
- *  plantilla es el único diálogo abierto. */
+/** Selector de ejercicios embebido: vista de mapa corporal (que filtra por
+ *  sub-región muscular), fichas de grupo padre, búsqueda y lista agrupada por
+ *  músculo. Los dos niveles del filtro son excluyentes. Sin overlay ni
+ *  `role=dialog` propios — la modal de plantilla es el único diálogo abierto. */
 function ExercisePicker({
   exercises,
   draftEntries,
@@ -284,23 +83,34 @@ function ExercisePicker({
   onAdd: (e: Exercise) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [region, setRegion] = useState<string | null>(null);
   const [group, setGroup] = useState<string | null>(null);
   const [view, setView] = useState<BodyView>("front");
 
   const q = search.trim().toLowerCase();
   const picks = exercises.filter((e) => {
+    // Dos niveles excluyentes: la sub-región es lo fino y el grupo padre es lo
+    // ancho. Como toda sub-región cuelga de un grupo que el ejercicio tiene
+    // como tag, filtrar por el grupo devuelve también sus sub-regiones.
+    if (region !== null && !e.regions.includes(region)) return false;
     if (group !== null && !e.tags.includes(group)) return false;
     if (
       q &&
       !(
         e.name.toLowerCase().includes(q) ||
-        e.tags.some((t) => t.toLowerCase().includes(q))
+        e.tags.some((t) => t.toLowerCase().includes(q)) ||
+        e.regions.some((r) => regionLabel(r).toLowerCase().includes(q))
       )
     )
       return false;
     return true;
   });
   const inDraftIds = new Set(draftEntries.map((en) => en.exerciseId));
+  const filter = region
+    ? regionLabel(region)
+    : group
+      ? (GROUP_LABELS[group] ?? group)
+      : null;
 
   return (
     <section
@@ -311,73 +121,132 @@ function ExercisePicker({
         Añadir ejercicio
       </h3>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">Vista:</span>
-          <Button
-            variant={view === "front" ? "primary" : "secondary"}
-            aria-pressed={view === "front"}
-            onClick={() => setView("front")}
-          >
-            Frontal
-          </Button>
-          <Button
-            variant={view === "back" ? "primary" : "secondary"}
-            aria-pressed={view === "back"}
-            onClick={() => setView("back")}
-          >
-            Trasera
-          </Button>
-        </div>
-
-        <BodyMap
-          view={view}
-          group={group}
-          onSelect={(tag) => setGroup((g) => (g === tag ? null : tag))}
-        />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant={group == null ? "primary" : "secondary"}
-            onClick={() => setGroup(null)}
-          >
-            Todos
-          </Button>
-          <span className="text-sm text-text-secondary">
-            Grupo: {group ? GROUP_LABELS[group] : "Todos"}
-          </span>
-        </div>
-
-        <Input
-          placeholder="Buscar ejercicio"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        {picks.length === 0 ? (
-          <p className="text-sm text-text-secondary">Sin ejercicios</p>
-        ) : (
-          <GroupedExercises
-            exercises={picks}
-            forceOpen={q !== "" || group !== null}
-            listClassName="flex flex-col gap-1"
-            renderItem={(e) => (
-              <li key={e.id}>
-                <button
-                  className="min-h-9 w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-surface-muted disabled:text-text-secondary"
-                  disabled={inDraftIds.has(e.id)}
-                  onClick={() => {
-                    if (inDraftIds.has(e.id)) return;
-                    onAdd(e);
-                  }}
-                >
-                  {e.name}
-                  {e.kind === "strength" ? null : ` · ${KIND_LABELS[e.kind]}`}
-                </button>
-              </li>
-            )}
+      {/* Desde `md`, el dibujo se lleva el alto libre de la columna y la lista el
+          suyo (crece con la modal en vez de encogerse por la lista). En móvil se
+          apila y el conjunto se desplaza, como antes. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto md:flex-row md:overflow-visible">
+        <div className="flex shrink-0 justify-center">
+          <BodyMap
+            view={view}
+            region={region}
+            onSelect={(id) => {
+              setRegion((r) => (r === id ? null : id));
+              setGroup(null);
+            }}
           />
-        )}
+        </div>
+
+        <div className="flex flex-col gap-2 md:min-h-0 md:flex-1 md:overflow-y-auto">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">Vista:</span>
+            <Button
+              size="sm"
+              variant={view === "front" ? "primary" : "secondary"}
+              aria-pressed={view === "front"}
+              onClick={() => setView("front")}
+            >
+              Frontal
+            </Button>
+            <Button
+              size="sm"
+              variant={view === "back" ? "primary" : "secondary"}
+              aria-pressed={view === "back"}
+              onClick={() => setView("back")}
+            >
+              Trasera
+            </Button>
+          </div>
+
+          <div
+            role="group"
+            aria-labelledby="pick-groups-label"
+            className="flex flex-wrap items-center gap-1 text-sm"
+          >
+            <span id="pick-groups-label" className="font-medium">
+              Grupo:
+            </span>
+            <Button
+              size="sm"
+              variant={filter === null ? "primary" : "secondary"}
+              aria-pressed={filter === null}
+              onClick={() => {
+                setRegion(null);
+                setGroup(null);
+              }}
+            >
+              Todos
+            </Button>
+            {MUSCLE_GROUPS.map((g) => (
+              <Button
+                key={g}
+                size="sm"
+                variant={group === g ? "primary" : "secondary"}
+                aria-pressed={group === g}
+                onClick={() => {
+                  setGroup((prev) => (prev === g ? null : g));
+                  setRegion(null);
+                }}
+              >
+                {GROUP_LABELS[g]}
+              </Button>
+            ))}
+          </div>
+
+          <p className="text-sm text-text-secondary">
+            {region ? `Músculo: ${filter}` : `Grupo: ${filter ?? "Todos"}`}
+          </p>
+
+          <Input
+            placeholder="Buscar ejercicio"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          <div className="min-h-0 md:flex-1 md:overflow-y-auto">
+            {picks.length === 0 ? (
+              <p className="text-sm text-text-secondary">Sin ejercicios</p>
+            ) : (
+              <GroupedExercises
+                exercises={picks}
+                forceOpen={q !== "" || group !== null || region !== null}
+                listClassName="flex flex-col gap-1"
+                renderItem={(e) => (
+                  <li key={e.id}>
+                    <button
+                      className="min-h-9 w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-surface-muted disabled:text-text-secondary"
+                      // El nombre es el del ejercicio (con su tipo, como se ve); los
+                      // músculos van de descripción, no pegados al nombre.
+                      aria-label={`${e.name}${e.kind === "strength" ? "" : ` · ${KIND_LABELS[e.kind]}`}`}
+                      aria-describedby={
+                        e.regions.length > 0
+                          ? `pick-regions-${e.id}`
+                          : undefined
+                      }
+                      disabled={inDraftIds.has(e.id)}
+                      onClick={() => {
+                        if (inDraftIds.has(e.id)) return;
+                        onAdd(e);
+                      }}
+                    >
+                      {e.name}
+                      {e.kind === "strength"
+                        ? null
+                        : ` · ${KIND_LABELS[e.kind]}`}
+                      {e.regions.length > 0 && (
+                        <span
+                          id={`pick-regions-${e.id}`}
+                          className="block text-caption text-text-secondary"
+                        >
+                          {e.regions.map(regionLabel).join(" · ")}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -595,12 +464,14 @@ function TemplateDialog({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="w-full max-w-4xl">
+      {/* Alto fijo (no `max-h`): la modal guarda el mismo espacio aunque el
+          borrador o la lista del selector cambien de tamaño. */}
+      <div className="w-full max-w-6xl">
         <Card
           role="dialog"
           aria-modal="true"
           aria-labelledby="tpl-editor-title"
-          className="flex max-h-[85vh] flex-col gap-3"
+          className="flex h-[88vh] flex-col gap-3"
         >
           <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
             <h2 id="tpl-editor-title" className="text-lg font-bold">
