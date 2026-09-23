@@ -25,7 +25,7 @@ const ALL_REGIONS: BodyRegion[] = [...FRONT_REGIONS, ...BACK_REGIONS];
 describe("BodyMap", () => {
   it("ofrece un botón por músculo de la vista y marca el elegido", () => {
     const { unmount } = render(
-      <BodyMap view="front" region="chest-lower" onSelect={() => {}} />,
+      <BodyMap view="front" regions={["chest-lower"]} onSelect={() => {}} />,
     );
     // Dos piezas (izquierda y derecha) del mismo músculo, un solo botón.
     expect(screen.getAllByRole("button")).toHaveLength(
@@ -47,7 +47,9 @@ describe("BodyMap", () => {
     expect(screen.queryByRole("button", { name: "Sóleo" })).toBeNull();
     unmount();
 
-    render(<BodyMap view="back" region="calves-soleus" onSelect={() => {}} />);
+    render(
+      <BodyMap view="back" regions={["calves-soleus"]} onSelect={() => {}} />,
+    );
     expect(
       screen
         .getByRole("button", { name: "Sóleo" })
@@ -58,9 +60,28 @@ describe("BodyMap", () => {
     ).toBeNull();
   });
 
+  it("sin `onSelect` es solo lectura: sin botones y el nombre lista los músculos de esa vista", () => {
+    const { unmount } = render(
+      <BodyMap view="front" regions={["chest-upper", "chest-lower"]} />,
+    );
+    // Informa, no filtra: nada que tabular ni que pulsar.
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(
+      screen.getByRole("img", {
+        name: "Vista frontal: Pecho inferior (esternal), Pecho superior (clavicular)",
+      }),
+    ).toBeDefined();
+    unmount();
+
+    // Una vista sin músculos del ejercicio no se dibuja: un cuerpo entero sin
+    // nada marcado se lee como un error.
+    render(<BodyMap view="back" regions={["chest-lower"]} />);
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
   it("selecciona con ratón y con Enter o espacio, y solo con esas teclas", () => {
     const onSelect = vi.fn();
-    render(<BodyMap view="front" region={null} onSelect={onSelect} />);
+    render(<BodyMap view="front" regions={[]} onSelect={onSelect} />);
     const quads = screen.getByRole("button", { name: "Cuádriceps" });
     fireEvent.click(quads);
     fireEvent.keyDown(quads, { key: "Enter" });
@@ -74,7 +95,7 @@ describe("BodyMap", () => {
   });
 
   it("el ratón no roba el foco: al pulsar no queda anillo de foco", () => {
-    render(<BodyMap view="front" region={null} onSelect={() => {}} />);
+    render(<BodyMap view="front" regions={[]} onSelect={() => {}} />);
     const quads = screen.getByRole("button", { name: "Cuádriceps" });
     // `fireEvent` devuelve `false` cuando el manejador cancela el evento por
     // defecto. Eso es lo que impide que el navegador pinte al pulsar su anillo
