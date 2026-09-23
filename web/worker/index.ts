@@ -4,15 +4,11 @@
 // en la configuración hace que este Worker vea todas las peticiones, que es lo
 // que permite gatear el HTML antes de servirlo.
 import { Hono } from "hono";
-import { parse } from "hono/utils/cookie";
-import { readSessionToken, SESSION_COOKIE } from "../../api/src/auth";
 
 export interface WebEnv {
   /** Binding de assets de wrangler ([assets] binding): sirve ./web/dist. */
   ASSETS: { fetch(request: Request): Promise<Response> };
-  /** Secreto compartido con el Worker de la API: valida la cookie de sesión. */
-  AUTH_SECRET?: string;
-  /** Origen público de la API: se autoriza en la CSP (fetch e imágenes). */
+  /** Origen público de la API: se autoriza en la CSP y se le pregunta por la sesión. */
   API_ORIGIN?: string;
 }
 
@@ -29,11 +25,31 @@ const csp = (apiOrigin?: string): string => {
   ].join("; ");
 };
 
+/**
+ * La sesión la valida la API, única dueña de la firma: aquí solo se reenvía la
+ * cookie a `GET /api/auth/status`. Antes cada Worker comprobaba la cookie con su
+ * copia de `AUTH_SECRET`, y dos copias se desincronizan (basta un `secret put`
+ * en un solo Worker): el guard rechazaba cookies válidas y en producción se veía
+ * como un cierre de sesión en cada recarga de la página.
+ *
+ * Fail closed: sin origen de la API, sin cookie o sin un 200 con
+ * `authenticated: true`, no se sirve el HTML (la pantalla de `/login` sí).
+ */
 async function hasValidSession(env: WebEnv, req: Request): Promise<boolean> {
-  // Missing secret fails closed: no key ⇒ no verifiable cookie ever.
-  if (!env.AUTH_SECRET) return false;
-  const raw = parse(req.headers.get("cookie") ?? "")[SESSION_COOKIE];
-  return (await readSessionToken(env.AUTH_SECRET, raw)) !== null;
+  const cookie = req.headers.get("cookie");
+  // Sin cookie no hay sesión que preguntar (y ahorra la subpetición).
+  if (!cookie || !env.API_ORIGIN) return false;
+  try {
+    const res = await fetch(`${env.API_ORIGIN}/api/auth/status`, {
+      headers: { cookie },
+    });
+    if (!res.ok) return false;
+    const body = (await res.json()) as { authenticated?: boolean };
+    return body.authenticated === true;
+  } catch {
+    // API inalcanzable: sin verificación no se sirve la app (fail closed).
+    return false;
+  }
 }
 
 const app = new Hono<{ Bindings: WebEnv }>()

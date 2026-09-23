@@ -3,9 +3,9 @@
 // envelope everywhere else). Handlers sit behind a factory so tests inject
 // limiter/clock/verify (DI seam).
 import { Hono } from "hono";
-import { deleteCookie, getCookie, setSignedCookie } from "hono/cookie";
+import { deleteCookie, setSignedCookie } from "hono/cookie";
 import {
-  readSessionToken,
+  readSession,
   SESSION_COOKIE,
   SESSION_MAX_AGE_S,
   sessionCookieDomain,
@@ -106,11 +106,12 @@ export function authRoutes(deps: AuthDeps = {}) {
     })
     .get("/status", async (c) => {
       const secret = deps.secret ?? c.env.AUTH_SECRET;
-      // getCookie (not getSignedCookie): readSessionToken verifies the raw
-      // `<exp>.<sig>` value itself; getSignedCookie would strip the signature
-      // before we could read the expiry.
-      const raw = secret ? getCookie(c, SESSION_COOKIE) : undefined;
-      const session = secret ? await readSessionToken(secret, raw) : null;
+      // El header entero, no una sola cookie: el navegador manda los duplicados
+      // del mismo nombre (una vieja del host y la compartida del dominio) y
+      // puede mandar primero la que ya no vale.
+      const session = secret
+        ? await readSession(secret, c.req.header("cookie"))
+        : null;
       return c.json({ authenticated: session !== null });
     });
 }

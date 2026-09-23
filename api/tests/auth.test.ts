@@ -214,6 +214,34 @@ describe("POST /api/auth/logout + GET /api/auth/status", () => {
     expect(await body(tampered)).toEqual({ authenticated: false });
   });
 
+  // Los navegadores acumulan cookies de sesión con el mismo nombre (una vieja
+  // host-only del host y la compartida del dominio) y mandan TODAS, ordenadas
+  // por fecha de creación. Quedarse con la primera es lo que dejaba fuera a una
+  // sesión válida: en producción se veía como un cierre de sesión al recargar.
+  it("status acepta la sesión válida aunque la preceda una cookie inválida del mismo nombre", async () => {
+    const login = await loginAt("/api/auth/login", PASSWORD);
+    const cookie = (login.headers.get("set-cookie") as string).split(";")[0];
+    const stale = `${SESSION_COOKIE}=1790000000.firma-invalida`;
+
+    for (const header of [`${stale}; ${cookie}`, `${cookie}; ${stale}`]) {
+      const res = await app.request(
+        "http://localhost/api/auth/status",
+        { headers: { cookie: header } },
+        env,
+      );
+      expect(res.status).toBe(200);
+      expect(await body(res)).toEqual({ authenticated: true });
+    }
+
+    // Ninguna válida: sigue siendo anónimo.
+    const none = await app.request(
+      "http://localhost/api/auth/status",
+      { headers: { cookie: stale } },
+      env,
+    );
+    expect(await body(none)).toEqual({ authenticated: false });
+  });
+
   it("logout clears the cookie with Max-Age=0", async () => {
     const login = await loginAt("/api/auth/login", PASSWORD);
     const cookie = (login.headers.get("set-cookie") as string).split(";")[0];
