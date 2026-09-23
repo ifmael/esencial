@@ -137,6 +137,16 @@ describe("auth gate on /api/*", () => {
     expect(res.status).toBe(401);
   });
 
+  it("una cookie válida entre duplicados del mismo nombre pasa el gate", async () => {
+    const stale = `${SESSION_COOKIE}=1790000000.firma-invalida`;
+    const res = await app.request(
+      "http://localhost/api/recipes",
+      { headers: { cookie: `${stale}; ${cookie}` } },
+      env,
+    );
+    expect(res.status).toBe(200);
+  });
+
   it("expired-but-well-signed cookie → 401", async () => {
     // Sign a token with the test secret expiring in the past, via the same
     // secret the test Worker uses.

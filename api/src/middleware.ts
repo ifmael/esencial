@@ -1,11 +1,11 @@
-// E7 middlewares (design D4): security headers on every response, the 401 gate
-// on /api/*, and the page guard that redirects unauthenticated HTML to /login.
-// Order at the app root: securityHeaders → authGuard → pageGuard.
+// E7 middlewares (design D4): security headers on every response, CORS para el
+// origen de la web y el 401 gate en /api/*. Orden en la raíz de la app:
+// securityHeaders → cors → authGuard. El guard del HTML (302 → /login) vive en
+// el Worker del frontal (B', dos despliegues).
 
 import type { Context } from "hono";
-import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
-import { readSessionToken, SESSION_COOKIE } from "./auth";
+import { readSession } from "./auth";
 import type { Env } from "./db";
 import { json } from "./http";
 
@@ -70,9 +70,10 @@ async function hasValidSession(
   const secret = c.env.AUTH_SECRET;
   // Missing secret fails closed: no key ⇒ no verifiable cookie ever.
   if (!secret) return false;
-  return (
-    (await readSessionToken(secret, getCookie(c, SESSION_COOKIE))) !== null
-  );
+  // El header entero: el navegador puede mandar varias cookies del mismo
+  // nombre (una vieja del host y la compartida del dominio) y basta con que
+  // una sea válida.
+  return (await readSession(secret, c.req.header("cookie"))) !== null;
 }
 
 /**

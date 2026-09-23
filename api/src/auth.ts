@@ -2,6 +2,7 @@
 // stateless HMAC-signed session token built on Hono's cookie signing helpers.
 // Zero dependencies beyond hono + Web Crypto.
 import { parseSigned, serializeSigned } from "hono/utils/cookie";
+import { tryDecodeURIComponent } from "hono/utils/url";
 
 export const SESSION_COOKIE = "esencial_session";
 /** 30 days — personal app; renewal is a re-login (design D3). */
@@ -141,4 +142,41 @@ export async function readSessionToken(
   const exp = Number(value);
   if (!Number.isInteger(exp) || exp * 1000 <= Date.now()) return null; // expired fail-closed
   return { exp };
+}
+
+/**
+ * Valores de la cookie de sesión del header, en el orden en que llegan.
+ *
+ * Un navegador acumula cookies con el mismo nombre cuando cambia su ámbito (una
+ * vieja host-only del host y la compartida del dominio, p. ej.) y manda TODAS,
+ * ordenadas por fecha de creación: leer una sola deja fuera a la sesión válida
+ * si la que toca leer es la vieja. Mismo troceado que `parse` de Hono (espacios,
+ * comillas y decodificación), pero sin descartar duplicados.
+ */
+export function sessionCookieValues(
+  cookieHeader: string | undefined,
+): string[] {
+  const values: string[] = [];
+  for (const pair of (cookieHeader ?? "").split(";")) {
+    const eq = pair.indexOf("=");
+    if (eq === -1 || pair.slice(0, eq).trim() !== SESSION_COOKIE) continue;
+    let value = pair.slice(eq + 1).trim();
+    if (value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1);
+    }
+    values.push(tryDecodeURIComponent(value));
+  }
+  return values;
+}
+
+/** Primera cookie de sesión válida del header, o null si ninguna lo es. */
+export async function readSession(
+  secret: string,
+  cookieHeader: string | undefined,
+): Promise<{ exp: number } | null> {
+  for (const raw of sessionCookieValues(cookieHeader)) {
+    const session = await readSessionToken(secret, raw);
+    if (session !== null) return session;
+  }
+  return null;
 }
