@@ -2,6 +2,7 @@
 // Diseño D4: "Ver técnica" acepta cualquier URL; los enlaces de YouTube se empotran (E8).
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { BodyMap } from "../components/body-map/body-map";
 import {
   type MuscleRegion,
   regionLabel,
@@ -569,23 +570,44 @@ export function EjercicioDetailPage() {
             )}
           </div>
         </div>
-        {exercise.description && <p>{exercise.description}</p>}
-        {exercise.setupCues && (
-          <div>
-            <h2 className="mb-1 font-semibold">Preparación</h2>
-            <p className="whitespace-pre-line">{exercise.setupCues}</p>
+        {/* Dos columnas en escritorio: el detalle a la izquierda y el dibujo a
+            la derecha, grande para que se lean los grupos musculares. En móvil
+            se apila y el dibujo va primero (donde ya estaba). */}
+        <div className="grid gap-gutter lg:grid-cols-2 lg:items-start">
+          {exercise.regions.length > 0 && (
+            <div className="flex items-start justify-center gap-4 lg:order-2">
+              <BodyMap
+                view="front"
+                regions={exercise.regions}
+                className="h-72 w-auto max-w-full lg:h-[55vh]"
+              />
+              <BodyMap
+                view="back"
+                regions={exercise.regions}
+                className="h-72 w-auto max-w-full lg:h-[55vh]"
+              />
+            </div>
+          )}
+          <div className="flex flex-col gap-3">
+            {exercise.description && <p>{exercise.description}</p>}
+            {exercise.setupCues && (
+              <div>
+                <h2 className="mb-1 font-semibold">Preparación</h2>
+                <p className="whitespace-pre-line">{exercise.setupCues}</p>
+              </div>
+            )}
+            {exercise.steps && exercise.steps.length > 0 && (
+              <div>
+                <h2 className="mb-1 font-semibold">Cómo se ejecuta</h2>
+                <ol className="list-decimal space-y-1 pl-5">
+                  {exercise.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
-        )}
-        {exercise.steps && exercise.steps.length > 0 && (
-          <div>
-            <h2 className="mb-1 font-semibold">Cómo se ejecuta</h2>
-            <ol className="list-decimal space-y-1 pl-5">
-              {exercise.steps.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
-          </div>
-        )}
+        </div>
         {exercise.techniqueUrl && ytEmbedId(exercise.techniqueUrl) && (
           <iframe
             className="aspect-video w-full rounded-xl"

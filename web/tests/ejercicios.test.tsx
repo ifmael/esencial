@@ -211,6 +211,31 @@ describe("detail", () => {
     expect(link.getAttribute("href")).toBe("https://youtu.be/dQw4w9WgXcQ");
   });
 
+  it("dibuja los músculos en la vista que les toca, y solo esa", async () => {
+    renderAt("/ejercicios/9");
+    await screen.findByRole("heading", { name: "Peso muerto" });
+    // Cuádriceps está en la vista frontal: la trasera no se pinta.
+    expect(
+      screen.getByRole("img", { name: "Vista frontal: Cuádriceps" }),
+    ).toBeDefined();
+    expect(screen.queryByRole("img", { name: /vista trasera/i })).toBeNull();
+  });
+
+  it("con músculos en las dos vistas pinta las dos", async () => {
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    expect(
+      screen.getByRole("img", {
+        name: "Vista frontal: Pecho inferior (esternal)",
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("img", {
+        name: "Vista trasera: Tríceps (cabeza lateral)",
+      }),
+    ).toBeDefined();
+  });
+
   it("non-YouTube techniqueUrl → link only, no iframe", async () => {
     vi.unstubAllGlobals();
     api = mockApi({

@@ -128,7 +128,7 @@ function ExercisePicker({
         <div className="flex shrink-0 justify-center">
           <BodyMap
             view={view}
-            region={region}
+            regions={region ? [region] : []}
             onSelect={(id) => {
               setRegion((r) => (r === id ? null : id));
               setGroup(null);
