@@ -245,16 +245,31 @@ describe("state A: editable", () => {
       await screen.findByRole("button", { name: /series de press banca/i }),
     );
     const weight = await screen.findByLabelText(
-      /^press banca serie 1 \(kg\)$/i,
+      /^peso \(kg\) · press banca serie 1$/i,
     );
     const before = api.fetchCount();
     fireEvent.click(
       screen.getByRole("button", {
-        name: /aumentar press banca serie 1 \(kg\)/i,
+        name: /aumentar peso \(kg\) · press banca serie 1/i,
       }),
     );
     expect((weight as HTMLInputElement).value).toBe("60"); // 57.5 → 60 (2.5kg steps)
     expect(api.fetchCount()).toBe(before);
+  });
+
+  it("cada campo numérico lleva su nombre visible", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /series de remo con barra/i }),
+    );
+    expect(screen.getAllByText("Peso (kg)").length).toBe(6); // 3 series × 2 ejercicios
+    expect(screen.getAllByText("Reps").length).toBe(6);
+    expect(screen.getByText("Distancia (km)")).toBeDefined();
+    expect(screen.getByText("Tiempo (min)")).toBeDefined();
   });
 
   it("prefill: última helper + starting values; never-logged exercise has no helper", async () => {
@@ -267,21 +282,21 @@ describe("state A: editable", () => {
     expect(
       (
         screen.getByLabelText(
-          /^press banca serie 1 \(kg\)$/i,
+          /^peso \(kg\) · press banca serie 1$/i,
         ) as HTMLInputElement
       ).value,
     ).toBe("57.5");
     expect(
       (
         screen.getByLabelText(
-          /^press banca serie 1 \(reps\)$/i,
+          /^reps · press banca serie 1$/i,
         ) as HTMLInputElement
       ).value,
     ).toBe("8");
     fireEvent.click(
       screen.getByRole("button", { name: /series de remo con barra/i }),
     );
-    await screen.findByLabelText(/^remo con barra serie 1 \(kg\)$/i);
+    await screen.findByLabelText(/^peso \(kg\) · remo con barra serie 1$/i);
     expect(screen.queryAllByText(/última/).length).toBe(1);
   });
 
@@ -293,7 +308,7 @@ describe("state A: editable", () => {
       screen.getByRole("button", { name: /series de press banca/i }),
     );
     expect(
-      await screen.findByLabelText(/^press banca serie 1 \(kg\)$/i),
+      await screen.findByLabelText(/^peso \(kg\) · press banca serie 1$/i),
     ).toBeDefined();
     expect(screen.queryAllByText(/última/).length).toBe(0);
   });
@@ -302,7 +317,7 @@ describe("state A: editable", () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
     const distance = await screen.findByLabelText(
-      /^running distancia \(km\)$/i,
+      /^distancia \(km\) · running$/i,
     );
     const done = screen.getByRole("checkbox", { name: /running hecho/i });
     expect((distance as HTMLInputElement).value).toBe("");

@@ -357,45 +357,55 @@ function Header({
   );
 }
 
+/** Contador con −/+ y su nombre visible delante («Peso (kg)  −  55  +»). El
+ * `context` («Press banca serie 1») completa el nombre accesible del campo y de
+ * los dos botones, para que el lector de pantalla distinga un campo de otro. */
 function Stepper({
-  label,
+  caption,
+  context,
   value,
   step,
   onValue,
   onStep,
 }: {
-  label: string;
+  caption: string;
+  context: string;
   value: number | null;
   step: number;
   onValue: (v: string) => void;
   onStep: (d: number) => void;
 }) {
+  const label = `${caption} · ${context}`;
   return (
-    <div className="flex items-center gap-1">
-      <Button
-        aria-label={`Reducir ${label}`}
-        variant="secondary"
-        className="min-h-11 min-w-11"
-        onClick={() => onStep(-step)}
-      >
-        −
-      </Button>
-      <Input
-        type="number"
-        inputMode="decimal"
-        aria-label={label}
-        className="w-20 text-center"
-        value={value === null ? "" : String(value)}
-        onChange={(e) => onValue(e.target.value)}
-      />
-      <Button
-        aria-label={`Aumentar ${label}`}
-        variant="secondary"
-        className="min-h-11 min-w-11"
-        onClick={() => onStep(step)}
-      >
-        +
-      </Button>
+    <div className="flex items-center gap-2">
+      {/* Sin `<label>`: el primer control etiquetable sería el botón «−». */}
+      <span className="text-caption text-text-secondary">{caption}</span>
+      <div className="flex items-center gap-1">
+        <Button
+          aria-label={`Reducir ${label}`}
+          variant="secondary"
+          className="min-h-11 min-w-11"
+          onClick={() => onStep(-step)}
+        >
+          −
+        </Button>
+        <Input
+          type="number"
+          inputMode="decimal"
+          aria-label={label}
+          className="w-20 text-center"
+          value={value === null ? "" : String(value)}
+          onChange={(e) => onValue(e.target.value)}
+        />
+        <Button
+          aria-label={`Aumentar ${label}`}
+          variant="secondary"
+          className="min-h-11 min-w-11"
+          onClick={() => onStep(step)}
+        >
+          +
+        </Button>
+      </div>
     </div>
   );
 }
@@ -652,40 +662,45 @@ export function SesionPage() {
               </div>
               {open && (
                 <ul className="mt-3 flex flex-col gap-2">
-                  {ex.sets.map((s, i) => (
-                    <li key={i} className="flex flex-wrap items-center gap-3">
-                      <input
-                        type="checkbox"
-                        aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
-                        className="min-h-11 min-w-11 accent-primary"
-                        checked={s.done}
-                        onChange={() => day.toggleDone(ex.se.id, i)}
-                      />
-                      <span className="w-16 text-text-secondary">
-                        Serie {i + 1}
-                      </span>
-                      <Stepper
-                        label={`${ex.se.exerciseName} serie ${i + 1} (kg)`}
-                        value={s.weightKg}
-                        step={2.5}
-                        onValue={(val) =>
-                          day.setDraftValue(ex.se.id, i, "weightKg", val)
-                        }
-                        onStep={(d) =>
-                          day.stepValue(ex.se.id, i, "weightKg", d)
-                        }
-                      />
-                      <Stepper
-                        label={`${ex.se.exerciseName} serie ${i + 1} (reps)`}
-                        value={s.reps}
-                        step={1}
-                        onValue={(val) =>
-                          day.setDraftValue(ex.se.id, i, "reps", val)
-                        }
-                        onStep={(d) => day.stepValue(ex.se.id, i, "reps", d)}
-                      />
-                    </li>
-                  ))}
+                  {ex.sets.map((s, i) => {
+                    const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
+                    return (
+                      <li key={i} className="flex flex-wrap items-center gap-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
+                          className="min-h-11 min-w-11 accent-primary"
+                          checked={s.done}
+                          onChange={() => day.toggleDone(ex.se.id, i)}
+                        />
+                        <span className="w-16 text-text-secondary">
+                          Serie {i + 1}
+                        </span>
+                        <Stepper
+                          caption="Peso (kg)"
+                          context={ctx}
+                          value={s.weightKg}
+                          step={2.5}
+                          onValue={(val) =>
+                            day.setDraftValue(ex.se.id, i, "weightKg", val)
+                          }
+                          onStep={(d) =>
+                            day.stepValue(ex.se.id, i, "weightKg", d)
+                          }
+                        />
+                        <Stepper
+                          caption="Reps"
+                          context={ctx}
+                          value={s.reps}
+                          step={1}
+                          onValue={(val) =>
+                            day.setDraftValue(ex.se.id, i, "reps", val)
+                          }
+                          onStep={(d) => day.stepValue(ex.se.id, i, "reps", d)}
+                        />
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>
@@ -714,7 +729,8 @@ export function SesionPage() {
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <Stepper
-                label={`${c.se.exerciseName} distancia (km)`}
+                caption="Distancia (km)"
+                context={c.se.exerciseName}
                 value={c.distanceKm}
                 step={1}
                 onValue={(val) =>
@@ -729,7 +745,8 @@ export function SesionPage() {
                 }
               />
               <Stepper
-                label={`${c.se.exerciseName} tiempo (min)`}
+                caption="Tiempo (min)"
+                context={c.se.exerciseName}
                 value={c.durationMin}
                 step={5}
                 onValue={(val) =>
