@@ -7,6 +7,7 @@
 // transiciones cortas y una barra inferior con área táctil de 44px.
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
+import { currentTheme, saveTheme, type Theme } from "../lib/ambient";
 import { apiFetchRaw } from "../lib/api";
 import {
   CalendarIcon,
@@ -16,9 +17,12 @@ import {
   DumbbellIcon,
   LeafIcon,
   LogoutIcon,
+  MoonIcon,
+  SunIcon,
   SwatchIcon,
   UtensilsIcon,
 } from "./icons";
+import { chipClass, chromeClass } from "./ui";
 
 type NavChild = { href: string; label: string };
 type NavSection = {
@@ -155,6 +159,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   // Preferencia del usuario sobre el ancho del menú; sin elección, la ruta.
   const [menuPref, setMenuPref] = useState(readMenuPref);
+  const [theme, setTheme] = useState<Theme>(currentTheme);
+  const nextTheme: Theme = theme === "dark" ? "light" : "dark";
+  const themeLabel = nextTheme === "dark" ? "Tema oscuro" : "Tema claro";
+  const ThemeIcon = nextTheme === "dark" ? MoonIcon : SunIcon;
+  const toggleTheme = () => {
+    saveTheme(nextTheme);
+    setTheme(nextTheme);
+  };
   const calendarRoute = CALENDAR_ROUTES[pathname] === true;
   const collapsed =
     menuPref === null ? calendarRoute : menuPref === "collapsed";
@@ -277,9 +289,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           calendario (fila de chips). Por defecto se pliega en las rutas de
           calendario; el botón de la cabecera manda a partir de ahí. */}
       <aside
-        className={`hidden shrink-0 flex-col border-r border-border bg-surface py-6 lg:flex lg:overflow-y-auto ${
-          collapsed ? "w-18 items-center gap-4 px-3" : "w-64 gap-6 px-4"
-        }`}
+        className={chromeClass(
+          "hidden shrink-0 flex-col border-r border-border py-6 lg:flex lg:overflow-y-auto",
+          collapsed ? "w-18 items-center gap-4 px-3" : "w-64 gap-6 px-4",
+        )}
       >
         <div
           className={`flex w-full ${
@@ -294,7 +307,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               collapsed ? "justify-center p-1" : "min-w-0 flex-1 px-2 py-1"
             }`}
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-panel bg-primary text-on-primary">
+            <span className="grid size-10 shrink-0 place-items-center rounded-panel bg-primary text-on-primary shadow-glow">
               <LeafIcon width={22} height={22} />
             </span>
             {collapsed ? null : (
@@ -328,6 +341,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex w-full flex-col gap-1">
           {collapsed ? (
             <>
+              <button
+                type="button"
+                aria-label={themeLabel}
+                title={themeLabel}
+                onClick={toggleTheme}
+                className={railItem(false)}
+              >
+                <ThemeIcon />
+              </button>
               <Link
                 to="/ui"
                 aria-label="Sistema de diseño"
@@ -363,6 +385,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </Link>
               <button
                 type="button"
+                onClick={toggleTheme}
+                className="flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text"
+              >
+                <ThemeIcon />
+                {themeLabel}
+              </button>
+              <button
+                type="button"
                 onClick={logout}
                 className="flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text"
               >
@@ -389,7 +419,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 key={child.href}
                 to={child.href}
-                className="rounded-chip bg-surface-muted px-3 py-1 text-caption font-semibold text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-primary-soft hover:text-primary"
+                className={chipClass({
+                  className:
+                    "text-text-secondary hover:bg-primary-soft hover:text-primary",
+                })}
               >
                 {child.label}
               </Link>
@@ -406,7 +439,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Móvil: barra inferior */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-up backdrop-blur lg:hidden">
+      <nav
+        className={chromeClass(
+          "fixed inset-x-0 bottom-0 z-20 border-t border-border pb-[env(safe-area-inset-bottom)] shadow-up lg:hidden",
+        )}
+      >
         <div className="mx-auto flex max-w-lg items-stretch px-2 py-1.5">
           {NAV.map((section) => (
             <BarItem
@@ -424,6 +461,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
             icon={SwatchIcon}
             active={isActive(pathname, "/ui")}
           />
+          <button
+            type="button"
+            aria-label={themeLabel}
+            onClick={toggleTheme}
+            className="flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel px-1 py-1 text-micro font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:text-text"
+          >
+            <span className="grid size-9 place-items-center">
+              <ThemeIcon />
+            </span>
+            Tema
+          </button>
           <button
             type="button"
             onClick={logout}

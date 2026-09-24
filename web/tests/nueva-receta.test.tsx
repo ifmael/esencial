@@ -58,10 +58,14 @@ describe("nueva-receta: categorías", () => {
     vi.stubGlobal("fetch", server.fetchMock);
     await openPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
+    const desayuno = screen.getByRole("button", { name: "Desayuno" });
+    expect(desayuno.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(desayuno);
     expect(
-      screen.getByRole("button", { name: "Desayuno" }).className,
-    ).toContain("bg-primary-container");
+      screen
+        .getByRole("button", { name: "Desayuno" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
 
     fireEvent.change(screen.getByRole("textbox", { name: "Nueva categoría" }), {
       target: { value: "batch" },

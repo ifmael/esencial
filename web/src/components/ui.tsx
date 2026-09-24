@@ -1,19 +1,20 @@
-// Primitivas compartidas (variante A). Postura mixta: la piel vive en las
-// clases de `globals.css` (.btn-*, .card, .input, .badge-*) y aquí queda solo
-// el contrato de React — variantes, tonos, tamaños y el `type` del botón.
+// Primitivas compartidas (dirección B «cristal»). La piel vive en las clases de
+// `globals.css` (.glass, .card, .sheet, .btn-*, .input, .badge-*, .chip) y aquí
+// queda solo el contrato de React — variantes, tonos, tamaños y el `type`.
 import type { ComponentProps } from "react";
 
 /** Une clases saltándose las falsas. Sin dependencias: son cuatro líneas. */
 const cx = (...parts: (string | false | null | undefined)[]) =>
   parts.filter(Boolean).join(" ");
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "icon";
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary: "btn-primary",
   secondary: "btn-secondary",
   ghost: "btn-ghost",
+  danger: "btn-danger",
 };
 
 /** `md` = 44px de alto (área táctil mínima); `icon` = 44×44 cuadrado. */
@@ -57,14 +58,61 @@ export function Button({
 }
 
 export function Card({ className, ...rest }: ComponentProps<"div">) {
-  return <div className={cx("card", className)} {...rest} />;
+  return <div className={cx("glass card", className)} {...rest} />;
 }
 
 /** Clases de la tarjeta, para los elementos que se ven como una tarjeta pero no
  * pueden ser un `<div>`: un `<Link>`, un `<button>` o un `<ul>` con sus `<li>`.
  * `Card` renderiza un div, así que en esos casos la piel se pide aquí. */
 export function cardClass(...parts: (string | false | null | undefined)[]) {
-  return cx("card", ...parts);
+  return cx("glass card", ...parts);
+}
+
+/** Fondo de una modal: oscurece la página y centra la hoja. Pulsar el propio
+ * fondo (no la hoja) cierra; el consumidor decide qué es cerrar. */
+export function Scrim({
+  className,
+  onDismiss,
+  ...rest
+}: ComponentProps<"div"> & { onDismiss?: () => void }) {
+  return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: Escape lo gestiona la modal; el clic en el fondo es un atajo de ratón.
+    <div
+      className={cx("scrim fixed inset-0 z-50 flex p-4", className)}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onDismiss?.();
+      }}
+      {...rest}
+    />
+  );
+}
+
+/** Cromo de vidrio: barra lateral y barra inferior, lo que queda fijo encima
+ * del contenido que se desplaza por detrás. */
+export function chromeClass(...parts: (string | false | null | undefined)[]) {
+  return cx("glass-chrome", ...parts);
+}
+
+/** Hoja de vidrio denso: el panel de una modal o de un cajón lateral. */
+export function sheetClass(...parts: (string | false | null | undefined)[]) {
+  return cx("glass-chrome sheet", ...parts);
+}
+
+/** Panel de una modal: la hoja con el relleno de una tarjeta. */
+export function Sheet({ className, ...rest }: ComponentProps<"div">) {
+  return <div className={sheetClass("p-card", className)} {...rest} />;
+}
+
+/** Ficha pequeña (material, tag, filtro). Si es un botón conmutable, su
+ * `aria-pressed` la pinta rellena de marca; `tone="done"` es la ficha verde. */
+export function chipClass({
+  tone,
+  className,
+}: {
+  tone?: "done";
+  className?: string;
+} = {}) {
+  return cx("chip", tone === "done" && "chip-done", className);
 }
 
 /** Campo de texto. El error se marca con `aria-invalid`, que es a la vez el

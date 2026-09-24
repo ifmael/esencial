@@ -1,92 +1,221 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   Esencial — capa de sistema (variante A "acabado sistémico")
-   Base: wireframes/DESIGN.md. Aquí viven SOLO decisiones transversales:
-   escala tipográfica, ritmo de espaciado, radios, superficies/elevación y
-   movimiento. Las pantallas no inventan valores: consumen estos tokens.
+   Esencial — capa de sistema (dirección B «cristal / aurora»)
+   Superficies translúcidas sobre una aurora de gradientes que se mueve muy
+   despacio. Aquí viven SOLO decisiones transversales: color, escala
+   tipográfica, ritmo, radios, vidrio/elevación y movimiento. Las pantallas no
+   inventan valores: consumen estos tokens.
    ========================================================================== */
 
+/* Manrope variable, subset latino, auto-alojada (licencia OFL junto al woff2). */
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Posiciones de la aurora: registradas para que el navegador las interpole
+   (sin @property, un custom property no se anima). */
+@property --aurora-a {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 12%;
+}
+@property --aurora-b {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 88%;
+}
+@property --aurora-hue {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 :root {
-  /* Marca y superficies — wireframes/DESIGN.md */
-  --color-primary: #15803d;
-  --color-primary-dark: #166534;
-  --color-primary-container: #15803d;
+  color-scheme: light;
+
+  /* Marca */
+  --color-primary: #0f7a45; /* 5,4:1 sobre blanco */
+  --color-primary-dark: #0b5e35;
   --color-on-primary: #ffffff;
   --color-secondary: #4d7c0f;
-  --color-background: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f5f5f4;
-  --color-pending: #d97706;
-  --color-pending-bg: #fef3c7;
-  --color-pending-text: #92400e;
-  --color-done-bg: #dcfce7;
-  --color-done-text: #166534;
+
+  /* Fondo y aurora: tres manchas de color sobre un lienzo casi blanco */
+  --color-background: #eef3f1;
+  --color-aurora-1: rgb(52 211 153 / 0.6); /* menta */
+  --color-aurora-2: rgb(56 189 248 / 0.5); /* cielo */
+  --color-aurora-3: rgb(167 139 250 / 0.45); /* lavanda */
+
+  /* Vidrio: el tinte es lo que garantiza el contraste AA del texto encima,
+     aunque la aurora pase por detrás. Opacidad alta a propósito. */
+  --color-surface: rgb(255 255 255 / 0.62);
+  --color-surface-strong: rgb(255 255 255 / 0.82);
+  --color-surface-muted: rgb(15 40 30 / 0.05);
+  --color-glass-edge: rgb(255 255 255 / 0.85); /* borde de luz, arriba */
+  --color-glass-edge-low: rgb(255 255 255 / 0.2); /* …y su caída, abajo */
+  --color-glass-highlight: rgb(255 255 255 / 0.55);
+  --color-scrim: rgb(12 24 20 / 0.32);
+  --color-photo-scrim: rgb(0 0 0 / 0.62); /* texto blanco sobre foto */
+  --color-on-photo: #ffffff;
+
+  /* Estados */
+  --color-pending: #b45309;
+  --color-pending-bg: rgb(254 243 199 / 0.85);
+  --color-pending-text: #7c2d12;
+  --color-done-bg: rgb(209 250 229 / 0.85);
+  --color-done-text: #065f46;
   --color-error: #b91c1c;
-  --color-text: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-border: #e7e5e4;
+  --color-error-soft: rgb(185 28 28 / 0.1);
+  --color-on-error: #ffffff;
+
+  /* Texto: secundario oscurecido para aguantar AA sobre el vidrio más claro */
+  --color-text: #0f1a16;
+  --color-text-secondary: #4b5a54; /* 6,6:1 sobre blanco, >4,5 sobre el vidrio */
+  --color-border: rgb(15 40 30 / 0.1);
+  --color-border-strong: rgb(15 40 30 / 0.2);
+
   /* Derivados: estados suaves (activo de menú, hover de controles) */
-  --color-primary-soft: #e9f3ed;
-  --color-primary-soft-strong: #d8ebdf;
-  --color-border-strong: #d6d3d1;
-  --color-ring: rgb(21 128 61 / 0.32);
-  /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
-     ratón. Un tono medio para que la silueta no se lave sobre la tarjeta; el
-     grupo elegido va en `--color-primary`. */
+  --color-primary-soft: rgb(15 122 69 / 0.1);
+  --color-primary-soft-strong: rgb(15 122 69 / 0.18);
+  --color-ring: rgb(15 122 69 / 0.32);
+  /* Mapa corporal (/plantillas) */
   --color-muscle: #8fb59d;
   --color-muscle-strong: #6e9c81;
 
-  /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
-     para todo lo que reacciona al usuario. */
+  /* Desenfoque: uno para superficies y uno para el cromo (barras, modales). */
+  --blur-glass: 18px;
+  --blur-chrome: 28px;
+
+  /* Movimiento: tres duraciones, un easing de salida y un muelle.
+     `--ease-spring` es un muelle amortiguado (ζ=0,7; ω=16) muestreado en
+     `linear()`: rebasa un 4,6 % y se asienta. Solo para transform. */
   --duration-fast: 120ms;
   --duration-base: 180ms;
   --duration-slow: 280ms;
+  --duration-spring: 500ms;
   --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: linear(
+    0,
+    0.098,
+    0.306,
+    0.531,
+    0.726,
+    0.871,
+    0.965,
+    1.018,
+    1.042,
+    1.046,
+    1.04,
+    1.03,
+    1.02,
+    1.011,
+    1.005,
+    1.001,
+    1
+  );
 
   /* Espaciado semántico (ritmo) */
-  --spacing-card: 1.25rem; /* 20px — padding interno de tarjeta */
-  --spacing-section: 1.75rem; /* 28px — separación entre secciones */
-  --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
-  --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
+  --spacing-card: 1.25rem; /* 20px */
+  --spacing-section: 1.75rem; /* 28px */
+  --spacing-stack: 0.75rem; /* 12px */
+  --spacing-gutter: 1rem; /* 16px */
 
-  /* Ancho de página: el calendario semanal es el caso ancho. Tope amplio, para
-     que en pantallas ultrapanorámicas no se estire sin fin. */
   --container-calendar: 110rem; /* 1760px */
 
-  /* Radios: control < panel < tarjeta */
-  --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
-  --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
-  --radius-card: 1rem; /* 16px — tarjetas y superficies grandes */
+  /* Radios: más generosos que antes, como piezas de vidrio pulido */
+  --radius-control: 0.75rem; /* 12px */
+  --radius-panel: 0.875rem; /* 14px */
+  --radius-card: 1.25rem; /* 20px */
+  --radius-sheet: 1.75rem; /* 28px — hojas y modales */
   --radius-chip: 999px;
 
-  /* Elevación: dos sombras compuestas, nunca una sola difusa fuerte */
+  /* Elevación: sombras de color (verde muy oscuro), nunca negro puro */
   --shadow-card:
-    0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
+    0 1px 2px rgb(10 40 28 / 0.05), 0 12px 32px -16px rgb(10 40 28 / 0.22);
   --shadow-raised:
-    0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
-  --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
-  /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
-  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
+    0 2px 6px rgb(10 40 28 / 0.06), 0 24px 48px -20px rgb(10 40 28 / 0.32);
+  --shadow-sheet:
+    0 8px 24px rgb(10 40 28 / 0.08), 0 40px 80px -24px rgb(10 40 28 / 0.4);
+  --shadow-inset: inset 0 1px 2px rgb(10 40 28 / 0.08);
+  --shadow-up: 0 -8px 24px -16px rgb(10 40 28 / 0.35);
+  --shadow-glow: 0 6px 20px -6px rgb(15 122 69 / 0.55);
+}
+
+/* Oscuro: la elección explícita manda; sin ella, `ambient.ts` pone el del
+   sistema en `data-theme` antes del primer pintado útil. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-primary: #4ade80; /* 10:1 sobre el vidrio oscuro */
+  --color-primary-dark: #86efac;
+  --color-on-primary: #052e16;
+  --color-secondary: #a3e635;
+  --color-background: #070d0b;
+  --color-aurora-1: rgb(16 185 129 / 0.32);
+  --color-aurora-2: rgb(14 116 144 / 0.34);
+  --color-aurora-3: rgb(109 40 217 / 0.28);
+  --color-surface: rgb(18 28 25 / 0.66);
+  --color-surface-strong: rgb(18 28 25 / 0.88);
+  --color-surface-muted: rgb(255 255 255 / 0.06);
+  --color-glass-edge: rgb(255 255 255 / 0.22);
+  --color-glass-edge-low: rgb(255 255 255 / 0.04);
+  --color-glass-highlight: rgb(255 255 255 / 0.06);
+  --color-scrim: rgb(0 0 0 / 0.55);
+  --color-pending: #fbbf24;
+  --color-pending-bg: rgb(120 53 15 / 0.45);
+  --color-pending-text: #fde68a;
+  --color-done-bg: rgb(6 78 59 / 0.55);
+  --color-done-text: #a7f3d0;
+  --color-error: #f87171;
+  --color-error-soft: rgb(248 113 113 / 0.14);
+  --color-on-error: #450a0a;
+  --color-text: #e8f0ec;
+  --color-text-secondary: #a3b3ac;
+  --color-border: rgb(255 255 255 / 0.1);
+  --color-border-strong: rgb(255 255 255 / 0.2);
+  --color-primary-soft: rgb(74 222 128 / 0.12);
+  --color-primary-soft-strong: rgb(74 222 128 / 0.22);
+  --color-ring: rgb(74 222 128 / 0.35);
+  --color-muscle: #3f6b52;
+  --color-muscle-strong: #5a8f70;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+  --shadow-raised:
+    0 2px 6px rgb(0 0 0 / 0.35), 0 24px 48px -20px rgb(0 0 0 / 0.7);
+  --shadow-sheet:
+    0 8px 24px rgb(0 0 0 / 0.4), 0 40px 80px -24px rgb(0 0 0 / 0.8);
+  --shadow-up: 0 -8px 24px -16px rgb(0 0 0 / 0.7);
+  --shadow-glow: 0 6px 20px -6px rgb(74 222 128 / 0.45);
 }
 
 @theme inline {
   --color-primary: var(--color-primary);
   --color-primary-dark: var(--color-primary-dark);
-  --color-primary-container: var(--color-primary-container);
   --color-on-primary: var(--color-on-primary);
   --color-primary-soft: var(--color-primary-soft);
   --color-primary-soft-strong: var(--color-primary-soft-strong);
   --color-secondary: var(--color-secondary);
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);
+  --color-surface-strong: var(--color-surface-strong);
   --color-surface-muted: var(--color-surface-muted);
+  --color-scrim: var(--color-scrim);
+  --color-photo-scrim: var(--color-photo-scrim);
+  --color-on-photo: var(--color-on-photo);
   --color-pending: var(--color-pending);
   --color-pending-bg: var(--color-pending-bg);
   --color-pending-text: var(--color-pending-text);
   --color-done-bg: var(--color-done-bg);
   --color-done-text: var(--color-done-text);
   --color-error: var(--color-error);
+  --color-error-soft: var(--color-error-soft);
+  --color-on-error: var(--color-on-error);
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
   --color-border: var(--color-border);
@@ -95,55 +224,100 @@
   --color-muscle: var(--color-muscle);
   --color-muscle-strong: var(--color-muscle-strong);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  /* Escala tipográfica: 6 pasos con line-height pareja. Nada de saltos de
-     14→16→18 sin criterio: micro/caption para metadatos, body para lectura,
-     lead para el dato de una fila, title/display para jerarquía de pantalla. */
-  --text-micro: 0.6875rem; /* 11px — etiquetas en mayúsculas */
+  /* Escala tipográfica: 6 pasos con line-height pareja. Manrope es ancha:
+     títulos con tracking negativo para que no se abran. */
+  --text-micro: 0.6875rem; /* 11px */
   --text-micro--line-height: 1rem;
   --text-micro--letter-spacing: 0.08em;
-  --text-caption: 0.8125rem; /* 13px — metadatos y ayudas */
+  --text-caption: 0.8125rem; /* 13px */
   --text-caption--line-height: 1.125rem;
-  --text-body: 0.9375rem; /* 15px — texto de interfaz */
-  --text-body--line-height: 1.45;
-  --text-lead: 1.0625rem; /* 17px — dato principal de una fila */
-  --text-lead--line-height: 1.35;
-  --text-title: 1.25rem; /* 20px — título de bloque */
+  --text-body: 0.9375rem; /* 15px */
+  --text-body--line-height: 1.5;
+  --text-lead: 1.0625rem; /* 17px */
+  --text-lead--line-height: 1.4;
+  --text-title: 1.25rem; /* 20px */
   --text-title--line-height: 1.3;
-  --text-display: 1.5rem; /* 24px — título de pantalla */
-  --text-display--line-height: 1.2;
-  --text-display--letter-spacing: -0.02em;
+  --text-title--letter-spacing: -0.015em;
+  --text-display: 1.75rem; /* 28px */
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.03em;
 
-  /* Ritmo de espaciado: `p-card`, `gap-section`, `gap-stack`, `gap-gutter` */
   --spacing-card: var(--spacing-card);
   --spacing-section: var(--spacing-section);
   --spacing-stack: var(--spacing-stack);
   --spacing-gutter: var(--spacing-gutter);
 
-  /* Ancho del calendario: `max-w-calendar` */
   --container-calendar: var(--container-calendar);
 
   --radius-control: var(--radius-control);
   --radius-panel: var(--radius-panel);
   --radius-card: var(--radius-card);
+  --radius-sheet: var(--radius-sheet);
   --radius-chip: var(--radius-chip);
 
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
+  --shadow-sheet: var(--shadow-sheet);
   --shadow-inset: var(--shadow-inset);
   --shadow-up: var(--shadow-up);
+  --shadow-glow: var(--shadow-glow);
+
+  --blur-glass: var(--blur-glass);
+  --blur-chrome: var(--blur-chrome);
 
   --ease-out-quart: var(--ease-out-quart);
+  --ease-spring: var(--ease-spring);
 }
 
 @layer base {
-  body {
+  html {
     background: var(--color-background);
+  }
+
+  body {
+    position: relative;
     color: var(--color-text);
     font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Aurora: una sola capa fija detrás de todo, pintada con gradientes. Se
+     mueve un ciclo cada 40s — lo bastante lento para no llamar la atención —
+     y se congela con la pestaña oculta y con reduced-motion. No lleva blur:
+     los gradientes radiales ya son suaves, y un filtro a pantalla completa
+     costaría en cada fotograma. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -10vmax;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        40vmax 32vmax at var(--aurora-a) 18%,
+        var(--color-aurora-1),
+        transparent 70%
+      ),
+      radial-gradient(
+        36vmax 30vmax at var(--aurora-b) 30%,
+        var(--color-aurora-2),
+        transparent 70%
+      ),
+      radial-gradient(
+        46vmax 34vmax at 50% calc(100% - var(--aurora-a)),
+        var(--color-aurora-3),
+        transparent 70%
+      );
+    filter: hue-rotate(var(--aurora-hue));
+    animation: aurora 40s ease-in-out infinite alternate;
+  }
+  :root[data-hidden] body::before {
+    animation-play-state: paused;
   }
 
   /* Un solo anillo de foco para toda la app, visible sobre cualquier superficie. */
@@ -166,34 +340,101 @@
 }
 
 @layer components {
+  /* --- Vidrio ----------------------------------------------------------- */
+
+  /* Borde de luz: un degradado de 1px que cae de arriba (luz) a abajo, pintado
+     con dos fondos —el tinte en padding-box y el degradado en border-box—.
+     Así no hace falta un pseudo-elemento ni una máscara por tarjeta. */
+  .glass {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+      linear-gradient(
+        160deg,
+        var(--color-glass-edge),
+        var(--color-glass-edge-low) 45%,
+        var(--color-glass-edge-low) 70%,
+        var(--color-glass-highlight)
+      )
+      border-box;
+    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
+    backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
+  }
+
+  /* Cromo: barras y modales. Más tinte y más blur que una tarjeta. */
+  .glass-chrome {
+    background: var(--color-surface-strong);
+    -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(1.8);
+    backdrop-filter: blur(var(--blur-chrome)) saturate(1.8);
+  }
+
   /* --- Superficies ------------------------------------------------------ */
 
   .card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
     border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
+    box-shadow:
+      inset 0 1px 0 var(--color-glass-highlight),
+      var(--shadow-card);
     padding: var(--spacing-card);
+    color: var(--color-text);
+  }
+  /* Presupuesto de blur: una tarjeta dentro de otra (o dentro de una hoja) ya
+     tiene vidrio detrás; no se desenfoca dos veces. */
+  :is(.card, .sheet) .card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background:
+      linear-gradient(var(--color-surface-muted), var(--color-surface-muted))
+      padding-box,
+      linear-gradient(var(--color-border), var(--color-border)) border-box;
+    box-shadow: none;
   }
 
-  /* Tarjeta que además se pulsa: se levanta al pasar por encima. */
+  /* Hoja: modal o panel lateral, el vidrio más denso. */
+  .sheet {
+    border: 1px solid var(--color-glass-edge-low);
+    border-radius: var(--radius-sheet);
+    box-shadow:
+      inset 0 1px 0 var(--color-glass-edge),
+      var(--shadow-sheet);
+    color: var(--color-text);
+  }
+
+  /* Fondo de modal: oscurece sin desenfocar (el blur ya lo pone la hoja). */
+  .scrim {
+    background: var(--color-scrim);
+    animation: fade-in var(--duration-base) var(--ease-out-quart) both;
+  }
+  .scrim > * {
+    animation: sheet-in var(--duration-spring) var(--ease-spring) both;
+  }
+
+  /* Tarjeta que además se pulsa: se inclina hacia el puntero (ambient.ts pone
+     --tilt-x/--tilt-y, solo con puntero fino) y responde con un muelle. */
   .card-interactive {
+    transform: perspective(900px) rotateX(var(--tilt-x, 0deg))
+      rotateY(var(--tilt-y, 0deg));
     transition:
-      transform var(--duration-base) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart),
-      border-color var(--duration-base) var(--ease-out-quart);
+      transform var(--duration-spring) var(--ease-spring),
+      box-shadow var(--duration-base) var(--ease-out-quart);
   }
   .card-interactive:hover {
-    transform: translateY(-1px);
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-raised);
+    transform: perspective(900px) rotateX(var(--tilt-x, 0deg))
+      rotateY(var(--tilt-y, 0deg)) translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 var(--color-glass-highlight),
+      var(--shadow-raised);
+    /* Mientras sigue al puntero no hay muelle: cada movimiento sería un rebote. */
+    transition:
+      transform var(--duration-fast) linear,
+      box-shadow var(--duration-base) var(--ease-out-quart);
   }
   .card-interactive:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-card);
+    transform: perspective(900px) scale(0.985);
+    transition: transform var(--duration-fast) var(--ease-out-quart);
   }
 
-  /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA) */
+  /* Etiqueta de sección */
   .section-label {
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
@@ -203,7 +444,7 @@
     color: var(--color-text-secondary);
   }
 
-  /* Loader: barrido suave en lugar del pulso de opacidad clásico. */
+  /* Loader: barrido suave */
   .skeleton {
     position: relative;
     overflow: hidden;
@@ -218,7 +459,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgb(255 255 255 / 0.75),
+      var(--color-glass-highlight),
       transparent
     );
     animation: shimmer 1.6s var(--ease-out-quart) infinite;
@@ -232,20 +473,24 @@
     justify-content: center;
     gap: 0.5rem;
     border-radius: var(--radius-control);
-    font-weight: 600;
+    font-weight: 650;
     letter-spacing: -0.01em;
     line-height: 1;
     white-space: nowrap;
+    border: 1px solid transparent;
     transition:
       background-color var(--duration-fast) var(--ease-out-quart),
-      background-image var(--duration-fast) var(--ease-out-quart),
       border-color var(--duration-fast) var(--ease-out-quart),
       color var(--duration-fast) var(--ease-out-quart),
       box-shadow var(--duration-base) var(--ease-out-quart),
-      transform var(--duration-fast) var(--ease-out-quart);
+      transform var(--duration-spring) var(--ease-spring);
+  }
+  .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
   }
   .btn:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: scale(0.96);
+    transition-duration: var(--duration-fast);
   }
   .btn:disabled,
   .btn[aria-disabled="true"] {
@@ -253,28 +498,47 @@
     cursor: not-allowed;
   }
 
-  /* El hover oscurece con una capa encima: así sigue funcionando cuando el
-     consumidor pinta el botón de otro color (p. ej. `bg-error`). */
+  /* Primario: gema. Degradado vertical con un brillo arriba; el hover añade
+     un halo de color. La capa de brillo va en background-image para que un
+     consumidor pueda cambiar el color base. */
   .btn-primary {
-    background: var(--color-primary);
+    background-color: var(--color-primary);
+    background-image: linear-gradient(
+      rgb(255 255 255 / 0.18),
+      rgb(255 255 255 / 0) 55%
+    );
     color: var(--color-on-primary);
-    box-shadow: 0 1px 2px rgb(22 101 52 / 0.25);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      0 1px 2px rgb(10 40 28 / 0.2);
   }
   .btn-primary:hover:not(:disabled) {
-    background-image: linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      var(--shadow-glow);
   }
 
+  /* Peligro: la acción destructiva de una confirmación. */
+  .btn-danger {
+    background-color: var(--color-error);
+    background-image: linear-gradient(
+      rgb(255 255 255 / 0.16),
+      rgb(255 255 255 / 0) 55%
+    );
+    color: var(--color-on-error);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
+  }
+
+  /* Secundario: una pastilla de vidrio. */
   .btn-secondary {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
     color: var(--color-text);
+    box-shadow: inset 0 1px 0 var(--color-glass-highlight);
   }
   .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-surface-strong);
     border-color: var(--color-border-strong);
-    background-image: linear-gradient(
-      rgb(28 25 23 / 0.04),
-      rgb(28 25 23 / 0.04)
-    );
   }
 
   .btn-ghost {
@@ -289,12 +553,13 @@
   /* --- Campos ----------------------------------------------------------- */
 
   .input {
-    background: var(--color-surface);
+    background: var(--color-surface-strong);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-control);
     padding: 0.625rem 0.875rem;
     min-height: 2.75rem;
     color: var(--color-text);
+    box-shadow: var(--shadow-inset);
     transition:
       border-color var(--duration-fast) var(--ease-out-quart),
       box-shadow var(--duration-base) var(--ease-out-quart);
@@ -308,7 +573,12 @@
   .input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-ring);
+    box-shadow:
+      var(--shadow-inset),
+      0 0 0 4px var(--color-ring);
+  }
+  .input:disabled {
+    opacity: 0.6;
   }
   .input-error,
   .input[aria-invalid="true"] {
@@ -317,7 +587,9 @@
   .input-error:focus,
   .input[aria-invalid="true"]:focus {
     border-color: var(--color-error);
-    box-shadow: 0 0 0 3px rgb(185 28 28 / 0.2);
+    box-shadow:
+      var(--shadow-inset),
+      0 0 0 4px var(--color-error-soft);
   }
 
   /* --- Insignias -------------------------------------------------------- */
@@ -333,6 +605,7 @@
     font-weight: 700;
     text-transform: uppercase;
     padding: 0.3125rem 0.625rem;
+    box-shadow: inset 0 0 0 1px var(--color-border);
   }
   .badge-pending {
     background: var(--color-pending-bg);
@@ -347,6 +620,38 @@
     color: var(--color-text-secondary);
   }
 
+  /* Ficha: chip seleccionable (materiales, tags, filtros). */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 2rem;
+    border-radius: var(--radius-chip);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-muted);
+    padding: 0.25rem 0.75rem;
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: 600;
+    color: var(--color-text);
+    transition:
+      background-color var(--duration-fast) var(--ease-out-quart),
+      color var(--duration-fast) var(--ease-out-quart),
+      transform var(--duration-spring) var(--ease-spring);
+  }
+  button.chip:active {
+    transform: scale(0.95);
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--color-primary);
+    border-color: transparent;
+    color: var(--color-on-primary);
+  }
+  .chip-done {
+    background: var(--color-done-bg);
+    color: var(--color-done-text);
+  }
+
   /* --- Fila de lista ---------------------------------------------------- */
 
   .list-row {
@@ -355,6 +660,57 @@
     gap: var(--spacing-stack);
     border-radius: var(--radius-panel);
     transition: background-color var(--duration-fast) var(--ease-out-quart);
+  }
+}
+
+/* Sin backdrop-filter (navegadores viejos, o modos de ahorro que lo
+   desactivan): el vidrio pasa a ser opaco para que el texto siga legible. */
+@supports not (
+    (backdrop-filter: blur(1px)) or
+    (-webkit-backdrop-filter: blur(1px))
+  ) {
+  :root {
+    --color-surface: #ffffff;
+    --color-surface-strong: #ffffff;
+  }
+  :root[data-theme="dark"] {
+    --color-surface: #121c19;
+    --color-surface-strong: #16221e;
+  }
+}
+
+/* Con transparencia reducida pedida por el sistema, igual: vidrio opaco. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --color-surface: #ffffff;
+    --color-surface-strong: #ffffff;
+  }
+  :root[data-theme="dark"] {
+    --color-surface: #121c19;
+    --color-surface-strong: #16221e;
+  }
+  .glass,
+  .glass-chrome {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@keyframes aurora {
+  0% {
+    --aurora-a: 12%;
+    --aurora-b: 88%;
+    --aurora-hue: 0deg;
+  }
+  50% {
+    --aurora-a: 40%;
+    --aurora-b: 60%;
+    --aurora-hue: 18deg;
+  }
+  100% {
+    --aurora-a: 70%;
+    --aurora-b: 25%;
+    --aurora-hue: -14deg;
   }
 }
 
@@ -367,7 +723,7 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px) scale(0.99);
   }
   to {
     opacity: 1;
@@ -375,9 +731,22 @@
   }
 }
 
-/* Entrada de contenido: una sola vez, corta y desplazada. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+/* Entrada de contenido: una sola vez, con muelle. */
 .animate-rise {
-  animation: rise var(--duration-slow) var(--ease-out-quart) both;
+  animation: rise var(--duration-spring) var(--ease-spring) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -388,5 +757,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* La aurora se queda quieta en su primer fotograma. */
+  body::before {
+    animation: none !important;
+  }
+  .card-interactive {
+    transform: none !important;
   }
 }

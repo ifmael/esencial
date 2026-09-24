@@ -13,6 +13,7 @@ import {
   buttonClass,
   Card,
   cardClass,
+  chipClass,
   Input,
 } from "../components/ui";
 import { photoSrc } from "../lib/api";
@@ -26,8 +27,8 @@ const takeFlash = () => {
 };
 export function Thumb({ recipe, big }: { recipe: Recipe; big?: boolean }) {
   const box = big
-    ? "h-20 w-20 shrink-0 rounded-lg md:h-40 md:w-full"
-    : "h-20 w-20 shrink-0 rounded-lg";
+    ? "h-20 w-20 shrink-0 rounded-control md:h-40 md:w-full"
+    : "h-20 w-20 shrink-0 rounded-control";
   return recipe.photo_path ? (
     <img
       src={photoSrc(recipe.photo_path)}
@@ -37,7 +38,7 @@ export function Thumb({ recipe, big }: { recipe: Recipe; big?: boolean }) {
   ) : (
     <div
       aria-hidden
-      className={`${box} flex items-center justify-center bg-surface-muted text-xs text-text-secondary`}
+      className={`${box} flex items-center justify-center bg-surface-muted text-micro text-text-secondary`}
     >
       Sin foto
     </div>
@@ -95,7 +96,7 @@ export function RecetarioPage() {
   return (
     <>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Recetario</h1>
+        <h1 className="text-display font-bold">Recetario</h1>
         <Button onClick={() => navigate("/recetario/nueva")}>
           + Nueva receta
         </Button>
@@ -110,7 +111,7 @@ export function RecetarioPage() {
       />
       {flash && (
         <div
-          className="mb-4 rounded-lg bg-done-bg p-3 text-done-text"
+          className="mb-4 rounded-control bg-done-bg p-3 text-done-text"
           role="status"
         >
           {flash}
@@ -169,7 +170,7 @@ export function RecetarioDetallePage() {
   if (!recipe)
     return (
       <Card>
-        <h1 className="mb-2 text-2xl font-bold">Receta no encontrada</h1>
+        <h1 className="mb-2 text-display font-bold">Receta no encontrada</h1>
         <Link to="/recetario" className={buttonClass({ variant: "secondary" })}>
           Volver al recetario
         </Link>
@@ -198,7 +199,7 @@ export function RecetarioDetallePage() {
         ←
       </Link>
 
-      <div className="relative overflow-hidden rounded-xl">
+      <div className="relative overflow-hidden rounded-card">
         {recipe.photo_path ? (
           <img
             src={photoSrc(recipe.photo_path)}
@@ -214,13 +215,13 @@ export function RecetarioDetallePage() {
           variant="secondary"
           size="icon"
           aria-label="Editar receta"
-          className="absolute right-3 top-3 bg-surface/90"
+          className="absolute right-3 top-3"
           onClick={() => setEditing(true)}
         >
           ✏️
         </Button>
         {/* Un solo <h1>: superpuesto a la foto en móvil, bajo ella en desktop. */}
-        <h1 className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 text-2xl font-bold text-white md:static md:mt-4 md:bg-none md:p-0 md:text-text">
+        <h1 className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-photo-scrim to-transparent p-4 text-display font-bold text-on-photo md:static md:mt-4 md:bg-none md:p-0 md:text-text">
           {recipe.name}
         </h1>
       </div>
@@ -235,7 +236,7 @@ export function RecetarioDetallePage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
           <section>
-            <h2 className="mb-2 text-lg font-semibold">Ingredientes</h2>
+            <h2 className="mb-2 text-lead font-semibold">Ingredientes</h2>
             <ul className={cardClass("flex flex-col gap-1")}>
               {recipe.ingredients.map((ing) => (
                 <li key={ing.id} className="flex items-center gap-2">
@@ -256,13 +257,10 @@ export function RecetarioDetallePage() {
 
           {recipe.materials.length > 0 && (
             <section>
-              <h2 className="mb-2 text-lg font-semibold">Materiales</h2>
+              <h2 className="mb-2 text-lead font-semibold">Materiales</h2>
               <ul className="flex flex-wrap gap-2">
                 {recipe.materials.map((m) => (
-                  <li
-                    key={m}
-                    className="rounded-full bg-surface-muted px-3 py-1 text-sm"
-                  >
+                  <li key={m} className={chipClass()}>
                     {m}
                   </li>
                 ))}
@@ -272,7 +270,7 @@ export function RecetarioDetallePage() {
         </div>
 
         <section>
-          <h2 className="mb-2 text-lg font-semibold">Elaboración</h2>
+          <h2 className="mb-2 text-lead font-semibold">Elaboración</h2>
           <ol className={cardClass("flex flex-col gap-2")}>
             {recipe.steps.map((s) => (
               <li key={s.id} aria-label={`paso ${s.step}`}>
@@ -314,11 +312,7 @@ export function RecetarioDetallePage() {
               <Button variant="secondary" onClick={() => setConfirming(false)}>
                 Cancelar
               </Button>
-              <Button
-                className="bg-error"
-                disabled={api.saving}
-                onClick={remove}
-              >
+              <Button variant="danger" disabled={api.saving} onClick={remove}>
                 {api.saving ? "Eliminando…" : "Eliminar receta"}
               </Button>
             </div>

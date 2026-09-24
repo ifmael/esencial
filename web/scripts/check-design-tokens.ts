@@ -55,10 +55,17 @@ const DERIVED = /^(?:var|calc|env|url|min|max|clamp|color-mix)\(/;
  * no entran aquí: esas sí se aplican tal cual. */
 const SKIN_CLASSES: Record<string, true> = {
   card: true,
+  glass: true,
+  "glass-chrome": true,
+  sheet: true,
+  scrim: true,
+  chip: true,
+  "chip-done": true,
   btn: true,
   "btn-primary": true,
   "btn-secondary": true,
   "btn-ghost": true,
+  "btn-danger": true,
   input: true,
   "input-error": true,
   "badge-pending": true,
