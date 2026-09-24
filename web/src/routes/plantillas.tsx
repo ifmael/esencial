@@ -28,7 +28,7 @@ import {
   sortableAnnouncements,
   useDragSensors,
 } from "../components/sortable";
-import { Badge, Button, Card, cardClass, Input } from "../components/ui";
+import { Badge, Button, Card, Chip, cardClass, Input } from "../components/ui";
 import { apiField } from "../lib/api";
 import {
   type Exercise,
@@ -139,22 +139,12 @@ function ExercisePicker({
         <div className="flex flex-col gap-2 md:min-h-0 md:flex-1 md:overflow-y-auto">
           <div className="flex flex-wrap items-center gap-2 text-body">
             <span className="font-medium">Vista:</span>
-            <Button
-              size="sm"
-              variant={view === "front" ? "primary" : "secondary"}
-              aria-pressed={view === "front"}
-              onClick={() => setView("front")}
-            >
+            <Chip pressed={view === "front"} onClick={() => setView("front")}>
               Frontal
-            </Button>
-            <Button
-              size="sm"
-              variant={view === "back" ? "primary" : "secondary"}
-              aria-pressed={view === "back"}
-              onClick={() => setView("back")}
-            >
+            </Chip>
+            <Chip pressed={view === "back"} onClick={() => setView("back")}>
               Trasera
-            </Button>
+            </Chip>
           </div>
 
           <div
@@ -165,30 +155,26 @@ function ExercisePicker({
             <span id="pick-groups-label" className="font-medium">
               Grupo:
             </span>
-            <Button
-              size="sm"
-              variant={filter === null ? "primary" : "secondary"}
-              aria-pressed={filter === null}
+            <Chip
+              pressed={filter === null}
               onClick={() => {
                 setRegion(null);
                 setGroup(null);
               }}
             >
               Todos
-            </Button>
+            </Chip>
             {MUSCLE_GROUPS.map((g) => (
-              <Button
+              <Chip
                 key={g}
-                size="sm"
-                variant={group === g ? "primary" : "secondary"}
-                aria-pressed={group === g}
+                pressed={group === g}
                 onClick={() => {
                   setGroup((prev) => (prev === g ? null : g));
                   setRegion(null);
                 }}
               >
                 {GROUP_LABELS[g]}
-              </Button>
+              </Chip>
             ))}
           </div>
 

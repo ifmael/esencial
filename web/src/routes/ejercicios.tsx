@@ -14,6 +14,7 @@ import {
   Button,
   buttonClass,
   Card,
+  Chip,
   cardClass,
   Input,
   Select,
@@ -299,17 +300,13 @@ function ExerciseEditor({
                   {GROUP_LABELS[t] ?? t}:
                 </span>
                 {options.map((r) => (
-                  <Button
+                  <Chip
                     key={r.id}
-                    size="sm"
-                    variant={
-                      draft.regions.includes(r.id) ? "primary" : "secondary"
-                    }
-                    aria-pressed={draft.regions.includes(r.id)}
+                    pressed={draft.regions.includes(r.id)}
                     onClick={() => toggleRegion(r)}
                   >
                     {r.label}
-                  </Button>
+                  </Chip>
                 ))}
               </div>
             );
