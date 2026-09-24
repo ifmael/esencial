@@ -64,7 +64,7 @@ Escala vigente — todo lo demás sale de aquí:
 | Tipografía | Manrope (auto-alojada, subset latino) · `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 28 |
 | Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
 | Radios | `control` 12 · `panel` 14 · `card` 20 · `sheet` 28 · `chip` 999 |
-| Vidrio | `blur-glass` 18px (tarjetas) · `blur-chrome` 28px (barras y hojas) · borde de luz en degradado |
+| Vidrio | `blur-glass` 18px (solo `blurCardClass`: la rejilla del calendario) · `blur-chrome` 28px (barras y hojas) · borde de luz en degradado |
 | Elevación | `shadow-card`, `shadow-raised`, `shadow-sheet`, `shadow-inset`, `shadow-up`, `shadow-glow` (compuestas, tinte verde oscuro) |
 | Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms · `spring` 500ms; `ease-out-quart` para color/opacidad y `ease-spring` (`linear()`) para transform |
 
