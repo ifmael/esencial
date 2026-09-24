@@ -14,11 +14,17 @@ describe("catálogo del sistema de diseño", () => {
       "Primario",
       "Secundario",
       "Fantasma",
+      "Peligro",
       "Deshabilitado",
       "Pequeño",
     ]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
+  });
+
+  it("expone las piezas de datos: anillos de progreso con nombre", () => {
+    render(<UiPage />);
+    expect(screen.getAllByRole("progressbar").length).toBeGreaterThanOrEqual(2);
   });
 
   it("expone los tres tonos de insignia", () => {

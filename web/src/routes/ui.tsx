@@ -17,6 +17,7 @@ import {
   SwatchIcon,
   UtensilsIcon,
 } from "../components/icons";
+import { CountUp, ProgressRing } from "../components/metrics";
 import { Badge, Button, Card, Input, Select, Textarea } from "../components/ui";
 
 function Block({
@@ -65,10 +66,16 @@ export function UiPage() {
 
       <Block
         title="Tipografía"
-        hint="Seis pasos, cada uno con su interlineado y su tracking."
+        hint="Seis pasos para la interfaz (Space Grotesk) y uno de marcador (Barlow Condensed). Titulares en condensada y mayúsculas; cifras tabulares en toda la app."
       >
         <div className="flex flex-col gap-2">
-          <TypeRow sample="text-display" label="24px · título de pantalla" />
+          <div className="flex items-baseline gap-3">
+            <span className="metric text-metric text-primary">128</span>
+            <span className="text-caption text-text-secondary">
+              44px · text-metric + .metric · cifra de marcador
+            </span>
+          </div>
+          <TypeRow sample="text-display" label="28px · título de pantalla" />
           <TypeRow sample="text-title" label="20px · título de bloque" />
           <TypeRow
             sample="text-lead"
@@ -82,12 +89,13 @@ export function UiPage() {
 
       <Block
         title="Botones"
-        hint="Tres variantes y tres tamaños; md mantiene 44px de alto y type=button por defecto."
+        hint="Cuatro variantes y tres tamaños; md mantiene 44px de alto y type=button por defecto. Peligro sustituye al bg-error suelto."
       >
         <div className="flex flex-wrap items-center gap-3">
           <Button>Primario</Button>
           <Button variant="secondary">Secundario</Button>
           <Button variant="ghost">Fantasma</Button>
+          <Button variant="danger">Peligro</Button>
           <Button disabled>Deshabilitado</Button>
           <Button size="sm">Pequeño</Button>
           <Button size="icon" aria-label="Botón de icono">
@@ -139,10 +147,29 @@ export function UiPage() {
       </Block>
 
       <Block
-        title="Superficies y elevación"
-        hint="Dos sombras hacia abajo, una hundida y shadow-up para la barra inferior."
+        title="Datos"
+        hint="Anillo de progreso (role=progressbar) y cifras que cuentan al aparecer; con prefers-reduced-motion se pintan ya en su valor."
       >
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="flex flex-wrap items-center gap-section">
+          <ProgressRing value={14} max={20} label="Series hechas (muestra)" />
+          <ProgressRing
+            value={3}
+            max={4}
+            tone="secondary"
+            label="Sesiones de la semana (muestra)"
+          />
+          <div>
+            <p className="section-label">Contador</p>
+            <CountUp value={42} className="metric text-metric text-primary" />
+          </div>
+        </div>
+      </Block>
+
+      <Block
+        title="Superficies y elevación"
+        hint="Filo de luz arriba y caída negra; shadow-glow solo para lo accionable; scrim para el velo de modales y fotos."
+      >
+        <div className="grid gap-3 sm:grid-cols-4">
           <div className="rounded-card border border-border bg-surface p-4 shadow-card text-caption">
             shadow-card
           </div>
@@ -152,6 +179,12 @@ export function UiPage() {
           <div className="rounded-card bg-surface-muted p-4 shadow-inset text-caption">
             shadow-inset
           </div>
+          <div className="rounded-card bg-surface p-4 shadow-glow text-caption">
+            shadow-glow
+          </div>
+        </div>
+        <div className="grid h-16 place-items-center rounded-card bg-scrim text-caption text-on-scrim">
+          bg-scrim · text-on-scrim
         </div>
         <div className="skeleton h-6" />
       </Block>
@@ -180,7 +213,7 @@ export function UiPage() {
 
       <Block
         title="Movimiento"
-        hint="Tres duraciones y un solo easing; todo se apaga con prefers-reduced-motion. Pasa el ratón por encima."
+        hint="Tres duraciones, una de recuento (900ms) y un solo easing; todo se apaga con prefers-reduced-motion. Pasa el ratón por encima."
       >
         <Card className="card-interactive">
           <p className="text-body">

@@ -57,15 +57,25 @@ piel de una primitiva escrita a mano (`className="card"`, `btn-primary`):
 aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
 inventan una escala.
 
-Escala vigente — todo lo demás sale de aquí:
+Escala vigente (dirección C, «sport-tech oscuro»: casi negro, grises fríos,
+lima `--color-primary` para lo accionable y los datos, cian `--color-secondary`
+para estados) — todo lo demás sale de aquí:
 
 | Familia | Tokens |
 | --- | --- |
-| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
+| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 28 · `metric` 44 (cifra de marcador, con `.metric`) |
+| Familias | `font-sans` Space Grotesk (interfaz) · `font-numeric` Barlow Condensed (h1/h2 y cifras); auto-alojadas con `@fontsource`, subset latino, `swap` |
 | Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
-| Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
-| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
-| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+| Radios | `control` 8 · `panel` 10 · `card` 14 · `chip` 999 |
+| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (filo de luz + caída negra), `shadow-glow` (halo lima, solo accionable) |
+| Color extra | `scrim` / `on-scrim` (velo de modales y texto sobre foto; nunca `bg-black/40` ni `text-white`) |
+| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms · `count` 900ms (recuentos y anillos), con **un solo** easing (`ease-out-quart`) |
+
+- `Button variant="danger"` es la confirmación destructiva: no se pinta un botón
+  con `bg-error` a mano.
+- Datos visibles: `ProgressRing` y `CountUp` (`web/src/components/metrics.tsx`).
+  El anillo es un `role=progressbar` con nombre; `CountUp` cuenta desde el valor
+  que se veía (no desde 0 en cada cambio) y el lector oye solo el final.
 
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
@@ -163,6 +173,18 @@ tokens `--color-muscle` / `--color-muscle-strong` de `globals.css`, más
 `--color-primary` para el grupo elegido); el fichero
 `web/src/components/body-map/data.ts` es generado a partir del original y lo dice
 en su cabecera.
+
+**Mapa 3D (conmutador 2D/3D).** `BodyMapStage` (`body-map/stage.tsx`) envuelve
+al SVG y, si hay WebGL y no hay `prefers-reduced-motion`, ofrece «3D». El SVG
+**sigue siendo la capa accesible también en 3D** (se vuelve transparente y sin
+puntero, pero sus `<g role=button>` conservan el foco y el teclado); la escena
+(`body-map-3d.tsx`, three + React Three Fiber) se carga con `import()` y
+**extruye los mismos `path`** de `data.ts`, un mesh por pieza ligado a su
+sub-región: la selección es el mismo estado en las dos capas. La escena va con
+`frameloop="demand"` y libera sus geometrías al salir. Un toque elige y un
+arrastre gira: la captura del puntero se pide solo al pasar 3 px
+(`body-map/drag.ts`), porque pedirla en `pointerdown` se come el `click` del
+lienzo.
 
 ## Taxonomía muscular: dos niveles
 
