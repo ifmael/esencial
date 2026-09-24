@@ -56,8 +56,11 @@
 
   /* Vidrio: el tinte es lo que garantiza el contraste AA del texto encima,
      aunque la aurora pase por detrás. Opacidad alta a propósito. */
-  --color-surface: rgb(255 255 255 / 0.62);
+  --color-surface: rgb(255 255 255 / 0.68);
   --color-surface-strong: rgb(255 255 255 / 0.82);
+  /* Hojas (modales, cajones): tapan contenido nítido y denso, no la aurora;
+     el tinte tiene que ganarle al texto de debajo, no solo al color. */
+  --color-surface-sheet: rgb(250 252 251 / 0.94);
   --color-surface-muted: rgb(15 40 30 / 0.05);
   --color-glass-edge: rgb(255 255 255 / 0.85); /* borde de luz, arriba */
   --color-glass-edge-low: rgb(255 255 255 / 0.2); /* …y su caída, abajo */
@@ -163,6 +166,7 @@
   --color-aurora-3: rgb(109 40 217 / 0.28);
   --color-surface: rgb(18 28 25 / 0.66);
   --color-surface-strong: rgb(18 28 25 / 0.88);
+  --color-surface-sheet: rgb(14 22 19 / 0.94);
   --color-surface-muted: rgb(255 255 255 / 0.06);
   --color-glass-edge: rgb(255 255 255 / 0.22);
   --color-glass-edge-low: rgb(255 255 255 / 0.04);
@@ -357,6 +361,13 @@
         var(--color-glass-highlight)
       )
       border-box;
+  }
+  /* Presupuesto de blur: el coste de desenfocar va en GPU y crece con el
+     número de capas. Una tarjeta normal es vidrio *tintado* (sin blur): sobre
+     la aurora, que ya es difusa, apenas se distingue. Desenfoca solo el cromo,
+     las hojas y una pieza protagonista por pantalla (la rejilla del
+     calendario). Nunca las tarjetas de una lista. */
+  .glass-blur {
     -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
     backdrop-filter: blur(var(--blur-glass)) saturate(1.6);
   }
@@ -392,6 +403,7 @@
 
   /* Hoja: modal o panel lateral, el vidrio más denso. */
   .sheet {
+    background: var(--color-surface-sheet);
     border: 1px solid var(--color-glass-edge-low);
     border-radius: var(--radius-sheet);
     box-shadow:
@@ -401,9 +413,11 @@
   }
 
   /* Fondo de modal: oscurece sin desenfocar (el blur ya lo pone la hoja). */
+  /* Se funde el color, no la opacidad: un padre con opacity < 1 es raíz de
+     backdrop y la hoja desenfocaría solo el scrim durante la entrada. */
   .scrim {
     background: var(--color-scrim);
-    animation: fade-in var(--duration-base) var(--ease-out-quart) both;
+    animation: scrim-in var(--duration-base) var(--ease-out-quart) both;
   }
   .scrim > * {
     animation: sheet-in var(--duration-spring) var(--ease-spring) both;
@@ -558,6 +572,9 @@
     border-radius: var(--radius-control);
     padding: 0.625rem 0.875rem;
     min-height: 2.75rem;
+    /* Un campo en una fila flex debe poder encoger: sin esto, su ancho
+       intrínseco (~20 caracteres) empuja la fila fuera de un móvil. */
+    min-width: 0;
     color: var(--color-text);
     box-shadow: var(--shadow-inset);
     transition:
@@ -689,7 +706,7 @@
     --color-surface: #121c19;
     --color-surface-strong: #16221e;
   }
-  .glass,
+  .glass-blur,
   .glass-chrome {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -731,9 +748,9 @@
   }
 }
 
-@keyframes fade-in {
+@keyframes scrim-in {
   from {
-    opacity: 0;
+    background-color: transparent;
   }
 }
 

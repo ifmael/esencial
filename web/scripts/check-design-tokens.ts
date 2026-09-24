@@ -56,6 +56,7 @@ const DERIVED = /^(?:var|calc|env|url|min|max|clamp|color-mix)\(/;
 const SKIN_CLASSES: Record<string, true> = {
   card: true,
   glass: true,
+  "glass-blur": true,
   "glass-chrome": true,
   sheet: true,
   scrim: true,

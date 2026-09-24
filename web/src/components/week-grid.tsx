@@ -4,7 +4,7 @@
 // render prop `children` (fuerza inyecta la sesión; comidas, las 3 tomas).
 import type { ReactNode } from "react";
 import { toISODate } from "../lib/day";
-import { Button, cardClass } from "./ui";
+import { Button, blurCardClass } from "./ui";
 
 const DAYS = [
   "Lunes",
@@ -59,7 +59,7 @@ export function WeekGrid({
   const today = toISODate(new Date());
 
   return (
-    <section className={cardClass("flex min-h-0 flex-1 flex-col gap-3")}>
+    <section className={blurCardClass("flex min-h-0 flex-1 flex-col gap-3")}>
       <header className="flex items-center justify-between gap-2">
         <Button
           variant="secondary"

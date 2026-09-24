@@ -57,6 +57,7 @@ export function Button({
   );
 }
 
+/** Tarjeta de vidrio tintado, sin blur: las listas pueden tener decenas. */
 export function Card({ className, ...rest }: ComponentProps<"div">) {
   return <div className={cx("glass card", className)} {...rest} />;
 }
@@ -66,6 +67,12 @@ export function Card({ className, ...rest }: ComponentProps<"div">) {
  * `Card` renderiza un div, así que en esos casos la piel se pide aquí. */
 export function cardClass(...parts: (string | false | null | undefined)[]) {
   return cx("glass card", ...parts);
+}
+
+/** Tarjeta con blur real: una sola pieza protagonista por pantalla (la rejilla
+ * del calendario). Cada capa con blur cuesta GPU; nunca en una lista. */
+export function blurCardClass(...parts: (string | false | null | undefined)[]) {
+  return cx("glass glass-blur card", ...parts);
 }
 
 /** Fondo de una modal: oscurece la página y centra la hoja. Pulsar el propio
