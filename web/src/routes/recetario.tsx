@@ -119,6 +119,13 @@ function RecipeCard({
   );
 }
 
+/** Abre la rejilla la primera receta con foto (una portada vacía no abre una
+ * revista); el resto conserva su orden. */
+const leadFirst = (list: Recipe[]): Recipe[] => {
+  const lead = list.find((r) => r.photo_path);
+  return lead ? [lead, ...list.filter((r) => r !== lead)] : list;
+};
+
 function ErrorBanner({
   message,
   onRetry,
@@ -191,12 +198,12 @@ export function RecetarioPage() {
         // Rejilla de revista: la primera receta abre a doble ancho y alto; el
         // resto cae en columnas. Entrada escalonada suave (`.stagger`).
         <div className="stagger grid grid-cols-1 gap-x-gutter gap-y-section sm:grid-cols-2 md:grid-cols-3">
-          {visible.map((r, i) => (
+          {leadFirst(visible).map((r, i) => (
             <RecipeCard
               key={r.id}
               recipe={r}
               index={i}
-              feature={i === 0 && visible.length > 2}
+              feature={i === 0 && r.photo_path !== null && visible.length > 2}
             />
           ))}
         </div>

@@ -15,6 +15,7 @@ import {
   Outlet,
   Route,
   RouterProvider,
+  ScrollRestoration,
   useLocation,
 } from "react-router";
 import { Shell } from "./components/shell";
@@ -55,6 +56,8 @@ function GuardedShell() {
   return (
     <Shell>
       <Outlet />
+      {/* Página nueva arriba; «atrás» vuelve a donde estaba (data router). */}
+      <ScrollRestoration />
     </Shell>
   );
 }
