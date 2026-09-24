@@ -624,16 +624,6 @@
   }
 }
 
-/* Anillo de los músculos del mapa (`<g role="button">`). Su `transition-colors`
-   anima `outline-color`, así que al tabular el anillo se ve un rato del color
-   del texto antes de fundirse al acento. Fuera de las capas a propósito: una
-   regla en `@layer base` pierde contra la utilidad de Tailwind. */
-svg [role="button"]:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  transition-property: fill, stroke;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

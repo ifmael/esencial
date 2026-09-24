@@ -110,7 +110,7 @@ export function BodyMap({
             tabIndex={0}
             aria-pressed={on}
             aria-label={regionLabel(id)}
-            className={`cursor-pointer transition-colors duration-150 ease-out-quart ${skin} ${
+            className={`cursor-pointer transition-[fill,stroke] duration-150 ease-out-quart ${skin} ${
               on ? "" : "hover:fill-muscle-strong"
             }`}
             // El ratón no roba el foco: si lo robara, el navegador pintaría su
