@@ -47,10 +47,11 @@ primario y marca activo y foco), bordes de 1px nítidos, densidad alta.
     suelta. Antes quedaba viva y se capturaba dentro del updater de `setOpen`,
     que StrictMode ejecuta dos veces. Hay test: navegar tras cerrar no roba el
     foco (comprobado que falla si el foco se devuelve en cada render).
-  - Mapa muscular: al tabular, el anillo salía del color del texto
-    (`rgb(14,18,16)`), porque `transition-colors` animaba `outline-color` y una
-    regla en `@layer base` pierde contra la utilidad. Una regla fuera de capas
-    lo arregla: ahora es `--color-primary` desde el primer fotograma.
+  - Mapa muscular: el `transition-colors` de cada músculo también animaba
+    `outline-color`, así que al tabular el anillo se fundía durante 150 ms desde
+    el color del texto. Ahora la transición solo anima relleno y trazo
+    (`transition-[fill,stroke]`) y el anillo es `--color-primary` desde el primer
+    fotograma, medido en claro (#157a45) y oscuro (#3ecf8e) a 0 y 200 ms.
   - `Alert` admite otro `role`: la muestra estática de `/ui` usa `note` y el
     lector de pantalla ya no la anuncia en cada visita.
 
@@ -90,13 +91,35 @@ Sin dependencias de JS nuevas: la paleta son unos 3 kB gz.
   recetas», «Ir a hoy»), ✕ de ingredientes y pasos en `/recetario/nueva`.
 - `docs/architecture/diseno.html` y `wireframes/DESIGN.md` siguen con la escala
   anterior (manda `globals.css`).
-- Paleta: sin historial de recientes y sin buscar plantillas por nombre.
+- Paleta (mejoras posibles, no hechas): «Cambiar tema» es un comando con
+  `href` especial (`#tema`) en vez de un tipo `action`; las cabeceras de grupo
+  no son `role="group"` (el lector no oye «Recetas»/«Ejercicios»); la región
+  «Sin resultados» nace ya llena y algunos lectores no la anuncian. Tampoco
+  hay historial de recientes ni búsqueda de plantillas.
 - El tema elegido se aplica al cargar el JS; sin script en línea en
   `index.html`, así que con tema forzado distinto del sistema puede verse un
-  destello del tema del sistema.
-- Revisión visual: capturas a 1280×800 de todas las pantallas y a 390×844 de
-  `/`, `/recetario/1` y `/plan-fuerza`. El resto de pantallas a 390 se comprobó
-  midiendo el desbordamiento horizontal, sin revisar la captura una a una.
-- El oscuro se verificó con `prefers-color-scheme: dark` (vía
-  `emulateMediaFeatures`) y con `data-theme="dark"` en `/recetario`, `/ui` y la
-  paleta; no hay capturas en oscuro del resto de pantallas.
+  destello del tema del sistema. Se arreglaría con un `/theme.js` externo en
+  `web/public/` (mismo origen: la CSP no cambia).
+- El lockfile entró en un commit posterior al que añade las fuentes: los
+  commits intermedios no pasan `pnpm install --frozen-lockfile` (HEAD sí).
+
+## Revisión visual
+
+Las 13 rutas, a 1280×800 y 390×844, en claro y oscuro (52 capturas; viewport,
+ruta y `data-theme` comprobados en cada una, sin desbordamiento horizontal):
+
+| Ruta | Resultado |
+|---|---|
+| `/login` | sin defectos |
+| `/` | sin defectos |
+| `/recetario` | sin defectos |
+| `/recetario/1` | sin defectos (sin foto, el título queda al pie del recuadro, sin solaparse) |
+| `/recetario/nueva` | sin defectos |
+| `/plan-recetas` | sin defectos; a 1280 los nombres de receta se recortan en la celda (decisión previa de no tocar las celdas) |
+| `/plan-fuerza` | sin defectos; mismo recorte de nombres a 1280 |
+| `/plantillas` | sin defectos |
+| `/plantillas/nueva` | sin defectos (modal y mapa muscular en los dos temas) |
+| `/ejercicios` | sin defectos |
+| `/ejercicios/6` | sin defectos |
+| `/sesion/2026-09-24` | sin defectos |
+| `/ui` | sin defectos |
