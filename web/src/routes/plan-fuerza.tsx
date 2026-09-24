@@ -154,7 +154,7 @@ function DayPicker({
         onChange={(e) => setQuery(e.target.value)}
       />
       {note && (
-        <p role="status" className="text-sm text-text-secondary">
+        <p role="status" className="text-caption text-text-secondary">
           {note}
         </p>
       )}
@@ -164,14 +164,14 @@ function DayPicker({
             Plantillas
           </h4>
           {templatesError ? (
-            <p className="text-sm text-error">
+            <p className="text-caption text-error">
               {templatesError}{" "}
               <button className="underline" onClick={onRetryTemplates}>
                 Reintentar
               </button>
             </p>
           ) : shownTemplates.length === 0 ? (
-            <p className="text-sm text-text-secondary">Sin plantillas</p>
+            <p className="text-caption text-text-secondary">Sin plantillas</p>
           ) : (
             <ul className="flex flex-col gap-1">
               {shownTemplates.map((t) => {
@@ -181,14 +181,14 @@ function DayPicker({
                 return (
                   <li key={t.id}>
                     <button
-                      className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
+                      className="min-h-11 w-full rounded-panel px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
                       disabled={done}
                       onClick={() => {
                         if (!done) onPickTemplate(t);
                       }}
                     >
                       {t.name}
-                      <span className="ml-2 text-sm text-text-secondary">
+                      <span className="ml-2 text-caption text-text-secondary">
                         {done
                           ? "ya añadida"
                           : `${t.exercises.length} ${
@@ -209,7 +209,7 @@ function DayPicker({
             Ejercicios
           </h4>
           {shownExercises.length === 0 ? (
-            <p className="text-sm text-text-secondary">Sin ejercicios</p>
+            <p className="text-caption text-text-secondary">Sin ejercicios</p>
           ) : (
             <GroupedExercises
               exercises={shownExercises}
@@ -220,7 +220,7 @@ function DayPicker({
                 return (
                   <li key={e.id}>
                     <button
-                      className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
+                      className="min-h-11 w-full rounded-panel px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
                       disabled={taken}
                       onClick={() => {
                         if (!taken) onPickExercise(e);
@@ -231,7 +231,7 @@ function DayPicker({
                         ? null
                         : ` · ${KIND_LABELS[e.kind]}`}
                       {taken ? (
-                        <span className="ml-2 text-sm">ya añadido</span>
+                        <span className="ml-2 text-caption">ya añadido</span>
                       ) : null}
                     </button>
                   </li>
@@ -274,7 +274,7 @@ function DayRowItem({
     >
       <button
         type="button"
-        className="cursor-grab touch-none rounded-md p-1 text-text-secondary hover:bg-surface-muted active:cursor-grabbing"
+        className="cursor-grab touch-none rounded-control p-1 text-text-secondary hover:bg-surface-muted active:cursor-grabbing"
         aria-label={`Mover ${row.exerciseName}`}
         {...attributes}
         {...listeners}
@@ -284,7 +284,7 @@ function DayRowItem({
       <span className="min-w-32 font-medium">{row.exerciseName}</span>
       {row.kind === "strength" ? (
         <>
-          <label className="text-sm">
+          <label className="text-caption">
             Series
             <Input
               className="w-16"
@@ -297,7 +297,7 @@ function DayRowItem({
               }
             />
           </label>
-          <label className="text-sm">
+          <label className="text-caption">
             Reps mín
             <Input
               className="w-16"
@@ -310,7 +310,7 @@ function DayRowItem({
               }
             />
           </label>
-          <label className="text-sm">
+          <label className="text-caption">
             Reps máx
             <Input
               className="w-16"
@@ -327,7 +327,7 @@ function DayRowItem({
       ) : (
         <>
           <Badge tone="pending">{KIND_LABELS[row.kind]}</Badge>
-          <label className="text-sm">
+          <label className="text-caption">
             Distancia (km)
             <Input
               className="w-20"
@@ -341,7 +341,7 @@ function DayRowItem({
               }
             />
           </label>
-          <label className="text-sm">
+          <label className="text-caption">
             Tiempo (min)
             <Input
               className="w-20"
@@ -481,10 +481,10 @@ function SessionEditor({
       className="flex max-h-[85vh] flex-col gap-3"
     >
       <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-        <h2 id="day-editor-title" className="text-lg font-bold">
+        <h2 id="day-editor-title" className="text-lead font-bold">
           {session ? "Editar sesión" : "Nueva sesión"} · {date}
         </h2>
-        <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
+        <div className="flex min-w-48 flex-1 flex-col gap-1 text-caption">
           <label htmlFor="day-name">Nombre</label>
           <Input
             id="day-name"
@@ -495,7 +495,7 @@ function SessionEditor({
         </div>
       </header>
 
-      {serverError && <p className="text-sm text-error">{serverError}</p>}
+      {serverError && <p className="text-caption text-error">{serverError}</p>}
 
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:grid-rows-1">
         <section className="flex min-h-0 flex-col gap-2">
@@ -517,7 +517,7 @@ function SessionEditor({
             >
               <ul
                 aria-label="Ejercicios del día"
-                className="min-h-0 flex-1 divide-y divide-border overflow-y-auto rounded-lg border border-border bg-surface-muted/50"
+                className="min-h-0 flex-1 divide-y divide-border overflow-y-auto rounded-panel border border-border bg-surface-muted/50"
               >
                 {rows.map((row) => (
                   <DayRowItem
@@ -563,7 +563,7 @@ function SessionEditor({
           (confirming ? (
             <span className="flex items-center gap-2">
               <span>¿Eliminar la sesión completa?</span>
-              <Button className="bg-error" onClick={onDelete}>
+              <Button variant="danger" onClick={onDelete}>
                 Confirmar
               </Button>
               <Button variant="secondary" onClick={() => setConfirming(false)}>
@@ -627,7 +627,8 @@ function CellRow({
           </span>
           <Button
             size="sm"
-            className="min-h-11 shrink-0 bg-error"
+            variant="danger"
+            className="min-h-11 shrink-0"
             aria-label={`Confirmar quitar ${exercise.exerciseName}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -719,7 +720,7 @@ function SessionCell({
           border || "border-border"
         }`}
       >
-        <span className="text-sm">+ añadir</span>
+        <span className="text-caption">+ añadir</span>
       </button>
     );
   }
@@ -754,7 +755,7 @@ function SessionCell({
     >
       <div className="flex items-center gap-2">
         <button
-          className="min-w-0 flex-1 truncate text-left text-sm font-semibold"
+          className="min-w-0 flex-1 truncate text-left text-caption font-semibold"
           aria-label={
             logged ? `Ver sesión del ${date}` : `Editar sesión del ${date}`
           }
@@ -838,7 +839,8 @@ function SessionCell({
       {confirming ? (
         <>
           <Button
-            className="min-h-11 bg-error text-xs"
+            variant="danger"
+            className="min-h-11 text-caption"
             onClick={(e) => {
               e.stopPropagation();
               setConfirming(false);
@@ -849,7 +851,7 @@ function SessionCell({
           </Button>
           <Button
             variant="secondary"
-            className="min-h-11 text-xs"
+            className="min-h-11 text-caption"
             onClick={(e) => {
               e.stopPropagation();
               setConfirming(false);
@@ -977,7 +979,7 @@ export function PlanFuerzaPage() {
 
       {day && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-scrim p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setDay(null);
           }}

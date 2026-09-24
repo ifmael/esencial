@@ -8,7 +8,14 @@ import {
   type RecipeInput,
   useRecipes,
 } from "../components/recipes/use-recipes";
-import { Button, buttonClass, Card, Input, Select } from "../components/ui";
+import {
+  Button,
+  buttonClass,
+  Card,
+  Chip,
+  Input,
+  Select,
+} from "../components/ui";
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -33,12 +40,8 @@ const blank = (): Draft => ({
 
 const BASE_TAGS = ["Desayuno", "Almuerzo", "Cena", "Snack"];
 
-const chip = (active: boolean) =>
-  `rounded-full border border-border px-3 py-1 text-sm transition-colors ${
-    active ? "bg-primary-container text-white" : "bg-surface-muted"
-  }`;
-const small = "rounded-lg border border-border bg-surface px-2 py-1";
-const label = "mb-1 block text-sm font-medium text-text-secondary";
+const small = "rounded-panel border border-border bg-surface px-2 py-1";
+const label = "mb-1 block text-caption font-medium text-text-secondary";
 
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
   rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
@@ -220,7 +223,7 @@ export function NuevaRecetaPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Nueva receta</h1>
+        <h1 className="text-display font-bold">Nueva receta</h1>
         <Button disabled={api.saving || uploading} onClick={save}>
           {api.saving || uploading ? "Guardando…" : "Guardar"}
         </Button>
@@ -228,7 +231,7 @@ export function NuevaRecetaPage() {
 
       {api.fieldError && api.fieldError.field !== "name" && (
         <div
-          className="mb-4 rounded-lg bg-error/10 p-3 text-error"
+          className="mb-4 rounded-panel bg-error-soft p-3 text-error"
           role="alert"
         >
           {api.fieldError.message}{" "}
@@ -251,7 +254,7 @@ export function NuevaRecetaPage() {
                 <img
                   src={photoSrc(draft.photo_path)}
                   alt="Vista previa de la foto"
-                  className="h-40 w-full rounded-lg object-cover"
+                  className="h-40 w-full rounded-panel object-cover"
                 />
                 <Button
                   variant="secondary"
@@ -262,18 +265,21 @@ export function NuevaRecetaPage() {
                 </Button>
               </>
             ) : (
-              <div className="flex h-40 items-center justify-center rounded-lg bg-surface-muted text-sm text-text-secondary">
+              <div className="flex h-40 items-center justify-center rounded-panel bg-surface-muted text-caption text-text-secondary">
                 Sin foto
               </div>
             )}
             {uploading && (
-              <p className="mt-2 text-sm text-text-secondary" role="status">
+              <p
+                className="mt-2 text-caption text-text-secondary"
+                role="status"
+              >
                 Subiendo…
               </p>
             )}
             {uploadError && (
               <div className="mt-2 flex items-center gap-3" role="alert">
-                <p className="text-sm text-error">{uploadError}</p>
+                <p className="text-caption text-error">{uploadError}</p>
                 <Button variant="secondary" onClick={discardPendingUpload}>
                   Descartar
                 </Button>
@@ -313,7 +319,7 @@ export function NuevaRecetaPage() {
             onChange={(e) => set("name", e.target.value)}
           />
           {(nameError ?? serverNameError) && (
-            <p className="mt-1 text-sm text-error">
+            <p className="mt-1 text-caption text-error">
               {nameError ?? serverNameError}
             </p>
           )}
@@ -324,26 +330,21 @@ export function NuevaRecetaPage() {
           <ul className="flex flex-wrap gap-2">
             {BASE_TAGS.map((t) => (
               <li key={t}>
-                <button
-                  type="button"
-                  className={chip(draft.tags.includes(t))}
+                <Chip
+                  pressed={draft.tags.includes(t)}
                   onClick={() => toggleTag(t)}
                 >
                   {t}
-                </button>
+                </Chip>
               </li>
             ))}
             {draft.tags
               .filter((t) => !BASE_TAGS.includes(t))
               .map((t) => (
                 <li key={t}>
-                  <button
-                    type="button"
-                    className={chip(true)}
-                    onClick={() => toggleTag(t)}
-                  >
+                  <Chip pressed onClick={() => toggleTag(t)}>
                     {t}
-                  </button>
+                  </Chip>
                 </li>
               ))}
           </ul>
@@ -369,7 +370,7 @@ export function NuevaRecetaPage() {
             {draft.materials.map((m) => (
               <li
                 key={m}
-                className="flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1"
+                className="flex items-center gap-1 rounded-chip bg-surface-muted px-3 py-1"
               >
                 {m}
                 <button

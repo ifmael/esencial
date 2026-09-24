@@ -7,13 +7,15 @@ import type { ComponentProps } from "react";
 const cx = (...parts: (string | false | null | undefined)[]) =>
   parts.filter(Boolean).join(" ");
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "icon";
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary: "btn-primary",
   secondary: "btn-secondary",
   ghost: "btn-ghost",
+  /** Confirmación destructiva (eliminar, quitar): relleno en `--color-error`. */
+  danger: "btn-danger",
 };
 
 /** `md` = 44px de alto (área táctil mínima); `icon` = 44×44 cuadrado. */
@@ -114,12 +116,32 @@ export function Select({
   );
 }
 
-type BadgeTone = "pending" | "done" | "neutral";
+/** Ficha conmutable (categorías, filtros). El estado va en `aria-pressed`, que
+ * pinta la ficha activa y la anuncia al lector de pantalla. */
+export function Chip({
+  pressed,
+  className,
+  type = "button",
+  ...rest
+}: ComponentProps<"button"> & { pressed: boolean }) {
+  return (
+    <button
+      type={type}
+      aria-pressed={pressed}
+      className={cx("chip", className)}
+      {...rest}
+    />
+  );
+}
+
+type BadgeTone = "pending" | "done" | "neutral" | "accent";
 
 const BADGE_TONE: Record<BadgeTone, string> = {
   pending: "badge-pending",
   done: "badge-done",
   neutral: "badge-neutral",
+  /** Terracota: etiqueta editorial (categoría de receta, «Hoy»). */
+  accent: "badge-accent",
 };
 
 export function Badge({

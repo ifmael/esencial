@@ -60,8 +60,10 @@ describe("nueva-receta: categorías", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
     expect(
-      screen.getByRole("button", { name: "Desayuno" }).className,
-    ).toContain("bg-primary-container");
+      screen
+        .getByRole("button", { name: "Desayuno" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
 
     fireEvent.change(screen.getByRole("textbox", { name: "Nueva categoría" }), {
       target: { value: "batch" },

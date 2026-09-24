@@ -345,7 +345,7 @@ function Header({
         >
           ←
         </Link>
-        <h1 className="text-2xl font-bold capitalize">
+        <h1 className="text-display font-bold capitalize">
           {formatDateEs(parseDateEs(date))}
         </h1>
       </div>
@@ -434,7 +434,7 @@ function EffortDots({
             <span
               data-testid="effort-dot"
               data-filled={String(filled)}
-              className={`min-h-11 min-w-11 rounded-full border-2 ${filled ? "border-primary bg-primary" : "border-border bg-surface"}`}
+              className={`min-h-11 min-w-11 rounded-chip border-2 ${filled ? "border-primary bg-primary" : "border-border bg-surface"}`}
             />
             <span className="text-micro text-text-secondary">{label}</span>
             {onSelect && (
@@ -464,7 +464,7 @@ export function SesionPage() {
   if (view.kind === "invalid")
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Fecha no válida</h1>
+        <h1 className="text-display font-bold">Fecha no válida</h1>
         <Card className="text-text-secondary">
           La dirección debe terminar en una fecha con formato AAAA-MM-DD.
         </Card>
@@ -483,7 +483,7 @@ export function SesionPage() {
   if (view.kind === "empty")
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold capitalize">
+        <h1 className="text-display font-bold capitalize">
           {isValidDateStr(date) ? formatDateEs(parseDateEs(date)) : "Día"}
         </h1>
         <Card className="text-text-secondary">
@@ -510,7 +510,7 @@ export function SesionPage() {
   if (view.kind === "error")
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Error</h1>
+        <h1 className="text-display font-bold">Error</h1>
         <Card role="alert" className="text-error">
           {view.message}
         </Card>
@@ -640,7 +640,7 @@ export function SesionPage() {
                     {open ? "Ocultar" : "Registrar series"}
                   </Button>
                   {helper && (
-                    <span className="text-sm text-text-secondary">
+                    <span className="text-caption text-text-secondary">
                       {helper}
                     </span>
                   )}
@@ -716,7 +716,7 @@ export function SesionPage() {
               >
                 {c.se.exerciseName}
               </Link>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-caption">
                 <input
                   type="checkbox"
                   aria-label={`${c.se.exerciseName} hecho`}

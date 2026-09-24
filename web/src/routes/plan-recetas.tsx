@@ -114,7 +114,7 @@ function RecipePicker({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-4 md:items-center"
       onClick={onClose}
     >
       <Card
@@ -138,7 +138,7 @@ function RecipePicker({
           {shown.map((r) => (
             <li key={r.id}>
               <button
-                className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted"
+                className="min-h-11 w-full rounded-panel px-3 py-2 text-left font-medium hover:bg-surface-muted"
                 onClick={() => onPick(r)}
               >
                 {r.name}
@@ -171,30 +171,30 @@ function SlotCell({
     return (
       <button
         onClick={onAdd}
-        className="flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary"
+        className="flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center rounded-panel border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary"
       >
-        <span className="text-sm">+ añadir</span>
+        <span className="text-caption">+ añadir</span>
       </button>
     );
   }
   return (
-    <div className="flex min-h-11 flex-1 flex-col gap-1 rounded-lg border border-border bg-surface p-2">
+    <div className="flex min-h-11 flex-1 flex-col gap-1 rounded-panel border border-border bg-surface p-2">
       <div className="flex items-center gap-2">
         {slot.recipePhoto ? (
           <img
             src={photoSrc(slot.recipePhoto)}
             alt=""
-            className="size-8 shrink-0 rounded object-cover"
+            className="size-8 shrink-0 rounded-control object-cover"
           />
         ) : (
           <span
             aria-hidden
-            className="size-8 shrink-0 rounded bg-surface-muted"
+            className="size-8 shrink-0 rounded-control bg-surface-muted"
           />
         )}
         <Link
           to={`/recetario/${slot.recipeId}`}
-          className="min-h-11 flex-1 truncate text-left text-sm font-semibold text-primary"
+          className="min-h-11 flex-1 truncate text-left text-caption font-semibold text-primary"
         >
           {slot.recipeName ?? "Receta"}
         </Link>
@@ -208,7 +208,8 @@ function SlotCell({
       </div>
       {confirming ? (
         <Button
-          className="bg-error min-h-11 text-xs"
+          variant="danger"
+          className="min-h-11 text-caption"
           onClick={() => {
             setConfirming(false);
             onRemove();
@@ -258,7 +259,7 @@ export function PlanRecetasPage() {
           <>
             {MEALS.map((meal) => (
               <div key={meal} className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-wide text-text-secondary">
+                <span className="text-caption uppercase tracking-wide text-text-secondary">
                   {meal}
                 </span>
                 <SlotCell

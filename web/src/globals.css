@@ -1,73 +1,96 @@
 @import "tailwindcss";
+/* Fuentes auto-alojadas (Fontsource): latin/latin-ext por unicode-range y
+   `font-display: swap`; el navegador solo descarga el subset que pinta.
+   Fraunces con todos sus ejes (wght + opsz + SOFT): el óptico es lo que da el
+   contraste fino en los titulares grandes. */
+@import "@fontsource-variable/fraunces/full.css";
+@import "@fontsource-variable/source-sans-3/wght.css";
 
 /* ==========================================================================
-   Esencial — capa de sistema (variante A "acabado sistémico")
-   Base: wireframes/DESIGN.md. Aquí viven SOLO decisiones transversales:
-   escala tipográfica, ritmo de espaciado, radios, superficies/elevación y
-   movimiento. Las pantallas no inventan valores: consumen estos tokens.
+   Esencial — capa de sistema, dirección A «Editorial cálido»
+   (Kinfolk, NYT Cooking, Headspace): papel crema, tinta cálida, oliva de
+   marca y terracota de acento; Fraunces para titulares y Source Sans 3 para
+   leer. Aquí viven SOLO decisiones transversales: las pantallas no inventan
+   valores, consumen estos tokens.
    ========================================================================== */
 
 :root {
-  /* Marca y superficies — wireframes/DESIGN.md */
-  --color-primary: #15803d;
-  --color-primary-dark: #166534;
-  --color-primary-container: #15803d;
-  --color-on-primary: #ffffff;
-  --color-secondary: #4d7c0f;
-  --color-background: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f5f5f4;
-  --color-pending: #d97706;
-  --color-pending-bg: #fef3c7;
-  --color-pending-text: #92400e;
-  --color-done-bg: #dcfce7;
-  --color-done-text: #166534;
-  --color-error: #b91c1c;
-  --color-text: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-border: #e7e5e4;
+  /* Marca: oliva. `primary` pasa AA (≥4.5) sobre papel y sobre blanco. */
+  --color-primary: #4f5d2f;
+  --color-primary-dark: #3c4724;
+  --color-primary-container: #4f5d2f;
+  --color-on-primary: #fbf8f1;
+  --color-secondary: #7d8a5a; /* salvia */
+  /* Acento terracota: detalles editoriales (filetes, «Hoy», numerales). */
+  --color-accent: #a4502f;
+  --color-accent-soft: #f3e1d6;
+  /* Papel: fondo crema, superficies un punto más claras, «muted» un punto más
+     tostado. */
+  --color-background: #f4efe4;
+  --color-surface: #fbf8f1;
+  --color-surface-muted: #ebe4d4;
+  --color-pending: #b7791f;
+  --color-pending-bg: #f5e6c8;
+  --color-pending-text: #7a4a12;
+  --color-done-bg: #e3e8d2;
+  --color-done-text: #3c4724;
+  --color-error: #a3321f;
+  --color-error-soft: #f6dfd7;
+  --color-text: #2a2520; /* tinta cálida, casi negra */
+  --color-text-secondary: #6b6155;
+  --color-border: #ded5c3;
   /* Derivados: estados suaves (activo de menú, hover de controles) */
-  --color-primary-soft: #e9f3ed;
-  --color-primary-soft-strong: #d8ebdf;
-  --color-border-strong: #d6d3d1;
-  --color-ring: rgb(21 128 61 / 0.32);
+  --color-primary-soft: #e8e9d9;
+  --color-primary-soft-strong: #d9dcc0;
+  --color-border-strong: #c8bca5;
+  --color-ring: rgb(79 93 47 / 0.3);
+  /* Velo de las modales y degradado sobre fotos: tinta, nunca negro puro. */
+  --color-scrim: rgb(42 37 32 / 0.5);
+  --color-scrim-strong: rgb(30 26 22 / 0.72);
   /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
-     ratón. Un tono medio para que la silueta no se lave sobre la tarjeta; el
+     ratón. Salvia media para que la silueta no se lave sobre el papel; el
      grupo elegido va en `--color-primary`. */
-  --color-muscle: #8fb59d;
-  --color-muscle-strong: #6e9c81;
+  --color-muscle: #a9b38a;
+  --color-muscle-strong: #8b976a;
 
-  /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
-     para todo lo que reacciona al usuario. */
-  --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --duration-slow: 280ms;
-  --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Grano de papel: ruido fractal en SVG, en línea (0 peticiones, ~300 B). */
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .16 0 0 0 0 .13 0 0 0 0 .1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
-  /* Espaciado semántico (ritmo) */
-  --spacing-card: 1.25rem; /* 20px — padding interno de tarjeta */
-  --spacing-section: 1.75rem; /* 28px — separación entre secciones */
+  /* Movimiento: sereno. Dos duraciones cortas para reaccionar, una de
+     entrada y una lenta para las transiciones de página; un solo easing, sin
+     rebotes. */
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 420ms;
+  --duration-page: 480ms;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  /* Separación entre elementos de una entrada escalonada. */
+  --stagger: 60ms;
+
+  /* Espaciado semántico (ritmo): más aire que la versión funcional. */
+  --spacing-card: 1.5rem; /* 24px — padding interno de tarjeta */
+  --spacing-section: 2.5rem; /* 40px — separación entre secciones */
   --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
-  --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
+  --spacing-gutter: 1.25rem; /* 20px — separación entre columnas / rejilla */
 
   /* Ancho de página: el calendario semanal es el caso ancho. Tope amplio, para
      que en pantallas ultrapanorámicas no se estire sin fin. */
   --container-calendar: 110rem; /* 1760px */
 
-  /* Radios: control < panel < tarjeta */
-  --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
-  --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
-  --radius-card: 1rem; /* 16px — tarjetas y superficies grandes */
+  /* Radios: contenidos, de papel cortado — control < panel < tarjeta. */
+  --radius-control: 0.375rem; /* 6px — botones, campos, iconos-botón */
+  --radius-panel: 0.5rem; /* 8px — bloques dentro de una tarjeta */
+  --radius-card: 0.75rem; /* 12px — tarjetas y superficies grandes */
   --radius-chip: 999px;
 
-  /* Elevación: dos sombras compuestas, nunca una sola difusa fuerte */
+  /* Elevación: papel sobre papel. Sombras cálidas, cortas y compuestas. */
   --shadow-card:
-    0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
+    0 1px 0 rgb(42 37 32 / 0.04), 0 12px 28px -22px rgb(42 37 32 / 0.35);
   --shadow-raised:
-    0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
-  --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
+    0 2px 3px rgb(42 37 32 / 0.05), 0 24px 44px -24px rgb(42 37 32 / 0.45);
+  --shadow-inset: inset 0 1px 2px rgb(42 37 32 / 0.07);
   /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
-  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
+  --shadow-up: 0 -6px 20px -14px rgb(42 37 32 / 0.5);
 }
 
 @theme inline {
@@ -78,6 +101,11 @@
   --color-primary-soft: var(--color-primary-soft);
   --color-primary-soft-strong: var(--color-primary-soft-strong);
   --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-scrim: var(--color-scrim);
+  --color-scrim-strong: var(--color-scrim-strong);
+  --color-error-soft: var(--color-error-soft);
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);
   --color-surface-muted: var(--color-surface-muted);
@@ -95,25 +123,36 @@
   --color-muscle: var(--color-muscle);
   --color-muscle-strong: var(--color-muscle-strong);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Source Sans 3 Variable", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  /* Titulares: Fraunces variable; `font-display` en utilidades. */
+  --font-display:
+    "Fraunces Variable", ui-serif, Georgia, "Times New Roman", serif;
 
-  /* Escala tipográfica: 6 pasos con line-height pareja. Nada de saltos de
-     14→16→18 sin criterio: micro/caption para metadatos, body para lectura,
-     lead para el dato de una fila, title/display para jerarquía de pantalla. */
+  /* Escala tipográfica editorial: 7 pasos. micro/caption para metadatos, body
+     para leer, lead para el dato de una fila, title/display para jerarquía de
+     pantalla y `hero` para portadas (cabecera de receta, login). Los tres
+     pasos grandes van en Fraunces (ver `@layer base`), con tracking negativo e
+     interlineado apretado; el cuerpo, con aire. */
   --text-micro: 0.6875rem; /* 11px — etiquetas en mayúsculas */
   --text-micro--line-height: 1rem;
-  --text-micro--letter-spacing: 0.08em;
+  --text-micro--letter-spacing: 0.12em;
   --text-caption: 0.8125rem; /* 13px — metadatos y ayudas */
-  --text-caption--line-height: 1.125rem;
-  --text-body: 0.9375rem; /* 15px — texto de interfaz */
-  --text-body--line-height: 1.45;
-  --text-lead: 1.0625rem; /* 17px — dato principal de una fila */
-  --text-lead--line-height: 1.35;
-  --text-title: 1.25rem; /* 20px — título de bloque */
-  --text-title--line-height: 1.3;
-  --text-display: 1.5rem; /* 24px — título de pantalla */
-  --text-display--line-height: 1.2;
+  --text-caption--line-height: 1.25rem;
+  --text-body: 1rem; /* 16px — texto de interfaz y lectura */
+  --text-body--line-height: 1.55;
+  --text-lead: 1.125rem; /* 18px — dato principal de una fila */
+  --text-lead--line-height: 1.45;
+  --text-title: 1.375rem; /* 22px — título de bloque */
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.01em;
+  --text-display: 2rem; /* 32px — título de pantalla */
+  --text-display--line-height: 1.1;
   --text-display--letter-spacing: -0.02em;
+  --text-hero: 2.75rem; /* 44px — portada */
+  --text-hero--line-height: 1.02;
+  --text-hero--letter-spacing: -0.03em;
 
   /* Ritmo de espaciado: `p-card`, `gap-section`, `gap-stack`, `gap-gutter` */
   --spacing-card: var(--spacing-card);
@@ -138,12 +177,33 @@
 }
 
 @layer base {
+  /* Papel: crema con grano sutil. El grano es una sola imagen de 160px en
+     mosaico (sin `fixed`, que repinta en cada scroll del móvil). */
   body {
-    background: var(--color-background);
+    background:
+      var(--texture-grain) repeat,
+      var(--color-background);
     color: var(--color-text);
     font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Titulares en Fraunces: óptico automático (el eje opsz sigue al tamaño) y
+     un punto de SOFT para que la serif sea cálida, no académica. */
+  :where(h1, h2, h3),
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-variation-settings: "SOFT" 50;
+    font-weight: 560;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
 
   /* Un solo anillo de foco para toda la app, visible sobre cualquier superficie. */
@@ -176,15 +236,15 @@
     padding: var(--spacing-card);
   }
 
-  /* Tarjeta que además se pulsa: se levanta al pasar por encima. */
+  /* Tarjeta que además se pulsa: se levanta al pasar por encima, despacio. */
   .card-interactive {
     transition:
-      transform var(--duration-base) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart),
+      transform var(--duration-slow) var(--ease-out-quart),
+      box-shadow var(--duration-slow) var(--ease-out-quart),
       border-color var(--duration-base) var(--ease-out-quart);
   }
   .card-interactive:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     border-color: var(--color-border-strong);
     box-shadow: var(--shadow-raised);
   }
@@ -193,14 +253,34 @@
     box-shadow: var(--shadow-card);
   }
 
-  /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA) */
+  /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA): versalitas
+     espaciadas, como el antetítulo de una revista. */
   .section-label {
+    font-family: var(--font-sans);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
     letter-spacing: var(--text-micro--letter-spacing);
-    font-weight: 700;
+    font-weight: 650;
     text-transform: uppercase;
     color: var(--color-text-secondary);
+  }
+
+  /* Pie de foto editorial: cursiva de la serif, en tinta secundaria. */
+  .caption-editorial {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-variation-settings: "SOFT" 100;
+    color: var(--color-text-secondary);
+  }
+
+  /* Filete: línea fina terracota bajo un antetítulo. */
+  .rule-accent {
+    display: block;
+    width: 2.5rem;
+    height: 2px;
+    background: var(--color-accent);
   }
 
   /* Loader: barrido suave en lugar del pulso de opacidad clásico. */
@@ -218,7 +298,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgb(255 255 255 / 0.75),
+      rgb(251 248 241 / 0.8),
       transparent
     );
     animation: shimmer 1.6s var(--ease-out-quart) infinite;
@@ -233,14 +313,14 @@
     gap: 0.5rem;
     border-radius: var(--radius-control);
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.005em;
     line-height: 1;
     white-space: nowrap;
     transition:
-      background-color var(--duration-fast) var(--ease-out-quart),
-      background-image var(--duration-fast) var(--ease-out-quart),
-      border-color var(--duration-fast) var(--ease-out-quart),
-      color var(--duration-fast) var(--ease-out-quart),
+      background-color var(--duration-base) var(--ease-out-quart),
+      background-image var(--duration-base) var(--ease-out-quart),
+      border-color var(--duration-base) var(--ease-out-quart),
+      color var(--duration-base) var(--ease-out-quart),
       box-shadow var(--duration-base) var(--ease-out-quart),
       transform var(--duration-fast) var(--ease-out-quart);
   }
@@ -253,27 +333,39 @@
     cursor: not-allowed;
   }
 
-  /* El hover oscurece con una capa encima: así sigue funcionando cuando el
-     consumidor pinta el botón de otro color (p. ej. `bg-error`). */
-  .btn-primary {
-    background: var(--color-primary);
+  /* El hover oscurece con una capa de tinta encima: la misma regla vale para
+     todas las variantes rellenas (primario, peligro). */
+  .btn-primary,
+  .btn-danger {
     color: var(--color-on-primary);
-    box-shadow: 0 1px 2px rgb(22 101 52 / 0.25);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      0 1px 2px rgb(42 37 32 / 0.2);
   }
-  .btn-primary:hover:not(:disabled) {
-    background-image: linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08));
+  .btn-primary {
+    background-color: var(--color-primary);
+  }
+  .btn-danger {
+    background-color: var(--color-error);
+  }
+  .btn-primary:hover:not(:disabled),
+  .btn-danger:hover:not(:disabled) {
+    background-image: linear-gradient(
+      rgb(42 37 32 / 0.14),
+      rgb(42 37 32 / 0.14)
+    );
   }
 
   .btn-secondary {
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-border-strong);
     color: var(--color-text);
   }
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--color-border-strong);
+    border-color: var(--color-text-secondary);
     background-image: linear-gradient(
-      rgb(28 25 23 / 0.04),
-      rgb(28 25 23 / 0.04)
+      rgb(42 37 32 / 0.04),
+      rgb(42 37 32 / 0.04)
     );
   }
 
@@ -286,11 +378,40 @@
     color: var(--color-text);
   }
 
+  /* --- Fichas conmutables (categorías, filtros) -------------------------- */
+
+  /* El estado vive en `aria-pressed`: gancho de estilo y de lector a la vez. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0 0.875rem;
+    border-radius: var(--radius-chip);
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: var(--text-caption);
+    font-weight: 550;
+    transition:
+      background-color var(--duration-base) var(--ease-out-quart),
+      border-color var(--duration-base) var(--ease-out-quart),
+      color var(--duration-base) var(--ease-out-quart);
+  }
+  .chip:hover {
+    border-color: var(--color-primary);
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
   /* --- Campos ----------------------------------------------------------- */
 
   .input {
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-control);
     padding: 0.625rem 0.875rem;
     min-height: 2.75rem;
@@ -303,7 +424,7 @@
     color: var(--color-text-secondary);
   }
   .input:hover:not(:disabled) {
-    border-color: var(--color-border-strong);
+    border-color: var(--color-text-secondary);
   }
   .input:focus {
     outline: none;
@@ -317,20 +438,20 @@
   .input-error:focus,
   .input[aria-invalid="true"]:focus {
     border-color: var(--color-error);
-    box-shadow: 0 0 0 3px rgb(185 28 28 / 0.2);
+    box-shadow: 0 0 0 3px var(--color-error-soft);
   }
 
   /* --- Insignias -------------------------------------------------------- */
 
-  :where(.badge-pending, .badge-done, .badge-neutral) {
+  :where(.badge-pending, .badge-done, .badge-neutral, .badge-accent) {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     border-radius: var(--radius-chip);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
-    letter-spacing: 0.06em;
-    font-weight: 700;
+    letter-spacing: 0.1em;
+    font-weight: 650;
     text-transform: uppercase;
     padding: 0.3125rem 0.625rem;
   }
@@ -345,6 +466,10 @@
   .badge-neutral {
     background: var(--color-surface-muted);
     color: var(--color-text-secondary);
+  }
+  .badge-accent {
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
   }
 
   /* --- Fila de lista ---------------------------------------------------- */
@@ -367,7 +492,7 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -375,9 +500,86 @@
   }
 }
 
-/* Entrada de contenido: una sola vez, corta y desplazada. */
+/* Entrada de contenido: una sola vez, lenta y desplazada, sin rebote. */
 .animate-rise {
   animation: rise var(--duration-slow) var(--ease-out-quart) both;
+}
+
+/* Entrada escalonada: cada hijo espera `--i` pasos de `--stagger`. El índice
+   lo pone la pantalla (`style={{ "--i": n }}`); con 12+ hijos se topa para
+   que el último no llegue tarde. */
+.stagger > * {
+  animation: rise var(--duration-slow) var(--ease-out-quart) both;
+  animation-delay: calc(min(var(--i, 0), 12) * var(--stagger));
+}
+
+/* --- View Transitions (pieza estrella) ------------------------------------
+   Recetario → detalle: la portada de la tarjeta y su título llevan el mismo
+   `view-transition-name` que la cabecera del detalle, así que el navegador
+   interpola posición y tamaño entre las dos. El nombre solo lo lleva la
+   tarjeta que se pulsa (ver `lib/view-transition.ts`): dos elementos con el
+   mismo nombre a la vez cancelan la transición. */
+::view-transition-group(*) {
+  animation-duration: var(--duration-page);
+  animation-timing-function: var(--ease-out-quart);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-base);
+}
+/* El título cambia de tamaño: se escala como imagen, sin fundido cruzado
+   que doble las letras. */
+::view-transition-old(recipe-title) {
+  display: none;
+}
+::view-transition-new(recipe-title) {
+  animation: none;
+}
+
+/* Cambio de semana en los calendarios: la rejilla sale hacia un lado y entra
+   por el otro con fundido. El sentido lo marca `data-week-dir` en <html>. */
+@keyframes week-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@keyframes week-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes week-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes week-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+::view-transition-old(week-grid),
+::view-transition-new(week-grid) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-out-quart);
+  /* Sin escalar: la rejilla mide lo mismo antes y después. */
+  height: 100%;
+}
+::view-transition-old(week-grid) {
+  animation-name: week-out-left;
+}
+::view-transition-new(week-grid) {
+  animation-name: week-in-right;
+}
+[data-week-dir="prev"]::view-transition-old(week-grid) {
+  animation-name: week-out-right;
+}
+[data-week-dir="prev"]::view-transition-new(week-grid) {
+  animation-name: week-in-left;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -386,7 +588,13 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

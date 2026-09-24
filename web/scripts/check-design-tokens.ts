@@ -59,11 +59,14 @@ const SKIN_CLASSES: Record<string, true> = {
   "btn-primary": true,
   "btn-secondary": true,
   "btn-ghost": true,
+  "btn-danger": true,
+  chip: true,
   input: true,
   "input-error": true,
   "badge-pending": true,
   "badge-done": true,
   "badge-neutral": true,
+  "badge-accent": true,
 };
 
 /** Valores de `className` en sus tres formas corrientes (comillas dobles,
@@ -107,6 +110,29 @@ export function findSkinClassUsage(source: string): Violation[] {
   return out;
 }
 
+/** Escala cruda de Tailwind (`text-sm`, `rounded-lg`, `shadow-xl`,
+ * `bg-black/40`, `text-white`): valores válidos pero ajenos a los tokens, así
+ * que un rediseño de `globals.css` no los alcanza. Se busca dentro de las
+ * cadenas (donde viven las clases, también en constantes y plantillas), nunca
+ * en comentarios o prosa. */
+const RAW_SCALE =
+  /^(?:text-(?:xs|sm|base|lg|[2-9]?xl)|rounded(?:-[trblse]{1,2})?(?:-(?:xs|sm|md|lg|[2-3]?xl|full))?|shadow(?:-(?:xs|sm|md|lg|2?xl))?|(?:bg|from|via|to|text|border)-(?:black|white)(?:\/\d+)?)$/;
+const STRING_LITERAL = /"([^"\n]*)"|'([^'\n]*)'|`([^`]*)`/g;
+
+export function findRawScale(source: string): Violation[] {
+  const out: Violation[] = [];
+  for (const lit of source.matchAll(STRING_LITERAL)) {
+    const value = lit[1] ?? lit[2] ?? lit[3] ?? "";
+    for (const token of value.split(/[\s"'`{}$]+/)) {
+      // `md:hover:text-sm` → la utilidad es lo que va tras el último `:`.
+      if (RAW_SCALE.test(token.slice(token.lastIndexOf(":") + 1))) {
+        out.push({ line: lineOf(source, lit.index), className: token });
+      }
+    }
+  }
+  return out;
+}
+
 async function* walk(dir: string): AsyncGenerator<string> {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -126,6 +152,7 @@ export async function check(src: string, cwd: string): Promise<number> {
     const isSkinSource = file.endsWith(join("components", "ui.tsx"));
     const hits = [
       ...findArbitraryValues(source),
+      ...findRawScale(source),
       ...(isSkinSource ? [] : findSkinClassUsage(source)),
     ];
     for (const hit of hits) {
