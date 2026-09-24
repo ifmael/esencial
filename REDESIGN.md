@@ -42,27 +42,44 @@ primario y marca activo y foco), bordes de 1px nítidos, densidad alta.
   390px (el fallo ya estaba antes); `pnpm test` fallaba en Node 25 porque su
   `localStorage` nativo tapaba el de jsdom (ahora el script lleva
   `--no-experimental-webstorage`).
+- **Arreglos tras la revisión**:
+  - Paleta: el foco se devuelve una sola vez al cerrar y la referencia se
+    suelta. Antes quedaba viva y se capturaba dentro del updater de `setOpen`,
+    que StrictMode ejecuta dos veces. Hay test: navegar tras cerrar no roba el
+    foco (comprobado que falla si el foco se devuelve en cada render).
+  - Mapa muscular: al tabular, el anillo salía del color del texto
+    (`rgb(14,18,16)`), porque `transition-colors` animaba `outline-color` y una
+    regla en `@layer base` pierde contra la utilidad. Una regla fuera de capas
+    lo arregla: ahora es `--color-primary` desde el primer fotograma.
+  - `Alert` admite otro `role`: la muestra estática de `/ui` usa `note` y el
+    lector de pantalla ya no la anuncia en cada visita.
 
 ## Verificado
 
-- `pnpm lint`, `pnpm typecheck`, `pnpm test` en verde (API 210, web 275; hay
-  tests nuevos para ranking de la paleta, tema, UI de la paleta y catálogo).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` en verde (API 210, web 279; hay
+  tests nuevos para ranking de la paleta, tema, UI y foco de la paleta, `Alert`
+  y catálogo).
 - 1280×800: `/plan-fuerza` y `/plan-recetas` sin scroll (`scrollHeight` 800,
   `scrollWidth` 1280), columna de día de **154 px** (antes 152,84), y la
   confirmación Sí/No cabe en la fila. Las 12 rutas, sin desbordamiento
   horizontal a 1280 ni a 390.
 - Contraste AA en todos los pares de texto, en los dos temas (el mínimo es
   5,13:1).
-- El ratón no roba el foco en el mapa muscular; el teclado conserva el anillo de
-  2px en `--color-primary`. Siguen 14 `<g role=button>` en la vista frontal.
+- El ratón no roba el foco en el mapa muscular. Con teclado, el anillo mide 2px
+  y es `rgb(21,122,69)` = `--color-primary`, medido justo después de cada Tab
+  en tres músculos. Siguen 14 `<g role=button>` en la vista frontal.
+- Chips: se ven de 32px y se pulsan en 44px (comprobado con `elementFromPoint`
+  a 5,5px por encima y por debajo). Confirmación Sí/No de la ✕: 44px de alto.
+- Geist y Geist Mono cargan desde el mismo origen, sin errores de consola ni de
+  CSP.
 - Con `prefers-reduced-motion: reduce`, `.reveal` queda en `animation: none`.
 
 ## Peso
 
 | | Antes | Después |
 |---|---|---|
-| CSS | 39,41 kB (8,26 gz) | 44,33 kB (9,37 gz) |
-| JS | 421,83 kB (127,09 gz) | 432,07 kB (130,20 gz) |
+| CSS | 39,41 kB (8,26 gz) | 44,45 kB (9,39 gz) |
+| JS | 421,83 kB (127,09 gz) | 432,15 kB (130,23 gz) |
 | Fuentes | — | 52,5 kB woff2 (Geist 29,4 + Mono 23,1) |
 
 Sin dependencias de JS nuevas: la paleta son unos 3 kB gz.
@@ -77,3 +94,9 @@ Sin dependencias de JS nuevas: la paleta son unos 3 kB gz.
 - El tema elegido se aplica al cargar el JS; sin script en línea en
   `index.html`, así que con tema forzado distinto del sistema puede verse un
   destello del tema del sistema.
+- Revisión visual: capturas a 1280×800 de todas las pantallas y a 390×844 de
+  `/`, `/recetario/1` y `/plan-fuerza`. El resto de pantallas a 390 se comprobó
+  midiendo el desbordamiento horizontal, sin revisar la captura una a una.
+- El oscuro se verificó con `prefers-color-scheme: dark` (vía
+  `emulateMediaFeatures`) y con `data-theme="dark"` en `/recetario`, `/ui` y la
+  paleta; no hay capturas en oscuro del resto de pantallas.
