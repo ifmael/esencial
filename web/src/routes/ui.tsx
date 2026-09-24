@@ -17,6 +17,7 @@ import {
   SwatchIcon,
   UtensilsIcon,
 } from "../components/icons";
+import { SessionReward } from "../components/reward";
 import { Badge, Button, Card, Input, Select, Textarea } from "../components/ui";
 
 function Block({
@@ -65,10 +66,11 @@ export function UiPage() {
 
       <Block
         title="Tipografía"
-        hint="Seis pasos, cada uno con su interlineado y su tracking."
+        hint="Siete pasos; hero, display y title van en Bricolage Grotesque."
       >
         <div className="flex flex-col gap-2">
-          <TypeRow sample="text-display" label="24px · título de pantalla" />
+          <TypeRow sample="text-hero" label="48px · sello y cifras grandes" />
+          <TypeRow sample="text-display" label="28px · título de pantalla" />
           <TypeRow sample="text-title" label="20px · título de bloque" />
           <TypeRow
             sample="text-lead"
@@ -82,12 +84,13 @@ export function UiPage() {
 
       <Block
         title="Botones"
-        hint="Tres variantes y tres tamaños; md mantiene 44px de alto y type=button por defecto."
+        hint="Cuatro variantes y tres tamaños; md mantiene 44px de alto. Al pulsar, el botón se hunde sobre su sombra dura."
       >
         <div className="flex flex-wrap items-center gap-3">
           <Button>Primario</Button>
           <Button variant="secondary">Secundario</Button>
           <Button variant="ghost">Fantasma</Button>
+          <Button variant="danger">Peligro</Button>
           <Button disabled>Deshabilitado</Button>
           <Button size="sm">Pequeño</Button>
           <Button size="icon" aria-label="Botón de icono">
@@ -140,20 +143,76 @@ export function UiPage() {
 
       <Block
         title="Superficies y elevación"
-        hint="Dos sombras hacia abajo, una hundida y shadow-up para la barra inferior."
+        hint="Sombras duras de tinta, sin blur: control, card, raised y press (la hundida). Trazo de 2px (border) o 3px (border-thick)."
       >
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-card border border-border bg-surface p-4 shadow-card text-caption">
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div className="rounded-card border bg-surface p-4 text-caption shadow-control">
+            shadow-control
+          </div>
+          <div className="rounded-card border-thick bg-surface p-4 text-caption shadow-card">
             shadow-card
           </div>
-          <div className="rounded-card border border-border bg-surface p-4 shadow-raised text-caption">
+          <div className="rounded-card border-thick bg-surface p-4 text-caption shadow-raised">
             shadow-raised
           </div>
-          <div className="rounded-card bg-surface-muted p-4 shadow-inset text-caption">
+          <div className="rounded-card border bg-surface-muted p-4 text-caption shadow-inset">
             shadow-inset
           </div>
         </div>
         <div className="skeleton h-6" />
+      </Block>
+
+      <Block
+        title="Color"
+        hint="Planos y saturados, siempre con tinta encima. Un acento por sección: Hoy azul, Deporte verde, Nutrición rosa; el amarillo marca hover y racha."
+      >
+        <div className="flex flex-wrap gap-3">
+          <span className="rounded-panel border bg-primary-fill px-3 py-2 text-caption font-bold shadow-control">
+            primary-fill
+          </span>
+          <span className="rounded-panel border bg-accent-yellow px-3 py-2 text-caption font-bold shadow-control">
+            accent-yellow
+          </span>
+          <span className="rounded-panel border bg-accent-pink px-3 py-2 text-caption font-bold shadow-control">
+            accent-pink
+          </span>
+          <span className="rounded-panel border bg-accent-blue px-3 py-2 text-caption font-bold shadow-control">
+            accent-blue
+          </span>
+          <span className="rounded-panel border bg-error px-3 py-2 text-caption font-bold text-on-error shadow-control">
+            error
+          </span>
+          <span className="rounded-panel border bg-surface-muted px-3 py-2 text-caption font-bold shadow-control">
+            surface-muted
+          </span>
+        </div>
+      </Block>
+
+      <Block
+        title="Casilla"
+        hint="Caja de tinta que se rellena de verde con un pop al marcarla."
+      >
+        <div className="flex items-center gap-4">
+          <input type="checkbox" aria-label="Casilla pequeña" defaultChecked />
+          <input
+            type="checkbox"
+            aria-label="Casilla táctil"
+            className="min-h-11 min-w-11"
+            defaultChecked
+          />
+          <input
+            type="checkbox"
+            aria-label="Casilla sin marcar"
+            className="min-h-11 min-w-11"
+          />
+        </div>
+      </Block>
+
+      <Block
+        title="Recompensa"
+        hint="Al marcar lo último de /sesion/:fecha: sello ¡Hecho! y confeti (canvas propio). Con reduced-motion, solo el sello quieto."
+      >
+        <SessionReward />
       </Block>
 
       <Block
@@ -180,12 +239,12 @@ export function UiPage() {
 
       <Block
         title="Movimiento"
-        hint="Tres duraciones y un solo easing; todo se apaga con prefers-reduced-motion. Pasa el ratón por encima."
+        hint="Tres duraciones, ease-out-quart para reaccionar y ease-bounce para lo que salta; todo se apaga con prefers-reduced-motion. Pasa el ratón por encima."
       >
         <Card className="card-interactive">
           <p className="text-body">
-            Tarjeta interactiva: se levanta 1px al pasar por encima y vuelve al
-            pulsarla.
+            Tarjeta interactiva: se levanta en hover (sombra más larga) y se
+            hunde al pulsarla, con rebote.
           </p>
         </Card>
       </Block>

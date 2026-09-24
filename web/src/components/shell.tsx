@@ -438,7 +438,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={logout}
-            className="ml-1 flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel border-l border-border px-1 py-1 text-micro font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:text-text"
+            className="ml-1 flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 border-l px-1 py-1 text-micro font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:text-text"
           >
             <span className="grid size-9 place-items-center">
               <LogoutIcon />

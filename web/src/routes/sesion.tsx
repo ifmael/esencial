@@ -347,7 +347,7 @@ function Header({
         >
           ←
         </Link>
-        <h1 className="text-display font-bold capitalize">
+        <h1 className="text-display font-bold first-letter:uppercase">
           {formatDateEs(parseDateEs(date))}
         </h1>
       </div>
@@ -485,7 +485,7 @@ export function SesionPage() {
   if (view.kind === "empty")
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-display font-bold capitalize">
+        <h1 className="text-display font-bold first-letter:uppercase">
           {isValidDateStr(date) ? formatDateEs(parseDateEs(date)) : "Día"}
         </h1>
         <Card className="text-text-secondary">

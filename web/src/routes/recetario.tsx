@@ -239,11 +239,7 @@ export function RecetarioDetallePage() {
             <ul className={cardClass("flex flex-col gap-1")}>
               {recipe.ingredients.map((ing) => (
                 <li key={ing.id} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id={`ing-${ing.id}`}
-                    className="h-4 w-4"
-                  />
+                  <input type="checkbox" id={`ing-${ing.id}`} />
                   <label htmlFor={`ing-${ing.id}`}>
                     {ing.quantity !== null && `${ing.quantity} `}
                     {ing.unit && `${ing.unit} `}

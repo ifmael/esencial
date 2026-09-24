@@ -200,7 +200,11 @@
 
   /* Titulares en la grotesca: la jerarquía se lee por la voz, no solo por el
      tamaño. */
-  :where(h1, h2, .text-display, .text-title, .text-hero) {
+  h1,
+  h2,
+  .text-display,
+  .text-title,
+  .text-hero {
     font-family: var(--font-display);
     font-weight: 800;
   }

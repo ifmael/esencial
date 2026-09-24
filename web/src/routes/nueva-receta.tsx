@@ -244,7 +244,7 @@ export function NuevaRecetaPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section>
           <h3 className="mb-2 font-semibold">Foto principal</h3>
           <Card>
@@ -357,7 +357,7 @@ export function NuevaRecetaPage() {
           <div className="mt-2 flex gap-2">
             <Input
               aria-label="Nueva categoría"
-              className="w-full"
+              className="w-full min-w-0"
               value={tag}
               onChange={(e) => setTag(e.target.value)}
             />
@@ -397,7 +397,7 @@ export function NuevaRecetaPage() {
           <div className="flex gap-2">
             <Input
               aria-label="Nuevo material"
-              className="w-full"
+              className="w-full min-w-0"
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
             />
@@ -419,7 +419,7 @@ export function NuevaRecetaPage() {
               <li key={i} className="flex gap-2">
                 <Input
                   aria-label={`Ingrediente ${i + 1} alimento`}
-                  className="flex-1"
+                  className="min-w-0 flex-1"
                   placeholder="alimento"
                   value={row.food}
                   onChange={(e) =>
@@ -499,7 +499,7 @@ export function NuevaRecetaPage() {
                 </span>
                 <Input
                   aria-label={`Paso ${i + 1}`}
-                  className="flex-1"
+                  className="min-w-0 flex-1"
                   value={text}
                   onChange={(e) =>
                     set(
