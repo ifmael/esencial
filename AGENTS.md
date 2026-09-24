@@ -41,36 +41,60 @@ una:
    `.input`, `.badge-*`, `.section-label`, `.list-row`, `.skeleton`).
 
 Las pantallas consumen **las primitivas** de `web/src/components/ui.tsx`
-(`Button`, `Card`, `Input`, `Textarea`, `Badge`); los iconos salen de
-`web/src/components/icons.tsx` (SVG en línea, sin dependencia).
+(`Button` —`primary`/`secondary`/`ghost`/`danger`—, `Card`, `Input`, `Textarea`,
+`Select`, `Chip`, `Badge`); los iconos salen de `web/src/components/icons.tsx`
+(SVG en línea, sin dependencia).
 
 Las clases del punto 3 son la **piel** de esas primitivas: una pantalla no las
-escribe a mano. Hay cuatro utilidades compartidas que sí se aplican tal cual,
-porque no son piel de ningún componente: `.section-label`, `.list-row`,
-`.card-interactive` (como modificador de `Card`) y `.skeleton`.
+escribe a mano. Hay utilidades compartidas que sí se aplican tal cual, porque no
+son piel de ningún componente: `.section-label`, `.list-row`,
+`.card-interactive` (como modificador de `Card`), `.skeleton`, `.stagger`
+(entrada escalonada; cada hijo lleva `style={{ "--i": n }}`),
+`.caption-editorial` (pie de foto) y `.rule-accent` (filete terracota).
 
 **Al añadir algo nuevo:** reutiliza una primitiva existente. Si no encaja, añade
 primero el token (`:root` + `@theme inline`) y después la primitiva. **Nunca un
-valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`) ni la
-piel de una primitiva escrita a mano (`className="card"`, `btn-primary`):
-`pnpm lint` rechaza las dos cosas (ver `web/scripts/check-design-tokens.ts`). Se
-aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
-inventan una escala.
+valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`), ni la
+**escala cruda de Tailwind** (`text-sm`, `rounded-lg`, `shadow-xl`, `text-white`,
+`bg-black/40`: válidas pero ajenas a los tokens, así que un rediseño no las
+alcanza — usa `text-caption`, `rounded-panel`, `shadow-raised`,
+`text-on-primary`, `bg-scrim`), ni la piel de una primitiva escrita a mano
+(`className="card"`, `btn-primary`): `pnpm lint` rechaza las tres cosas (ver
+`web/scripts/check-design-tokens.ts`). Se aceptan los valores derivados
+(`var(...)`, `calc(...)`, `env(...)`), porque no inventan una escala.
+
+Dirección visual vigente: **A — Editorial cálido** (papel crema con grano SVG,
+tinta cálida, oliva de marca, terracota de acento). Titulares `h1`–`h3` (y
+`.font-display`) en **Fraunces** variable con óptico automático; el cuerpo en
+**Source Sans 3**. Las dos fuentes se auto-alojan con Fontsource (`font-display:
+swap`, subsets por `unicode-range`), así que la CSP del frontal no cambia.
 
 Escala vigente — todo lo demás sale de aquí:
 
 | Familia | Tokens |
 | --- | --- |
-| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
-| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
-| Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
-| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
-| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+| Tipografía | `micro` 11 · `caption` 13 · `body` 16 · `lead` 18 · `title` 22 · `display` 32 · `hero` 44 |
+| Espaciado | `stack` 12 · `gutter` 20 · `card` 24 · `section` 40 |
+| Radios | `control` 6 · `panel` 8 · `card` 12 · `chip` 999 |
+| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas y cálidas, nunca una sola difusa fuerte) |
+| Color (nuevos) | `accent` / `accent-soft` (terracota), `scrim` / `scrim-strong` (velo de modal y degradado sobre foto), `error-soft` |
+| Movimiento | `fast` 140ms · `base` 220ms · `slow` 420ms · `page` 480ms, `--stagger` 60ms, con **un solo** easing (`ease-out-quart`, sin rebote) |
 
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
   la vez, sin estado duplicado en una clase aparte.
-- Todo lo animado se neutraliza con `prefers-reduced-motion`.
+- Todo lo animado se neutraliza con `prefers-reduced-motion` (también los
+  pseudo-elementos `::view-transition-*`).
+- **View Transitions** (API nativa, 0 KB, `web/src/lib/view-transition.ts`): la
+  tarjeta de `/recetario` se transforma en la cabecera del detalle (nombres fijos
+  `recipe-cover`/`recipe-title`, puestos con `flushSync` solo en la tarjeta
+  pulsada; la receta viaja en `location.state` para que la cabecera se pinte en
+  el primer render) y `WeekGrid` desliza la rejilla al cambiar de semana
+  (`view-transition-name: week-grid`, sentido en `html[data-week-dir]`; espera a
+  la prop `busy` para no animar hacia datos viejos). Por eso `app.tsx` usa el
+  **router de datos** (`createBrowserRouter` + `RouterProvider`): el
+  `<BrowserRouter>` declarativo ignora `viewTransition`. Sin la API o con
+  movimiento reducido, el cambio es directo.
 - Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
   sesión»): míralo antes de inventar una pieza.
 - `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
