@@ -496,7 +496,10 @@
 
   /* --- Chip (filtro/etiqueta pulsable) ---------------------------------- */
 
+  /* Se ve de 32px, pero el área que se pulsa llega a 44px (::after invisible
+     que desborda 6px por lado sobre el borde): densidad sin objetivos pequeños. */
   .chip {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
@@ -513,6 +516,11 @@
       background-color var(--duration-fast) var(--ease-out-quart),
       border-color var(--duration-fast) var(--ease-out-quart),
       color var(--duration-fast) var(--ease-out-quart);
+  }
+  :where(button, a).chip::after {
+    content: "";
+    position: absolute;
+    inset: -7px -1px;
   }
   :where(button, a).chip:hover {
     border-color: var(--color-border-strong);
