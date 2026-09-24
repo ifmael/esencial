@@ -74,8 +74,8 @@ CSP del Worker no cambia.
   `/`, `/login`, `/recetario`, `/recetario/:id`, `/recetario/nueva`,
   `/plan-recetas`, `/plan-fuerza`, `/plantillas`, `/plantillas/:id/editar`,
   `/ejercicios`, `/ejercicios/:id`, `/sesion/:fecha` (en borrador, con el sello y
-  registrada) y `/ui`; a **390×844** las mismas rutas salvo el login a 1280, que
-  se capturó en una pestaña sin sesión.
+  registrada) y `/ui` (el login, en una pestaña sin sesión); a **390×844** las
+  mismas rutas.
 - Calendario a 1280×800: columna de día **152,28 px** (antes 152,84), sin
   scroll de página ni horizontal. **Coste**: el trazo de 2px y los paddings de
   la celda recortan el texto —título de sesión 62 px (antes 75) y receta
