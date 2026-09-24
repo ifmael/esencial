@@ -2,8 +2,9 @@
 // navegación de semana y las siete columnas. Presentacional y sin dominio: la
 // página es dueña de los datos y del contenido de cada día, que entra por el
 // render prop `children` (fuerza inyecta la sesión; comidas, las 3 tomas).
-import type { ReactNode } from "react";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
 import { toISODate } from "../lib/day";
+import { canViewTransition, runViewTransition } from "../lib/view-transition";
 import { Button, cardClass } from "./ui";
 
 const DAYS = [
@@ -42,6 +43,7 @@ type WeekDay = {
 export function WeekGrid({
   isoWeek,
   loading = false,
+  busy = false,
   error = null,
   onRetry,
   onShiftWeek,
@@ -49,6 +51,10 @@ export function WeekGrid({
 }: {
   isoWeek: string;
   loading?: boolean;
+  /** Los datos de `isoWeek` aún no han llegado (se ve la semana anterior o
+   * nada). La transición de semana espera a que sea false para fotografiar la
+   * rejilla nueva, así que nunca anima hacia datos viejos. */
+  busy?: boolean;
   error?: string | null;
   /** Acción del aviso de error; sin ella el aviso no lleva botón. */
   onRetry?: () => void;
@@ -57,6 +63,38 @@ export function WeekGrid({
   children: (day: WeekDay) => ReactNode;
 }) {
   const today = toISODate(new Date());
+  // Transición en curso: la semana de la que se sale y cómo soltar la foto.
+  const pending = useRef<{ from: string; release: () => void } | null>(null);
+
+  // Tras cada render: si la semana ya cambió y sus datos están, el navegador
+  // puede tomar la foto «después» (antes de pintar: layout effect).
+  useLayoutEffect(() => {
+    const p = pending.current;
+    if (p && p.from !== isoWeek && !busy) {
+      pending.current = null;
+      p.release();
+    }
+  });
+
+  const shift = (delta: number) => {
+    if (!canViewTransition()) {
+      onShiftWeek(delta);
+      return;
+    }
+    // El sentido del deslizamiento lo lee el CSS (`[data-week-dir]`).
+    document.documentElement.dataset.weekDir = delta < 0 ? "prev" : "next";
+    const from = isoWeek;
+    void runViewTransition(
+      () =>
+        new Promise<void>((release) => {
+          // Un clic encima de otro: la transición anterior la salta el
+          // navegador; se suelta su espera para no dejarla colgada.
+          pending.current?.release();
+          pending.current = { from, release };
+          onShiftWeek(delta);
+        }),
+    );
+  };
 
   return (
     <section className={cardClass("flex min-h-0 flex-1 flex-col gap-3")}>
@@ -64,15 +102,15 @@ export function WeekGrid({
         <Button
           variant="secondary"
           aria-label="Semana anterior"
-          onClick={() => onShiftWeek(-1)}
+          onClick={() => shift(-1)}
         >
           ‹
         </Button>
-        <h2 className="text-title font-bold">{isoWeek}</h2>
+        <h2 className="text-title">{isoWeek}</h2>
         <Button
           variant="secondary"
           aria-label="Semana siguiente"
-          onClick={() => onShiftWeek(1)}
+          onClick={() => shift(1)}
         >
           ›
         </Button>
@@ -95,16 +133,27 @@ export function WeekGrid({
       {loading ? (
         <div className="text-text-secondary">Cargando…</div>
       ) : (
-        <div className="flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2 md:overflow-y-auto">
+        <div
+          // Nombre de la transición de semana: el CSS desliza solo esta pieza.
+          style={{ viewTransitionName: "week-grid" }}
+          className="flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2 md:overflow-y-auto"
+        >
           {DAYS.map((name, index) => {
             const date = dayOf(isoWeek, index);
             const isToday = date === today;
             return (
               <div key={name} className="flex flex-col gap-2 md:min-h-0">
-                <h3 className="font-semibold">
+                <h3
+                  className={`flex items-baseline gap-2 border-b pb-1 text-lead ${
+                    isToday ? "border-accent" : "border-border"
+                  }`}
+                >
                   {name}
+                  <span className="font-sans text-caption text-text-secondary tabular-nums">
+                    {Number(date.slice(8))}
+                  </span>
                   {isToday ? (
-                    <span className="ml-2 text-caption font-bold text-primary">
+                    <span className="ml-auto font-sans text-micro font-semibold uppercase tracking-widest text-accent">
                       Hoy
                     </span>
                   ) : null}

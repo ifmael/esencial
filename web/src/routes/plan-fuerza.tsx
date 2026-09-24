@@ -958,6 +958,7 @@ export function PlanFuerzaPage() {
       <WeekGrid
         isoWeek={isoWeek}
         loading={week.loading && week.sessions.length === 0}
+        busy={week.loading}
         error={week.error}
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
       >

@@ -125,4 +125,32 @@ describe("/recetario book", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/recetario/1"));
     expect(await screen.findByText("1. Sofreír")).toBeDefined();
   });
+
+  it("la cabecera del detalle aparece al momento, sin esperar a la API", async () => {
+    // La tarjeta pasa su receta al detalle: la cabecera (foto + título) ya
+    // está en el primer render, que es lo que la transición de vista
+    // fotografía. El resto del detalle llega cuando responde la API.
+    const server = makeServer(three);
+    let hold = false;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    vi.stubGlobal(
+      "fetch",
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (hold && String(input) === "/api/recipes") await gate;
+        return server.fetchMock(input, init);
+      },
+    );
+    renderAt("/recetario");
+    const card = await screen.findByText("Arroz con pollo");
+    hold = true;
+    fireEvent.click(card);
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/1"));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Arroz con pollo" }),
+    ).toBeDefined();
+    expect(screen.queryByText("1. Sofreír")).toBeNull();
+    release();
+    expect(await screen.findByText("1. Sofreír")).toBeDefined();
+  });
 });

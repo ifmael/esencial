@@ -26,6 +26,8 @@ const slotKey = (day: number, meal: string) => `${day}|${meal}`;
 /** GET/PUT de la semana completa; PUT fallido recarga el estado del servidor. */
 export function useMealPlan(isoWeek: string) {
   const [slots, setSlots] = useState<Slot[] | null>(null);
+  // Semana a la que pertenecen `slots`: mientras no coincide, la nueva carga.
+  const [loadedWeek, setLoadedWeek] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -36,11 +38,15 @@ export function useMealPlan(isoWeek: string) {
       .then(async (res) => {
         const data: { slots: Slot[]; error?: string } = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Error");
-        if (!cancelled) setSlots(data.slots);
+        if (!cancelled) {
+          setSlots(data.slots);
+          setLoadedWeek(isoWeek);
+        }
       })
       .catch(() => {
         if (!cancelled) {
           setSlots(null);
+          setLoadedWeek(isoWeek);
           setError("No se pudo cargar el plan semanal.");
         }
       });
@@ -82,7 +88,13 @@ export function useMealPlan(isoWeek: string) {
     [isoWeek],
   );
 
-  return { slots, error, save, retry: () => setAttempt((a) => a + 1) };
+  return {
+    slots,
+    error,
+    save,
+    busy: loadedWeek !== isoWeek,
+    retry: () => setAttempt((a) => a + 1),
+  };
 }
 
 function RecipePicker({
@@ -225,7 +237,7 @@ function SlotCell({
 export function PlanRecetasPage() {
   const [params, setParams] = useSearchParams();
   const isoWeek = params.get("week") ?? currentIsoWeek();
-  const { slots, error, save, retry } = useMealPlan(isoWeek);
+  const { slots, error, save, busy, retry } = useMealPlan(isoWeek);
   const [picker, setPicker] = useState<{ day: number; meal: string } | null>(
     null,
   );
@@ -251,6 +263,7 @@ export function PlanRecetasPage() {
       <WeekGrid
         isoWeek={isoWeek}
         loading={slots === null && !error}
+        busy={busy}
         error={error}
         onRetry={retry}
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}

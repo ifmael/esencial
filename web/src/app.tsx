@@ -1,14 +1,20 @@
-// SPA router (react-router 7, declarative mode). Shell wraps guarded routes.
+// SPA router (react-router 7, data mode). Shell wraps guarded routes.
 // E7: on startup the app asks /api/auth/status; unauthenticated visitors are
 // sent to /login?next=<path>. UX defense-in-depth — the server 401 gate stays
 // authoritative (spec: Client-side session guard).
+//
+// Data mode (`createBrowserRouter` + `RouterProvider`) y no `<BrowserRouter>`:
+// solo el router de datos envuelve la navegación en `startViewTransition`
+// cuando un `<Link viewTransition>` o `navigate(…, { viewTransition })` lo
+// pide. Las rutas son las mismas, declaradas como JSX.
 import { useEffect, useState } from "react";
 import {
-  BrowserRouter,
+  createBrowserRouter,
+  createRoutesFromElements,
   Navigate,
   Outlet,
   Route,
-  Routes,
+  RouterProvider,
   useLocation,
 } from "react-router";
 import { Shell } from "./components/shell";
@@ -61,31 +67,33 @@ import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
 import { SesionPage } from "./routes/sesion";
 import { UiPage } from "./routes/ui";
 
+const routes = createRoutesFromElements(
+  <>
+    <Route path="/login" element={<LoginPage />} />
+    <Route element={<GuardedShell />}>
+      <Route path="/" element={<DiaPage />} />
+      <Route path="/plan-recetas" element={<PlanRecetasPage />} />
+      <Route path="/plan-fuerza" element={<PlanFuerzaPage />} />
+
+      <Route path="/recetario" element={<RecetarioPage />} />
+      <Route path="/recetario/nueva" element={<NuevaRecetaPage />} />
+      <Route path="/recetario/:id" element={<RecetarioDetallePage />} />
+      <Route path="/ejercicios" element={<EjerciciosPage />} />
+      <Route path="/ejercicios/:id" element={<EjercicioDetailPage />} />
+      {/* La lista también sirve /plantillas/nueva y /plantillas/:id/editar:
+          la modal sale de la URL y la lista queda detrás, montada. */}
+      <Route path="/plantillas/*" element={<PlantillasPage />} />
+
+      <Route path="/sesion/:date" element={<SesionPage />} />
+
+      {/* Referencia del sistema de diseño: fuera del menú, para consultarla. */}
+      <Route path="/ui" element={<UiPage />} />
+    </Route>
+  </>,
+);
+
 export function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<GuardedShell />}>
-          <Route path="/" element={<DiaPage />} />
-          <Route path="/plan-recetas" element={<PlanRecetasPage />} />
-          <Route path="/plan-fuerza" element={<PlanFuerzaPage />} />
-
-          <Route path="/recetario" element={<RecetarioPage />} />
-          <Route path="/recetario/nueva" element={<NuevaRecetaPage />} />
-          <Route path="/recetario/:id" element={<RecetarioDetallePage />} />
-          <Route path="/ejercicios" element={<EjerciciosPage />} />
-          <Route path="/ejercicios/:id" element={<EjercicioDetailPage />} />
-          {/* La lista también sirve /plantillas/nueva y /plantillas/:id/editar:
-              la modal sale de la URL y la lista queda detrás, montada. */}
-          <Route path="/plantillas/*" element={<PlantillasPage />} />
-
-          <Route path="/sesion/:date" element={<SesionPage />} />
-
-          {/* Referencia del sistema de diseño: fuera del menú, para consultarla. */}
-          <Route path="/ui" element={<UiPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+  // Un router por montaje (lee la URL al crearse), como hacía <BrowserRouter>.
+  const [router] = useState(() => createBrowserRouter(routes));
+  return <RouterProvider router={router} />;
 }

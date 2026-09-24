@@ -3,7 +3,8 @@
 // El flash de "receta eliminada" cruza la navegación en un módulo-único porque
 // el detalle y el libro son rutas distintas sin estado compartido.
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { flushSync } from "react-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { filterRecipes } from "../components/recipes/filter";
 import { RecipeEditor } from "../components/recipes/recipe-editor";
 import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
@@ -24,44 +25,95 @@ const takeFlash = () => {
   flashMessage = null;
   return m;
 };
-export function Thumb({ recipe, big }: { recipe: Recipe; big?: boolean }) {
-  const box = big
-    ? "h-20 w-20 shrink-0 rounded-panel md:h-40 md:w-full"
-    : "h-20 w-20 shrink-0 rounded-panel";
+/** Portada de receta: la foto o, sin ella, un papel tostado con la inicial en
+ * la serif. La usan la tarjeta y la cabecera del detalle, así que las dos
+ * piezas que se transforman una en otra son la misma. */
+function Cover({ recipe, className }: { recipe: Recipe; className: string }) {
   return recipe.photo_path ? (
     <img
       src={photoSrc(recipe.photo_path)}
       alt=""
-      className={`${box} object-cover`}
+      className={`${className} object-cover`}
     />
   ) : (
     <div
       aria-hidden
-      className={`${box} flex items-center justify-center bg-surface-muted text-caption text-text-secondary`}
+      className={`${className} flex flex-col items-center justify-center gap-1 bg-surface-muted text-text-secondary`}
     >
-      Sin foto
+      <span className="font-display text-hero text-border-strong">
+        {recipe.name.charAt(0)}
+      </span>
+      <span className="caption-editorial">Sin foto</span>
     </div>
   );
 }
 
-function RecipeCard({ recipe }: { recipe: Recipe }) {
+/** Nombres de la transición tarjeta → cabecera. Fijos: solo los lleva la
+ * tarjeta que se pulsa y la cabecera del detalle, nunca dos a la vez (dos
+ * elementos con el mismo nombre cancelan la transición entera). El CSS de
+ * `globals.css` apunta a estos nombres. */
+const COVER = { viewTransitionName: "recipe-cover" };
+const TITLE = { viewTransitionName: "recipe-title" };
+
+/** La receta viaja con la navegación (`state`) para que el detalle pinte su
+ * cabecera en el primer render —el que fotografía la transición— sin esperar
+ * a la API. */
+type DetailHandoff = { recipe: Recipe };
+
+function RecipeCard({
+  recipe,
+  index,
+  feature,
+}: {
+  recipe: Recipe;
+  index: number;
+  /** La primera de la rejilla: portada a doble ancho, como una apertura. */
+  feature: boolean;
+}) {
+  const [leaving, setLeaving] = useState(false);
   return (
     <Link
       to={`/recetario/${recipe.id}`}
-      className={cardClass(
-        "flex items-center gap-4 md:flex-col md:items-stretch",
-      )}
+      state={{ recipe } satisfies DetailHandoff}
+      viewTransition
+      // Síncrono: los nombres tienen que estar en el DOM antes de que el
+      // router pida la foto «antes», que ocurre en este mismo clic.
+      onClick={() => flushSync(() => setLeaving(true))}
+      style={{ "--i": index } as React.CSSProperties}
+      className={`group flex flex-col gap-3 ${feature ? "md:col-span-2 md:row-span-2" : ""}`}
     >
-      <Thumb recipe={recipe} big />
-      <div className="min-w-0">
-        <div className="truncate font-semibold">{recipe.name}</div>
-        <ul className="mt-1 flex flex-wrap gap-1">
-          {recipe.tags.map((t) => (
-            <li key={t}>
-              <Badge tone="done">{t}</Badge>
-            </li>
-          ))}
-        </ul>
+      <div
+        style={leaving ? COVER : undefined}
+        className="overflow-hidden rounded-card shadow-card transition-shadow duration-base group-hover:shadow-raised"
+      >
+        <Cover
+          recipe={recipe}
+          className={`w-full transition-transform duration-page ease-out-quart group-hover:scale-105 ${
+            feature
+              ? "aspect-4/3 md:aspect-auto md:h-full md:min-h-96"
+              : "aspect-4/3"
+          }`}
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        {recipe.tags.length > 0 && (
+          <ul className="flex flex-wrap gap-x-2 section-label text-accent">
+            {recipe.tags.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        )}
+        <h2
+          style={leaving ? TITLE : undefined}
+          className={`${feature ? "text-display" : "text-title"} group-hover:text-primary`}
+        >
+          {recipe.name}
+        </h2>
+        {recipe.description && (
+          <p className="line-clamp-2 text-caption text-text-secondary">
+            {recipe.description}
+          </p>
+        )}
       </div>
     </Link>
   );
@@ -94,8 +146,12 @@ export function RecetarioPage() {
 
   return (
     <>
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display font-bold">Recetario</h1>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <span className="section-label">Nutrición</span>
+          <h1 className="text-hero">Recetario</h1>
+          <span className="rule-accent" />
+        </div>
         <Button onClick={() => navigate("/recetario/nueva")}>
           + Nueva receta
         </Button>
@@ -132,9 +188,16 @@ export function RecetarioPage() {
           Ninguna receta coincide con la búsqueda.
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {visible.map((r) => (
-            <RecipeCard key={r.id} recipe={r} />
+        // Rejilla de revista: la primera receta abre a doble ancho y alto; el
+        // resto cae en columnas. Entrada escalonada suave (`.stagger`).
+        <div className="stagger grid grid-cols-1 gap-x-gutter gap-y-section sm:grid-cols-2 md:grid-cols-3">
+          {visible.map((r, i) => (
+            <RecipeCard
+              key={r.id}
+              recipe={r}
+              index={i}
+              feature={i === 0 && visible.length > 2}
+            />
           ))}
         </div>
       )}
@@ -150,26 +213,89 @@ export function RecetarioPage() {
   );
 }
 
+/** Cabecera del detalle: portada a sangre y título grande en la serif. Es el
+ * destino de la transición desde la tarjeta (mismos nombres). */
+function DetailHeader({
+  recipe,
+  onEdit,
+}: {
+  recipe: Recipe;
+  onEdit?: () => void;
+}) {
+  return (
+    <header className="flex flex-col gap-4">
+      <Link
+        to="/recetario"
+        viewTransition
+        aria-label="Volver al recetario"
+        className={buttonClass({ variant: "ghost", size: "icon" })}
+      >
+        ←
+      </Link>
+      <figure className="flex flex-col gap-2">
+        <div
+          style={COVER}
+          className="relative overflow-hidden rounded-card shadow-raised"
+        >
+          <Cover recipe={recipe} className="aspect-4/3 w-full md:aspect-21/9" />
+          {onEdit && (
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label="Editar receta"
+              className="absolute right-3 top-3"
+              onClick={onEdit}
+            >
+              ✏️
+            </Button>
+          )}
+        </div>
+        {recipe.servings !== null && (
+          <figcaption className="caption-editorial">
+            Para {recipe.servings} comensales
+          </figcaption>
+        )}
+      </figure>
+      <h1 style={TITLE} className="max-w-3xl text-hero">
+        {recipe.name}
+      </h1>
+    </header>
+  );
+}
+
 export function RecetarioDetallePage() {
   const { id } = useParams();
   const api = useRecipes();
   const navigate = useNavigate();
+  const handoff = (useLocation().state as DetailHandoff | null)?.recipe;
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  if (api.loading)
+  if (api.loading) {
+    // Viniendo de la tarjeta, la cabecera ya se puede pintar: es lo que la
+    // transición necesita en su primer fotograma.
+    if (handoff && String(handoff.id) === id)
+      return (
+        <>
+          <DetailHeader recipe={handoff} />
+          <div className="skeleton mt-section h-40" role="status">
+            <span className="sr-only">Cargando receta…</span>
+          </div>
+        </>
+      );
     return (
       <Card className="bg-pending-bg text-pending-text" role="status">
         Cargando recetario…
       </Card>
     );
+  }
   if (api.error) return <ErrorBanner message={api.error} onRetry={api.retry} />;
 
   const recipe = api.list.find((r) => String(r.id) === id);
   if (!recipe)
     return (
       <Card>
-        <h1 className="mb-2 text-display font-bold">Receta no encontrada</h1>
+        <h1 className="mb-2 text-display">Receta no encontrada</h1>
         <Link to="/recetario" className={buttonClass({ variant: "secondary" })}>
           Volver al recetario
         </Link>
@@ -185,67 +311,42 @@ export function RecetarioDetallePage() {
   };
 
   return (
-    <>
-      <Link
-        to="/recetario"
-        aria-label="Volver al recetario"
-        className={buttonClass({
-          variant: "secondary",
-          size: "icon",
-          className: "mb-3",
-        })}
-      >
-        ←
-      </Link>
-
-      <div className="relative overflow-hidden rounded-card">
-        {recipe.photo_path ? (
-          <img
-            src={photoSrc(recipe.photo_path)}
-            alt=""
-            className="h-56 w-full object-cover md:h-72"
-          />
-        ) : (
-          <div className="flex h-56 items-center justify-center bg-surface-muted text-text-secondary md:h-72">
-            Sin foto
-          </div>
-        )}
-        <Button
-          variant="secondary"
-          size="icon"
-          aria-label="Editar receta"
-          className="absolute right-3 top-3 bg-surface/90"
-          onClick={() => setEditing(true)}
-        >
-          ✏️
-        </Button>
-        {/* Un solo <h1>: superpuesto a la foto en móvil, bajo ella en desktop. */}
-        <h1 className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-scrim-strong to-transparent p-4 text-display font-bold text-on-primary md:static md:mt-4 md:bg-none md:p-0 md:text-text">
-          {recipe.name}
-        </h1>
-      </div>
+    <article className="flex flex-col gap-section">
+      <DetailHeader recipe={recipe} onEdit={() => setEditing(true)} />
 
       {recipe.description && (
-        <p className="mt-4 text-text-secondary">{recipe.description}</p>
-      )}
-      {recipe.servings !== null && (
-        <p className="mt-2 font-medium">{recipe.servings} comensales</p>
+        <p className="animate-rise max-w-2xl font-display text-lead italic text-text-secondary">
+          {recipe.description}
+        </p>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-6">
-          <section>
-            <h2 className="mb-2 text-lead font-semibold">Ingredientes</h2>
-            <ul className={cardClass("flex flex-col gap-1")}>
+      <div className="stagger grid gap-section lg:grid-cols-5">
+        <div
+          style={{ "--i": 0 } as React.CSSProperties}
+          className="flex flex-col gap-section lg:col-span-2"
+        >
+          <section className="flex flex-col gap-stack">
+            <h2 className="text-title">Ingredientes</h2>
+            <span className="rule-accent" />
+            <ul
+              className={cardClass("flex flex-col divide-y divide-border py-2")}
+            >
               {recipe.ingredients.map((ing) => (
-                <li key={ing.id} className="flex items-center gap-2">
+                <li key={ing.id} className="flex min-h-11 items-center gap-3">
                   <input
                     type="checkbox"
                     id={`ing-${ing.id}`}
-                    className="h-4 w-4 accent-primary"
+                    className="size-5 shrink-0 accent-primary"
                   />
-                  <label htmlFor={`ing-${ing.id}`}>
-                    {ing.quantity !== null && `${ing.quantity} `}
+                  <label
+                    htmlFor={`ing-${ing.id}`}
+                    className="flex-1 py-2 has-checked:line-through"
+                  >
+                    {ing.quantity !== null && (
+                      <span className="font-semibold tabular-nums">
+                        {`${ing.quantity} `}
+                      </span>
+                    )}
                     {ing.unit && `${ing.unit} `}
                     {ing.food}
                   </label>
@@ -255,15 +356,12 @@ export function RecetarioDetallePage() {
           </section>
 
           {recipe.materials.length > 0 && (
-            <section>
-              <h2 className="mb-2 text-lead font-semibold">Materiales</h2>
+            <section className="flex flex-col gap-stack">
+              <h2 className="text-title">Materiales</h2>
               <ul className="flex flex-wrap gap-2">
                 {recipe.materials.map((m) => (
-                  <li
-                    key={m}
-                    className="rounded-chip bg-surface-muted px-3 py-1 text-caption"
-                  >
-                    {m}
+                  <li key={m}>
+                    <Badge>{m}</Badge>
                   </li>
                 ))}
               </ul>
@@ -271,12 +369,22 @@ export function RecetarioDetallePage() {
           )}
         </div>
 
-        <section>
-          <h2 className="mb-2 text-lead font-semibold">Elaboración</h2>
-          <ol className={cardClass("flex flex-col gap-2")}>
+        <section
+          style={{ "--i": 1 } as React.CSSProperties}
+          className="flex flex-col gap-stack lg:col-span-3"
+        >
+          <h2 className="text-title">Elaboración</h2>
+          <span className="rule-accent" />
+          <ol className="flex flex-col gap-gutter">
             {recipe.steps.map((s) => (
-              <li key={s.id} aria-label={`paso ${s.step}`}>
-                {s.step}. {s.text}
+              // El numeral grande es un marcador de lista (CSS); el texto sigue
+              // siendo «1. Sofreír» para el lector y para copiar.
+              <li
+                key={s.id}
+                aria-label={`paso ${s.step}`}
+                className="max-w-prose border-l-2 border-accent-soft pl-4 first-letter:font-display first-letter:text-title first-letter:text-accent"
+              >
+                {`${s.step}. ${s.text}`}
               </li>
             ))}
           </ol>
@@ -284,18 +392,18 @@ export function RecetarioDetallePage() {
       </div>
 
       {recipe.tags.length > 0 && (
-        <ul className="mt-6 flex flex-wrap gap-2">
+        <ul className="flex flex-wrap gap-2">
           {recipe.tags.map((t) => (
             <li key={t}>
-              <Badge tone="done">{t}</Badge>
+              <Badge tone="accent">{t}</Badge>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="mt-8 border-t border-border pt-4">
+      <div className="border-t border-border pt-4">
         <Button
-          variant="secondary"
+          variant="ghost"
           className="text-error"
           onClick={() => setConfirming(true)}
         >
@@ -329,6 +437,6 @@ export function RecetarioDetallePage() {
           onClose={() => setEditing(false)}
         />
       )}
-    </>
+    </article>
   );
 }
