@@ -85,3 +85,30 @@ describe("inclinación de tarjeta", () => {
     expect(tiltFor(rect, 900, -50, 6)).toEqual({ x: 6, y: 6 });
   });
 });
+
+describe("theme.js (antes del primer pintado)", () => {
+  // Es un script clásico en public/: no puede importar ambient.ts, así que se
+  // ejecuta tal cual y se exige que decida lo mismo con la misma clave.
+  const run = async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("public/theme.js", "utf8"); // vitest corre en web/
+    new Function(src)();
+  };
+
+  it("aplica el tema guardado con la misma clave que ambient.ts", async () => {
+    window.localStorage.setItem(THEME_KEY, "dark");
+    await run();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("sin elección válida cae en el del sistema, como effectiveTheme", async () => {
+    window.localStorage.setItem(THEME_KEY, "sepia");
+    window.matchMedia = ((q: string) => ({
+      matches: q.includes("dark"),
+    })) as typeof window.matchMedia;
+    await run();
+    expect(document.documentElement.dataset.theme).toBe(
+      effectiveTheme("sepia", true),
+    );
+  });
+});
