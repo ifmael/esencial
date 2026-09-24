@@ -68,17 +68,29 @@ Escala vigente — todo lo demás sale de aquí:
 | Elevación | `shadow-card`, `shadow-raised`, `shadow-sheet`, `shadow-inset`, `shadow-up`, `shadow-glow` (compuestas, tinte verde oscuro) |
 | Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms · `spring` 500ms; `ease-out-quart` para color/opacidad y `ease-spring` (`linear()`) para transform |
 
-- **Dirección «cristal / aurora»**: `Card`/`cardClass` = vidrio (`.glass .card`),
-  `Sheet`/`sheetClass` = panel de modal o cajón, `Scrim` = fondo de modal,
-  `chromeClass` = barras fijas, `chipClass` = fichas (conmutables con
-  `aria-pressed`), `Button variant="danger"` para confirmar un borrado. El
-  **presupuesto de blur**: una tarjeta dentro de otra (o de una hoja) no vuelve
-  a desenfocar; la aurora (`body::before`) es gradiente puro, sin filtro de
-  blur. Sin `backdrop-filter` o con `prefers-reduced-transparency`, el vidrio
-  pasa a opaco.
-- Tema claro/oscuro en `data-theme` de `<html>` (`web/src/lib/ambient.ts`, clave
-  `esencial.theme`; sin elección, el del sistema). Los tokens oscuros viven en
-  `:root[data-theme="dark"]`: un color nuevo necesita sus dos valores.
+- **Dirección «cristal / aurora»**: `Card`/`cardClass` = vidrio **tintado, sin
+  blur** (`.glass .card`), `Sheet`/`sheetClass` = panel de modal o cajón,
+  `Scrim` = fondo de modal, `chromeClass` = barras fijas, `chipClass` = fichas
+  (conmutables con `aria-pressed`), `Button variant="danger"` para confirmar un
+  borrado.
+- **El blur es opt-in** (`backdrop-filter` pesa en GPU y crece con el número de
+  capas). Solo desenfocan `chromeClass` (barra lateral e inferior), `Sheet` y
+  `blurCardClass`, que es para **una** pieza protagonista por pantalla (hoy, la
+  rejilla del calendario de `week-grid.tsx`) y **nunca** para las tarjetas de una
+  lista: con blur en cada tarjeta, `/ejercicios` llegaba a 93 capas
+  desenfocadas; ahora son 2. Una tarjeta dentro de otra, o de una hoja, es un
+  pozo sin blur. La aurora (`body::before`) es gradiente puro, sin filtro. Sin
+  `backdrop-filter` o con `prefers-reduced-transparency`, el vidrio pasa a
+  opaco.
+- Tema claro/oscuro en `data-theme` de `<html>`, clave `esencial.theme` (sin
+  elección, el del sistema). Lo pone `web/public/theme.js` antes del primer
+  pintado (script clásico en `<head>`, sin destello) y lo vuelve a aplicar
+  `web/src/lib/ambient.ts`; los dos son espejo y `tests/ambient.test.ts` falla si
+  divergen. Los tokens oscuros viven en `:root[data-theme="dark"]`: un color
+  nuevo necesita sus dos valores.
+- `wrangler dev` del frontal no recoge un `web/dist` reconstruido: tras cada
+  `pnpm build`, reinícialo, o los assets con hash nuevo salen como `text/html`
+  y la app queda en blanco.
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
   la vez, sin estado duplicado en una clase aparte.
