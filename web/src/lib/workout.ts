@@ -54,3 +54,23 @@ export function formatSetText(set: {
   if (set.weightKg === null && set.reps === null) return "—";
   return `${set.weightKg ?? "—"}×${set.reps ?? "—"}`;
 }
+
+/** Series hechas sobre el total de la sesión; cada cardio cuenta como una. */
+export function setsProgress(
+  sets: readonly { done: boolean }[],
+  cardio: readonly { done: boolean }[],
+): { done: number; total: number } {
+  const all = [...sets, ...cardio];
+  return { done: all.filter((s) => s.done).length, total: all.length };
+}
+
+/** Sesiones registradas sobre las planificadas de la semana. */
+export function weekProgress(sessions: readonly { status: string }[]): {
+  logged: number;
+  total: number;
+} {
+  return {
+    logged: sessions.filter((s) => s.status === "logged").length,
+    total: sessions.length,
+  };
+}

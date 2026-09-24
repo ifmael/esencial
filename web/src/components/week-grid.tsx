@@ -45,6 +45,7 @@ export function WeekGrid({
   error = null,
   onRetry,
   onShiftWeek,
+  summary,
   children,
 }: {
   isoWeek: string;
@@ -53,6 +54,8 @@ export function WeekGrid({
   /** Acción del aviso de error; sin ella el aviso no lleva botón. */
   onRetry?: () => void;
   onShiftWeek: (delta: number) => void;
+  /** Marcador opcional junto al título de la semana (p. ej. sesiones hechas). */
+  summary?: ReactNode;
   /** Contenido de la columna de cada día (lo pone la página). */
   children: (day: WeekDay) => ReactNode;
 }) {
@@ -68,7 +71,10 @@ export function WeekGrid({
         >
           ‹
         </Button>
-        <h2 className="text-title font-bold">{isoWeek}</h2>
+        <div className="flex min-w-0 items-center gap-gutter">
+          <h2 className="text-title font-bold">{isoWeek}</h2>
+          {summary}
+        </div>
         <Button
           variant="secondary"
           aria-label="Semana siguiente"

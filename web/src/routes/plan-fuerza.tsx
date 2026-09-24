@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { GroupedExercises } from "../components/grouped-exercises";
+import { CountUp, ProgressRing } from "../components/metrics";
 import {
   DRAG_INSTRUCTIONS,
   GripIcon,
@@ -45,6 +46,7 @@ import {
 } from "../lib/plan-week";
 import { intAt, numAt } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
+import { weekProgress } from "../lib/workout";
 
 // --- Editor del día (sesión) ------------------------------------------------
 
@@ -952,6 +954,7 @@ export function PlanFuerzaPage() {
   };
 
   const byDate = new Map(week.sessions.map((s) => [s.date, s]));
+  const progress = weekProgress(week.sessions);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -960,6 +963,27 @@ export function PlanFuerzaPage() {
         loading={week.loading && week.sessions.length === 0}
         error={week.error}
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
+        summary={
+          <div className="flex items-center gap-stack">
+            <ProgressRing
+              value={progress.logged}
+              max={progress.total}
+              label="Sesiones registradas esta semana"
+              size={48}
+            >
+              <CountUp
+                value={progress.logged}
+                className="metric text-lead text-primary"
+              />
+            </ProgressRing>
+            <span className="hidden text-caption text-text-secondary sm:inline">
+              <span className="metric text-lead text-text">
+                {progress.logged}/{progress.total}
+              </span>{" "}
+              sesiones
+            </span>
+          </div>
+        }
       >
         {({ date, isToday }) => (
           <SessionCell

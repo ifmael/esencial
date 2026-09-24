@@ -3,6 +3,7 @@
 // el estado logged es solo lectura desde GET /api/workout-logs/:date.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import { CountUp, ProgressRing } from "../components/metrics";
 import {
   Badge,
   Button,
@@ -22,6 +23,7 @@ import {
   noteOrNull,
   numOrNull,
   parseDateEs,
+  setsProgress,
 } from "../lib/workout";
 import { formatDateEs } from "./dia";
 
@@ -357,6 +359,41 @@ function Header({
   );
 }
 
+/** Marcador de la sesión: anillo de series hechas y dos contadores que cuentan
+ *  al aparecer (series hechas y ejercicios). */
+function SessionStats({
+  done,
+  total,
+  exercises,
+}: {
+  done: number;
+  total: number;
+  exercises: number;
+}) {
+  return (
+    <section
+      aria-label="Progreso de la sesión"
+      className={cardClass("mb-3 flex items-center gap-gutter")}
+    >
+      <ProgressRing value={done} max={total} label="Series hechas" size={104} />
+      <dl className="grid flex-1 grid-cols-2 gap-stack">
+        <div>
+          <dt className="section-label">Series hechas</dt>
+          <dd className="metric text-metric text-primary">
+            <CountUp value={done} />
+          </dd>
+        </div>
+        <div>
+          <dt className="section-label">Ejercicios</dt>
+          <dd className="metric text-metric text-secondary">
+            <CountUp value={exercises} />
+          </dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
 /** Contador con −/+ y su nombre visible delante («Peso (kg)  −  55  +»). El
  * `context` («Press banca serie 1») completa el nombre accesible del campo y de
  * los dos botones, para que el lector de pantalla distinga un campo de otro. */
@@ -547,6 +584,10 @@ export function SesionPage() {
           name={view.log.session?.name ?? view.session?.name ?? "Sesión"}
           logged
         />
+        <SessionStats
+          {...setsProgress(view.log.sets, view.log.cardio)}
+          exercises={Object.keys(byExercise).length + view.log.cardio.length}
+        />
         <div className="flex flex-col gap-3">
           {Object.entries(byExercise).map(([seId, sets]) => (
             <section key={seId} className={cardClass()}>
@@ -606,6 +647,13 @@ export function SesionPage() {
   return (
     <div>
       <Header date={date} name={v.session.name ?? "Sesión"} logged={false} />
+      <SessionStats
+        {...setsProgress(
+          v.exercises.flatMap((ex) => ex.sets),
+          v.cardio,
+        )}
+        exercises={v.exercises.length + v.cardio.length}
+      />
       {v.historyFailed && (
         <Card role="status" className="mb-3 text-pending-text">
           No se pudo cargar el histórico de últimos pesos; puedes registrarlo

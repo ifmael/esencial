@@ -6,6 +6,8 @@ import {
   isValidDateStr,
   noteOrNull,
   parseDateEs,
+  setsProgress,
+  weekProgress,
 } from "../src/lib/workout";
 
 describe("defaultSetCount", () => {
@@ -50,5 +52,31 @@ describe("isValidDateStr / parseDateEs", () => {
     expect(parseDateEs("2026-09-02").getTime()).toBe(
       new Date(2026, 8, 2).getTime(),
     );
+  });
+});
+
+describe("setsProgress", () => {
+  it("cuenta series hechas sobre el total, incluido el cardio como una serie", () => {
+    expect(
+      setsProgress(
+        [{ done: true }, { done: false }, { done: true }],
+        [{ done: true }, { done: false }],
+      ),
+    ).toEqual({ done: 3, total: 5 });
+  });
+  it("sin nada planificado es 0 de 0", () => {
+    expect(setsProgress([], [])).toEqual({ done: 0, total: 0 });
+  });
+});
+
+describe("weekProgress", () => {
+  it("cuenta sesiones registradas sobre las planificadas de la semana", () => {
+    expect(
+      weekProgress([
+        { status: "logged" },
+        { status: "planned" },
+        { status: "logged" },
+      ]),
+    ).toEqual({ logged: 2, total: 3 });
   });
 });
