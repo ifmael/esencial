@@ -1,46 +1,63 @@
 # Rediseño B — Cristal / aurora
 
-Referentes: visionOS, Arc, Raycast. Superficies de vidrio translúcido sobre una
-aurora de gradientes que se mueve muy despacio. Tema claro por defecto y tema
-oscuro con conmutador.
+Referentes: visionOS, Arc, Raycast. Superficies de vidrio sobre una aurora de
+gradientes que se mueve muy despacio. Tema claro por defecto y tema oscuro con
+conmutador (menú lateral o barra inferior). El tema se aplica antes del primer
+pintado.
 
 ## Qué cambió
 
 **Tokens (`web/src/globals.css`)**
-- Color: marca `#0d6e3e`, lienzo `#eef3f1` y tres colores de aurora (menta, cielo,
-  lavanda). Tokens nuevos: `surface-strong`, `scrim`, `photo-scrim`/`on-photo`,
-  `error-soft`/`on-error` y los bordes de luz `glass-edge*`. Todos los colores
-  tienen su valor oscuro en `:root[data-theme="dark"]`. `primary-container` se
-  eliminó: nadie lo usa ya.
+- Color: marca `#0d6e3e`, lienzo `#eef3f1`, tres colores de aurora (menta,
+  cielo, lavanda) y tres tintes de vidrio (`surface` 0,68, `surface-strong`
+  0,82, `surface-sheet` 0,94). Tokens nuevos: `scrim`, `photo-scrim`/`on-photo`,
+  `error-soft`/`on-error` y los bordes de luz `glass-edge*`. Todos tienen su
+  valor en `:root[data-theme="dark"]`. `primary-container` se eliminó.
 - Tipografía: Manrope variable **auto-alojada** (`/fonts/manrope-latin.woff2`,
-  subset latino, `font-display: swap`, licencia OFL al lado). `display` pasa de
-  24 a 28 px, y `title`/`display` llevan tracking negativo.
+  solo el subset latino, `font-display: swap`, con preload y la licencia OFL al
+  lado). `display` pasa de 24 a 28 px.
 - Radios `control` 12 · `panel` 14 · `card` 20, y `sheet` 28 (nuevo).
-- Vidrio: `blur-glass` 18px, `blur-chrome` 28px. Sombras con tinte verde
-  oscuro, más `shadow-sheet` y `shadow-glow`.
+- Vidrio: `blur-glass` 18 px y `blur-chrome` 28 px. Sombras con tinte verde,
+  más `shadow-sheet` y `shadow-glow`.
 - Movimiento: `ease-spring` = muelle amortiguado (ζ 0,7, ω 16, rebasa un 4,6 %)
-  muestreado en `linear()`, sobre 500 ms. Se usa solo en `transform`.
+  muestreado en `linear()` con 17 puntos. Se asienta en 0,999 → 1, sin salto al
+  final.
 
-**Primitivas (`web/src/components/ui.tsx`)**: `Card`/`cardClass` ahora son de
-vidrio. Nuevas: `Sheet`/`sheetClass`, `Scrim`, `chromeClass`, `chipClass` y
-`Button variant="danger"`. El guardarraíl del lint vigila también esta piel
-nueva.
+**Primitivas (`web/src/components/ui.tsx`)**
+- Tarjetas: `Card`/`cardClass` = vidrio tintado, **sin blur**.
+  `blurCardClass` = con blur, solo para la rejilla del calendario.
+- Nuevas: `Sheet`/`sheetClass`, `Scrim`, `chromeClass`, `chipClass` y
+  `Button variant="danger"`.
+- El guardarraíl del lint cubre toda la piel nueva.
 
-**Pantallas**: las 11 rutas quedan sin clases crudas de tamaño, radio u overlay:
-- `text-sm/xs/lg/xl/2xl` → escala de texto; `rounded-lg/md/xl/full` → radios
-  del sistema.
+**Pantallas**: las 11 rutas quedan sin clases crudas de tamaño, radio u overlay.
 - Las 4 modales pasan a `Scrim` + `Sheet`, y la lista de la compra a
-  `sheetClass`.
+  `sheetClass` con área segura.
 - `bg-error` → `danger`; `from-black/60 text-white` → `photo-scrim`/`on-photo`.
 - Las fichas de categoría se conmutan con `aria-pressed`. El test que fijaba la
-  clase `bg-primary-container` ahora comprueba `aria-pressed`, que es lo que
-  percibe el usuario.
+  clase `bg-primary-container` ahora comprueba `aria-pressed`.
+- El scrim funde el color de fondo, no la opacidad. Un scrim con opacity < 1
+  sería raíz de backdrop y la hoja desenfocaría solo el scrim.
 
-**Lógica nueva (TDD, `web/src/lib/ambient.ts` + `tests/ambient.test.ts`)**:
-- Tema: la elección guardada manda; sin elección, el del sistema.
-- Pausa de la aurora con la pestaña oculta (`data-hidden`).
-- Inclinación 3D de `.card-interactive`, hasta 5°. Solo se activa con
-  `hover: hover`, `pointer: fine` y sin reduced-motion.
+**Lógica nueva (TDD)**
+- `web/src/lib/ambient.ts`: tema (la elección guardada manda; sin ella, el del
+  sistema), pausa de la aurora con la pestaña oculta (`data-hidden`) e
+  inclinación 3D de `.card-interactive`, hasta 5°. La inclinación solo se
+  activa con `hover: hover`, `pointer: fine` y sin reduced-motion.
+- `web/public/theme.js`: script clásico en `<head>`, permitido por
+  `default-src 'self'`. Pone `data-theme` antes de pintar.
+  `tests/ambient.test.ts` lo ejecuta y exige que use la misma clave y la misma
+  regla que `ambient.ts`: al cambiar la clave, el test falla.
+- Comprobado en el navegador: con el bundle de la app bloqueado, la página sale
+  ya en oscuro.
+
+**Arreglos de paso**
+- `vitest` en Node 25: el `localStorage` nativo de Node tapaba el de jsdom
+  (9 tests de `shell.test.tsx` ya fallaban antes). Se desactiva con
+  `execArgv: ["--no-experimental-webstorage"]`.
+- `/recetario/nueva` desbordaba a 390 px (425 de ancho real) desde antes del
+  rediseño. Causa: la pista implícita del grid mide `auto`, no `minmax(0,1fr)`.
+  Se arregla con `grid-cols-1`, más `min-width: 0` en `.input`.
 
 ## Pieza estrella
 
@@ -48,71 +65,103 @@ La **aurora + vidrio con muelle**. Para verla:
 1. Abre `/` o `/ui` → bloque «Movimiento».
 2. Pasa el ratón por una tarjeta de Hoy: se inclina hacia el puntero y, al
    pulsarla, se hunde con un muelle.
-3. Pulsa **Tema oscuro** (menú lateral o barra inferior) para ver la aurora de
-   noche.
+3. En `/plan-fuerza`, abre un día: la hoja entra con muelle sobre la rejilla
+   desenfocada.
+4. Pulsa **Tema oscuro** para ver la aurora de noche.
 
-La aurora es una sola capa `body::before` de gradientes radiales. Se anima con
-`@property`, con un ciclo de 40 s. No lleva filtro de blur.
+La aurora es una sola capa `body::before` de gradientes radiales, sin filtro de
+blur. Se anima con `@property`, con un ciclo de 40 s.
 
 ## Rendimiento (`backdrop-filter`)
 
-**Presupuesto de blur**:
-- Una tarjeta dentro de otra tarjeta, o dentro de una hoja, no vuelve a
-  desenfocar.
-- `/plan-fuerza` tiene **3 nodos con blur** a la vez: el cromo, la rejilla y la
-  fila de chips.
-- Con la modal abierta, la hoja sustituye a la rejilla como capa con blur.
+**Regla**: el blur es opt-in.
+- Llevan blur el cromo (barra lateral y barra inferior), las hojas (modales y
+  lista de la compra) y **una** pieza protagonista, la rejilla del calendario
+  (`blurCardClass`).
+- Las tarjetas de lista no llevan blur, solo tinte, borde de luz y sombra:
+  sobre una aurora ya difusa, el blur apenas se ve.
+- Una tarjeta dentro de otra, o de una hoja, es un pozo sin blur.
 
-Medido en Chromium headless con **CPU 4×** (`Emulation.setCPUThrottlingRate`),
-tiempos entre fotogramas medidos con rAF:
+Nodos con `backdrop-filter` activo, en Chromium con `prefers-reduced-transparency:
+no-preference` emulado:
 
-| Escenario | Viewport | p50 | p95 | máx | >50 ms | long tasks |
+| Ruta | Antes del opt-in | Ahora |
+| --- | --- | --- |
+| `/ejercicios` (91 tarjetas) | **93** | **2** |
+| `/recetario`, `/plantillas`, `/`, detalles | 2 + n.º de tarjetas | 2 |
+| `/plan-fuerza`, `/plan-recetas` | 3 | 3 |
+| Modal de sesión o lista de la compra abierta (390×844) | — | 4 |
+| `/login` | — | 0 |
+
+Tiempos entre fotogramas (rAF), con **CPU 4×** (`Emulation.setCPUThrottlingRate`):
+
+| Escenario | Viewport | Nodos con blur | p50 | p95 | máx | >50 ms |
 | --- | --- | --- | --- | --- | --- | --- |
-| Reposo (aurora en marcha) | 390×844 | 16,7 | 17,6 | 17,7 | 0 | 0 |
-| Scroll | 390×844 | 16,6 | 17,6 | 17,7 | 0 | 0 |
-| Abrir/cerrar modal | 390×844 | 16,7 | 17,5 | 25,0 | 0 | 0 |
-| Scroll | 1280×800 | 16,7 | 17,4 | 17,7 | 0 | 0 |
-| Scroll, vidrio opaco | 390×844 | 16,7 | 17,6 | 17,7 | 0 | 0 |
+| `/ejercicios` scroll, antes del opt-in | 390×844 | 93 | 16,6 | 17,5 | 17,7 | 0 |
+| `/ejercicios` scroll | 390×844 | 2 | 16,6 | 17,4 | 17,6 | 0 |
+| `/ejercicios` scroll | 1280×800 | 2 | 16,7 | 17,5 | 17,6 | 0 |
+| `/plan-fuerza` reposo (aurora en marcha) | 390×844 | 3 | 16,6 | 17,6 | 17,7 | 0 |
+| `/plan-fuerza` scroll | 390×844 | 3 | 16,6 | 17,6 | 17,7 | 0 |
+| `/plan-fuerza` abrir/cerrar modal | 390×844 | 3→4 | 16,7 | 17,5 | 33,3 | 0 |
 
-Límite de la medida: el throttling solo frena la CPU. El coste real de
-`backdrop-filter` está en la GPU, y un Mac no reproduce la de un móvil modesto.
-Hay que confirmarlo en un Android de gama baja.
+**Límite de la medida**: el throttling solo frena el hilo principal. El coste de
+`backdrop-filter` se paga en raster y composición (GPU), que rAF no ve y que un
+Mac no reproduce: incluso con 93 capas el número sale igual. **El coste en GPU
+no se midió**; queda pendiente de un Android de gama baja o de una traza con
+categorías `cc,gpu,viz`. Por eso el opt-in no se decidió por estos números,
+sino para acotar el peor caso (de 93 capas a 4).
 
-Fallbacks:
+**Fallbacks**
 - `@supports not (backdrop-filter)` y `prefers-reduced-transparency: reduce` →
-  vidrio opaco y sin blur.
+  vidrio opaco y sin blur. Comprobado: 0 nodos con blur y el mismo scroll.
 - `prefers-reduced-motion` → aurora quieta, sin inclinación ni animaciones.
 
-**Contraste AA**, calculado en el peor caso: la aurora más intensa detrás y sin
-el promediado del blur.
-- Claro: texto 14,9:1 · secundario 6,1:1 · primario ≥5,3:1 · error 5,4:1.
-- Oscuro: ≥13:1 · ≥7:1 · ≥8,8:1 · ≥5,5:1.
+**Contraste AA**, calculado sin blur (el peor caso de una tarjeta, que ya no
+desenfoca): el tinte de la superficie sobre la aurora cruda, incluidas las tres
+manchas apiladas en su punto más intenso. Mínimos:
 
-## Peso añadido
+| | texto | secundario | primario | error |
+| --- | --- | --- | --- | --- |
+| Tarjeta clara (0,68) | 13,98 | 5,71 | 4,97 | 5,08 |
+| Tarjeta oscura (0,66) | 12,53 | 6,64 | 8,34 | 5,25 |
+| Hoja clara (0,94) | 16,56 | 6,76 | 5,89 | 6,02 |
+| Hoja oscura (0,94) | 15,42 | 8,18 | 10,26 | 6,47 |
+
+## Peso añadido (gzip según Vite)
 
 | | Antes | Después |
 | --- | --- | --- |
-| CSS | 39,41 kB (8,26 gz) | 44,39 kB (9,61 gz) → **+1,35 kB gz** |
-| JS | 421,83 kB (127,09 gz) | 425,69 kB (127,06 gz) → **≈ 0** |
-| Fuente | — | 24,8 kB woff2 (solo latino, se carga con swap) |
+| CSS (`assets/`) | 39,41 kB (8,26 gz) | 44,67 kB (9,69 gz) → **+1,43 kB gz** |
+| JS (`assets/`) | 421,83 kB (127,09 gz) | 425,84 kB (128,24 gz) → **+1,15 kB gz** |
+| Fuente (`fonts/`, fuera de `assets/`) | — | **+24,8 kB** woff2, solo latino |
+| `theme.js` (raíz) | — | **+0,5 kB gz** |
 
-No hay dependencias nuevas en runtime. La CSP no cambia: la fuente sale del
-mismo origen.
+No hay dependencias nuevas en runtime. La CSP no cambia: la fuente y
+`theme.js` salen del mismo origen.
 
 ## Verificación
 
-- `pnpm lint`, `pnpm typecheck` y `pnpm test` en verde (API 210, web 263).
-- Capturas revisadas a 1280×800 y 390×844 (el script registra `innerWidth ×
-  innerHeight` junto a cada captura) de: login, `/`, recetario, detalle, nueva,
-  plan-recetas, plan-fuerza (claro, oscuro y con la modal abierta), plantillas,
-  ejercicios, detalle de ejercicio, sesión y `/ui`.
-- Calendario a 1280×800: `scrollHeight` 800 y `scrollWidth` 1280, sin scroll.
+- `pnpm lint`, `pnpm typecheck` y `pnpm test` en verde (API 210, web 265).
+- **Capturas retomadas con el vidrio activo**. Las primeras se hicieron con
+  `prefers-reduced-transparency: reduce` (vidrio opaco), así que no cuentan.
+  Cada captura registra viewport, `rt=false`, tema, nodos con blur y si hay
+  scroll horizontal:
+  - las 12 rutas a 1280×800 y a 390×844 (login, `/`, recetario, detalle, nueva,
+    plan-recetas, plan-fuerza, plantillas, ejercicios, detalle de ejercicio,
+    sesión, `/ui`), en claro;
+  - `/`, plan-fuerza y detalle de receta en oscuro, en las dos medidas, más
+    ejercicios en escritorio;
+  - a 390×844: la modal de sesión abierta y la lista de la compra abierta (el
+    padding inferior respeta el área segura).
+- Ninguna ruta tiene scroll horizontal. Calendario a 1280×800: `scrollHeight`
+  800 y `scrollWidth` 1280.
 
 ## Lo que quedó fuera
 
-- Medición en un dispositivo real de gama baja: solo hay throttling de CPU.
-- Evitar el destello del tema oscuro antes de que cargue el JS: haría falta un
-  script en línea en `index.html`, y la CSP no permite scripts en línea.
+- Coste en GPU en un dispositivo real de gama baja (ver arriba).
+- Fotos de receta: no hay ninguna en los datos de prueba, así que el
+  `photo-scrim` se comprobó solo con el hueco «Sin foto».
+- View Transitions entre rutas.
 - Las fichas de tags de `ejercicios.tsx` y los botones del mapa muscular se
-  mantienen como estaban, a propósito: no se tocan el mapa ni sus LICENSE/NOTICE.
-- Las View Transitions entre rutas no se hicieron.
+  mantienen como estaban, a propósito: no se tocan el mapa ni sus
+  LICENSE/NOTICE.
