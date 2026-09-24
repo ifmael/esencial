@@ -58,7 +58,7 @@ despacio, y la elección 2D/3D se recuerda entre visitas.
 | --- | --- | --- |
 | JS inicial | 421,83 kB (127,09 gz) | 429,33 kB (129,07 gz) → **+2 kB gz** (anillos, contadores, escenario) |
 | CSS | 39,41 kB (8,26 gz) | 41,5 kB (≈8,9 gz) |
-| Fuentes | — | 3 woff2 latinos, 67 kB (Barlow 600/700 + Space Grotesk variable) |
+| Fuentes | — | 3 woff2 latinos, 67 kB (Barlow 600/700 + Space Grotesk variable). En dist hay además 2 `.woff` de Barlow (37,7 kB) de respaldo que los navegadores modernos no descargan |
 | Chunk 3D (solo al pulsar «3D») | — | 938 kB (**251 kB gz**): three ≈75 %, R3F ≈24 % |
 
 Fuera de las rutas del 3D, el bundle inicial no crece por el 3D: el chunk solo
@@ -68,7 +68,7 @@ se descarga al pulsar «3D».
 
 - `pnpm lint` y `pnpm typecheck` en verde. `pnpm test`: 275/275 en web y 210/210
   en api.
-- Capturas a 1280×800 y 390×844 de las 11 pantallas, revisadas. /plan-fuerza y
+- Capturas a 1280×800 y 390×844 de las 11 pantallas, revisadas. Casillas medidas: 20×20 en la lista de la compra (`size-5`, visible marcada y sin marcar) y 44×44 en /sesion; tamaño base de 1,25rem en `globals.css` para las casillas sin clase. /plan-fuerza y
   /plan-recetas a 1280×800: sin scroll de página ni horizontal, columna de
   153 px. A 390: ninguna pantalla con scroll horizontal. Conmutador 2D/3D de
   44 px.
