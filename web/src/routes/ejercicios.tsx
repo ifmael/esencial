@@ -8,6 +8,7 @@ import {
   regionLabel,
   regionsOfGroup,
 } from "../components/body-map/regions";
+import { BodyMapStage } from "../components/body-map/stage";
 import { GROUP_LABELS } from "../components/grouped-exercises";
 import {
   Badge,
@@ -575,18 +576,21 @@ export function EjercicioDetailPage() {
             se apila y el dibujo va primero (donde ya estaba). */}
         <div className="grid gap-gutter lg:grid-cols-2 lg:items-start">
           {exercise.regions.length > 0 && (
-            <div className="flex items-start justify-center gap-4 lg:order-2">
+            <BodyMapStage
+              regions={exercise.regions}
+              className="h-80 lg:order-2 lg:h-[55vh]"
+            >
               <BodyMap
                 view="front"
                 regions={exercise.regions}
-                className="h-72 w-auto max-w-full lg:h-[55vh]"
+                className="h-full w-auto max-w-full"
               />
               <BodyMap
                 view="back"
                 regions={exercise.regions}
-                className="h-72 w-auto max-w-full lg:h-[55vh]"
+                className="h-full w-auto max-w-full"
               />
-            </div>
+            </BodyMapStage>
           )}
           <div className="flex flex-col gap-3">
             {exercise.description && <p>{exercise.description}</p>}

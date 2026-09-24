@@ -106,6 +106,7 @@ export function BodyMap({
         return (
           <g
             key={id}
+            data-region={id}
             role="button"
             tabIndex={0}
             aria-pressed={on}

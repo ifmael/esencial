@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useMatch, useNavigate } from "react-router";
 import { BodyMap, type BodyView } from "../components/body-map/body-map";
 import { regionLabel } from "../components/body-map/regions";
+import { BodyMapStage } from "../components/body-map/stage";
 import {
   GROUP_LABELS,
   GroupedExercises,
@@ -106,6 +107,10 @@ function ExercisePicker({
     return true;
   });
   const inDraftIds = new Set(draftEntries.map((en) => en.exerciseId));
+  const selectRegion = (id: string) => {
+    setRegion((r) => (r === id ? null : id));
+    setGroup(null);
+  };
   const filter = region
     ? regionLabel(region)
     : group
@@ -125,15 +130,19 @@ function ExercisePicker({
           suyo (crece con la modal en vez de encogerse por la lista). En móvil se
           apila y el conjunto se desplaza, como antes. */}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto md:flex-row md:overflow-visible">
-        <div className="flex shrink-0 justify-center">
-          <BodyMap
+        <div className="flex shrink-0 justify-center md:min-h-0">
+          <BodyMapStage
+            className="h-72 md:h-full"
             view={view}
             regions={region ? [region] : []}
-            onSelect={(id) => {
-              setRegion((r) => (r === id ? null : id));
-              setGroup(null);
-            }}
-          />
+            onSelect={selectRegion}
+          >
+            <BodyMap
+              view={view}
+              regions={region ? [region] : []}
+              onSelect={selectRegion}
+            />
+          </BodyMapStage>
         </div>
 
         <div className="flex flex-col gap-2 md:min-h-0 md:flex-1 md:overflow-y-auto">
