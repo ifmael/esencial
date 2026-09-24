@@ -96,6 +96,11 @@ Sin dependencias de JS nuevas: la paleta son unos 3 kB gz.
   no son `role="group"` (el lector no oye «Recetas»/«Ejercicios»); la región
   «Sin resultados» nace ya llena y algunos lectores no la anuncian. Tampoco
   hay historial de recientes ni búsqueda de plantillas.
+- Filas de chips que se parten en dos líneas: el área táctil de 44px sobresale
+  7px arriba y abajo, y con `gap-1` (4px) entre filas las áreas se solapan hasta
+  ~10px (el chip de abajo gana el toque). Peor caso: el filtro de grupo en
+  `/plantillas/nueva` y los músculos del editor de ejercicios. Arreglo: separar
+  las filas con `gap-y-3.5`.
 - El tema elegido se aplica al cargar el JS; sin script en línea en
   `index.html`, así que con tema forzado distinto del sistema puede verse un
   destello del tema del sistema. Se arreglaría con un `/theme.js` externo en

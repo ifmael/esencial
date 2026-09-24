@@ -95,7 +95,9 @@ Escala vigente (dirección E «minimal preciso») — todo lo demás sale de aqu
   `globals.css`, manda `globals.css`.
 - El sistema explicado con muestras en vivo (colores, escala, movimiento) vive en
   el sitio de arquitectura: `docs/architecture/diseno.html`, que se abre con
-  doble clic, sin build.
+  doble clic, sin build. Ojo: esa página aún muestra la escala y la paleta de la
+  dirección anterior; mientras no se actualice, mandan `globals.css` y la ruta
+  `/ui`.
 
 ### Pantallas de calendario (fuerza y comidas)
 
@@ -374,6 +376,17 @@ node -e "const fs=require('fs');for(const f of fs.readdirSync('web/dist/assets')
 Nota relacionada: `api/scripts/dev.ts` arranca y para los dos servidores juntos,
 así que matar a mano cualquiera de los dos (por ejemplo el que ocupa 8787)
 termina el `pnpm dev` entero con el código de salida del hijo.
+
+### 7. Node ≥22.4 tapa el `localStorage` de jsdom
+
+Desde Node 22.4 hay un `localStorage` nativo (experimental) en el global; sin
+`--localstorage-file` no tiene métodos, y en jsdom `window === globalThis`, así
+que `localStorage.clear()` / `setItem` fallan con `is not a function` y los tests
+de web que lo usan (shell, tema) caen. El script `test` de `web/package.json`
+corre vitest con `NODE_OPTIONS=--no-experimental-webstorage`. Ojo: esa bandera no
+existe en Node < 22.4 (Node la rechaza en `NODE_OPTIONS` y no arranca); el repo
+pide Node ≥ 24 en `engines`, así que no aplica aquí. Si lanzas `npx vitest` a mano,
+pasa la misma variable.
 
 ## Tests e2e — base de datos propia
 
