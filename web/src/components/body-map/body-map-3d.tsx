@@ -36,11 +36,11 @@ const CENTER_X = { front: 17.5, back: 54.5 };
 const CENTER_Y = 46.5;
 const DEPTH = 2.2;
 /** Separación entre la cara frontal y la trasera de la figura. */
-const GAP = 0.6;
+const GAP = 0.2;
 /** Radianes por píxel arrastrado. */
 const DRAG_SPEED = 0.01;
 /** Giro de reposo (rad): tres cuartos suaves en vez de plano frontal. */
-const TILT = -0.45;
+const TILT = -0.28;
 
 type Piece = {
   key: string;
@@ -160,6 +160,13 @@ function Figure({
     if (!view || Math.abs(g.rotation.y - yaw.current) > 1e-3) invalidate();
   });
 
+  // Solo cuenta la cara que mira a la cámara: entre las piezas extruidas hay
+  // huecos por los que el rayo alcanzaría la cara oculta (un clic en el pecho
+  // elegía el trapecio). Se decide por el giro real, no por `view`, porque
+  // arrastrar 180° da la vuelta al cuerpo.
+  const hidden = (p: Piece) =>
+    p.back === Math.cos(group.current?.rotation.y ?? 0) >= 0;
+
   const skin = (region: string | null) => {
     if (!region) return colors.filler;
     if (active.has(region)) return colors.active;
@@ -179,13 +186,14 @@ function Figure({
             key={p.key}
             geometry={p.geometry}
             onPointerOver={(e) => {
-              if (!p.region || !onSelect) return;
+              if (!p.region || !onSelect || hidden(p)) return;
               e.stopPropagation();
               setHovered(p.region);
             }}
             onPointerOut={() => setHovered((h) => (h === p.region ? null : h))}
             onClick={(e) => {
-              if (!p.region || !onSelect || drag.current?.moved) return;
+              if (!p.region || !onSelect || drag.current?.moved || hidden(p))
+                return;
               e.stopPropagation();
               onSelect(p.region);
             }}
