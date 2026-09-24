@@ -176,7 +176,7 @@ function Figure({
   };
 
   return (
-    <group ref={group} scale={0.075} rotation-y={yaw.current}>
+    <group ref={group} scale={0.075}>
       {pieces.map((p) => {
         const on = p.region !== null && active.has(p.region);
         const lit = on || p.region === focused || p.region === hovered;

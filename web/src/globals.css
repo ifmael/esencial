@@ -212,6 +212,43 @@
   body {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Casillas: el nativo en oscuro es un bloque gris sin contraste. Hueco con
+     borde frío y, marcada, lima con la marca en casi negro. Conserva el foco
+     global y el tamaño que le dé cada pantalla (≥44px en /sesion). */
+  input[type="checkbox"] {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    border: 2px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-background);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out-quart),
+      border-color var(--duration-fast) var(--ease-out-quart),
+      box-shadow var(--duration-base) var(--ease-out-quart);
+  }
+  input[type="checkbox"]:hover {
+    border-color: var(--color-primary);
+  }
+  input[type="checkbox"]::before {
+    content: "";
+    width: 0.75em;
+    height: 0.75em;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    background: var(--color-on-primary);
+    transform: scale(0);
+    transition: transform var(--duration-fast) var(--ease-out-quart);
+  }
+  input[type="checkbox"]:checked {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-glow);
+  }
+  input[type="checkbox"]:checked::before {
+    transform: scale(1);
+  }
 }
 
 @layer components {
@@ -352,6 +389,7 @@
 
   .input {
     background: var(--color-background);
+    min-width: 0;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-control);
     padding: 0.625rem 0.875rem;

@@ -194,7 +194,7 @@ function SlotCell({
         )}
         <Link
           to={`/recetario/${slot.recipeId}`}
-          className="min-h-11 flex-1 truncate text-left text-caption font-semibold text-primary"
+          className="min-h-11 flex-1 truncate text-left font-numeric text-body font-semibold text-primary"
         >
           {slot.recipeName ?? "Receta"}
         </Link>

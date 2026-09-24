@@ -668,7 +668,7 @@ function CellRow({
             </button>
           ) : null}
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="line-clamp-2 text-body text-text">
+            <span className="line-clamp-2 font-numeric text-body font-semibold text-text">
               {exercise.exerciseName}
             </span>
             {info ? (
@@ -757,7 +757,7 @@ function SessionCell({
     >
       <div className="flex items-center gap-2">
         <button
-          className="min-w-0 flex-1 truncate text-left text-caption font-semibold"
+          className="min-w-0 flex-1 truncate text-left font-numeric text-body font-semibold"
           aria-label={
             logged ? `Ver sesión del ${date}` : `Editar sesión del ${date}`
           }
