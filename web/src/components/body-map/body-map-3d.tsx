@@ -28,6 +28,7 @@ import {
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 import type { BodyView } from "./body-map";
 import { BACK_REGIONS, type BodyRegion, FRONT_REGIONS } from "./data";
+import { type DragState, dragStep } from "./drag";
 import { canonicalRegionId } from "./regions";
 
 /** Centro horizontal de cada vista en el lienzo original (ver `VIEWBOX`). */
@@ -107,7 +108,7 @@ function palette() {
   };
 }
 
-type Drag = { x: number; moved: boolean } | null;
+type Drag = DragState | null;
 
 function Figure({
   view,
@@ -222,14 +223,14 @@ function DragSurface({
       className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
       onPointerDown={(e) => {
         drag.current = { x: e.clientX, moved: false };
-        e.currentTarget.setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
         if (!drag.current) return;
-        const dx = e.clientX - drag.current.x;
-        if (Math.abs(dx) > 3) drag.current.moved = true;
-        drag.current.x = e.clientX;
-        yaw.current += dx * DRAG_SPEED;
+        const step = dragStep(drag.current, e.clientX);
+        drag.current = step.state;
+        if (step.capture) e.currentTarget.setPointerCapture(e.pointerId);
+        if (step.dx === 0) return;
+        yaw.current += step.dx * DRAG_SPEED;
         wake.current();
       }}
       onPointerUp={() => {
