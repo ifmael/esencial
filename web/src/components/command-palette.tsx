@@ -133,17 +133,21 @@ export function useCommandPalette() {
   const returnTo = useRef<HTMLElement | null>(null);
 
   // Quién tenía el foco se recuerda ANTES de abrir (el campo se enfoca al
-  // montar); al cerrar —Escape, ⌘K otra vez o al elegir— vuelve a él.
+  // montar) y fuera del updater de `setOpen`, que debe ser puro (StrictMode lo
+  // ejecuta dos veces). Al cerrar —Escape, ⌘K otra vez o al elegir— el foco
+  // vuelve una sola vez y la referencia se suelta.
+  const openRef = useRef(false);
   const toggle = useCallback((next?: boolean) => {
-    setOpen((was) => {
-      const now = next ?? !was;
-      if (now && !was)
-        returnTo.current = document.activeElement as HTMLElement | null;
-      return now;
-    });
+    const now = next ?? !openRef.current;
+    if (now && !openRef.current)
+      returnTo.current = document.activeElement as HTMLElement | null;
+    openRef.current = now;
+    setOpen(now);
   }, []);
   useEffect(() => {
-    if (!open) returnTo.current?.focus();
+    if (open || !returnTo.current) return;
+    returnTo.current.focus();
+    returnTo.current = null;
   }, [open]);
 
   useEffect(() => {

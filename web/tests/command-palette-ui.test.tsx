@@ -128,6 +128,32 @@ describe("paleta de comandos", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("tras cerrarla, navegar no roba el foco (se devuelve una sola vez)", async () => {
+    await openApp();
+    const trigger = screen.getAllByRole("button", { name: /buscar/i })[0];
+    trigger.focus();
+    fireEvent.click(trigger);
+    fireEvent.keyDown(await paletteInput(), { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+
+    // El usuario sigue a lo suyo: enfoca otro control y navega. Ni el
+    // re-render del Shell ni su nuevo montaje deben devolverle el foco al botón.
+    const other = screen.getByRole("link", { name: "Sistema de diseño" });
+    other.focus();
+    fireEvent.click(screen.getAllByRole("link", { name: "Hoy" })[0]);
+    await waitFor(() => expect(window.location.pathname).toBe("/"));
+    expect(document.activeElement).not.toBe(trigger);
+  });
+
+  it("montar el Shell sin haber abierto la paleta no mueve el foco", async () => {
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    await openApp();
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  });
+
   it("sin resultados lo anuncia", async () => {
     await openApp();
     pressK();
