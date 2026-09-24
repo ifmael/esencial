@@ -296,7 +296,7 @@ export function RecetarioDetallePage() {
         <ul className="mt-6 flex flex-wrap gap-2">
           {recipe.tags.map((t) => (
             <li key={t}>
-              <Badge tone="done">{t}</Badge>
+              <Badge>{t}</Badge>
             </li>
           ))}
         </ul>

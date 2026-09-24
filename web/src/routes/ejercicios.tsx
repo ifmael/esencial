@@ -45,7 +45,7 @@ const TagChips = ({ tags }: { tags: string[] }) => (
   <ul className="flex flex-wrap gap-1" aria-label="tags">
     {tags.map((t) => (
       <li key={t}>
-        <Badge tone="done">{t}</Badge>
+        <Badge>{t}</Badge>
       </li>
     ))}
   </ul>
@@ -386,7 +386,9 @@ export function EjerciciosPage() {
               <Link
                 key={e.id}
                 to={`/ejercicios/${e.id}`}
-                className={cardClass("flex flex-col gap-2")}
+                className={cardClass(
+                  "card-interactive reveal flex flex-col gap-2",
+                )}
               >
                 <span className="text-lead font-semibold">{e.name}</span>
                 {e.kind === "strength" ? null : (
@@ -562,7 +564,7 @@ export function EjercicioDetailPage() {
                 <ul className="flex flex-wrap gap-1" aria-label="músculos">
                   {exercise.regions.map((id) => (
                     <li key={id}>
-                      <Badge tone="pending">{regionLabel(id)}</Badge>
+                      <Badge>{regionLabel(id)}</Badge>
                     </li>
                   ))}
                 </ul>
