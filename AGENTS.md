@@ -61,11 +61,24 @@ Escala vigente — todo lo demás sale de aquí:
 
 | Familia | Tokens |
 | --- | --- |
-| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
+| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 28 · `hero` 48 (title/display/hero y `h1`/`h2` en **Bricolage Grotesque**, auto-alojada en `web/src/fonts/`, subset latino, OFL) |
 | Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
 | Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
-| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
-| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+| Trazo | `border` = 2px de tinta (`--default-border-width`), `border-thick` 3px (tarjetas, modales) |
+| Elevación | sombras **duras** de tinta, sin blur: `shadow-control` 3px · `shadow-card` 4px · `shadow-raised` 6px · `shadow-press` 1px (hundida) · `shadow-inset` |
+| Color | tinta `ink`; verde `primary` (texto) y `primary-fill` (rellenos, siempre con tinta encima); acentos por sección `accent-blue` (Hoy), `primary-fill` (Deporte), `accent-pink` (Nutrición), `accent-yellow` (hover/racha); `scrim` para el velo de los modales |
+| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms; `ease-out-quart` para reaccionar y `ease-bounce` para lo que salta (pulsar, pop de la casilla, sello) |
+
+- Acción destructiva: `<Button variant="danger">`, nunca `bg-error` sobre un
+  botón primario. Casillas: el `input[type=checkbox]` nativo ya lleva la piel
+  (con `min-h-11 min-w-11` crece a 44px).
+- Recompensa: al marcar la última serie/cardio de `/sesion/:fecha` aparece
+  `SessionReward` (`web/src/components/reward.tsx`: sello «¡Hecho!» + confeti en
+  canvas, sin librería; con reduced-motion no hay confeti). `/plan-fuerza`
+  enseña la racha semanal (`weekStreak`, `web/src/lib/reward.ts`).
+- Con Node ≥ 25 los tests de `shell.test.tsx` fallan por el `localStorage`
+  nativo de Node, que tapa al de jsdom (ya pasaba antes de este cambio):
+  `NODE_OPTIONS=--no-experimental-webstorage pnpm test`.
 
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
@@ -93,9 +106,11 @@ para la rejilla; el submenú de la sección queda como **fila de chips sobre el
 calendario**, en escritorio y en móvil (donde no hay raíl). El `main` de estas
 rutas es `max-w-calendar` —el token `--container-calendar`, 110rem = 1760 px—
 con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
-1280×800: columna de día **152,84 px** (antes 124,28 con la barra de 256px) y
-espacio de texto por nombre ~2,2× (título de sesión 36→75 px, ejercicio 15→54 px,
-receta 29→68 px), sin scroll de página ni horizontal. Techo del ancho: a 1280 no
+1280×800: columna de día **152,28 px** (antes 124,28 con la barra de 256px) y
+espacio de texto por nombre (título de sesión 36→62 px, ejercicio 15→66 px,
+receta 29→56 px; medido con la dirección D, cuyo trazo de 2px y los paddings de
+las filas se comen ~13 px frente a la versión anterior —75/54/68 px—), sin
+scroll de página ni horizontal. Techo del ancho: a 1280 no
 cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracteres)
 el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
 celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
