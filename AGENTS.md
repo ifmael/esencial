@@ -41,13 +41,16 @@ una:
    `.input`, `.badge-*`, `.section-label`, `.list-row`, `.skeleton`).
 
 Las pantallas consumen **las primitivas** de `web/src/components/ui.tsx`
-(`Button`, `Card`, `Input`, `Textarea`, `Badge`); los iconos salen de
-`web/src/components/icons.tsx` (SVG en línea, sin dependencia).
+(`Button` —`primary`/`secondary`/`ghost`/`danger`—, `Card` —con `featured`—,
+`Input`, `Textarea`, `Select`, `Badge`, `Chip`, `Kbd`, `Alert`); los iconos
+salen de `web/src/components/icons.tsx` (SVG en línea, sin dependencia).
 
 Las clases del punto 3 son la **piel** de esas primitivas: una pantalla no las
-escribe a mano. Hay cuatro utilidades compartidas que sí se aplican tal cual,
+escribe a mano (para un `<Link>` o un `<li>` están `buttonClass`, `cardClass` y
+`chipClass`). Hay seis utilidades compartidas que sí se aplican tal cual,
 porque no son piel de ningún componente: `.section-label`, `.list-row`,
-`.card-interactive` (como modificador de `Card`) y `.skeleton`.
+`.card-interactive` (como modificador de `Card`), `.skeleton`, `.scrim` (velo
+de las modales) y `.reveal` (aparición ligada al scroll).
 
 **Al añadir algo nuevo:** reutiliza una primitiva existente. Si no encaja, añade
 primero el token (`:root` + `@theme inline`) y después la primitiva. **Nunca un
@@ -57,20 +60,35 @@ piel de una primitiva escrita a mano (`className="card"`, `btn-primary`):
 aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
 inventan una escala.
 
-Escala vigente — todo lo demás sale de aquí:
+Escala vigente (dirección E «minimal preciso») — todo lo demás sale de aquí:
 
 | Familia | Tokens |
 | --- | --- |
-| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
-| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
-| Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
-| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
-| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+| Tipografía | Geist (auto-alojada, subset latino) · `micro` 11 · `caption` 13 · `body` 14 · `lead` 15 · `title` 18 · `display` 26; `font-mono` (Geist Mono) para cifras y metadatos |
+| Espaciado | `stack` 10 · `gutter` 16 · `card` 16 · `section` 24 |
+| Radios | `control` 6 · `panel` 8 · `card` 12 · `chip` 999 |
+| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (casi nulas: el borde de 1px hace el trabajo) |
+| Movimiento | `fast` 120ms · `base` 160ms · `slow` 240ms, con **un solo** easing (`ease-out-quart`) |
 
+- **Claro y oscuro con los mismos tokens**: cada color de `:root` es un
+  `light-dark()`, y `color-scheme` decide. Sin elección sigue a
+  `prefers-color-scheme`; el conmutador del menú (y la acción «Cambiar tema» de
+  la paleta) fija `data-theme` en `<html>` y lo guarda en `esencial.theme`
+  (`web/src/lib/theme.ts`). Un color nuevo se declara con sus dos valores.
+- **Un solo acento** (`--color-primary`): solo rellena el botón primario y
+  marca activo y foco. Las etiquetas de receta/ejercicio van en `Badge` neutro.
+- **Halo**: un único listener pasivo (`web/src/lib/pointer-halo.ts`) escribe
+  `--mx`/`--my` en la tarjeta bajo el puntero; lo pinta `.card::before`, solo
+  con `(hover: hover) and (pointer: fine)`.
+- **Paleta de comandos ⌘K / Ctrl+K** (`web/src/components/command-palette.tsx`,
+  lógica pura en `web/src/lib/command-palette.ts`): combobox + listbox dentro
+  de un diálogo modal; recetas y ejercicios se piden al abrirla. Una pantalla
+  o acción nueva se añade a `STATIC`.
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
   la vez, sin estado duplicado en una clase aparte.
-- Todo lo animado se neutraliza con `prefers-reduced-motion`.
+- Todo lo animado se neutraliza con `prefers-reduced-motion`; `.reveal` además
+  solo existe tras `@supports (animation-timeline: view())`.
 - Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
   sesión»): míralo antes de inventar una pieza.
 - `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
@@ -93,10 +111,13 @@ para la rejilla; el submenú de la sección queda como **fila de chips sobre el
 calendario**, en escritorio y en móvil (donde no hay raíl). El `main` de estas
 rutas es `max-w-calendar` —el token `--container-calendar`, 110rem = 1760 px—
 con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
-1280×800: columna de día **152,84 px** (antes 124,28 con la barra de 256px) y
-espacio de texto por nombre ~2,2× (título de sesión 36→75 px, ejercicio 15→54 px,
-receta 29→68 px), sin scroll de página ni horizontal. Techo del ancho: a 1280 no
-cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracteres)
+1280×800: columna de día **154 px** con la dirección E (152,84 con la escala
+anterior; 124,28 con la barra de 256px): tarjetas de 16px de relleno en vez de
+20 dejan 1 px más por columna. Espacio de texto por nombre ~2,2× respecto a la
+barra ancha, sin scroll de página ni horizontal (`scrollHeight` 800,
+`scrollWidth` 1280), y la confirmación Sí/No de la ✕ cabe en la fila (44 px de
+alto, 8 px de margen al borde de la columna). Techo del ancho: a 1280 no
+cabe más de ~154 px por columna con el raíl; con títulos largos (>20 caracteres)
 el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
 celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
 
@@ -120,7 +141,7 @@ modal: la fila se convierte en su confirmación en línea (nombre truncado +
 **Sí/No**, con el nombre completo en el `aria-label`) y, al confirmar, el día se
 guarda con el mismo PUT de los items que usa el arrastre (`usePlanWeek.saveItems`,
 optimista y con recarga). Los dos botones van en **una sola línea** a propósito:
-la columna mide ~152 px y dos botones de texto largo (`size="sm"` = `px-3` +
+la columna mide ~154 px y dos botones de texto largo (`size="sm"` = `px-3` +
 `text-caption`, ~86 y ~77 px) se salían de la fila y quedaban tapados por el día
 siguiente — de ahí las etiquetas cortas. Quitar el **último** ejercicio deja el
 día sin items, que no es representable (la API exige ≥1): desprograma la sesión

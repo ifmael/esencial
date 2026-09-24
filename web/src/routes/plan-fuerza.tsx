@@ -617,7 +617,7 @@ function CellRow({
     >
       {confirming ? (
         <>
-          {/* Una sola línea: la columna mide ~152px y dos botones anchos se
+          {/* Una sola línea: la columna mide ~154px y dos botones anchos se
               salían de la fila (tapaban el día siguiente). El nombre trunca. */}
           <span
             className="min-w-0 flex-1 truncate text-caption text-text-secondary"
