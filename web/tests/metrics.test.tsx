@@ -73,6 +73,40 @@ describe("CountUp", () => {
     });
     expect(container.querySelector("[aria-hidden]")?.textContent).toBe("18");
   });
+
+  it("al cambiar el valor cuenta desde el que se veía, no desde 0", () => {
+    stubReducedMotion(false);
+    let now = 0;
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const visible = () =>
+      Number(container.querySelector("[aria-hidden]")?.textContent);
+
+    const { container, rerender } = render(<CountUp value={18} />);
+    now = 5000;
+    act(() => {
+      for (const cb of frames.splice(0)) cb(now);
+    });
+    expect(visible()).toBe(18);
+
+    // Marcar una serie más: el primer fotograma sigue en 18, nunca vuelve a 0.
+    rerender(<CountUp value={19} />);
+    expect(visible()).toBe(18);
+    act(() => {
+      for (const cb of frames.splice(0)) cb(now + 1);
+    });
+    expect(visible()).toBeGreaterThanOrEqual(18);
+    now += 5000;
+    act(() => {
+      for (const cb of frames.splice(0)) cb(now);
+    });
+    expect(visible()).toBe(19);
+  });
 });
 
 describe("ProgressRing", () => {

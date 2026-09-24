@@ -4,7 +4,7 @@
 // Con `prefers-reduced-motion` la cifra final está ahí desde el primer render y
 // la regla global neutraliza el arco.
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Duración del recuento; la misma que `--duration-count`. */
 const COUNT_MS = 900;
@@ -23,8 +23,9 @@ function prefersReducedMotion(): boolean {
   );
 }
 
-/** Cifra que cuenta desde 0. El lector de pantalla oye solo el valor final
- *  (con su `label`), nunca los intermedios. */
+/** Cifra que cuenta desde 0 al aparecer y, si cambia, desde la que se veía
+ *  (marcar una serie no la hace volver a 0). El lector de pantalla oye solo el
+ *  valor final (con su `label`), nunca los intermedios. */
 export function CountUp({
   value,
   label,
@@ -37,17 +38,23 @@ export function CountUp({
   const [shown, setShown] = useState(() =>
     prefersReducedMotion() ? value : 0,
   );
+  // Último valor pintado: el punto de partida del siguiente recuento.
+  const from = useRef(shown);
 
   useEffect(() => {
     if (prefersReducedMotion()) {
+      from.current = value;
       setShown(value);
       return;
     }
+    const origin = from.current;
     const start = performance.now();
     let id = 0;
     const tick = (now: number) => {
       const t = (now - start) / COUNT_MS;
-      setShown(countUpValue(value, t));
+      const next = origin + countUpValue(value - origin, t);
+      from.current = next;
+      setShown(next);
       if (t < 1) id = requestAnimationFrame(tick);
     };
     id = requestAnimationFrame(tick);

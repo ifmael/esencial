@@ -9,8 +9,15 @@
 //
 // Esta capa es decorativa para el lector de pantalla (`aria-hidden`): los
 // botones accesibles siguen siendo los del SVG que hay debajo.
-import { Canvas, type ThreeEvent, useFrame } from "@react-three/fiber";
-import { useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Color,
   ExtrudeGeometry,
@@ -100,28 +107,44 @@ function palette() {
   };
 }
 
+type Drag = { x: number; moved: boolean } | null;
+
 function Figure({
   view,
   regions,
   focused,
   onSelect,
+  drag,
+  yaw,
 }: {
   view?: BodyView;
   regions: string[];
   focused: string | null;
   onSelect?: (region: string) => void;
+  /** Arrastre en curso: lo gestiona el lienzo entero, no solo los meshes. */
+  drag: RefObject<Drag>;
+  /** Giro objetivo de la figura (rad). */
+  yaw: RefObject<number>;
 }) {
   const pieces = useMemo(buildPieces, []);
   const colors = useMemo(palette, []);
   const group = useRef<Group>(null);
   const [hovered, setHovered] = useState<string | null>(null);
-  const drag = useRef<{ x: number; moved: boolean } | null>(null);
-  // Arranca girada un poco para que se lea el volumen desde el primer vistazo.
-  const yaw = useRef((view === "back" ? Math.PI : 0) + TILT);
   const lastView = useRef(view);
   const active = new Set(regions);
 
-  useFrame((_, dt) => {
+  // 89 geometrías extruidas: se liberan de la GPU al salir de 3D.
+  useEffect(
+    () => () => {
+      for (const p of pieces) p.geometry.dispose();
+    },
+    [pieces],
+  );
+
+  // `frameloop="demand"`: solo se pinta mientras la figura se mueve. Aquí se
+  // pide un fotograma por fotograma hasta que el giro llega a su objetivo (o
+  // siempre, en la ficha, que gira sola).
+  useFrame(({ invalidate }, dt) => {
     // Cambiar de vista (Frontal/Trasera) gira la figura hasta esa cara.
     if (view !== lastView.current) {
       lastView.current = view;
@@ -133,6 +156,7 @@ function Figure({
     if (!g) return;
     if (!view && !drag.current) yaw.current += dt * 0.35; // ficha: giro lento
     g.rotation.y = MathUtils.damp(g.rotation.y, yaw.current, 8, dt);
+    if (!view || Math.abs(g.rotation.y - yaw.current) > 1e-3) invalidate();
   });
 
   const skin = (region: string | null) => {
@@ -144,27 +168,7 @@ function Figure({
   };
 
   return (
-    <group
-      ref={group}
-      scale={0.075}
-      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-        drag.current = { x: e.clientX, moved: false };
-        (e.target as Element).setPointerCapture?.(e.pointerId);
-      }}
-      onPointerMove={(e: ThreeEvent<PointerEvent>) => {
-        if (!drag.current) return;
-        const dx = e.clientX - drag.current.x;
-        if (Math.abs(dx) > 3) drag.current.moved = true;
-        drag.current.x = e.clientX;
-        yaw.current += dx * DRAG_SPEED;
-      }}
-      onPointerUp={() => {
-        // El clic de un mesh llega después: se deja la marca un instante.
-        setTimeout(() => {
-          drag.current = null;
-        });
-      }}
-    >
+    <group ref={group} scale={0.075} rotation-y={yaw.current}>
       {pieces.map((p) => {
         const on = p.region !== null && active.has(p.region);
         const lit = on || p.region === focused || p.region === hovered;
@@ -199,28 +203,92 @@ function Figure({
   );
 }
 
+/** Arrastrar en cualquier punto del lienzo gira la figura (también fuera de
+ *  un mesh); el `invalidate` despierta el `frameloop="demand"`. */
+function DragSurface({
+  drag,
+  yaw,
+  wake,
+  children,
+}: {
+  drag: RefObject<Drag>;
+  yaw: RefObject<number>;
+  wake: RefObject<() => void>;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
+      onPointerDown={(e) => {
+        drag.current = { x: e.clientX, moved: false };
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        if (!drag.current) return;
+        const dx = e.clientX - drag.current.x;
+        if (Math.abs(dx) > 3) drag.current.moved = true;
+        drag.current.x = e.clientX;
+        yaw.current += dx * DRAG_SPEED;
+        wake.current();
+      }}
+      onPointerUp={() => {
+        // El `click` del mesh llega después: la marca de arrastre dura un tick
+        // para que soltar tras girar no elija el músculo de debajo.
+        setTimeout(() => {
+          drag.current = null;
+        });
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Despierta el lienzo cuando cambia algo que se ve (selección, foco, arrastre). */
+function Wake({
+  wake,
+  deps,
+}: {
+  wake: RefObject<() => void>;
+  deps: unknown[];
+}) {
+  const invalidate = useThree((s) => s.invalidate);
+  wake.current = invalidate;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `deps` es la lista a vigilar
+  useEffect(() => invalidate(), deps);
+  return null;
+}
+
 export default function BodyMap3D(props: {
   view?: BodyView;
   regions: string[];
   focused: string | null;
   onSelect?: (region: string) => void;
 }) {
+  const drag = useRef<Drag>(null);
+  // Arranca girada un poco para que se lea el volumen desde el primer vistazo.
+  const yaw = useRef((props.view === "back" ? Math.PI : 0) + TILT);
+  // `invalidate` del lienzo, para que el arrastre (fuera de R3F) lo despierte.
+  const wake = useRef<() => void>(() => {});
   return (
-    <div
-      aria-hidden="true"
-      className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
-    >
+    <DragSurface drag={drag} yaw={yaw} wake={wake}>
       <Canvas
+        frameloop="demand"
         dpr={[1, 2]}
         camera={{ position: [0, 0, 11], fov: 40 }}
         gl={{ antialias: true, alpha: true }}
       >
+        <Wake
+          wake={wake}
+          deps={[props.view, props.regions.join(), props.focused]}
+        />
         <ambientLight intensity={1.1} />
         <hemisphereLight args={["#dfe7f2", "#0a0c0f", 0.8]} />
         <directionalLight position={[4, 6, 8]} intensity={2.4} />
         <directionalLight position={[-6, -2, -8]} intensity={1.4} />
-        <Figure {...props} />
+        <Figure {...props} drag={drag} yaw={yaw} />
       </Canvas>
-    </div>
+    </DragSurface>
   );
 }

@@ -96,7 +96,7 @@ export function BodyMapStage({
                 setMode(m);
                 storeMode(m);
               }}
-              className={`min-h-9 rounded-chip px-3 font-numeric text-caption font-bold tracking-wide transition-colors duration-150 ease-out-quart ${
+              className={`min-h-11 min-w-11 rounded-chip px-3 font-numeric text-caption font-bold tracking-wide transition-colors duration-150 ease-out-quart ${
                 mode === m
                   ? "bg-primary text-on-primary"
                   : "bg-surface-muted text-text-secondary hover:text-text"
