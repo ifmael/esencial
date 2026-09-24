@@ -109,9 +109,9 @@ export function ShoppingListSheet({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex max-h-[75vh] flex-col gap-3 overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 shadow-xl md:inset-y-0 md:left-auto md:w-96 md:rounded-none">
+    <div className="fixed inset-x-0 bottom-0 z-40 flex max-h-[75vh] flex-col gap-3 overflow-y-auto rounded-t-card border border-border bg-surface p-4 shadow-raised md:inset-y-0 md:left-auto md:w-96 md:rounded-none">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Lista de la compra</h2>
+        <h2 className="text-title font-bold">Lista de la compra</h2>
         <button
           aria-label="Cerrar lista"
           className="min-h-11 px-3 text-text-secondary"
@@ -173,7 +173,7 @@ export function ShoppingListSheet({
             onKeyDown={(e) => {
               if (e.key === "Enter") void addItem(s.section);
             }}
-            className="min-h-11 rounded-lg border border-dashed border-border px-2 text-sm"
+            className="min-h-11 rounded-control border border-dashed border-border px-2 text-caption"
           />
         </section>
       ))}

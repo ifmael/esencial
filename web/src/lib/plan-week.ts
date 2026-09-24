@@ -4,7 +4,9 @@
 // error se fija después, para que el mensaje sobreviva a la re-sincronización.
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiGet, apiSend } from "./api";
+import { toISODate } from "./day";
 import type { ExerciseKind } from "./exercises";
+import { weekStreak } from "./reward";
 
 export type PlanSession = {
   id: number;
@@ -54,6 +56,8 @@ export function usePlanWeek(isoWeek: string) {
   const [sessions, setSessions] = useState<PlanSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Racha semanal: sale del GET completo (todas las semanas), no de la filtrada.
+  const [streak, setStreak] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,6 +65,7 @@ export function usePlanWeek(isoWeek: string) {
       const all = await apiGet<PlanSession[]>("/api/plan-sessions");
       // Week filter via Monday-anchored ISO week of "YYYY-MM-DD" (no clock).
       setSessions(all.filter((s) => isoWeekOf(s.date) === isoWeek));
+      setStreak(weekStreak(all, toISODate(new Date())));
       setError(null);
     } catch {
       setSessions([]);
@@ -126,7 +131,7 @@ export function usePlanWeek(isoWeek: string) {
     [load],
   );
 
-  return { sessions, loading, error, reload, remove, saveItems };
+  return { sessions, loading, error, streak, reload, remove, saveItems };
 }
 
 /** ISO week ("YYYY-Www") of a "YYYY-MM-DD" date (UTC, no clock). */

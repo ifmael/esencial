@@ -27,15 +27,24 @@ type NavSection = {
   label: string;
   icon: (props: { width?: number; height?: number }) => React.ReactNode;
   children?: NavChild[];
+  /** Acento plano de la sección: pinta su pastilla de activo. */
+  accent: string;
 };
 
 const NAV: NavSection[] = [
-  { key: "hoy", href: "/", label: "Hoy", icon: CalendarIcon },
+  {
+    key: "hoy",
+    href: "/",
+    label: "Hoy",
+    icon: CalendarIcon,
+    accent: "bg-accent-blue",
+  },
   {
     key: "deporte",
     href: "/plan-fuerza",
     label: "Deporte",
     icon: DumbbellIcon,
+    accent: "bg-primary-fill",
     children: [
       { href: "/ejercicios", label: "Ejercicios" },
       { href: "/plantillas", label: "Plantillas" },
@@ -46,6 +55,7 @@ const NAV: NavSection[] = [
     href: "/plan-recetas",
     label: "Nutrición",
     icon: UtensilsIcon,
+    accent: "bg-accent-pink",
     children: [{ href: "/recetario", label: "Recetas" }],
   },
 ];
@@ -89,26 +99,26 @@ const rowClass = (active: boolean) =>
     "flex h-11 items-center gap-3 rounded-control px-3 text-body",
     "transition-colors duration-150 ease-out-quart",
     active
-      ? "font-semibold text-primary"
-      : "font-medium text-text-secondary hover:bg-surface-muted hover:text-text",
+      ? "font-extrabold text-text"
+      : "font-semibold text-text hover:bg-surface-muted",
   ].join(" ");
 
-const rowBox = (active: boolean) =>
+const rowBox = (active: boolean, accent = "bg-accent-yellow") =>
   [
-    "flex items-center rounded-control",
-    "transition-colors duration-150 ease-out-quart",
-    active ? "bg-primary-soft" : "",
+    "flex items-center rounded-control border",
+    "transition-[background-color,box-shadow] duration-fast ease-out-quart",
+    active ? `${accent} shadow-control` : "border-transparent",
   ].join(" ");
 
 /** Ítem del raíl (rutas de calendario): solo el icono, 44px de alto y ancho
  * completo del raíl; el nombre va en `aria-label`/`title`. */
-const railItem = (active: boolean) =>
+const railItem = (active: boolean, accent = "bg-accent-yellow") =>
   [
-    "grid h-11 w-full place-items-center rounded-control",
-    "transition-colors duration-150 ease-out-quart",
+    "grid h-11 w-full place-items-center rounded-control border text-text",
+    "transition-[background-color,box-shadow] duration-fast ease-out-quart",
     active
-      ? "bg-primary-soft text-primary"
-      : "text-text-secondary hover:bg-surface-muted hover:text-text",
+      ? `${accent} shadow-control`
+      : "border-transparent hover:border-ink hover:bg-surface-muted",
   ].join(" ");
 
 /** Ítem de la barra inferior: icono + etiqueta, 44px de alto. `active` pinta la
@@ -120,24 +130,26 @@ function BarItem({
   icon: Icon,
   active,
   current = active,
+  accent = "bg-accent-yellow",
 }: {
   href: string;
   label: string;
   icon: NavSection["icon"];
   active: boolean;
   current?: boolean;
+  accent?: string;
 }) {
   return (
     <Link
       to={href}
       aria-current={current ? "page" : undefined}
       className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel px-1 py-1 text-micro font-semibold transition-colors duration-150 ease-out-quart ${
-        active ? "text-primary" : "text-text-secondary"
+        active ? "text-text" : "text-text-secondary"
       }`}
     >
       <span
-        className={`grid size-9 place-items-center rounded-panel transition-colors duration-200 ease-out-quart ${
-          active ? "bg-primary-soft" : ""
+        className={`grid size-9 place-items-center rounded-panel border transition-[background-color,box-shadow] duration-base ease-out-quart ${
+          active ? `${accent} shadow-press` : "border-transparent"
         }`}
       >
         <Icon />
@@ -188,7 +200,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           aria-label={section.label}
           title={section.label}
           aria-current={isActive(pathname, section.href) ? "page" : undefined}
-          className={railItem(active)}
+          className={railItem(active, section.accent)}
         >
           <SectionIcon />
         </Link>
@@ -200,7 +212,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           key={section.href}
           to={section.href}
           aria-current={isActive(pathname, section.href) ? "page" : undefined}
-          className={rowBox(active)}
+          className={rowBox(active, section.accent)}
         >
           <span className={rowClass(active)}>
             <SectionIcon />
@@ -213,7 +225,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     const panelId = `nav-${section.key}`;
     return (
       <div key={section.href} className="flex flex-col">
-        <div className={rowBox(active)}>
+        <div className={rowBox(active, section.accent)}>
           <Link
             to={section.href}
             aria-current={active ? "page" : undefined}
@@ -244,7 +256,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {expanded && (
           <ul
             id={panelId}
-            className="mt-1 ml-5 flex flex-col gap-0.5 border-l border-border pl-2"
+            className="mt-1 ml-5 flex flex-col gap-0.5 border-l pl-2"
           >
             {section.children.map((child) => (
               <li key={child.href}>
@@ -277,7 +289,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           calendario (fila de chips). Por defecto se pliega en las rutas de
           calendario; el botón de la cabecera manda a partir de ahí. */}
       <aside
-        className={`hidden shrink-0 flex-col border-r border-border bg-surface py-6 lg:flex lg:overflow-y-auto ${
+        className={`hidden shrink-0 flex-col border-r-thick bg-surface py-6 lg:flex lg:overflow-y-auto ${
           collapsed ? "w-18 items-center gap-4 px-3" : "w-64 gap-6 px-4"
         }`}
       >
@@ -294,14 +306,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
               collapsed ? "justify-center p-1" : "min-w-0 flex-1 px-2 py-1"
             }`}
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-panel bg-primary text-on-primary">
+            <span className="grid size-10 shrink-0 place-items-center rounded-panel border bg-primary-fill text-ink shadow-control">
               <LeafIcon width={22} height={22} />
             </span>
             {collapsed ? null : (
               <span className="flex min-w-0 flex-col">
-                <span className="text-title font-bold tracking-tight text-primary">
-                  Esencial
-                </span>
+                <span className="text-title">Esencial</span>
                 <span className="text-caption text-text-secondary">
                   Bienestar personal
                 </span>
@@ -389,7 +399,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 key={child.href}
                 to={child.href}
-                className="rounded-chip bg-surface-muted px-3 py-1 text-caption font-semibold text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-primary-soft hover:text-primary"
+                className="rounded-chip border bg-surface px-3 py-1 text-caption font-bold shadow-control transition-[transform,box-shadow] duration-fast ease-bounce hover:-translate-y-px hover:bg-accent-yellow active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
               >
                 {child.label}
               </Link>
@@ -406,7 +416,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Móvil: barra inferior */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-up backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t-thick bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
         <div className="mx-auto flex max-w-lg items-stretch px-2 py-1.5">
           {NAV.map((section) => (
             <BarItem
@@ -416,6 +426,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               icon={section.icon}
               active={sectionActive(pathname, section)}
               current={isActive(pathname, section.href)}
+              accent={section.accent}
             />
           ))}
           <BarItem

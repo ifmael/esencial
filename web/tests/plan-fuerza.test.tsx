@@ -516,6 +516,27 @@ describe("plan screen", () => {
     );
     expect(window.location.pathname).toBe("/sesion/2026-09-01");
   });
+
+  it("muestra la racha de semanas seguidas con sesiones registradas", async () => {
+    vi.unstubAllGlobals();
+    const now = Date.now();
+    api = mockApi({
+      exercises: [press],
+      sessions: [1, 2].map((n) => ({
+        id: n,
+        date: new Date(now - n * 7 * 86_400_000).toISOString().slice(0, 10),
+        name: `Sesión ${n}`,
+        status: "logged" as const,
+        exercises: [],
+      })),
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("status", { name: /racha/i }).textContent,
+      ).toMatch(/2\s*semanas/),
+    );
+  });
 });
 
 describe("editor del día (sesión) en modal", () => {

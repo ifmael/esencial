@@ -1,48 +1,75 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   Esencial — capa de sistema (variante A "acabado sistémico")
-   Base: wireframes/DESIGN.md. Aquí viven SOLO decisiones transversales:
-   escala tipográfica, ritmo de espaciado, radios, superficies/elevación y
-   movimiento. Las pantallas no inventan valores: consumen estos tokens.
+   Esencial — capa de sistema (dirección D, «neo-brutalista lúdico»)
+   Tinta gruesa, sombras duras desplazadas (sin blur), colores planos
+   saturados y rebote al pulsar. Las pantallas no inventan valores: consumen
+   estos tokens.
    ========================================================================== */
 
-:root {
-  /* Marca y superficies — wireframes/DESIGN.md */
-  --color-primary: #15803d;
-  --color-primary-dark: #166534;
-  --color-primary-container: #15803d;
-  --color-on-primary: #ffffff;
-  --color-secondary: #4d7c0f;
-  --color-background: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f5f5f4;
-  --color-pending: #d97706;
-  --color-pending-bg: #fef3c7;
-  --color-pending-text: #92400e;
-  --color-done-bg: #dcfce7;
-  --color-done-text: #166534;
-  --color-error: #b91c1c;
-  --color-text: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-border: #e7e5e4;
-  /* Derivados: estados suaves (activo de menú, hover de controles) */
-  --color-primary-soft: #e9f3ed;
-  --color-primary-soft-strong: #d8ebdf;
-  --color-border-strong: #d6d3d1;
-  --color-ring: rgb(21 128 61 / 0.32);
-  /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
-     ratón. Un tono medio para que la silueta no se lave sobre la tarjeta; el
-     grupo elegido va en `--color-primary`. */
-  --color-muscle: #8fb59d;
-  --color-muscle-strong: #6e9c81;
+/* Titulares: Bricolage Grotesque (OFL, ver fonts/LICENSE-*), variable, solo
+   el subset latino y auto-alojada. `swap`: el texto sale ya con la de sistema. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(./fonts/bricolage-grotesque-latin-wght-normal.woff2)
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
-  /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
-     para todo lo que reacciona al usuario. */
+:root {
+  /* Tinta: bordes, sombras duras y texto. Un solo negro para todo. */
+  --color-ink: #111111;
+  /* Marca. `primary` es el verde para TEXTO y bordes de acento (AA sobre
+     crema y blanco); `primary-fill` es el verde potente de las superficies
+     llenas, que siempre llevan tinta encima (9.6:1). */
+  --color-primary: #0b6b2f;
+  --color-primary-dark: #084d22;
+  --color-primary-fill: #34d27b;
+  --color-primary-container: #34d27b;
+  --color-on-primary: #111111;
+  --color-secondary: #0b6b2f;
+  /* Acentos por sección: planos, siempre con tinta encima (≥ 8.9:1). */
+  --color-accent-yellow: #ffd23f;
+  --color-accent-pink: #ff8fc2;
+  --color-accent-blue: #7cb8ff;
+  --color-background: #fff6e0;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7ecd0;
+  --color-pending: #ffd23f;
+  --color-pending-bg: #ffe98a;
+  --color-pending-text: #6b3f00;
+  --color-done-bg: #b8f5c8;
+  --color-done-text: #0b6b2f;
+  --color-error: #c81e1e;
+  --color-on-error: #ffffff;
+  --color-text: #111111;
+  --color-text-secondary: #4a4a4a;
+  --color-border: #111111;
+  /* Derivados: estados suaves (activo de menú, hover de controles) */
+  --color-primary-soft: #d6f5dd;
+  --color-primary-soft-strong: #b8f5c8;
+  --color-border-strong: #c9bd9f;
+  --color-ring: rgb(11 107 47 / 0.35);
+  /* Velo tras un modal: tinta translúcida, no negro puro. */
+  --color-scrim: rgb(17 17 17 / 0.55);
+  /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
+     ratón; el grupo elegido va en `--color-primary`. */
+  --color-muscle: #8fd6a8;
+  --color-muscle-strong: #4fb878;
+
+  /* Movimiento: tres duraciones y un easing de salida; `ease-bounce` solo para
+     lo que «salta» (pop del checkbox, sello de ¡Hecho!). */
   --duration-fast: 120ms;
   --duration-base: 180ms;
   --duration-slow: 280ms;
   --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Espaciado semántico (ritmo) */
   --spacing-card: 1.25rem; /* 20px — padding interno de tarjeta */
@@ -50,34 +77,43 @@
   --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
   --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
 
-  /* Ancho de página: el calendario semanal es el caso ancho. Tope amplio, para
-     que en pantallas ultrapanorámicas no se estire sin fin. */
+  /* Ancho de página: el calendario semanal es el caso ancho. */
   --container-calendar: 110rem; /* 1760px */
 
-  /* Radios: control < panel < tarjeta */
+  /* Radios medianos: con borde grueso un radio pequeño se lee como esquina. */
   --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
   --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
   --radius-card: 1rem; /* 16px — tarjetas y superficies grandes */
   --radius-chip: 999px;
 
-  /* Elevación: dos sombras compuestas, nunca una sola difusa fuerte */
-  --shadow-card:
-    0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
-  --shadow-raised:
-    0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
-  --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
-  /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
-  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
+  /* Trazo: dos grosores de tinta. */
+  --border-thin: 2px; /* controles, celdas, chips */
+  --border-thick: 3px; /* tarjetas, modales */
+
+  /* Elevación dura: desplazada, sin blur. `press` es la sombra hundida. */
+  --shadow-offset: 4px;
+  --shadow-card: 4px 4px 0 var(--color-ink);
+  --shadow-raised: 6px 6px 0 var(--color-ink);
+  --shadow-press: 1px 1px 0 var(--color-ink);
+  --shadow-control: 3px 3px 0 var(--color-ink);
+  --shadow-inset: inset 2px 2px 0 rgb(17 17 17 / 0.12);
+  /* La barra inferior de móvil proyecta hacia arriba. */
+  --shadow-up: 0 -3px 0 var(--color-ink);
 }
 
 @theme inline {
+  --color-ink: var(--color-ink);
   --color-primary: var(--color-primary);
   --color-primary-dark: var(--color-primary-dark);
+  --color-primary-fill: var(--color-primary-fill);
   --color-primary-container: var(--color-primary-container);
   --color-on-primary: var(--color-on-primary);
   --color-primary-soft: var(--color-primary-soft);
   --color-primary-soft-strong: var(--color-primary-soft-strong);
   --color-secondary: var(--color-secondary);
+  --color-accent-yellow: var(--color-accent-yellow);
+  --color-accent-pink: var(--color-accent-pink);
+  --color-accent-blue: var(--color-accent-blue);
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);
   --color-surface-muted: var(--color-surface-muted);
@@ -87,19 +123,23 @@
   --color-done-bg: var(--color-done-bg);
   --color-done-text: var(--color-done-text);
   --color-error: var(--color-error);
+  --color-on-error: var(--color-on-error);
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
   --color-ring: var(--color-ring);
+  --color-scrim: var(--color-scrim);
   --color-muscle: var(--color-muscle);
   --color-muscle-strong: var(--color-muscle-strong);
 
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  /* Escala tipográfica: 6 pasos con line-height pareja. Nada de saltos de
-     14→16→18 sin criterio: micro/caption para metadatos, body para lectura,
-     lead para el dato de una fila, title/display para jerarquía de pantalla. */
+  /* Escala tipográfica: 6 pasos con line-height pareja. micro/caption para
+     metadatos, body para lectura, lead para el dato de una fila,
+     title/display para jerarquía de pantalla (estos dos, en la grotesca). */
   --text-micro: 0.6875rem; /* 11px — etiquetas en mayúsculas */
   --text-micro--line-height: 1rem;
   --text-micro--letter-spacing: 0.08em;
@@ -110,10 +150,14 @@
   --text-lead: 1.0625rem; /* 17px — dato principal de una fila */
   --text-lead--line-height: 1.35;
   --text-title: 1.25rem; /* 20px — título de bloque */
-  --text-title--line-height: 1.3;
-  --text-display: 1.5rem; /* 24px — título de pantalla */
-  --text-display--line-height: 1.2;
-  --text-display--letter-spacing: -0.02em;
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.01em;
+  --text-display: 1.75rem; /* 28px — título de pantalla */
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.025em;
+  --text-hero: 3rem; /* 48px — sello de recompensa, iconos grandes */
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.03em;
 
   /* Ritmo de espaciado: `p-card`, `gap-section`, `gap-stack`, `gap-gutter` */
   --spacing-card: var(--spacing-card);
@@ -129,12 +173,20 @@
   --radius-card: var(--radius-card);
   --radius-chip: var(--radius-chip);
 
+  /* `border` a secas ya pinta 2px de tinta: el trazo del sistema. */
+  --default-border-width: var(--border-thin);
+  --border-width-thin: var(--border-thin);
+  --border-width-thick: var(--border-thick);
+
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
+  --shadow-press: var(--shadow-press);
+  --shadow-control: var(--shadow-control);
   --shadow-inset: var(--shadow-inset);
   --shadow-up: var(--shadow-up);
 
   --ease-out-quart: var(--ease-out-quart);
+  --ease-bounce: var(--ease-bounce);
 }
 
 @layer base {
@@ -146,7 +198,15 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Un solo anillo de foco para toda la app, visible sobre cualquier superficie. */
+  /* Titulares en la grotesca: la jerarquía se lee por la voz, no solo por el
+     tamaño. */
+  :where(h1, h2, .text-display, .text-title, .text-hero) {
+    font-family: var(--font-display);
+    font-weight: 800;
+  }
+
+  /* Un solo anillo de foco para toda la app: tinta gruesa + halo verde, visible
+     sobre crema, blanco y los rellenos de color. */
   :where(
     a,
     button,
@@ -156,12 +216,61 @@
     summary,
     [tabindex]
   ):focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 3px solid var(--color-ink);
     outline-offset: 2px;
+    box-shadow: 0 0 0 6px var(--color-primary-fill);
   }
 
   ::selection {
-    background: var(--color-primary-soft-strong);
+    background: var(--color-accent-yellow);
+  }
+
+  /* Casilla propia: caja de tinta que se rellena de verde con un «pop». */
+  input[type="checkbox"] {
+    appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: var(--border-thin) solid var(--color-ink);
+    border-radius: 0.375rem;
+    background: var(--color-surface);
+    box-shadow: 2px 2px 0 var(--color-ink);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out-quart),
+      box-shadow var(--duration-fast) var(--ease-out-quart),
+      transform var(--duration-fast) var(--ease-out-quart);
+  }
+  /* Casillas con área táctil de 44px: caja grande, marca a juego. */
+  input[type="checkbox"].min-h-11 {
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-control);
+  }
+  input[type="checkbox"].min-h-11::after {
+    width: 1.1rem;
+    height: 0.6rem;
+    border-width: 0 0 4px 4px;
+  }
+  input[type="checkbox"]::after {
+    content: "";
+    width: 0.75rem;
+    height: 0.4rem;
+    border-left: 3px solid var(--color-ink);
+    border-bottom: 3px solid var(--color-ink);
+    transform: translateY(-0.1rem) rotate(-45deg) scale(0);
+    transition: transform var(--duration-base) var(--ease-bounce);
+  }
+  input[type="checkbox"]:checked {
+    background-color: var(--color-primary-fill);
+    animation: pop var(--duration-slow) var(--ease-bounce);
+  }
+  input[type="checkbox"]:checked::after {
+    transform: translateY(-0.1rem) rotate(-45deg) scale(1);
+  }
+  input[type="checkbox"]:active:not(:disabled) {
+    transform: translate(1px, 1px);
   }
 }
 
@@ -170,27 +279,25 @@
 
   .card {
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: var(--border-thick) solid var(--color-ink);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
     padding: var(--spacing-card);
   }
 
-  /* Tarjeta que además se pulsa: se levanta al pasar por encima. */
+  /* Tarjeta que además se pulsa: se levanta en hover y se hunde al pulsar. */
   .card-interactive {
     transition:
-      transform var(--duration-base) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart),
-      border-color var(--duration-base) var(--ease-out-quart);
+      transform var(--duration-base) var(--ease-bounce),
+      box-shadow var(--duration-base) var(--ease-bounce);
   }
   .card-interactive:hover {
-    transform: translateY(-1px);
-    border-color: var(--color-border-strong);
+    transform: translate(-2px, -2px);
     box-shadow: var(--shadow-raised);
   }
   .card-interactive:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-card);
+    transform: translate(3px, 3px);
+    box-shadow: var(--shadow-press);
   }
 
   /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA) */
@@ -198,16 +305,17 @@
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
     letter-spacing: var(--text-micro--letter-spacing);
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
-    color: var(--color-text-secondary);
+    color: var(--color-text);
   }
 
-  /* Loader: barrido suave en lugar del pulso de opacidad clásico. */
+  /* Loader: barrido en lugar del pulso de opacidad clásico. */
   .skeleton {
     position: relative;
     overflow: hidden;
     background: var(--color-surface-muted);
+    border: var(--border-thin) solid var(--color-ink);
     border-radius: var(--radius-panel);
   }
   .skeleton::after {
@@ -218,7 +326,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgb(255 255 255 / 0.75),
+      rgb(255 255 255 / 0.8),
       transparent
     );
     animation: shimmer 1.6s var(--ease-out-quart) infinite;
@@ -226,98 +334,108 @@
 
   /* --- Botones ---------------------------------------------------------- */
 
+  /* El botón «flota» sobre su sombra dura; al pulsar se hunde: se traslada lo
+     que la sombra encoge, así que la tinta de abajo no se mueve. */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    border: var(--border-thin) solid var(--color-ink);
     border-radius: var(--radius-control);
-    font-weight: 600;
+    font-weight: 800;
     letter-spacing: -0.01em;
     line-height: 1;
     white-space: nowrap;
+    box-shadow: var(--shadow-control);
     transition:
       background-color var(--duration-fast) var(--ease-out-quart),
-      background-image var(--duration-fast) var(--ease-out-quart),
-      border-color var(--duration-fast) var(--ease-out-quart),
       color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart),
-      transform var(--duration-fast) var(--ease-out-quart);
+      box-shadow var(--duration-fast) var(--ease-bounce),
+      transform var(--duration-fast) var(--ease-bounce);
+  }
+  .btn:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--color-ink);
   }
   .btn:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: translate(2px, 2px);
+    box-shadow: var(--shadow-press);
   }
   .btn:disabled,
   .btn[aria-disabled="true"] {
     opacity: 0.5;
     cursor: not-allowed;
+    box-shadow: none;
   }
 
-  /* El hover oscurece con una capa encima: así sigue funcionando cuando el
-     consumidor pinta el botón de otro color (p. ej. `bg-error`). */
   .btn-primary {
-    background: var(--color-primary);
+    background-color: var(--color-primary-fill);
     color: var(--color-on-primary);
-    box-shadow: 0 1px 2px rgb(22 101 52 / 0.25);
-  }
-  .btn-primary:hover:not(:disabled) {
-    background-image: linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08));
   }
 
   .btn-secondary {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
     color: var(--color-text);
   }
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--color-border-strong);
-    background-image: linear-gradient(
-      rgb(28 25 23 / 0.04),
-      rgb(28 25 23 / 0.04)
-    );
+    background-color: var(--color-accent-yellow);
   }
 
+  /* Acción destructiva: el único botón blanco sobre color. */
+  .btn-danger {
+    background-color: var(--color-error);
+    color: var(--color-on-error);
+  }
+
+  /* Fantasma: sin caja hasta que se pasa por encima. */
   .btn-ghost {
     background: transparent;
-    color: var(--color-text-secondary);
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--color-text);
   }
   .btn-ghost:hover:not(:disabled) {
     background: var(--color-surface-muted);
-    color: var(--color-text);
+    border-color: var(--color-ink);
+    box-shadow: none;
+    transform: none;
+  }
+  .btn-ghost:active:not(:disabled) {
+    transform: translate(1px, 1px);
+    box-shadow: none;
   }
 
   /* --- Campos ----------------------------------------------------------- */
 
   .input {
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: var(--border-thin) solid var(--color-ink);
     border-radius: var(--radius-control);
     padding: 0.625rem 0.875rem;
     min-height: 2.75rem;
     color: var(--color-text);
+    box-shadow: var(--shadow-inset);
     transition:
-      border-color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart);
+      box-shadow var(--duration-fast) var(--ease-bounce),
+      transform var(--duration-fast) var(--ease-bounce);
   }
   .input::placeholder {
     color: var(--color-text-secondary);
   }
-  .input:hover:not(:disabled) {
-    border-color: var(--color-border-strong);
-  }
   .input:focus {
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-ring);
+    box-shadow: var(--shadow-control);
+    transform: translate(-1px, -1px);
   }
   .input-error,
   .input[aria-invalid="true"] {
     border-color: var(--color-error);
+    background: #fff0f0;
   }
   .input-error:focus,
   .input[aria-invalid="true"]:focus {
-    border-color: var(--color-error);
-    box-shadow: 0 0 0 3px rgb(185 28 28 / 0.2);
+    box-shadow: 3px 3px 0 var(--color-error);
   }
 
   /* --- Insignias -------------------------------------------------------- */
@@ -326,13 +444,14 @@
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
+    border: var(--border-thin) solid var(--color-ink);
     border-radius: var(--radius-chip);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
     letter-spacing: 0.06em;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
-    padding: 0.3125rem 0.625rem;
+    padding: 0.125rem 0.5rem;
   }
   .badge-pending {
     background: var(--color-pending-bg);
@@ -343,8 +462,8 @@
     color: var(--color-done-text);
   }
   .badge-neutral {
-    background: var(--color-surface-muted);
-    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    color: var(--color-text);
   }
 
   /* --- Fila de lista ---------------------------------------------------- */
@@ -355,6 +474,26 @@
     gap: var(--spacing-stack);
     border-radius: var(--radius-panel);
     transition: background-color var(--duration-fast) var(--ease-out-quart);
+  }
+
+  /* --- Recompensa ------------------------------------------------------- */
+
+  /* Sello «¡Hecho!»: cae girado y rebota. Con reduced-motion queda estático. */
+  .stamp {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--text-hero);
+    line-height: var(--text-hero--line-height);
+    letter-spacing: var(--text-hero--letter-spacing);
+    padding: 0.5rem 1.25rem;
+    background: var(--color-accent-yellow);
+    color: var(--color-ink);
+    border: var(--border-thick) solid var(--color-ink);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-raised);
+    transform: rotate(-6deg);
+    animation: stamp var(--duration-slow) var(--ease-bounce) both;
   }
 }
 
@@ -372,6 +511,32 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes stamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-20deg) scale(2.4);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(-4deg) scale(0.92);
+  }
+  100% {
+    transform: rotate(-6deg) scale(1);
   }
 }
 

@@ -59,6 +59,7 @@ const SKIN_CLASSES: Record<string, true> = {
   "btn-primary": true,
   "btn-secondary": true,
   "btn-ghost": true,
+  "btn-danger": true,
   input: true,
   "input-error": true,
   "badge-pending": true,

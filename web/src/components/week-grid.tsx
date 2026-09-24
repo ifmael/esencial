@@ -45,6 +45,7 @@ export function WeekGrid({
   error = null,
   onRetry,
   onShiftWeek,
+  aside,
   children,
 }: {
   isoWeek: string;
@@ -53,6 +54,8 @@ export function WeekGrid({
   /** Acción del aviso de error; sin ella el aviso no lleva botón. */
   onRetry?: () => void;
   onShiftWeek: (delta: number) => void;
+  /** Pieza opcional junto al título de la semana (p. ej. la racha). */
+  aside?: ReactNode;
   /** Contenido de la columna de cada día (lo pone la página). */
   children: (day: WeekDay) => ReactNode;
 }) {
@@ -68,7 +71,10 @@ export function WeekGrid({
         >
           ‹
         </Button>
-        <h2 className="text-xl font-bold">{isoWeek}</h2>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <h2 className="text-title">{isoWeek}</h2>
+          {aside}
+        </div>
         <Button
           variant="secondary"
           aria-label="Semana siguiente"
@@ -81,7 +87,7 @@ export function WeekGrid({
       {error ? (
         <div
           role="alert"
-          className="flex flex-col items-start gap-2 rounded-panel border border-error/40 p-3 text-error"
+          className="flex flex-col items-start gap-2 rounded-panel border border-error p-3 text-error"
         >
           <p>{error}</p>
           {onRetry ? (
@@ -101,10 +107,14 @@ export function WeekGrid({
             const isToday = date === today;
             return (
               <div key={name} className="flex flex-col gap-2 md:min-h-0">
-                <h3 className="font-semibold">
+                <h3
+                  className={`flex items-center justify-between gap-1 rounded-control border px-2 py-1 text-caption font-extrabold ${
+                    isToday ? "bg-primary-fill shadow-control" : "bg-surface"
+                  }`}
+                >
                   {name}
                   {isToday ? (
-                    <span className="ml-2 text-xs font-bold text-primary">
+                    <span className="rounded-chip bg-ink px-1.5 text-micro text-surface">
                       Hoy
                     </span>
                   ) : null}

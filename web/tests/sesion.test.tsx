@@ -313,6 +313,23 @@ describe("state A: editable", () => {
     expect(screen.queryAllByText(/última/).length).toBe(0);
   });
 
+  it("marcar la última casilla celebra la sesión completa; desmarcar la retira", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    const boxes = await screen.findAllByRole("checkbox");
+    for (const box of boxes.slice(0, -1)) fireEvent.click(box);
+    expect(screen.queryByText("¡Hecho!")).toBeNull();
+
+    fireEvent.click(boxes[boxes.length - 1]);
+    expect(
+      (await screen.findByRole("status", { name: "Sesión completa" }))
+        .textContent,
+    ).toMatch(/¡Hecho!/);
+
+    fireEvent.click(boxes[0]);
+    expect(screen.queryByText("¡Hecho!")).toBeNull();
+  });
+
   it("cardio: marcas opcionales; escribir distancia implica hecho", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
