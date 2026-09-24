@@ -63,10 +63,10 @@ export function GroupedExercises({
         const isOpen = forceOpen ? open[tag] !== false : open[tag] === true;
         return (
           <section key={tag} className="flex flex-col gap-1">
-            <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
+            <h4 className="font-sans text-caption font-semibold text-text-secondary">
               <button
                 type="button"
-                className="flex w-full items-center gap-2 text-left"
+                className="flex min-h-11 w-full items-center gap-2 text-left hover:text-text"
                 aria-expanded={isOpen}
                 onClick={() => setOpen((o) => ({ ...o, [tag]: !isOpen }))}
               >

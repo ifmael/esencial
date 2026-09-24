@@ -117,9 +117,7 @@ function ExercisePicker({
       aria-label="Añadir ejercicio"
       className="flex min-h-0 flex-col gap-2"
     >
-      <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-        Añadir ejercicio
-      </h3>
+      <h3 className="section-label">Añadir ejercicio</h3>
 
       {/* Desde `md`, el dibujo se lleva el alto libre de la columna y la lista el
           suyo (crece con la modal en vez de encogerse por la lista). En móvil se
@@ -496,9 +494,7 @@ function TemplateDialog({
 
           <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 md:grid-cols-2 md:grid-rows-1">
             <section className="flex min-h-0 flex-col gap-2">
-              <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-                Ejercicios de la plantilla
-              </h3>
+              <h3 className="section-label">Ejercicios de la plantilla</h3>
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}

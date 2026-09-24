@@ -140,9 +140,7 @@ export function ShoppingListSheet({
 
       {sections?.map((s) => (
         <section key={s.section} className="flex flex-col gap-1">
-          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-            {s.section}
-          </h3>
+          <h3 className="section-label">{s.section}</h3>
           {s.items.map((item, idx) => (
             <div
               key={`${item.source}-${item.id ?? idx}`}

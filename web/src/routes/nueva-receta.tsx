@@ -40,7 +40,6 @@ const blank = (): Draft => ({
 
 const BASE_TAGS = ["Desayuno", "Almuerzo", "Cena", "Snack"];
 
-const small = "rounded-panel border border-border bg-surface px-2 py-1";
 const label = "mb-1 block text-caption font-medium text-text-secondary";
 
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
@@ -245,7 +244,7 @@ export function NuevaRecetaPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section>
           <h3 className="mb-2 font-semibold">Foto principal</h3>
           <Card>
@@ -351,7 +350,7 @@ export function NuevaRecetaPage() {
           <div className="mt-2 flex gap-2">
             <Input
               aria-label="Nueva categoría"
-              className="w-full"
+              className="min-w-0 flex-1"
               value={tag}
               onChange={(e) => setTag(e.target.value)}
             />
@@ -391,7 +390,7 @@ export function NuevaRecetaPage() {
           <div className="flex gap-2">
             <Input
               aria-label="Nuevo material"
-              className="w-full"
+              className="min-w-0 flex-1"
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
             />
@@ -413,7 +412,7 @@ export function NuevaRecetaPage() {
               <li key={i} className="flex gap-2">
                 <Input
                   aria-label={`Ingrediente ${i + 1} alimento`}
-                  className="flex-1"
+                  className="min-w-0 flex-1"
                   placeholder="alimento"
                   value={row.food}
                   onChange={(e) =>
@@ -425,7 +424,7 @@ export function NuevaRecetaPage() {
                 />
                 <Input
                   aria-label={`Ingrediente ${i + 1} cantidad`}
-                  className="w-20"
+                  className="w-16 min-w-0"
                   type="number"
                   placeholder="cant."
                   value={row.quantity}
@@ -453,10 +452,10 @@ export function NuevaRecetaPage() {
                   <option value="ml">ml</option>
                   <option value="ud">ud</option>
                 </Select>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="icon"
                   aria-label={`Quitar ingrediente ${i + 1}`}
-                  className={small}
                   onClick={() =>
                     set(
                       "ingredients",
@@ -465,7 +464,7 @@ export function NuevaRecetaPage() {
                   }
                 >
                   ✕
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -493,7 +492,7 @@ export function NuevaRecetaPage() {
                 </span>
                 <Input
                   aria-label={`Paso ${i + 1}`}
-                  className="flex-1"
+                  className="min-w-0 flex-1"
                   value={text}
                   onChange={(e) =>
                     set(
@@ -503,29 +502,29 @@ export function NuevaRecetaPage() {
                   }
                 />
                 {i > 0 && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     aria-label={`Subir paso ${i + 1}`}
-                    className={small}
                     onClick={() => set("steps", move(draft.steps, i, i - 1))}
                   >
                     ↑
-                  </button>
+                  </Button>
                 )}
                 {i < draft.steps.length - 1 && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="icon"
                     aria-label={`Bajar paso ${i + 1}`}
-                    className={small}
                     onClick={() => set("steps", move(draft.steps, i, i + 1))}
                   >
                     ↓
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="icon"
                   aria-label={`Quitar paso ${i + 1}`}
-                  className={small}
                   onClick={() =>
                     set(
                       "steps",
@@ -534,7 +533,7 @@ export function NuevaRecetaPage() {
                   }
                 >
                   ✕
-                </button>
+                </Button>
               </li>
             ))}
           </ol>

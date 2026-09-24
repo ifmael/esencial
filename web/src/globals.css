@@ -22,7 +22,7 @@
   --color-on-primary: #fbf8f1;
   --color-secondary: #7d8a5a; /* salvia */
   /* Acento terracota: detalles editoriales (filetes, «Hoy», numerales). */
-  --color-accent: #a4502f;
+  --color-accent: #984729; /* ≥5:1 sobre papel y sobre accent-soft */
   --color-accent-soft: #f3e1d6;
   /* Papel: fondo crema, superficies un punto más claras, «muted» un punto más
      tostado. */

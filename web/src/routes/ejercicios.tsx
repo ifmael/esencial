@@ -368,7 +368,7 @@ export function EjerciciosPage() {
       ) : (
         <>
           <Input
-            className="mb-4"
+            className="mb-4 w-full max-w-md"
             placeholder="Buscar por nombre o tag"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

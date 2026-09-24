@@ -142,9 +142,7 @@ function DayPicker({
 
   return (
     <section aria-label="Añadir al día" className="flex min-h-0 flex-col gap-2">
-      <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-        Añadir al día
-      </h3>
+      <h3 className="section-label">Añadir al día</h3>
       <Input
         type="text"
         autoFocus
@@ -160,9 +158,7 @@ function DayPicker({
       )}
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <section className="flex flex-col gap-1">
-          <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
-            Plantillas
-          </h4>
+          <h4 className="section-label">Plantillas</h4>
           {templatesError ? (
             <p className="text-caption text-error">
               {templatesError}{" "}
@@ -205,9 +201,7 @@ function DayPicker({
           )}
         </section>
         <section className="flex flex-col gap-1">
-          <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
-            Ejercicios
-          </h4>
+          <h4 className="section-label">Ejercicios</h4>
           {shownExercises.length === 0 ? (
             <p className="text-caption text-text-secondary">Sin ejercicios</p>
           ) : (
@@ -499,9 +493,7 @@ function SessionEditor({
 
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:grid-rows-1">
         <section className="flex min-h-0 flex-col gap-2">
-          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-            Ejercicios del día
-          </h3>
+          <h3 className="section-label">Ejercicios del día</h3>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
