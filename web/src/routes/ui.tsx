@@ -14,10 +14,24 @@ import {
   DumbbellIcon,
   LeafIcon,
   LogoutIcon,
+  MonitorIcon,
+  MoonIcon,
+  SearchIcon,
+  SunIcon,
   SwatchIcon,
   UtensilsIcon,
 } from "../components/icons";
-import { Badge, Button, Card, Input, Select, Textarea } from "../components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Chip,
+  Input,
+  Kbd,
+  Select,
+  Textarea,
+} from "../components/ui";
 
 function Block({
   title,
@@ -68,26 +82,30 @@ export function UiPage() {
         hint="Seis pasos, cada uno con su interlineado y su tracking."
       >
         <div className="flex flex-col gap-2">
-          <TypeRow sample="text-display" label="24px · título de pantalla" />
-          <TypeRow sample="text-title" label="20px · título de bloque" />
+          <TypeRow sample="text-display" label="26px · título de pantalla" />
+          <TypeRow sample="text-title" label="18px · título de bloque" />
           <TypeRow
             sample="text-lead"
-            label="17px · dato principal de una fila"
+            label="15px · dato principal de una fila"
           />
-          <TypeRow sample="text-body" label="15px · texto de interfaz" />
+          <TypeRow sample="text-body" label="14px · texto de interfaz" />
           <TypeRow sample="text-caption" label="13px · metadatos y ayudas" />
           <TypeRow sample="text-micro" label="11px · etiquetas y insignias" />
+          <p className="font-mono text-caption text-text-secondary">
+            font-mono · Geist Mono para cifras y metadatos: 4 × 8–10 · 60 kg
+          </p>
         </div>
       </Block>
 
       <Block
         title="Botones"
-        hint="Tres variantes y tres tamaños; md mantiene 44px de alto y type=button por defecto."
+        hint="Cuatro variantes y tres tamaños; md mantiene 44px de alto y type=button por defecto. El acento solo rellena el primario."
       >
         <div className="flex flex-wrap items-center gap-3">
           <Button>Primario</Button>
           <Button variant="secondary">Secundario</Button>
           <Button variant="ghost">Fantasma</Button>
+          <Button variant="danger">Peligro</Button>
           <Button disabled>Deshabilitado</Button>
           <Button size="sm">Pequeño</Button>
           <Button size="icon" aria-label="Botón de icono">
@@ -139,18 +157,31 @@ export function UiPage() {
       </Block>
 
       <Block
+        title="Chips, teclas y avisos"
+        hint="El chip encendido invierte el color (texto sobre fondo); se ve de 32px y se pulsa en 44px."
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip pressed>Activo</Chip>
+          <Chip pressed={false}>Inactivo</Chip>
+          <span className="ml-2 flex items-center gap-1 text-caption text-text-secondary">
+            <Kbd>⌘</Kbd>
+            <Kbd>K</Kbd> abre la paleta de comandos
+          </span>
+        </div>
+        <Alert>No se pudo guardar. Revisa la conexión.</Alert>
+      </Block>
+
+      <Block
         title="Superficies y elevación"
-        hint="Dos sombras hacia abajo, una hundida y shadow-up para la barra inferior."
+        hint="El borde de 1px hace el trabajo; la sombra apenas se nota. La destacada lleva un filo con degradado. Con ratón, el halo sigue al cursor."
       >
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-card border border-border bg-surface p-4 shadow-card text-caption">
-            shadow-card
-          </div>
+          <Card className="text-caption">Card</Card>
+          <Card featured className="text-caption">
+            Card featured
+          </Card>
           <div className="rounded-card border border-border bg-surface p-4 shadow-raised text-caption">
             shadow-raised
-          </div>
-          <div className="rounded-card bg-surface-muted p-4 shadow-inset text-caption">
-            shadow-inset
           </div>
         </div>
         <div className="skeleton h-6" />
@@ -158,7 +189,7 @@ export function UiPage() {
 
       <Block
         title="Iconos"
-        hint="Once trazos de 24px; once formas no justifican una librería."
+        hint="Quince trazos de 24px; quince formas no justifican una librería."
       >
         <div
           data-testid="icon-set"
@@ -175,17 +206,21 @@ export function UiPage() {
           <CheckIcon />
           <LeafIcon />
           <SwatchIcon />
+          <SearchIcon />
+          <SunIcon />
+          <MoonIcon />
+          <MonitorIcon />
         </div>
       </Block>
 
       <Block
         title="Movimiento"
-        hint="Tres duraciones y un solo easing; todo se apaga con prefers-reduced-motion. Pasa el ratón por encima."
+        hint="Tres duraciones cortas y un solo easing; las tarjetas de las listas entran al asomar con el scroll (animation-timeline: view()). Todo se apaga con prefers-reduced-motion."
       >
         <Card className="card-interactive">
           <p className="text-body">
-            Tarjeta interactiva: se levanta 1px al pasar por encima y vuelve al
-            pulsarla.
+            Tarjeta interactiva: el borde se afila y aparece la sombra al pasar
+            por encima.
           </p>
         </Card>
       </Block>

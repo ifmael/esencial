@@ -14,11 +14,22 @@ describe("catálogo del sistema de diseño", () => {
       "Primario",
       "Secundario",
       "Fantasma",
+      "Peligro",
       "Deshabilitado",
       "Pequeño",
     ]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
+  });
+
+  it("expone el chip encendido y apagado, la tecla y el aviso", () => {
+    render(<UiPage />);
+    const pressed = (name: string) =>
+      screen.getByRole("button", { name }).getAttribute("aria-pressed");
+    expect(pressed("Activo")).toBe("true");
+    expect(pressed("Inactivo")).toBe("false");
+    expect(document.querySelector("kbd")).toBeTruthy();
+    expect(screen.getByRole("alert")).toBeTruthy();
   });
 
   it("expone los tres tonos de insignia", () => {
@@ -48,9 +59,9 @@ describe("catálogo del sistema de diseño", () => {
     expect(screen.getByRole("textbox", { name: "Área de texto" })).toBeTruthy();
   });
 
-  it("expone los once iconos", () => {
+  it("expone los quince iconos", () => {
     render(<UiPage />);
     const set = screen.getByTestId("icon-set");
-    expect(set.querySelectorAll("svg")).toHaveLength(11);
+    expect(set.querySelectorAll("svg")).toHaveLength(15);
   });
 });
