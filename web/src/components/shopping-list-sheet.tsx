@@ -111,7 +111,7 @@ export function ShoppingListSheet({
   return (
     <div
       className={sheetClass(
-        "fixed inset-x-0 bottom-0 z-40 flex max-h-[75vh] flex-col gap-3 overflow-y-auto rounded-b-none p-4 md:inset-y-3 md:right-3 md:left-auto md:w-96 md:rounded-sheet",
+        "fixed inset-x-0 bottom-0 z-40 flex max-h-[75vh] flex-col gap-3 overflow-y-auto rounded-b-none p-4 pb-[calc(var(--spacing-gutter)+env(safe-area-inset-bottom))] md:inset-y-3 md:right-3 md:left-auto md:w-96 md:rounded-sheet",
       )}
     >
       <div className="flex items-center justify-between">

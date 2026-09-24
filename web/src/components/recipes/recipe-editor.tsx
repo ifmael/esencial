@@ -361,7 +361,7 @@ export function RecipeEditor({
                 <li key={i} className="flex gap-2">
                   <Input
                     aria-label={`Ingrediente ${i + 1} alimento`}
-                    className="flex-1"
+                    className="min-w-0 flex-1"
                     placeholder="alimento"
                     value={row.food}
                     onChange={(e) =>
@@ -442,7 +442,7 @@ export function RecipeEditor({
                   </span>
                   <Input
                     aria-label={`Paso ${i + 1}`}
-                    className="flex-1"
+                    className="min-w-0 flex-1"
                     value={text}
                     onChange={(e) =>
                       set(
