@@ -14,10 +14,21 @@ import {
   DumbbellIcon,
   LeafIcon,
   LogoutIcon,
+  MoonIcon,
+  SunIcon,
   SwatchIcon,
   UtensilsIcon,
 } from "../components/icons";
-import { Badge, Button, Card, Input, Select, Textarea } from "../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  chipClass,
+  Input,
+  Select,
+  Sheet,
+  Textarea,
+} from "../components/ui";
 
 function Block({
   title,
@@ -68,7 +79,7 @@ export function UiPage() {
         hint="Seis pasos, cada uno con su interlineado y su tracking."
       >
         <div className="flex flex-col gap-2">
-          <TypeRow sample="text-display" label="24px · título de pantalla" />
+          <TypeRow sample="text-display" label="28px · título de pantalla" />
           <TypeRow sample="text-title" label="20px · título de bloque" />
           <TypeRow
             sample="text-lead"
@@ -82,12 +93,13 @@ export function UiPage() {
 
       <Block
         title="Botones"
-        hint="Tres variantes y tres tamaños; md mantiene 44px de alto y type=button por defecto."
+        hint="Cuatro variantes y tres tamaños; md mantiene 44px de alto y type=button por defecto. Hover y pulsación con muelle (--ease-spring)."
       >
         <div className="flex flex-wrap items-center gap-3">
           <Button>Primario</Button>
           <Button variant="secondary">Secundario</Button>
           <Button variant="ghost">Fantasma</Button>
+          <Button variant="danger">Peligro</Button>
           <Button disabled>Deshabilitado</Button>
           <Button size="sm">Pequeño</Button>
           <Button size="icon" aria-label="Botón de icono">
@@ -139,8 +151,24 @@ export function UiPage() {
       </Block>
 
       <Block
-        title="Superficies y elevación"
-        hint="Dos sombras hacia abajo, una hundida y shadow-up para la barra inferior."
+        title="Fichas"
+        hint="chipClass(): materiales, tags y filtros. Si es un botón conmutable, aria-pressed la pinta rellena."
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={chipClass()}>Sartén</span>
+          <span className={chipClass({ tone: "done" })}>cena</span>
+          <button type="button" aria-pressed={true} className={chipClass()}>
+            Desayuno
+          </button>
+          <button type="button" aria-pressed={false} className={chipClass()}>
+            Almuerzo
+          </button>
+        </div>
+      </Block>
+
+      <Block
+        title="Vidrio y elevación"
+        hint="Card = vidrio (blur 18px + borde de luz); una tarjeta dentro de otra no vuelve a desenfocar. Sheet = vidrio denso de modales y cajones (blur 28px). Sin backdrop-filter o con transparencia reducida, el vidrio pasa a opaco."
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-card border border-border bg-surface p-4 shadow-card text-caption">
@@ -153,12 +181,16 @@ export function UiPage() {
             shadow-inset
           </div>
         </div>
+        <Sheet className="text-caption">
+          Sheet · shadow-sheet · rounded-sheet
+          <Card className="mt-3">Card anidada: sin segundo blur</Card>
+        </Sheet>
         <div className="skeleton h-6" />
       </Block>
 
       <Block
         title="Iconos"
-        hint="Once trazos de 24px; once formas no justifican una librería."
+        hint="Trece trazos de 24px; trece formas no justifican una librería."
       >
         <div
           data-testid="icon-set"
@@ -175,17 +207,19 @@ export function UiPage() {
           <CheckIcon />
           <LeafIcon />
           <SwatchIcon />
+          <MoonIcon />
+          <SunIcon />
         </div>
       </Block>
 
       <Block
         title="Movimiento"
-        hint="Tres duraciones y un solo easing; todo se apaga con prefers-reduced-motion. Pasa el ratón por encima."
+        hint="Tres duraciones, un easing de salida y un muelle; la aurora se pausa con la pestaña oculta y todo se apaga con prefers-reduced-motion. Pasa el ratón por encima."
       >
         <Card className="card-interactive">
           <p className="text-body">
-            Tarjeta interactiva: se levanta 1px al pasar por encima y vuelve al
-            pulsarla.
+            Tarjeta interactiva: con ratón se inclina hacia el puntero (hasta
+            5°), se levanta 2px y al pulsarla se hunde con un muelle.
           </p>
         </Card>
       </Block>

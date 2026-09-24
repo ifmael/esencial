@@ -43,7 +43,7 @@
   color-scheme: light;
 
   /* Marca */
-  --color-primary: #0f7a45; /* 5,4:1 sobre blanco */
+  --color-primary: #0d6e3e; /* ≥5,3:1 sobre el vidrio con la aurora más intensa detrás */
   --color-primary-dark: #0b5e35;
   --color-on-primary: #ffffff;
   --color-secondary: #4d7c0f;
@@ -78,14 +78,14 @@
 
   /* Texto: secundario oscurecido para aguantar AA sobre el vidrio más claro */
   --color-text: #0f1a16;
-  --color-text-secondary: #4b5a54; /* 6,6:1 sobre blanco, >4,5 sobre el vidrio */
+  --color-text-secondary: #4b5a54; /* ≥6:1 sobre el vidrio en el peor caso */
   --color-border: rgb(15 40 30 / 0.1);
   --color-border-strong: rgb(15 40 30 / 0.2);
 
   /* Derivados: estados suaves (activo de menú, hover de controles) */
   --color-primary-soft: rgb(15 122 69 / 0.1);
   --color-primary-soft-strong: rgb(15 122 69 / 0.18);
-  --color-ring: rgb(15 122 69 / 0.32);
+  --color-ring: rgb(13 110 62 / 0.32);
   /* Mapa corporal (/plantillas) */
   --color-muscle: #8fb59d;
   --color-muscle-strong: #6e9c81;

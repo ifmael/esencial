@@ -14,6 +14,7 @@ describe("catálogo del sistema de diseño", () => {
       "Primario",
       "Secundario",
       "Fantasma",
+      "Peligro",
       "Deshabilitado",
       "Pequeño",
     ]) {
@@ -48,9 +49,9 @@ describe("catálogo del sistema de diseño", () => {
     expect(screen.getByRole("textbox", { name: "Área de texto" })).toBeTruthy();
   });
 
-  it("expone los once iconos", () => {
+  it("expone los trece iconos", () => {
     render(<UiPage />);
     const set = screen.getByTestId("icon-set");
-    expect(set.querySelectorAll("svg")).toHaveLength(11);
+    expect(set.querySelectorAll("svg")).toHaveLength(13);
   });
 });
