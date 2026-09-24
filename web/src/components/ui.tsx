@@ -7,13 +7,14 @@ import type { ComponentProps } from "react";
 const cx = (...parts: (string | false | null | undefined)[]) =>
   parts.filter(Boolean).join(" ");
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "icon";
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary: "btn-primary",
   secondary: "btn-secondary",
   ghost: "btn-ghost",
+  danger: "btn-danger",
 };
 
 /** `md` = 44px de alto (área táctil mínima); `icon` = 44×44 cuadrado. */

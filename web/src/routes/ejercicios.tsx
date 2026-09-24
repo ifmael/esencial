@@ -183,7 +183,7 @@ function ExerciseEditor({
 
   return (
     <Card className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <label htmlFor="ex-name">Nombre</label>
         <Input
           id="ex-name"
@@ -191,10 +191,10 @@ function ExerciseEditor({
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
         />
         {errors.name && (
-          <span className="text-sm text-error">{errors.name}</span>
+          <span className="text-caption text-error">{errors.name}</span>
         )}
       </div>
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <label htmlFor="ex-kind">Tipo</label>
         <Select
           id="ex-kind"
@@ -210,7 +210,7 @@ function ExerciseEditor({
           ))}
         </Select>
       </div>
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <label htmlFor="ex-desc">Descripción</label>
         <Textarea
           id="ex-desc"
@@ -218,7 +218,7 @@ function ExerciseEditor({
           onChange={(e) => setDraft({ ...draft, description: e.target.value })}
         />
       </div>
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <label htmlFor="ex-cues">Claves de preparación</label>
         <Textarea
           id="ex-cues"
@@ -226,7 +226,7 @@ function ExerciseEditor({
           onChange={(e) => setDraft({ ...draft, setupCues: e.target.value })}
         />
       </div>
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <label htmlFor="ex-steps">Pasos de ejecución</label>
         <Textarea
           id="ex-steps"
@@ -235,7 +235,7 @@ function ExerciseEditor({
           onChange={(e) => setDraft({ ...draft, steps: e.target.value })}
         />
       </div>
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <label htmlFor="ex-url">Técnica (URL de YouTube)</label>
         <Input
           id="ex-url"
@@ -244,13 +244,13 @@ function ExerciseEditor({
           onChange={(e) => setDraft({ ...draft, techniqueUrl: e.target.value })}
         />
         {errors.techniqueUrl && (
-          <span className="text-sm text-error">{errors.techniqueUrl}</span>
+          <span className="text-caption text-error">{errors.techniqueUrl}</span>
         )}
       </div>
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <span id="ex-tags-label">Tags</span>
         {errors.tags && (
-          <span className="text-sm text-error">{errors.tags}</span>
+          <span className="text-caption text-error">{errors.tags}</span>
         )}
         <TagChips tags={draft.tags} />
         <div className="flex gap-2">
@@ -273,17 +273,17 @@ function ExerciseEditor({
         {draft.tags.map((t) => (
           <button
             key={t}
-            className="text-left text-xs text-text-secondary"
+            className="text-left text-caption text-text-secondary"
             onClick={() => removeTag(t)}
           >
             Quitar tag {t}
           </button>
         ))}
       </div>
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-caption">
         <span id="ex-regions-label">Músculos</span>
         {errors.regions && (
-          <span className="text-sm text-error">{errors.regions}</span>
+          <span className="text-caption text-error">{errors.regions}</span>
         )}
         {draft.tags.every((t) => regionsOfGroup(t).length === 0) ? (
           <span className="text-text-secondary">
@@ -347,7 +347,7 @@ export function EjerciciosPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Ejercicios</h1>
+      <h1 className="mb-4 text-display font-bold">Ejercicios</h1>
       {error && (
         <Card className="mb-4 flex items-center justify-between">
           <span className="text-error">{error}</span>
@@ -388,7 +388,7 @@ export function EjerciciosPage() {
                 to={`/ejercicios/${e.id}`}
                 className={cardClass("flex flex-col gap-2")}
               >
-                <span className="text-lg font-semibold">{e.name}</span>
+                <span className="text-lead font-semibold">{e.name}</span>
                 {e.kind === "strength" ? null : (
                   <Badge tone="pending" className="self-start">
                     {KIND_LABELS[e.kind]}
@@ -491,11 +491,11 @@ function AddToTemplate({
         </Card>
       )}
       {done && (
-        <p className="text-sm text-primary">
+        <p className="text-caption text-primary">
           Añadido al final de la plantilla.
         </p>
       )}
-      {failed && <p className="text-sm text-error">{failed}</p>}
+      {failed && <p className="text-caption text-error">{failed}</p>}
     </div>
   );
 }
@@ -529,7 +529,7 @@ export function EjercicioDetailPage() {
   if (!exercise)
     return (
       <Card className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">Este ejercicio no existe.</h1>
+        <h1 className="text-title font-semibold">Este ejercicio no existe.</h1>
         <Link className="text-primary underline" to="/ejercicios">
           ← Volver al catálogo
         </Link>
@@ -546,12 +546,12 @@ export function EjercicioDetailPage() {
           {/* Placeholder de foto: la tabla exercises no tiene columna de imagen (E4). */}
           <div
             aria-hidden
-            className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-3xl"
+            className="flex h-24 w-24 shrink-0 items-center justify-center rounded-panel bg-surface-muted text-display"
           >
             🏋️
           </div>
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-bold">{exercise.name}</h1>
+            <h1 className="text-display font-bold">{exercise.name}</h1>
             <div className="flex flex-col gap-1">
               <span className="section-label">Grupos</span>
               <TagChips tags={exercise.tags} />
@@ -610,7 +610,7 @@ export function EjercicioDetailPage() {
         </div>
         {exercise.techniqueUrl && ytEmbedId(exercise.techniqueUrl) && (
           <iframe
-            className="aspect-video w-full rounded-xl"
+            className="aspect-video w-full rounded-panel"
             src={`https://www.youtube.com/embed/${ytEmbedId(exercise.techniqueUrl)}`}
             title={`Vídeo de técnica de ${exercise.name}`}
             loading="lazy"
@@ -660,7 +660,9 @@ export function EjercicioDetailPage() {
             </Button>
           </div>
         )}
-        {deleteError && <p className="text-sm text-error">{deleteError}</p>}
+        {deleteError && (
+          <p className="text-caption text-error">{deleteError}</p>
+        )}
       </Card>
       {editing && (
         <ExerciseEditor

@@ -1,47 +1,74 @@
 @import "tailwindcss";
+/* Fuentes auto-alojadas (subset latino, `font-display: swap`): Barlow Condensed
+   para cifras y titulares, Space Grotesk para la interfaz. */
+@import "@fontsource/barlow-condensed/latin-600.css";
+@import "@fontsource/barlow-condensed/latin-700.css";
+
+/* Space Grotesk variable, solo el subset latino (el paquete trae también
+   vietnamita y latin-ext, que la app en español no necesita). */
+@font-face {
+  font-family: "Space Grotesk Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url("@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 /* ==========================================================================
-   Esencial — capa de sistema (variante A "acabado sistémico")
-   Base: wireframes/DESIGN.md. Aquí viven SOLO decisiones transversales:
-   escala tipográfica, ritmo de espaciado, radios, superficies/elevación y
-   movimiento. Las pantallas no inventan valores: consumen estos tokens.
+   Esencial — capa de sistema (dirección C "sport-tech oscuro")
+   Referentes: Whoop, Nike Training Club, Strava. Oscuro por defecto, grises
+   fríos, un acento lima para lo accionable y los datos, y un cian para estados.
+   Aquí viven SOLO decisiones transversales: las pantallas consumen tokens.
    ========================================================================== */
 
 :root {
-  /* Marca y superficies — wireframes/DESIGN.md */
-  --color-primary: #15803d;
-  --color-primary-dark: #166534;
-  --color-primary-container: #15803d;
-  --color-on-primary: #ffffff;
-  --color-secondary: #4d7c0f;
-  --color-background: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f5f5f4;
-  --color-pending: #d97706;
-  --color-pending-bg: #fef3c7;
-  --color-pending-text: #92400e;
-  --color-done-bg: #dcfce7;
-  --color-done-text: #166534;
-  --color-error: #b91c1c;
-  --color-text: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-border: #e7e5e4;
-  /* Derivados: estados suaves (activo de menú, hover de controles) */
-  --color-primary-soft: #e9f3ed;
-  --color-primary-soft-strong: #d8ebdf;
-  --color-border-strong: #d6d3d1;
-  --color-ring: rgb(21 128 61 / 0.32);
-  /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
-     ratón. Un tono medio para que la silueta no se lave sobre la tarjeta; el
-     grupo elegido va en `--color-primary`. */
-  --color-muscle: #8fb59d;
-  --color-muscle-strong: #6e9c81;
+  color-scheme: dark;
 
-  /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
-     para todo lo que reacciona al usuario. */
+  /* Marca y superficies */
+  --color-primary: #c6ff3d; /* lima: lo que se pulsa y lo que se mide */
+  --color-primary-dark: #b2ec22;
+  --color-on-primary: #0a0c0f;
+  --color-secondary: #38e1ff; /* cian: estados y segundo dato */
+  --color-background: #0a0c0f;
+  --color-surface: #13161b;
+  --color-surface-muted: #1b1f26;
+  --color-pending: #ffb13d;
+  --color-pending-bg: rgb(255 177 61 / 0.14);
+  --color-pending-text: #ffc670;
+  --color-done-bg: rgb(198 255 61 / 0.14);
+  --color-done-text: #d4ff70;
+  --color-error: #ff5f5f;
+  --color-text: #eef1f5;
+  --color-text-secondary: #98a1ae;
+  --color-border: #252a33;
+  /* Derivados: estados suaves (activo de menú, hover de controles) */
+  --color-primary-soft: rgb(198 255 61 / 0.1);
+  --color-primary-soft-strong: rgb(198 255 61 / 0.22);
+  --color-border-strong: #353b46;
+  --color-ring: rgb(198 255 61 / 0.35);
+  /* Velo de modales y degradado sobre fotos: casi negro, nunca `bg-black/40`. */
+  --color-scrim: rgb(4 5 7 / 0.72);
+  --color-on-scrim: #ffffff;
+  /* Mapa corporal: músculo en reposo (gris frío) y su realce al pasar; el
+     elegido va en `--color-primary`. */
+  --color-muscle: #3b4350;
+  --color-muscle-strong: #56606f;
+
+  /* Tipografía: dos familias con papel fijo. */
+  --font-ui: "Space Grotesk Variable", system-ui, -apple-system, sans-serif;
+  --font-numeric: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+
+  /* Movimiento: dos duraciones cortas + una de entrada + la de los datos que
+     cuentan al aparecer; un solo easing para todo. */
   --duration-fast: 120ms;
   --duration-base: 180ms;
   --duration-slow: 280ms;
+  --duration-count: 900ms;
   --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Espaciado semántico (ritmo) */
@@ -50,30 +77,30 @@
   --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
   --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
 
-  /* Ancho de página: el calendario semanal es el caso ancho. Tope amplio, para
-     que en pantallas ultrapanorámicas no se estire sin fin. */
+  /* Ancho de página: el calendario semanal es el caso ancho. */
   --container-calendar: 110rem; /* 1760px */
 
-  /* Radios: control < panel < tarjeta */
-  --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
-  --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
-  --radius-card: 1rem; /* 16px — tarjetas y superficies grandes */
+  /* Radios: más secos que en la versión clara (look técnico). */
+  --radius-control: 0.5rem; /* 8px — botones, campos, iconos-botón */
+  --radius-panel: 0.625rem; /* 10px — bloques dentro de una tarjeta */
+  --radius-card: 0.875rem; /* 14px — tarjetas y superficies grandes */
   --radius-chip: 999px;
 
-  /* Elevación: dos sombras compuestas, nunca una sola difusa fuerte */
+  /* Elevación en oscuro: filo de luz arriba + caída negra, nunca una sola
+     sombra difusa. `glow` es el halo del acento (solo en lo accionable). */
   --shadow-card:
-    0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 28px -18px rgb(0 0 0 / 0.9);
   --shadow-raised:
-    0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
-  --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
-  /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
-  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
+    inset 0 1px 0 rgb(255 255 255 / 0.06), 0 20px 40px -18px rgb(0 0 0 / 0.95);
+  --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-up: 0 -8px 24px -12px rgb(0 0 0 / 0.9);
+  --shadow-glow:
+    0 0 0 1px rgb(198 255 61 / 0.5), 0 8px 24px -8px rgb(198 255 61 / 0.45);
 }
 
 @theme inline {
   --color-primary: var(--color-primary);
   --color-primary-dark: var(--color-primary-dark);
-  --color-primary-container: var(--color-primary-container);
   --color-on-primary: var(--color-on-primary);
   --color-primary-soft: var(--color-primary-soft);
   --color-primary-soft-strong: var(--color-primary-soft-strong);
@@ -94,8 +121,12 @@
   --color-ring: var(--color-ring);
   --color-muscle: var(--color-muscle);
   --color-muscle-strong: var(--color-muscle-strong);
+  --color-scrim: var(--color-scrim);
+  --color-on-scrim: var(--color-on-scrim);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* `font-sans` (interfaz) y `font-numeric` (cifras y titulares). */
+  --font-sans: var(--font-ui);
+  --font-numeric: var(--font-numeric);
 
   /* Escala tipográfica: 6 pasos con line-height pareja. Nada de saltos de
      14→16→18 sin criterio: micro/caption para metadatos, body para lectura,
@@ -111,9 +142,11 @@
   --text-lead--line-height: 1.35;
   --text-title: 1.25rem; /* 20px — título de bloque */
   --text-title--line-height: 1.3;
-  --text-display: 1.5rem; /* 24px — título de pantalla */
-  --text-display--line-height: 1.2;
-  --text-display--letter-spacing: -0.02em;
+  --text-display: 1.75rem; /* 28px — título de pantalla (condensada) */
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: 0.01em;
+  --text-metric: 2.75rem; /* 44px — cifra protagonista (anillos, contadores) */
+  --text-metric--line-height: 1;
 
   /* Ritmo de espaciado: `p-card`, `gap-section`, `gap-stack`, `gap-gutter` */
   --spacing-card: var(--spacing-card);
@@ -133,6 +166,7 @@
   --shadow-raised: var(--shadow-raised);
   --shadow-inset: var(--shadow-inset);
   --shadow-up: var(--shadow-up);
+  --shadow-glow: var(--shadow-glow);
 
   --ease-out-quart: var(--ease-out-quart);
 }
@@ -163,13 +197,31 @@
   ::selection {
     background: var(--color-primary-soft-strong);
   }
+
+  /* Titulares de pantalla y de bloque: grotesca condensada, en mayúsculas, como
+     un marcador. El resto del texto sigue en la familia de interfaz. */
+  h1,
+  h2 {
+    font-family: var(--font-numeric);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  /* Las cifras nunca bailan: tabulares en toda la app. */
+  body {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer components {
   /* --- Superficies ------------------------------------------------------ */
 
+  /* Tarjeta: superficie fría con filo de luz arriba (ver `--shadow-card`). */
   .card {
-    background: var(--color-surface);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.018), transparent 40%),
+      var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
@@ -185,7 +237,7 @@
   }
   .card-interactive:hover {
     transform: translateY(-1px);
-    border-color: var(--color-border-strong);
+    border-color: var(--color-primary-soft-strong);
     box-shadow: var(--shadow-raised);
   }
   .card-interactive:active {
@@ -218,7 +270,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgb(255 255 255 / 0.75),
+      rgb(255 255 255 / 0.06),
       transparent
     );
     animation: shimmer 1.6s var(--ease-out-quart) infinite;
@@ -233,7 +285,7 @@
     gap: 0.5rem;
     border-radius: var(--radius-control);
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
     line-height: 1;
     white-space: nowrap;
     transition:
@@ -245,35 +297,35 @@
       transform var(--duration-fast) var(--ease-out-quart);
   }
   .btn:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: translateY(1px) scale(0.99);
   }
   .btn:disabled,
   .btn[aria-disabled="true"] {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
-  /* El hover oscurece con una capa encima: así sigue funcionando cuando el
-     consumidor pinta el botón de otro color (p. ej. `bg-error`). */
+  /* Lima sobre casi negro; al pasar, el halo del acento. */
   .btn-primary {
     background: var(--color-primary);
     color: var(--color-on-primary);
-    box-shadow: 0 1px 2px rgb(22 101 52 / 0.25);
+    font-weight: 700;
   }
   .btn-primary:hover:not(:disabled) {
-    background-image: linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08));
+    background-color: var(--color-primary-dark);
+    box-shadow: var(--shadow-glow);
   }
 
   .btn-secondary {
-    background: var(--color-surface);
+    background: var(--color-surface-muted);
     border: 1px solid var(--color-border);
     color: var(--color-text);
   }
   .btn-secondary:hover:not(:disabled) {
     border-color: var(--color-border-strong);
     background-image: linear-gradient(
-      rgb(28 25 23 / 0.04),
-      rgb(28 25 23 / 0.04)
+      rgb(255 255 255 / 0.04),
+      rgb(255 255 255 / 0.04)
     );
   }
 
@@ -286,10 +338,20 @@
     color: var(--color-text);
   }
 
+  /* Acción destructiva (confirmar un borrado): sustituye al `bg-error` suelto. */
+  .btn-danger {
+    background: var(--color-error);
+    color: var(--color-on-primary);
+    font-weight: 700;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-image: linear-gradient(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.12));
+  }
+
   /* --- Campos ----------------------------------------------------------- */
 
   .input {
-    background: var(--color-surface);
+    background: var(--color-background);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-control);
     padding: 0.625rem 0.875rem;
@@ -317,7 +379,7 @@
   .input-error:focus,
   .input[aria-invalid="true"]:focus {
     border-color: var(--color-error);
-    box-shadow: 0 0 0 3px rgb(185 28 28 / 0.2);
+    box-shadow: 0 0 0 3px rgb(255 95 95 / 0.25);
   }
 
   /* --- Insignias -------------------------------------------------------- */
@@ -326,25 +388,48 @@
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border-radius: var(--radius-chip);
+    border-radius: var(--radius-control);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     font-weight: 700;
     text-transform: uppercase;
-    padding: 0.3125rem 0.625rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid transparent;
   }
   .badge-pending {
     background: var(--color-pending-bg);
     color: var(--color-pending-text);
+    border-color: rgb(255 177 61 / 0.3);
   }
   .badge-done {
     background: var(--color-done-bg);
     color: var(--color-done-text);
+    border-color: rgb(198 255 61 / 0.3);
   }
   .badge-neutral {
     background: var(--color-surface-muted);
     color: var(--color-text-secondary);
+    border-color: var(--color-border);
+  }
+
+  /* --- Datos ------------------------------------------------------------ */
+
+  /* Anillo de progreso (piel de `ProgressRing`): pista gris y arco lima que se
+     dibuja desde 0 al montar. `--ring-offset` lo fija la primitiva. */
+  .progress-ring-track {
+    stroke: var(--color-border);
+  }
+  .progress-ring-arc {
+    stroke: var(--color-primary);
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px rgb(198 255 61 / 0.45));
+    transition: stroke-dashoffset var(--duration-count) var(--ease-out-quart);
+    animation: ring-fill var(--duration-count) var(--ease-out-quart) both;
+  }
+  .progress-ring-arc[data-tone="secondary"] {
+    stroke: var(--color-secondary);
+    filter: drop-shadow(0 0 6px rgb(56 225 255 / 0.45));
   }
 
   /* --- Fila de lista ---------------------------------------------------- */
@@ -355,6 +440,15 @@
     gap: var(--spacing-stack);
     border-radius: var(--radius-panel);
     transition: background-color var(--duration-fast) var(--ease-out-quart);
+  }
+
+  /* Cifra de marcador: condensada y tabular (contadores, anillos). */
+  .metric {
+    font-family: var(--font-numeric);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: 0.01em;
   }
 }
 
@@ -372,6 +466,13 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* El arco del anillo se dibuja desde vacío (`--ring-length`) hasta su valor. */
+@keyframes ring-fill {
+  from {
+    stroke-dashoffset: var(--ring-length);
   }
 }
 

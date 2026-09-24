@@ -35,8 +35,8 @@ const fromRecipe = (r: Recipe): Draft => ({
   tags: [...r.tags],
 });
 
-const small = "rounded-lg border border-border bg-surface px-2 py-1";
-const label = "mb-1 block text-sm font-medium text-text-secondary";
+const small = "rounded-control border border-border bg-surface px-2 py-1";
+const label = "mb-1 block text-caption font-medium text-text-secondary";
 
 function move(items: string[], from: number, to: number): string[] {
   const next = [...items];
@@ -225,7 +225,7 @@ export function RecipeEditor({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim p-4"
       onClick={cancel}
     >
       <Card
@@ -234,11 +234,11 @@ export function RecipeEditor({
         className="my-8 w-full max-w-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-xl font-bold">{title}</h2>
+        <h2 className="mb-4 text-title font-bold">{title}</h2>
 
         {(otherFieldError || api.error) && (
           <div
-            className="mb-4 rounded-lg bg-error/10 p-3 text-error"
+            className="mb-4 rounded-control bg-error/10 p-3 text-error"
             role="alert"
           >
             {otherFieldError ?? api.error}{" "}
@@ -265,7 +265,7 @@ export function RecipeEditor({
               onChange={(e) => set("name", e.target.value)}
             />
             {(nameError ?? serverNameError) && (
-              <p className="mt-1 text-sm text-error">
+              <p className="mt-1 text-caption text-error">
                 {nameError ?? serverNameError}
               </p>
             )}
@@ -306,7 +306,7 @@ export function RecipeEditor({
                   <img
                     src={photoSrc(draft.photo_path)}
                     alt="Foto actual"
-                    className="h-12 w-12 rounded-lg object-cover"
+                    className="h-12 w-12 rounded-control object-cover"
                   />
                   <Button
                     variant="secondary"
@@ -342,7 +342,7 @@ export function RecipeEditor({
               )}
               {uploadError && (
                 <div className="mt-2 flex items-center gap-3" role="alert">
-                  <p className="text-sm text-error">{uploadError}</p>
+                  <p className="text-caption text-error">{uploadError}</p>
                   <Button variant="secondary" onClick={discardPendingUpload}>
                     Descartar
                   </Button>
@@ -501,7 +501,7 @@ export function RecipeEditor({
               {draft.materials.map((m) => (
                 <li
                   key={m}
-                  className="flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1"
+                  className="flex items-center gap-1 rounded-chip bg-surface-muted px-3 py-1"
                 >
                   {m}
                   <button
@@ -543,7 +543,7 @@ export function RecipeEditor({
               {draft.tags.map((t) => (
                 <li
                   key={t}
-                  className="flex items-center gap-1 rounded-full bg-done-bg px-3 py-1 text-done-text"
+                  className="flex items-center gap-1 rounded-chip bg-done-bg px-3 py-1 text-done-text"
                 >
                   {t}
                   <button

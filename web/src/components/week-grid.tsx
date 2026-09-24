@@ -68,7 +68,7 @@ export function WeekGrid({
         >
           ‹
         </Button>
-        <h2 className="text-xl font-bold">{isoWeek}</h2>
+        <h2 className="text-title font-bold">{isoWeek}</h2>
         <Button
           variant="secondary"
           aria-label="Semana siguiente"
@@ -104,7 +104,7 @@ export function WeekGrid({
                 <h3 className="font-semibold">
                   {name}
                   {isToday ? (
-                    <span className="ml-2 text-xs font-bold text-primary">
+                    <span className="ml-2 text-caption font-bold text-primary">
                       Hoy
                     </span>
                   ) : null}
