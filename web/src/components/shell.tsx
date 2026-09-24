@@ -8,6 +8,8 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { apiFetchRaw } from "../lib/api";
+import { applyTheme, nextTheme, readTheme, type Theme } from "../lib/theme";
+import { CommandPalette, useCommandPalette } from "./command-palette";
 import {
   CalendarIcon,
   ChevronDownIcon,
@@ -16,9 +18,25 @@ import {
   DumbbellIcon,
   LeafIcon,
   LogoutIcon,
+  MonitorIcon,
+  MoonIcon,
+  SearchIcon,
+  SunIcon,
   SwatchIcon,
   UtensilsIcon,
 } from "./icons";
+import { chipClass, Kbd } from "./ui";
+
+const THEME_LABEL: Record<Theme, string> = {
+  system: "Tema: sistema",
+  light: "Tema: claro",
+  dark: "Tema: oscuro",
+};
+const THEME_ICON: Record<Theme, typeof SunIcon> = {
+  system: MonitorIcon,
+  light: SunIcon,
+  dark: MoonIcon,
+};
 
 type NavChild = { href: string; label: string };
 type NavSection = {
@@ -155,6 +173,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   // Preferencia del usuario sobre el ancho del menú; sin elección, la ruta.
   const [menuPref, setMenuPref] = useState(readMenuPref);
+  const [theme, setTheme] = useState(readTheme);
+  const palette = useCommandPalette();
+  const cycleTheme = () => {
+    const next = nextTheme(theme);
+    applyTheme(next);
+    setTheme(next);
+  };
+  const ThemeIcon = THEME_ICON[theme];
   const calendarRoute = CALENDAR_ROUTES[pathname] === true;
   const collapsed =
     menuPref === null ? calendarRoute : menuPref === "collapsed";
@@ -294,16 +320,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
               collapsed ? "justify-center p-1" : "min-w-0 flex-1 px-2 py-1"
             }`}
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-panel bg-primary text-on-primary">
-              <LeafIcon width={22} height={22} />
+            <span className="grid size-8 shrink-0 place-items-center rounded-panel border border-border bg-surface-muted text-primary">
+              <LeafIcon width={18} height={18} />
             </span>
             {collapsed ? null : (
               <span className="flex min-w-0 flex-col">
-                <span className="text-title font-bold tracking-tight text-primary">
+                <span className="text-lead font-semibold tracking-tight text-text">
                   Esencial
                 </span>
-                <span className="text-caption text-text-secondary">
-                  Bienestar personal
+                <span className="font-mono text-micro text-text-secondary">
+                  bienestar personal
                 </span>
               </span>
             )}
@@ -323,11 +349,43 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={palette.show}
+            aria-label="Buscar (⌘K)"
+            title="Buscar (⌘K)"
+            className={railItem(false)}
+          >
+            <SearchIcon />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={palette.show}
+            aria-label="Buscar (⌘K)"
+            className="flex h-11 w-full items-center gap-2 rounded-control border border-border bg-surface-muted px-3 text-body text-text-secondary transition-colors duration-150 ease-out-quart hover:border-border-strong hover:text-text"
+          >
+            <SearchIcon width={16} height={16} />
+            <span className="flex-1 text-left">Buscar…</span>
+            <Kbd>⌘K</Kbd>
+          </button>
+        )}
+
         <nav className="flex w-full flex-1 flex-col gap-1">{nav}</nav>
 
         <div className="flex w-full flex-col gap-1">
           {collapsed ? (
             <>
+              <button
+                type="button"
+                aria-label={THEME_LABEL[theme]}
+                title={THEME_LABEL[theme]}
+                onClick={cycleTheme}
+                className={railItem(false)}
+              >
+                <ThemeIcon />
+              </button>
               <Link
                 to="/ui"
                 aria-label="Sistema de diseño"
@@ -349,6 +407,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </>
           ) : (
             <>
+              <button
+                type="button"
+                onClick={cycleTheme}
+                className="flex h-11 items-center gap-3 rounded-control px-3 text-body font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-surface-muted hover:text-text"
+              >
+                <ThemeIcon />
+                {THEME_LABEL[theme]}
+              </button>
               <Link
                 to="/ui"
                 aria-current={isActive(pathname, "/ui") ? "page" : undefined}
@@ -386,11 +452,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {calendarRoute && navSection?.children ? (
           <nav aria-label={navSection.label} className="flex flex-wrap gap-1">
             {navSection.children.map((child) => (
-              <Link
-                key={child.href}
-                to={child.href}
-                className="rounded-chip bg-surface-muted px-3 py-1 text-caption font-semibold text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-primary-soft hover:text-primary"
-              >
+              <Link key={child.href} to={child.href} className={chipClass()}>
                 {child.label}
               </Link>
             ))}
@@ -404,6 +466,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div aria-hidden="true" className="hidden h-14 shrink-0 lg:block" />
         ) : null}
       </main>
+
+      {palette.open && (
+        <CommandPalette onClose={palette.hide} onToggleTheme={cycleTheme} />
+      )}
 
       {/* Móvil: barra inferior */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-up backdrop-blur lg:hidden">
@@ -424,6 +490,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
             icon={SwatchIcon}
             active={isActive(pathname, "/ui")}
           />
+          <button
+            type="button"
+            onClick={palette.show}
+            aria-label="Buscar (⌘K)"
+            className="flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-panel px-1 py-1 text-micro font-medium text-text-secondary transition-colors duration-150 ease-out-quart hover:text-text"
+          >
+            <span className="grid size-9 place-items-center">
+              <SearchIcon />
+            </span>
+            Buscar
+          </button>
           <button
             type="button"
             onClick={logout}

@@ -1,19 +1,21 @@
-// Primitivas compartidas (variante A). Postura mixta: la piel vive en las
-// clases de `globals.css` (.btn-*, .card, .input, .badge-*) y aquí queda solo
-// el contrato de React — variantes, tonos, tamaños y el `type` del botón.
+// Primitivas compartidas (dirección E, «minimal preciso»). La piel vive en las
+// clases de `globals.css` (.btn-*, .card, .input, .badge-*, .chip, .kbd,
+// .alert-error) y aquí queda solo el contrato de React: variantes, tonos,
+// tamaños y el `type` del botón.
 import type { ComponentProps } from "react";
 
 /** Une clases saltándose las falsas. Sin dependencias: son cuatro líneas. */
 const cx = (...parts: (string | false | null | undefined)[]) =>
   parts.filter(Boolean).join(" ");
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "icon";
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary: "btn-primary",
   secondary: "btn-secondary",
   ghost: "btn-ghost",
+  danger: "btn-danger",
 };
 
 /** `md` = 44px de alto (área táctil mínima); `icon` = 44×44 cuadrado. */
@@ -56,8 +58,19 @@ export function Button({
   );
 }
 
-export function Card({ className, ...rest }: ComponentProps<"div">) {
-  return <div className={cx("card", className)} {...rest} />;
+/** `featured`: filo de 1px con degradado, para la tarjeta que manda en la
+ * pantalla (la de hoy, el formulario principal). */
+export function Card({
+  className,
+  featured = false,
+  ...rest
+}: ComponentProps<"div"> & { featured?: boolean }) {
+  return (
+    <div
+      className={cx("card", featured && "card-featured", className)}
+      {...rest}
+    />
+  );
 }
 
 /** Clases de la tarjeta, para los elementos que se ven como una tarjeta pero no
@@ -65,6 +78,41 @@ export function Card({ className, ...rest }: ComponentProps<"div">) {
  * `Card` renderiza un div, así que en esos casos la piel se pide aquí. */
 export function cardClass(...parts: (string | false | null | undefined)[]) {
   return cx("card", ...parts);
+}
+
+/** Clases del chip, para los `<Link>` que se ven como chip (submenú). */
+export function chipClass(...parts: (string | false | null | undefined)[]) {
+  return cx("chip", ...parts);
+}
+
+/** Chip pulsable: filtro o etiqueta que se enciende. `pressed` es el estado
+ * (y el `aria-pressed`, así que el lector de pantalla lo anuncia). */
+export function Chip({
+  pressed,
+  className,
+  type = "button",
+  ...rest
+}: ComponentProps<"button"> & { pressed?: boolean }) {
+  return (
+    <button
+      type={type}
+      aria-pressed={pressed}
+      className={cx("chip", className)}
+      {...rest}
+    />
+  );
+}
+
+/** Tecla de un atajo (⌘K, ↵). */
+export function Kbd({ className, ...rest }: ComponentProps<"kbd">) {
+  return <kbd className={cx("kbd", className)} {...rest} />;
+}
+
+/** Aviso de error en bloque (fallo al guardar, validación del servidor). */
+export function Alert({ className, ...rest }: ComponentProps<"div">) {
+  return (
+    <div role="alert" className={cx("alert-error", className)} {...rest} />
+  );
 }
 
 /** Campo de texto. El error se marca con `aria-invalid`, que es a la vez el

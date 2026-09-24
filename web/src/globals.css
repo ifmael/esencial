@@ -1,83 +1,127 @@
 @import "tailwindcss";
 
+/* Geist auto-alojada, solo el subset latino (español incluido) y con
+   `font-display: swap`: el mismo origen, así que la CSP no cambia. */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* ==========================================================================
-   Esencial — capa de sistema (variante A "acabado sistémico")
-   Base: wireframes/DESIGN.md. Aquí viven SOLO decisiones transversales:
-   escala tipográfica, ritmo de espaciado, radios, superficies/elevación y
-   movimiento. Las pantallas no inventan valores: consumen estos tokens.
+   Esencial — dirección E «Minimal preciso» (referentes: Linear, Vercel).
+   Monocromo de grises con un matiz verde apenas perceptible y un único acento
+   de marca. Claro y oscuro con los MISMOS tokens: cada color es un
+   `light-dark()`, y `color-scheme` decide (sigue al sistema; el conmutador
+   fija `data-theme` en <html>). Las pantallas no inventan valores.
    ========================================================================== */
 
 :root {
-  /* Marca y superficies — wireframes/DESIGN.md */
-  --color-primary: #15803d;
-  --color-primary-dark: #166534;
-  --color-primary-container: #15803d;
-  --color-on-primary: #ffffff;
-  --color-secondary: #4d7c0f;
-  --color-background: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f5f5f4;
-  --color-pending: #d97706;
-  --color-pending-bg: #fef3c7;
-  --color-pending-text: #92400e;
-  --color-done-bg: #dcfce7;
-  --color-done-text: #166534;
-  --color-error: #b91c1c;
-  --color-text: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-border: #e7e5e4;
-  /* Derivados: estados suaves (activo de menú, hover de controles) */
-  --color-primary-soft: #e9f3ed;
-  --color-primary-soft-strong: #d8ebdf;
-  --color-border-strong: #d6d3d1;
-  --color-ring: rgb(21 128 61 / 0.32);
-  /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
-     ratón. Un tono medio para que la silueta no se lave sobre la tarjeta; el
-     grupo elegido va en `--color-primary`. */
-  --color-muscle: #8fb59d;
-  --color-muscle-strong: #6e9c81;
+  color-scheme: light dark;
 
-  /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
-     para todo lo que reacciona al usuario. */
+  /* Acento de marca: solo para acción principal, activo y foco. */
+  --color-primary: light-dark(#157a45, #3ecf8e);
+  --color-primary-dark: light-dark(#0f5f35, #6ee7b0);
+  --color-on-primary: light-dark(#ffffff, #04140b);
+  --color-primary-soft: light-dark(#edf5f0, #10241a);
+  --color-primary-soft-strong: light-dark(#dcebe2, #173323);
+  --color-ring: light-dark(rgb(21 122 69 / 0.28), rgb(62 207 142 / 0.32));
+
+  /* Neutros con matiz verde (h≈150, croma mínimo). */
+  --color-background: light-dark(#fbfcfb, #0a0c0b);
+  --color-surface: light-dark(#ffffff, #101312);
+  --color-surface-muted: light-dark(#f3f5f4, #171b19);
+  --color-text: light-dark(#0e1210, #eceeed);
+  --color-text-secondary: light-dark(#5b635f, #9aa29e);
+  --color-border: light-dark(#e4e8e6, #222826);
+  --color-border-strong: light-dark(#cdd3d0, #333b37);
+
+  /* Estados: tonos apagados, texto siempre ≥ AA sobre su fondo. */
+  --color-pending: light-dark(#b45309, #f5a524);
+  --color-pending-bg: light-dark(#fdf5e6, #2a1f0c);
+  --color-pending-text: light-dark(#8a4108, #f6c26b);
+  --color-done-bg: light-dark(#ebf6ef, #0f2519);
+  --color-done-text: light-dark(#136237, #7ee2ad);
+  --color-error: light-dark(#c3262e, #ff6369);
+  --color-on-error: light-dark(#ffffff, #1d0506);
+  --color-error-soft: light-dark(#fdeeee, #2b1012);
+
+  /* Velo tras las modales y degradado sobre fotos (texto encima = blanco). */
+  --color-scrim: light-dark(rgb(10 14 12 / 0.4), rgb(0 0 0 / 0.6));
+  --color-photo-fade: rgb(6 9 7 / 0.72);
+  --color-on-photo: #ffffff;
+
+  /* Mapa corporal: músculo en reposo y su realce; el elegido va en primary. */
+  --color-muscle: light-dark(#a9c2b3, #2e4a3b);
+  --color-muscle-strong: light-dark(#86a895, #44705a);
+
+  /* Detalle: halo que sigue al puntero y filo con degradado. */
+  --color-halo: light-dark(rgb(21 122 69 / 0.07), rgb(62 207 142 / 0.09));
+  --color-edge-hi: light-dark(#c4cec8, #3b4a42);
+
+  /* Movimiento: cortas y exactas, un solo easing. */
   --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --duration-slow: 280ms;
-  --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-base: 160ms;
+  --duration-slow: 240ms;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* Espaciado semántico (ritmo) */
-  --spacing-card: 1.25rem; /* 20px — padding interno de tarjeta */
-  --spacing-section: 1.75rem; /* 28px — separación entre secciones */
-  --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
+  /* Espaciado semántico (densidad alta pero aireada) */
+  --spacing-card: 1rem; /* 16px — padding interno de tarjeta */
+  --spacing-section: 1.5rem; /* 24px — separación entre secciones */
+  --spacing-stack: 0.625rem; /* 10px — entre elementos de un mismo bloque */
   --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
 
-  /* Ancho de página: el calendario semanal es el caso ancho. Tope amplio, para
-     que en pantallas ultrapanorámicas no se estire sin fin. */
   --container-calendar: 110rem; /* 1760px */
 
-  /* Radios: control < panel < tarjeta */
-  --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
-  --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
-  --radius-card: 1rem; /* 16px — tarjetas y superficies grandes */
+  /* Radios contenidos: control < panel < tarjeta */
+  --radius-control: 0.375rem; /* 6px */
+  --radius-panel: 0.5rem; /* 8px */
+  --radius-card: 0.75rem; /* 12px */
   --radius-chip: 999px;
 
-  /* Elevación: dos sombras compuestas, nunca una sola difusa fuerte */
-  --shadow-card:
-    0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
+  /* Elevación mínima: el borde de 1px hace el trabajo, la sombra apenas. */
+  --shadow-card: 0 1px 0 light-dark(rgb(14 18 16 / 0.03), rgb(0 0 0 / 0.4));
   --shadow-raised:
-    0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
-  --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
-  /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
-  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
+    0 1px 2px light-dark(rgb(14 18 16 / 0.05), rgb(0 0 0 / 0.5)),
+    0 12px 32px -12px light-dark(rgb(14 18 16 / 0.18), rgb(0 0 0 / 0.7));
+  --shadow-inset: inset 0 1px 1px
+    light-dark(rgb(14 18 16 / 0.05), rgb(0 0 0 / 0.4));
+  --shadow-up: 0 -1px 0 var(--color-border);
+}
+
+/* El conmutador fija el tema; sin elección manda `prefers-color-scheme`. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-primary: var(--color-primary);
   --color-primary-dark: var(--color-primary-dark);
-  --color-primary-container: var(--color-primary-container);
   --color-on-primary: var(--color-on-primary);
   --color-primary-soft: var(--color-primary-soft);
   --color-primary-soft-strong: var(--color-primary-soft-strong);
-  --color-secondary: var(--color-secondary);
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);
   --color-surface-muted: var(--color-surface-muted);
@@ -87,6 +131,11 @@
   --color-done-bg: var(--color-done-bg);
   --color-done-text: var(--color-done-text);
   --color-error: var(--color-error);
+  --color-on-error: var(--color-on-error);
+  --color-error-soft: var(--color-error-soft);
+  --color-scrim: var(--color-scrim);
+  --color-photo-fade: var(--color-photo-fade);
+  --color-on-photo: var(--color-on-photo);
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
   --color-border: var(--color-border);
@@ -95,25 +144,29 @@
   --color-muscle: var(--color-muscle);
   --color-muscle-strong: var(--color-muscle-strong);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Escala tipográfica: 6 pasos con line-height pareja. Nada de saltos de
      14→16→18 sin criterio: micro/caption para metadatos, body para lectura,
      lead para el dato de una fila, title/display para jerarquía de pantalla. */
   --text-micro: 0.6875rem; /* 11px — etiquetas en mayúsculas */
   --text-micro--line-height: 1rem;
-  --text-micro--letter-spacing: 0.08em;
+  --text-micro--letter-spacing: 0.06em;
   --text-caption: 0.8125rem; /* 13px — metadatos y ayudas */
   --text-caption--line-height: 1.125rem;
-  --text-body: 0.9375rem; /* 15px — texto de interfaz */
-  --text-body--line-height: 1.45;
-  --text-lead: 1.0625rem; /* 17px — dato principal de una fila */
-  --text-lead--line-height: 1.35;
-  --text-title: 1.25rem; /* 20px — título de bloque */
-  --text-title--line-height: 1.3;
-  --text-display: 1.5rem; /* 24px — título de pantalla */
-  --text-display--line-height: 1.2;
-  --text-display--letter-spacing: -0.02em;
+  --text-body: 0.875rem; /* 14px — texto de interfaz */
+  --text-body--line-height: 1.5;
+  --text-lead: 0.9375rem; /* 15px — dato principal de una fila */
+  --text-lead--line-height: 1.4;
+  --text-lead--letter-spacing: -0.006em;
+  --text-title: 1.125rem; /* 18px — título de bloque */
+  --text-title--line-height: 1.35;
+  --text-title--letter-spacing: -0.018em;
+  --text-display: 1.625rem; /* 26px — título de pantalla */
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.032em;
 
   /* Ritmo de espaciado: `p-card`, `gap-section`, `gap-stack`, `gap-gutter` */
   --spacing-card: var(--spacing-card);
@@ -142,8 +195,22 @@
     background: var(--color-background);
     color: var(--color-text);
     font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Titulares con tracking ajustado, sea cual sea su tamaño. */
+  :where(h1, h2, h3) {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  /* Cifras que se alinean al cambiar (contadores, series, pesos). */
+  :where(input[type="number"], time, [data-numeric]) {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Un solo anillo de foco para toda la app, visible sobre cualquier superficie. */
@@ -163,12 +230,19 @@
   ::selection {
     background: var(--color-primary-soft-strong);
   }
+
+  /* Barras de desplazamiento finas, del color del borde. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
 }
 
 @layer components {
   /* --- Superficies ------------------------------------------------------ */
 
   .card {
+    position: relative;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-card);
@@ -176,29 +250,64 @@
     padding: var(--spacing-card);
   }
 
-  /* Tarjeta que además se pulsa: se levanta al pasar por encima. */
+  /* Halo que sigue al puntero: `--mx`/`--my` los pone un solo listener global
+     (lib/pointer-halo.ts). Solo con puntero fino; táctil no tiene hover. */
+  @media (hover: hover) and (pointer: fine) {
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(
+        420px circle at var(--mx, 50%) var(--my, 50%),
+        var(--color-halo),
+        transparent 45%
+      );
+      transition: opacity var(--duration-slow) var(--ease-out-quart);
+    }
+    .card:hover::before {
+      opacity: 1;
+    }
+  }
+
+  /* Tarjeta destacada: filo de 1px con degradado (más claro arriba). */
+  .card-featured {
+    border-color: transparent;
+    background:
+      linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+      linear-gradient(
+        180deg,
+        var(--color-edge-hi),
+        var(--color-border) 40%,
+        var(--color-border)
+      )
+      border-box;
+  }
+
+  /* Tarjeta que además se pulsa: el borde se afila, sin saltos. */
   .card-interactive {
     transition:
-      transform var(--duration-base) var(--ease-out-quart),
+      border-color var(--duration-base) var(--ease-out-quart),
       box-shadow var(--duration-base) var(--ease-out-quart),
-      border-color var(--duration-base) var(--ease-out-quart);
+      transform var(--duration-fast) var(--ease-out-quart);
   }
   .card-interactive:hover {
-    transform: translateY(-1px);
     border-color: var(--color-border-strong);
     box-shadow: var(--shadow-raised);
   }
   .card-interactive:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-card);
+    transform: scale(0.995);
   }
 
-  /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA) */
+  /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA): mono, precisa. */
   .section-label {
+    font-family: var(--font-mono);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
     letter-spacing: var(--text-micro--letter-spacing);
-    font-weight: 700;
+    font-weight: 500;
     text-transform: uppercase;
     color: var(--color-text-secondary);
   }
@@ -218,10 +327,16 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgb(255 255 255 / 0.75),
+      light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.05)),
       transparent
     );
     animation: shimmer 1.6s var(--ease-out-quart) infinite;
+  }
+
+  /* Velo de las modales: un token, claro y oscuro. */
+  .scrim {
+    background: var(--color-scrim);
+    backdrop-filter: blur(2px);
   }
 
   /* --- Botones ---------------------------------------------------------- */
@@ -231,50 +346,54 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    border: 1px solid transparent;
     border-radius: var(--radius-control);
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-weight: 500;
+    letter-spacing: -0.006em;
     line-height: 1;
     white-space: nowrap;
     transition:
       background-color var(--duration-fast) var(--ease-out-quart),
-      background-image var(--duration-fast) var(--ease-out-quart),
       border-color var(--duration-fast) var(--ease-out-quart),
       color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart),
+      box-shadow var(--duration-fast) var(--ease-out-quart),
       transform var(--duration-fast) var(--ease-out-quart);
   }
   .btn:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: scale(0.98);
   }
   .btn:disabled,
   .btn[aria-disabled="true"] {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
-  /* El hover oscurece con una capa encima: así sigue funcionando cuando el
-     consumidor pinta el botón de otro color (p. ej. `bg-error`). */
+  /* Primario: el único sitio donde el acento es un relleno. Brillo interior de
+     1px arriba, como el filo de las tarjetas destacadas. */
   .btn-primary {
     background: var(--color-primary);
     color: var(--color-on-primary);
-    box-shadow: 0 1px 2px rgb(22 101 52 / 0.25);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
+      0 1px 2px rgb(0 0 0 / 0.12);
   }
   .btn-primary:hover:not(:disabled) {
-    background-image: linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08));
+    background: color-mix(
+      in oklab,
+      var(--color-primary),
+      var(--color-text) 12%
+    );
   }
 
   .btn-secondary {
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border-color: var(--color-border);
     color: var(--color-text);
+    box-shadow: var(--shadow-card);
   }
   .btn-secondary:hover:not(:disabled) {
     border-color: var(--color-border-strong);
-    background-image: linear-gradient(
-      rgb(28 25 23 / 0.04),
-      rgb(28 25 23 / 0.04)
-    );
+    background: var(--color-surface-muted);
   }
 
   .btn-ghost {
@@ -286,18 +405,28 @@
     color: var(--color-text);
   }
 
+  /* Destructivo: confirmaciones de borrado. */
+  .btn-danger {
+    background: var(--color-error);
+    color: var(--color-on-error);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--color-error), var(--color-text) 14%);
+  }
+
   /* --- Campos ----------------------------------------------------------- */
 
   .input {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-control);
-    padding: 0.625rem 0.875rem;
+    padding: 0.5rem 0.75rem;
     min-height: 2.75rem;
     color: var(--color-text);
+    box-shadow: var(--shadow-inset);
     transition:
       border-color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart);
+      box-shadow var(--duration-fast) var(--ease-out-quart);
   }
   .input::placeholder {
     color: var(--color-text-secondary);
@@ -317,7 +446,8 @@
   .input-error:focus,
   .input[aria-invalid="true"]:focus {
     border-color: var(--color-error);
-    box-shadow: 0 0 0 3px rgb(185 28 28 / 0.2);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--color-error), transparent 75%);
   }
 
   /* --- Insignias -------------------------------------------------------- */
@@ -326,25 +456,103 @@
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border-radius: var(--radius-chip);
+    border: 1px solid;
+    border-radius: var(--radius-control);
+    font-family: var(--font-mono);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
-    letter-spacing: 0.06em;
-    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-weight: 500;
     text-transform: uppercase;
-    padding: 0.3125rem 0.625rem;
+    padding: 0.125rem 0.4375rem;
+  }
+  /* Punto de estado delante: la señal no depende solo del color de fondo. */
+  :where(.badge-pending, .badge-done)::before {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: var(--radius-chip);
+    background: currentColor;
   }
   .badge-pending {
     background: var(--color-pending-bg);
+    border-color: color-mix(
+      in oklab,
+      var(--color-pending-text),
+      transparent 75%
+    );
     color: var(--color-pending-text);
   }
   .badge-done {
     background: var(--color-done-bg);
+    border-color: color-mix(in oklab, var(--color-done-text), transparent 75%);
     color: var(--color-done-text);
   }
   .badge-neutral {
     background: var(--color-surface-muted);
+    border-color: var(--color-border);
     color: var(--color-text-secondary);
+  }
+
+  /* --- Chip (filtro/etiqueta pulsable) ---------------------------------- */
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 2rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-chip);
+    background: var(--color-surface);
+    padding: 0.25rem 0.75rem;
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    transition:
+      background-color var(--duration-fast) var(--ease-out-quart),
+      border-color var(--duration-fast) var(--ease-out-quart),
+      color var(--duration-fast) var(--ease-out-quart);
+  }
+  :where(button, a).chip:hover {
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-current="page"],
+  .chip-active {
+    background: var(--color-text);
+    border-color: var(--color-text);
+    color: var(--color-background);
+  }
+
+  /* --- Tecla (atajos: ⌘K, ↑↓, ↵) ---------------------------------------- */
+
+  .kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3125rem;
+    border: 1px solid var(--color-border);
+    border-bottom-width: 2px;
+    border-radius: 0.25rem;
+    background: var(--color-surface-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: 1;
+    color: var(--color-text-secondary);
+  }
+
+  /* --- Aviso de error en bloque ----------------------------------------- */
+
+  .alert-error {
+    border: 1px solid color-mix(in oklab, var(--color-error), transparent 70%);
+    border-radius: var(--radius-panel);
+    background: var(--color-error-soft);
+    color: var(--color-error);
+    padding: 0.75rem;
+    font-size: var(--text-body);
   }
 
   /* --- Fila de lista ---------------------------------------------------- */
@@ -367,7 +575,18 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
   }
   to {
     opacity: 1;
@@ -378,6 +597,23 @@
 /* Entrada de contenido: una sola vez, corta y desplazada. */
 .animate-rise {
   animation: rise var(--duration-slow) var(--ease-out-quart) both;
+}
+.animate-pop {
+  animation: pop var(--duration-base) var(--ease-out-quart) both;
+}
+
+/* Aparición ligada al scroll (`.reveal`): el elemento entra al asomar por
+   abajo. CSS nativo (`animation-timeline: view()`); sin soporte o con
+   movimiento reducido, se ve sin más. Solo en listas largas de tarjetas, nunca
+   en contenedores de modales (el `transform` capturaría sus `fixed`). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

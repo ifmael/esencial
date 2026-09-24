@@ -55,7 +55,7 @@ export function DayHeader({
       {/* El título abre en el mismo borde que la rejilla de abajo: los
           controles de fecha van detrás, nunca por delante del texto. */}
       <div className="flex w-full items-center gap-2">
-        <h1 className="min-w-0 flex-1 text-balance text-title leading-tight font-bold first-letter:uppercase lg:text-display">
+        <h1 className="min-w-0 flex-1 text-balance text-title leading-tight font-semibold first-letter:uppercase lg:text-display">
           {isToday ? "Hoy — " : ""}
           {formatDateEs(date)}
         </h1>
@@ -306,7 +306,7 @@ function StrengthSection({
                 key={e.exerciseId}
                 className="flex items-center gap-3 rounded-panel px-2 py-2"
               >
-                <span className="grid size-6 shrink-0 place-items-center rounded-chip bg-surface text-micro font-bold text-text-secondary">
+                <span className="grid size-6 shrink-0 place-items-center rounded-chip bg-surface text-micro font-semibold text-text-secondary">
                   {i + 1}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-body">

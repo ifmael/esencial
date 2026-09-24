@@ -56,7 +56,7 @@ export function UiPage() {
   return (
     <div className="flex flex-col gap-section">
       <header className="flex flex-col gap-1">
-        <h1 className="text-display font-bold">Sistema de diseño</h1>
+        <h1 className="text-display font-semibold">Sistema de diseño</h1>
         <p className="text-caption text-text-secondary">
           Los valores viven en <code>web/src/globals.css</code>. Si algo no
           encaja, se añade un token; nunca un valor suelto.

@@ -53,8 +53,13 @@ export function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <form onSubmit={submit} noValidate>
-          <h1 className="mb-4 text-xl font-bold text-primary">Esencial</h1>
-          <label htmlFor="password" className="mb-1 block text-sm font-medium">
+          <h1 className="mb-4 text-title font-semibold text-primary">
+            Esencial
+          </h1>
+          <label
+            htmlFor="password"
+            className="mb-1 block text-body font-medium"
+          >
             Contraseña
           </label>
           <Input
@@ -71,7 +76,7 @@ export function LoginPage() {
           {error && (
             <p
               id="login-error"
-              className="mb-2 text-sm text-error"
+              className="mb-2 text-body text-error"
               role="alert"
             >
               {error.message}

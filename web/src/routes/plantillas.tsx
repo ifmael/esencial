@@ -137,7 +137,7 @@ function ExercisePicker({
         </div>
 
         <div className="flex flex-col gap-2 md:min-h-0 md:flex-1 md:overflow-y-auto">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2 text-body">
             <span className="font-medium">Vista:</span>
             <Button
               size="sm"
@@ -160,7 +160,7 @@ function ExercisePicker({
           <div
             role="group"
             aria-labelledby="pick-groups-label"
-            className="flex flex-wrap items-center gap-1 text-sm"
+            className="flex flex-wrap items-center gap-1 text-body"
           >
             <span id="pick-groups-label" className="font-medium">
               Grupo:
@@ -192,7 +192,7 @@ function ExercisePicker({
             ))}
           </div>
 
-          <p className="text-sm text-text-secondary">
+          <p className="text-body text-text-secondary">
             {region ? `Músculo: ${filter}` : `Grupo: ${filter ?? "Todos"}`}
           </p>
 
@@ -204,7 +204,7 @@ function ExercisePicker({
 
           <div className="min-h-0 md:flex-1 md:overflow-y-auto">
             {picks.length === 0 ? (
-              <p className="text-sm text-text-secondary">Sin ejercicios</p>
+              <p className="text-body text-text-secondary">Sin ejercicios</p>
             ) : (
               <GroupedExercises
                 exercises={picks}
@@ -213,7 +213,7 @@ function ExercisePicker({
                 renderItem={(e) => (
                   <li key={e.id}>
                     <button
-                      className="min-h-9 w-full rounded-lg px-3 py-1.5 text-left text-sm hover:bg-surface-muted disabled:text-text-secondary"
+                      className="min-h-9 w-full rounded-control px-3 py-1.5 text-left text-body hover:bg-surface-muted disabled:text-text-secondary"
                       // El nombre es el del ejercicio (con su tipo, como se ve); los
                       // músculos van de descripción, no pegados al nombre.
                       aria-label={`${e.name}${e.kind === "strength" ? "" : ` · ${KIND_LABELS[e.kind]}`}`}
@@ -284,7 +284,7 @@ function EntryRow({
     >
       <button
         type="button"
-        className="cursor-grab touch-none rounded-md p-1 text-text-secondary hover:bg-surface-muted active:cursor-grabbing"
+        className="cursor-grab touch-none rounded-control p-1 text-text-secondary hover:bg-surface-muted active:cursor-grabbing"
         aria-label={`Mover ${entry.exerciseName}`}
         {...attributes}
         {...listeners}
@@ -299,7 +299,7 @@ function EntryRow({
       </Link>
       {entry.kind === "strength" ? (
         <>
-          <label className="text-sm">
+          <label className="text-body">
             Series
             <Input
               className="w-16"
@@ -311,7 +311,7 @@ function EntryRow({
               }
             />
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             Reps mín
             <Input
               className="w-16"
@@ -323,7 +323,7 @@ function EntryRow({
               }
             />
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             Reps máx
             <Input
               className="w-16"
@@ -339,7 +339,7 @@ function EntryRow({
       ) : (
         <>
           <Badge tone="pending">{KIND_LABELS[entry.kind]}</Badge>
-          <label className="text-sm">
+          <label className="text-body">
             Distancia (km)
             <Input
               className="w-20"
@@ -352,7 +352,7 @@ function EntryRow({
               }
             />
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             Tiempo (min)
             <Input
               className="w-20"
@@ -459,7 +459,7 @@ function TemplateDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto scrim p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();
       }}
@@ -474,10 +474,10 @@ function TemplateDialog({
           className="flex h-[88vh] flex-col gap-3"
         >
           <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-            <h2 id="tpl-editor-title" className="text-lg font-bold">
+            <h2 id="tpl-editor-title" className="text-lead font-semibold">
               {title}
             </h2>
-            <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
+            <div className="flex min-w-48 flex-1 flex-col gap-1 text-body">
               <label htmlFor="tpl-name">Nombre</label>
               <Input
                 id="tpl-name"
@@ -485,12 +485,12 @@ function TemplateDialog({
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
               {nameError && (
-                <span className="text-sm text-error">{nameError}</span>
+                <span className="text-body text-error">{nameError}</span>
               )}
             </div>
           </header>
 
-          {serverError && <p className="text-sm text-error">{serverError}</p>}
+          {serverError && <p className="text-body text-error">{serverError}</p>}
 
           <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 md:grid-cols-2 md:grid-rows-1">
             <section className="flex min-h-0 flex-col gap-2">
@@ -512,7 +512,7 @@ function TemplateDialog({
                 >
                   <ul
                     aria-label="Ejercicios de la plantilla"
-                    className="min-h-0 flex-1 divide-y divide-border overflow-y-auto rounded-lg border border-border bg-surface-muted/50"
+                    className="min-h-0 flex-1 divide-y divide-border overflow-y-auto rounded-control border border-border bg-surface-muted/50"
                   >
                     {draft.entries.map((entry) => (
                       <EntryRow
@@ -588,7 +588,7 @@ function TemplateCard({
           aria-label={template.name}
           onClick={onToggle}
         >
-          <span className="truncate text-lg font-semibold">
+          <span className="truncate text-lead font-semibold">
             {template.name}
           </span>
         </button>
@@ -602,7 +602,7 @@ function TemplateCard({
       </header>
 
       {expanded ? (
-        <ul className="overflow-hidden rounded-lg border border-border bg-surface-muted/50">
+        <ul className="overflow-hidden rounded-control border border-border bg-surface-muted/50">
           {template.exercises.map((e, i) => {
             const info = targetSummary(e);
             return (
@@ -620,7 +620,7 @@ function TemplateCard({
                 >
                   <span className="truncate">{e.exerciseName}</span>
                   {info ? (
-                    <span className="shrink-0 text-sm text-text-secondary">
+                    <span className="shrink-0 text-body text-text-secondary">
                       {info}
                     </span>
                   ) : null}
@@ -670,7 +670,7 @@ function TemplateCard({
           </Button>
         </div>
       )}
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <p className="text-body text-error">{error}</p>}
     </section>
   );
 }
@@ -728,7 +728,7 @@ export function PlantillasPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Plantillas</h1>
+      <h1 className="text-display font-semibold">Plantillas</h1>
 
       {error && (
         <Card className="flex items-center justify-between">
@@ -771,12 +771,9 @@ export function PlantillasPage() {
       </div>
 
       <div className="flex justify-center">
-        <button
-          className="rounded-full bg-primary-container px-6 py-3 font-bold text-on-primary shadow-sm hover:bg-primary-dark"
-          onClick={() => navigate("/plantillas/nueva")}
-        >
+        <Button onClick={() => navigate("/plantillas/nueva")}>
           + Nueva plantilla
-        </button>
+        </Button>
       </div>
 
       {(nueva || editing) && (
