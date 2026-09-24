@@ -243,7 +243,7 @@ export function NuevaRecetaPage() {
         </Alert>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <section>
           <h3 className="mb-2 font-semibold">Foto principal</h3>
           <Card>
@@ -408,7 +408,7 @@ export function NuevaRecetaPage() {
               <li key={i} className="flex gap-2">
                 <Input
                   aria-label={`Ingrediente ${i + 1} alimento`}
-                  className="flex-1"
+                  className="min-w-0 flex-1"
                   placeholder="alimento"
                   value={row.food}
                   onChange={(e) =>
