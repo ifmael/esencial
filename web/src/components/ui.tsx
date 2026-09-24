@@ -108,7 +108,9 @@ export function Kbd({ className, ...rest }: ComponentProps<"kbd">) {
   return <kbd className={cx("kbd", className)} {...rest} />;
 }
 
-/** Aviso de error en bloque (fallo al guardar, validación del servidor). */
+/** Aviso de error en bloque (fallo al guardar, validación del servidor). Se
+ * anuncia al aparecer (`role="alert"`); una muestra estática —el catálogo— pasa
+ * otro `role` para no gritarse en cada visita. */
 export function Alert({ className, ...rest }: ComponentProps<"div">) {
   return (
     <div role="alert" className={cx("alert-error", className)} {...rest} />

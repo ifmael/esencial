@@ -29,7 +29,9 @@ describe("catálogo del sistema de diseño", () => {
     expect(pressed("Activo")).toBe("true");
     expect(pressed("Inactivo")).toBe("false");
     expect(document.querySelector("kbd")).toBeTruthy();
-    expect(screen.getByRole("alert")).toBeTruthy();
+    // Muestra estática: se ve, pero no se anuncia en cada visita.
+    expect(screen.getByText(/No se pudo guardar/)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("expone los tres tonos de insignia", () => {

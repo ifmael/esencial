@@ -5,7 +5,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Badge, Button, Card, Input } from "../src/components/ui";
+import { Alert, Badge, Button, Card, Input } from "../src/components/ui";
 
 afterEach(cleanup);
 
@@ -85,5 +85,18 @@ describe("Card", () => {
     const card = screen.getByText("Contenido");
     expect(card.className).toContain("card");
     expect(card.className).toContain("extra");
+  });
+});
+
+describe("Alert", () => {
+  it("por defecto se anuncia (role=alert): es un error que acaba de pasar", () => {
+    render(<Alert>No se pudo guardar</Alert>);
+    expect(screen.getByRole("alert").textContent).toBe("No se pudo guardar");
+  });
+
+  it("un ejemplo estático puede quitarse el anuncio con otro role", () => {
+    render(<Alert role="note">Muestra</Alert>);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("note").textContent).toBe("Muestra");
   });
 });

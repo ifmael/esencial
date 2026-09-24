@@ -168,7 +168,7 @@ export function UiPage() {
             <Kbd>K</Kbd> abre la paleta de comandos
           </span>
         </div>
-        <Alert>No se pudo guardar. Revisa la conexión.</Alert>
+        <Alert role="note">No se pudo guardar. Revisa la conexión.</Alert>
       </Block>
 
       <Block
