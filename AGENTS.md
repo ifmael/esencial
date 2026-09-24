@@ -85,13 +85,14 @@ Escala vigente — todo lo demás sale de aquí:
   la vez, sin estado duplicado en una clase aparte.
 - Todo lo animado se neutraliza con `prefers-reduced-motion` (también los
   pseudo-elementos `::view-transition-*`).
-- **View Transitions** (API nativa, 0 KB, `web/src/lib/view-transition.ts`): la
+- **View Transitions** (API nativa sin dependencia, `web/src/lib/view-transition.ts`; el router de datos que exige suma ~18 kB gz de JS): la
   tarjeta de `/recetario` se transforma en la cabecera del detalle (nombres fijos
   `recipe-cover`/`recipe-title`, puestos con `flushSync` solo en la tarjeta
   pulsada; la receta viaja en `location.state` para que la cabecera se pinte en
   el primer render) y `WeekGrid` desliza la rejilla al cambiar de semana
   (`view-transition-name: week-grid`, sentido en `html[data-week-dir]`; espera a
-  la prop `busy` para no animar hacia datos viejos). Por eso `app.tsx` usa el
+  la prop `busy` para no animar hacia datos viejos, con un techo de 400 ms para
+  no congelar el pintado si la API tarda o falla). Por eso `app.tsx` usa el
   **router de datos** (`createBrowserRouter` + `RouterProvider`): el
   `<BrowserRouter>` declarativo ignora `viewTransition`. Sin la API o con
   movimiento reducido, el cambio es directo.
@@ -377,6 +378,21 @@ node -e "const fs=require('fs');for(const f of fs.readdirSync('web/dist/assets')
 Nota relacionada: `api/scripts/dev.ts` arranca y para los dos servidores juntos,
 así que matar a mano cualquiera de los dos (por ejemplo el que ocupa 8787)
 termina el `pnpm dev` entero con el código de salida del hijo.
+
+### 7. Node 25 tapa el `localStorage` de jsdom
+
+Node ≥25 trae un `localStorage` global propio (sin `clear`, vacío) que en los
+workers de vitest tapa al de jsdom: `window.localStorage.clear is not a
+function`. Se apaga con `test.execArgv: ["--no-experimental-webstorage"]` en
+`web/vite.config.ts`; no lo quites aunque tu Node sea más viejo.
+
+### 8. `RouterProvider` se importa de `react-router`, no de `react-router/dom`
+
+En vitest (Node) las dos entradas resuelven a builds distintos (CJS y ESM), cada
+uno con sus contextos: con el de `/dom` todos los tests fallan con
+«useLocation() may be used only in the context of a <Router>». El de
+`react-router` es el mismo componente sin el `flushSync` automático, que las
+transiciones de vista de la app no necesitan.
 
 ## Tests e2e — base de datos propia
 

@@ -385,7 +385,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    min-height: 2.25rem;
+    min-height: 2.75rem;
     padding: 0 0.875rem;
     border-radius: var(--radius-chip);
     border: 1px solid var(--color-border-strong);
@@ -505,11 +505,12 @@
   animation: rise var(--duration-slow) var(--ease-out-quart) both;
 }
 
-/* Entrada escalonada: cada hijo espera `--i` pasos de `--stagger`. El índice
+/* Entrada escalonada (`backwards`: al acabar suelta `transform`, así el hover
+   de `.card-interactive` sigue funcionando): cada hijo espera `--i` pasos de `--stagger`. El índice
    lo pone la pantalla (`style={{ "--i": n }}`); con 12+ hijos se topa para
    que el último no llegue tarde. */
 .stagger > * {
-  animation: rise var(--duration-slow) var(--ease-out-quart) both;
+  animation: rise var(--duration-slow) var(--ease-out-quart) backwards;
   animation-delay: calc(min(var(--i, 0), 12) * var(--stagger));
 }
 

@@ -4,7 +4,7 @@ Referentes: Kinfolk, NYT Cooking, Headspace. Papel crema con grano, tinta cálid
 oliva de marca, terracota de acento; Fraunces para titulares, Source Sans 3 para
 leer. Movimiento sereno, sin rebotes.
 
-## Pieza estrella: View Transitions nativas (0 KB)
+## Pieza estrella: View Transitions nativas (sin dependencia; coste real: el router de datos, ~18 kB gz)
 
 - **Receta → detalle**: la portada y el título de la tarjeta se transforman en la
   cabecera del detalle. Cómo verla: `/recetario` → pulsa una tarjeta; «←» vuelve.
@@ -21,7 +21,11 @@ leer. Movimiento sereno, sin rebotes.
   `viewTransition`. Los nombres de la transición los pone `flushSync` solo en la
   tarjeta pulsada, y la receta viaja en `location.state` para pintar la cabecera
   en el primer fotograma. `WeekGrid` espera a la prop `busy` para no animar hacia
-  datos viejos.
+  datos viejos, con un techo de 400 ms (test con temporizadores falsos): con la
+  API lenta o caída anima hacia «Cargando…»/el aviso en vez de congelar el
+  pintado.
+- Alternativa sin ese coste: dejar `<BrowserRouter>` y envolver `navigate` a mano
+  en `startViewTransition` + `flushSync` (≈0 kB, más código propio).
 
 ## Tokens y primitivas
 
@@ -64,6 +68,10 @@ La CSP no cambia: no hay orígenes externos.
 
 ## Fuera de alcance
 
+- `.caption-editorial` usa una cursiva sintética (no se importa `full-italic`, +~120 kB).
+- Semana con red lenta: solo cubierta por el test de 400 ms, no medida en el navegador.
+- `dist` copia también los subsets no latinos de Fontsource (~413 kB en total); el
+  navegador solo baja los latinos (~150 kB). Un `@font-face` propio los quitaría.
 - Fraunces con los ejes `full` (121 kB): con el subset `soft` (62 kB) se
   perdería el óptico. Se puede recortar con un subset propio si pesa.
 - Sin transición compartida en «atrás» desde el detalle a una tarjeta concreta

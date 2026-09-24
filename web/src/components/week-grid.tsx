@@ -39,6 +39,8 @@ type WeekDay = {
   date: string;
   isToday: boolean;
 };
+/** Techo de espera de la foto «después» al cambiar de semana. */
+const WEEK_TRANSITION_MAX_WAIT_MS = 400;
 
 export function WeekGrid({
   isoWeek,
@@ -91,6 +93,10 @@ export function WeekGrid({
           // navegador; se suelta su espera para no dejarla colgada.
           pending.current?.release();
           pending.current = { from, release };
+          // Mientras la promesa no resuelve, el navegador no pinta: con datos
+          // lentos o un error, a los 400 ms se anima hacia lo que haya
+          // («Cargando…» o el aviso) en vez de congelar la página.
+          setTimeout(release, WEEK_TRANSITION_MAX_WAIT_MS);
           onShiftWeek(delta);
         }),
     );

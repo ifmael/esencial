@@ -100,6 +100,25 @@ describe("WeekGrid: transición al cambiar de semana", () => {
     expect(settled).toBe(true);
   });
 
+  it("con datos lentos suelta la foto a los 400 ms: la página no se congela", async () => {
+    vi.useFakeTimers();
+    try {
+      const transitions = stubViewTransitions();
+      const onShift = vi.fn();
+      const { rerender } = render(grid("2026-W10", false, onShift));
+      let settled = false;
+      fireEvent.click(screen.getByRole("button", { name: "Semana siguiente" }));
+      void transitions[0].updateCallbackDone.then(() => (settled = true));
+      await act(async () => rerender(grid("2026-W11", true, onShift)));
+      await act(async () => vi.advanceTimersByTime(399));
+      expect(settled).toBe(false);
+      await act(async () => vi.advanceTimersByTime(1));
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("la semana anterior marca el sentido contrario", async () => {
     stubViewTransitions();
     const onShift = vi.fn();
