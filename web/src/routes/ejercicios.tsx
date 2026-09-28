@@ -1,6 +1,7 @@
 // /ejercicios + /ejercicios/:id — catálogo del banco de ejercicios (E4).
 // Diseño D4: "Ver técnica" acepta cualquier URL; los enlaces de YouTube se empotran (E8).
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router";
 import { BodyMap } from "../components/body-map/body-map";
 import {
@@ -55,6 +56,11 @@ import {
   type TemplatesState,
   useTemplates,
 } from "../lib/templates";
+import {
+  morphFrom,
+  runViewTransition,
+  useCreateMorph,
+} from "../lib/view-transition";
 
 const errorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : "Error inesperado";
@@ -231,7 +237,10 @@ function ExerciseEditor({
   const muscleGroups = draft.tags.filter((t) => regionsOfGroup(t).length > 0);
 
   return (
-    <Card className="flex flex-col gap-6 rounded-xl animate-rise">
+    <Card
+      className="flex flex-col gap-6 rounded-xl animate-rise"
+      style={useCreateMorph()}
+    >
       <h2 className="text-headline-s text-e">{title}</h2>
       <div className="grid gap-5 md:grid-cols-2">
         <Field label="Nombre" error={errors.name}>
@@ -444,7 +453,13 @@ export function EjerciciosPage() {
         e.tags.some((t) => t.toLowerCase().includes(q))),
   );
   const newButton = (
-    <Button onClick={() => setCreating(true)}>
+    <Button
+      onClick={(e) => {
+        // Lo pulsado crece hasta el formulario (transición de vista).
+        morphFrom(e.currentTarget);
+        void runViewTransition(() => flushSync(() => setCreating(true)));
+      }}
+    >
       <AddIcon />
       Nuevo ejercicio
     </Button>

@@ -213,6 +213,22 @@ va por la pila de capas (`lib/escape-stack.ts`), que ignora el Escape con el que
 dnd-kit cancela un arrastre de teclado, así que la modal no se cierra a media
 operación.
 
+**Crear sigue un único patrón** (recetas, plantillas, ejercicios y el menú FAB):
+lo pulsado **crece hasta lo que abre** (transformación de contenedor con View
+Transitions). El FAB es el único elevado; el botón de cabecera es un `Button`
+*filled* de tamaño por defecto, sin sombra. El mecanismo vive en
+`lib/view-transition.ts`: el `onClick` llama a `morphFrom(e.currentTarget)` antes
+de navegar (o de abrir, con `runViewTransition` + `flushSync`, como «Nuevo
+ejercicio», que no tiene ruta), y el destino pone `style={useCreateMorph()}`.
+Así el nombre `create` está solo en lo pulsado en la foto «antes» y solo en el
+destino en la foto «después» (dos iguales anulan la transición). Carga directa
+y editar no animan. El destino apaga su animación de entrada propia (la hace la
+transición). Los tests usan `tests/view-transition-stub.ts`.
+
+El **menú FAB** sigue el M3E: velo (`Scrim`) que tapa la página y la cierra al
+pulsarlo, y acciones planas del mismo color (`accent-container`), sin sombra ni
+colores por sección.
+
 Desde `md` la modal mide **siempre lo mismo** (`h-[88vh]`, `max-w-6xl`; nada de `max-h`), así
 que no se redimensiona al cambiar el borrador ni la lista del selector. Desde
 `md`, dentro de la columna derecha el **mapa muscular se lleva el alto libre**

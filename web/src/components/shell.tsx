@@ -19,6 +19,7 @@ import {
   readTheme,
   type Theme,
 } from "../lib/theme";
+import { morphFrom } from "../lib/view-transition";
 import { CommandPalette, useCommandPalette } from "./command-palette";
 import {
   AddIcon,
@@ -38,7 +39,7 @@ import {
   SwatchIcon,
   UtensilsIcon,
 } from "./icons";
-import { SnackbarHost } from "./overlay";
+import { Scrim, SnackbarHost } from "./overlay";
 import { connectedClass, connectedItemClass, cx, Fab, ripple } from "./ui";
 
 type IconType = typeof HomeIcon;
@@ -212,83 +213,79 @@ function FabMenu({
     {
       label: "Sesión de hoy",
       icon: DumbbellIcon,
-      section: "deporte",
-      go: () => navigate(`/sesion/${toISODate(new Date())}`),
+      to: `/sesion/${toISODate(new Date())}`,
     },
-    {
-      label: "Plantilla",
-      icon: ListIcon,
-      section: "deporte",
-      go: () => navigate("/plantillas/nueva", { viewTransition: true }),
-    },
-    {
-      label: "Receta",
-      icon: BookIcon,
-      section: "nutricion",
-      go: () => navigate("/recetario/nueva", { viewTransition: true }),
-    },
-  ] as const;
+    { label: "Plantilla", icon: ListIcon, to: "/plantillas/nueva" },
+    { label: "Receta", icon: BookIcon, to: "/recetario/nueva" },
+  ];
   return (
-    <div
-      // `relative` y `fixed` a la vez: gana el que Tailwind emita después
-      // (relative), y el FAB flotante acababa al final del documento.
-      className={
-        placement === "float"
-          ? "fixed right-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 lg:hidden"
-          : "relative"
-      }
-    >
-      <Fab
-        aria-label={open ? "Cerrar menú de crear" : "Crear"}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          setAnchor({ top: r.bottom + 8, left: r.left });
-          setOpen((o) => !o);
-        }}
-        // FAB → formulario: el FAB y el formulario de destino comparten
-        // nombre de transición; en la ruta de destino el FAB lo suelta, porque
-        // dos nombres iguales en la misma foto anulan la transición.
-        style={{
-          viewTransitionName:
-            open || pathname.endsWith("/nueva") ? undefined : "fab",
-        }}
-        className={cx(extended && !open ? "px-5" : "w-14 px-0")}
+    <>
+      {/* Velo: separa el menú de la página que tapa, y pulsarlo lo cierra. */}
+      {open ? <Scrim onClose={() => setOpen(false)} /> : null}
+      <div
+        // `relative` y `fixed` a la vez: gana el que Tailwind emita después
+        // (relative), y el FAB flotante acababa al final del documento. Abierto
+        // sube por encima del velo; cerrado, el flotante queda bajo los diálogos.
+        className={cx(
+          placement === "float"
+            ? "fixed right-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] lg:hidden"
+            : "relative",
+          open ? "z-50" : placement === "float" && "z-30",
+        )}
       >
-        {open ? <CloseIcon /> : <AddIcon />}
-        {extended && !open ? <span className="text-label-l">Crear</span> : null}
-      </Fab>
-      {open ? (
-        <div
-          role="menu"
-          aria-label="Crear"
-          style={placement === "rail" ? anchor : undefined}
-          className={cx(
-            "stagger z-40 flex flex-col gap-1",
-            placement === "rail"
-              ? "fixed items-start"
-              : "absolute right-0 bottom-16 items-end",
-          )}
+        <Fab
+          aria-label={open ? "Cerrar menú de crear" : "Crear"}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setAnchor({ top: r.bottom + 8, left: r.left });
+            setOpen((o) => !o);
+          }}
+          className={cx(extended && !open ? "px-5" : "w-14 px-0")}
         >
-          {items.map((item, i) => (
-            <div key={item.label} style={{ ["--i" as string]: i }}>
-              <button
-                type="button"
-                role="menuitem"
-                data-section={item.section}
-                onClick={item.go}
-                onPointerDown={ripple}
-                className="state flex h-14 items-center gap-3 rounded-full bg-accent-container pr-6 pl-4 text-title-m whitespace-nowrap text-on-accent-container shadow-2"
-              >
-                <item.icon />
-                {item.label}
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
+          {open ? <CloseIcon /> : <AddIcon />}
+          {extended && !open ? (
+            <span className="text-label-l">Crear</span>
+          ) : null}
+        </Fab>
+        {open ? (
+          <div
+            role="menu"
+            aria-label="Crear"
+            style={placement === "rail" ? anchor : undefined}
+            className={cx(
+              "stagger flex flex-col gap-1",
+              placement === "rail"
+                ? "fixed items-start"
+                : "absolute right-0 bottom-16 items-end",
+            )}
+          >
+            {/* Menú FAB M3E: todas las acciones del mismo color (el contenedor
+                de la sección), planas sobre el velo; el botón de cerrar
+                contrasta con el tono fuerte. */}
+            {items.map((item, i) => (
+              <div key={item.label} style={{ ["--i" as string]: i }}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    // Lo pulsado crece hasta el formulario (transición de vista).
+                    morphFrom(e.currentTarget);
+                    navigate(item.to, { viewTransition: true });
+                  }}
+                  onPointerDown={ripple}
+                  className="state flex h-14 items-center gap-2 rounded-full bg-accent-container px-6 text-title-m whitespace-nowrap text-on-accent-container"
+                >
+                  <item.icon />
+                  {item.label}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </>
   );
 }
 

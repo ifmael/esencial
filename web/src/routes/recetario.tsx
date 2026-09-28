@@ -24,6 +24,7 @@ import {
 import { photoSrc } from "../lib/api";
 import { useRecipeColor } from "../lib/recipe-color";
 import type { ShapeName } from "../lib/shapes";
+import { morphFrom } from "../lib/view-transition";
 
 const morph = (id: number): CSSProperties => ({
   viewTransitionName: `recipe-${id}`,
@@ -135,11 +136,11 @@ export function RecetarioPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
           <h1 className="text-headline-l text-e">Recetario</h1>
           {!api.loading && !api.error && (
-            <p className="text-body-m text-on-surface-variant tabular">
+            <p className="text-body-l text-on-surface-variant tabular">
               {api.list.length === 1
                 ? "1 receta"
                 : `${api.list.length} recetas`}
@@ -147,7 +148,10 @@ export function RecetarioPage() {
           )}
         </div>
         <Button
-          onClick={() => navigate("/recetario/nueva", { viewTransition: true })}
+          onClick={(e) => {
+            morphFrom(e.currentTarget);
+            navigate("/recetario/nueva", { viewTransition: true });
+          }}
         >
           <AddIcon />
           Nueva receta
@@ -170,6 +174,7 @@ export function RecetarioPage() {
           <Link
             to="/recetario/nueva"
             viewTransition
+            onClick={(e) => morphFrom(e.currentTarget)}
             className={buttonClass({ variant: "tonal" })}
           >
             Crear receta

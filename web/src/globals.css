@@ -985,6 +985,18 @@
   animation-duration: var(--duration-spatial-default);
   animation-timing-function: var(--ease-spatial-default);
 }
+/* Crear: lo pulsado (FAB, «Nueva …») crece hasta lo que abre con el muelle
+   espacial; el contenido cambia por fundido cruzado sin estirarse. */
+::view-transition-old(create),
+::view-transition-new(create) {
+  height: 100%;
+  object-fit: cover;
+  overflow: clip;
+}
+/* Lo pulsado se desvanece pronto: no se ve estirado mientras crece. */
+::view-transition-old(create) {
+  animation-duration: var(--duration-effects-fast);
+}
 /* Eje compartido X al cambiar de semana: sale hacia un lado, entra del otro. */
 ::view-transition-old(week-grid) {
   animation: axis-out var(--duration-spatial-fast) var(--ease-emphasized) both;

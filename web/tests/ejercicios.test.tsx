@@ -13,6 +13,11 @@ import { App } from "../src/app";
 import type { Exercise } from "../src/lib/exercises";
 import type { Template } from "../src/lib/templates";
 import { type MockApi, mockApi } from "./api-mock";
+import {
+  morphing,
+  stubViewTransitions,
+  unstubViewTransitions,
+} from "./view-transition-stub";
 
 const press: Exercise = {
   id: 7,
@@ -95,6 +100,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  unstubViewTransitions();
 });
 
 describe("catalog", () => {
@@ -152,6 +158,22 @@ describe("catalog", () => {
     expect(
       screen.getByRole("button", { name: "Nuevo ejercicio" }),
     ).toBeDefined();
+  });
+
+  it("«Nuevo ejercicio» se transforma en el formulario", async () => {
+    const before = stubViewTransitions();
+    renderAt("/ejercicios");
+    const button = await screen.findByRole("button", {
+      name: "Nuevo ejercicio",
+    });
+    fireEvent.click(button);
+    await waitFor(() => expect(before).toHaveLength(1));
+    expect(before[0]).toEqual([button]);
+    const form = await screen.findByRole("heading", {
+      name: "Nuevo ejercicio",
+    });
+    expect(morphing()).toHaveLength(1);
+    expect(morphing()[0].contains(form)).toBe(true);
   });
 
   it("create flow: name required, ≥1 tag, valid save → POST 201 + detail shows data", async () => {

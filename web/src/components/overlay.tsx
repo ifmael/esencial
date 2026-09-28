@@ -2,6 +2,7 @@
 // inferior con asa y arrastre para cerrar, y el snackbar global con «Deshacer».
 import {
   type ComponentProps,
+  type CSSProperties,
   createContext,
   type ReactNode,
   useContext,
@@ -103,6 +104,7 @@ export function Dialog({
   label,
   labelledBy,
   className,
+  style,
   mobile = "fullscreen",
   children,
 }: {
@@ -110,6 +112,7 @@ export function Dialog({
   label?: string;
   labelledBy?: string;
   className?: string;
+  style?: CSSProperties;
   mobile?: "fullscreen" | "sheet" | "center";
   children: ReactNode;
 }) {
@@ -132,7 +135,7 @@ export function Dialog({
         aria-modal="true"
         aria-label={label}
         aria-labelledby={labelledBy}
-        style={sheet ? drag.style : undefined}
+        style={sheet ? { ...style, ...drag.style } : style}
         className={cx(
           "dialog flex w-full flex-col",
           mobile === "fullscreen" && "max-md:rounded-none max-md:shadow-none",

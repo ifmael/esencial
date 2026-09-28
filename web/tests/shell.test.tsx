@@ -14,6 +14,11 @@ import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
 import type { Exercise } from "../src/lib/exercises";
 import { mockApi } from "./api-mock";
+import {
+  morphing,
+  stubViewTransitions,
+  unstubViewTransitions,
+} from "./view-transition-stub";
 
 const press: Exercise = {
   id: 7,
@@ -237,6 +242,46 @@ describe("Shell M3E", () => {
     await waitFor(() =>
       expect(window.location.pathname).toBe("/recetario/nueva"),
     );
+  });
+
+  it("cada acción del menú FAB se transforma en su destino", async () => {
+    for (const label of ["Sesión de hoy", "Plantilla", "Receta"]) {
+      const before = stubViewTransitions();
+      const view = renderAt("/");
+      await screen.findAllByText("Deporte");
+      const aside = document.querySelector("aside") as HTMLElement;
+      const fab = within(aside).getByRole("button", { name: "Crear" });
+      expect(fab.style.viewTransitionName, label).not.toBe("create");
+      fireEvent.click(fab);
+      const item = within(aside).getByRole("menuitem", { name: label });
+      fireEvent.click(item);
+      // Foto «antes»: solo la acción pulsada lleva el nombre; «después», solo
+      // el destino (dos iguales en una foto anulan la transición).
+      await waitFor(() => expect(before, label).toHaveLength(1));
+      expect(before[0], label).toEqual([item]);
+      // Tras navegar, el nombre pasa de lo pulsado al destino, fuera del raíl.
+      await waitFor(() =>
+        expect(
+          morphing().map((el) => el.closest("aside")),
+          label,
+        ).toEqual([null]),
+      );
+      view.unmount();
+      unstubViewTransitions();
+    }
+  });
+
+  it("el menú FAB tapa la página con un velo que lo cierra al pulsarlo", async () => {
+    renderAt("/");
+    await screen.findAllByText("Deporte");
+    const aside = document.querySelector("aside") as HTMLElement;
+    const fab = within(aside).getByRole("button", { name: "Crear" });
+    fireEvent.click(fab);
+    const scrim = aside.querySelector(".scrim") as HTMLElement;
+    expect(scrim).not.toBeNull();
+    fireEvent.click(scrim);
+    expect(fab.getAttribute("aria-expanded")).toBe("false");
+    expect(within(aside).queryByRole("menu")).toBeNull();
   });
 
   it("sin FAB flotante donde ya hay barra de herramientas o formulario de crear", async () => {

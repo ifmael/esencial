@@ -34,6 +34,7 @@ import { ApiError, apiGet, apiSend } from "../lib/api";
 import type { PlanSession, SessionExercise } from "../lib/plan-week";
 import { isSessionComplete } from "../lib/reward";
 import type { ShapeName } from "../lib/shapes";
+import { useCreateMorph } from "../lib/view-transition";
 import {
   defaultSetCount,
   formatLast,
@@ -591,7 +592,17 @@ const Stat = ({ value, label }: { value: string; label: string }) => (
 
 // --- Page ---------------------------------------------------------------------
 
+/** Destino de «Sesión de hoy» del menú FAB: la página entera, en cualquiera de
+ * sus estados (la foto «después» se toma aún cargando). */
 export function SesionPage() {
+  return (
+    <div style={useCreateMorph()}>
+      <SesionView />
+    </div>
+  );
+}
+
+function SesionView() {
   const { date = "" } = useParams<{ date: string }>();
   const day = useWorkoutDay(date);
   const { view } = day;

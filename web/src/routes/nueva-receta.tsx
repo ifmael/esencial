@@ -33,6 +33,7 @@ import {
   SplitButton,
 } from "../components/ui";
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
+import { useCreateMorph } from "../lib/view-transition";
 
 type IngRow = { food: string; quantity: string; unit: string };
 
@@ -253,14 +254,12 @@ export function NuevaRecetaPage() {
     nameInput.current?.focus();
   };
 
+  const morph = useCreateMorph();
   const serverNameError =
     api.fieldError?.field === "name" ? api.fieldError.message : null;
 
   return (
-    <div
-      className="mx-auto flex w-full max-w-4xl flex-col gap-4"
-      style={{ viewTransitionName: "fab" }}
-    >
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4" style={morph}>
       <header className="relative flex flex-col items-start gap-5 rounded-xl rounded-tr-xxl bg-accent-container p-6 text-on-accent-container sm:flex-row sm:items-end sm:justify-between">
         <div
           aria-hidden="true"

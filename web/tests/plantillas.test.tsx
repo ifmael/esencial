@@ -15,6 +15,11 @@ import type { Exercise } from "../src/lib/exercises";
 import type { TemplatePayload } from "../src/lib/template-draft";
 import type { Template } from "../src/lib/templates";
 import { type MockApi, mockApi } from "./api-mock";
+import {
+  morphing,
+  stubViewTransitions,
+  unstubViewTransitions,
+} from "./view-transition-stub";
 
 const press: Exercise = {
   id: 7,
@@ -140,6 +145,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  unstubViewTransitions();
 });
 
 async function openPlantillas() {
@@ -603,6 +609,10 @@ describe("modal de plantilla con URL propia", () => {
     const name = await screen.findByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("A — Empuje");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    // Editar no viene de un botón de crear: sin nombre, no hay morph.
+    expect(screen.getByRole("dialog").style.viewTransitionName).not.toBe(
+      "create",
+    );
     // La lista sigue detrás: las otras tarjetas se ven.
     expect(screen.getByText("B — Tirón")).toBeDefined();
   });
@@ -612,6 +622,21 @@ describe("modal de plantilla con URL propia", () => {
     const name = await screen.findByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    // Carga directa: no hay nada pulsado de lo que crecer.
+    expect(screen.getByRole("dialog").style.viewTransitionName).not.toBe(
+      "create",
+    );
+  });
+
+  it("«Nueva plantilla» se transforma en la modal", async () => {
+    const before = stubViewTransitions();
+    await openPlantillas();
+    const button = screen.getByRole("button", { name: "+ Nueva plantilla" });
+    fireEvent.click(button);
+    await waitFor(() => expect(before).toHaveLength(1));
+    expect(before[0]).toEqual([button]);
+    await screen.findByRole("dialog");
+    expect(morphing()).toEqual([screen.getByRole("dialog")]);
   });
 
   it("una plantilla inexistente devuelve a la lista", async () => {

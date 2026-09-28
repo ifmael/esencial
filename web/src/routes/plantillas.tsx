@@ -77,6 +77,7 @@ import {
   type Targets,
 } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
+import { morphFrom, useCreateMorph } from "../lib/view-transition";
 
 const toDraft = (t: Template): Draft => ({
   name: t.name,
@@ -405,12 +406,15 @@ function EntryRow({
 function TemplateDialog({
   draft: initial,
   title,
+  create,
   submitting,
   onSave,
   onCancel,
 }: {
   draft: Draft;
   title: string;
+  /** Crear: lo pulsado (FAB o «Nueva plantilla») se transforma en la modal. */
+  create: boolean;
   submitting: boolean;
   onSave: (draft: Draft) => Promise<void>;
   onCancel: () => void;
@@ -475,6 +479,7 @@ function TemplateDialog({
       // y la modal sigue abierta.
       onClose={onCancel}
       labelledBy="tpl-editor-title"
+      style={useCreateMorph(create)}
       // Alto fijo (no `max-h`) desde `md`: la modal guarda el mismo espacio
       // aunque el borrador o la lista del selector cambien de tamaño.
       className="gap-4 overflow-hidden md:h-[88vh] md:max-w-6xl"
@@ -794,9 +799,11 @@ export function PlantillasPage() {
         </div>
         {/* El nombre conserva el «+» que ya buscan los tests y el e2e. */}
         <Button
-          size="lg"
           aria-label="+ Nueva plantilla"
-          onClick={() => navigate("/plantillas/nueva")}
+          onClick={(e) => {
+            morphFrom(e.currentTarget);
+            navigate("/plantillas/nueva", { viewTransition: true });
+          }}
         >
           <AddIcon />
           Nueva plantilla
@@ -850,6 +857,7 @@ export function PlantillasPage() {
         <TemplateDialog
           key={editing ? `t${editing.id}` : "nueva"}
           title={editing ? "Editar plantilla" : "Nueva plantilla"}
+          create={Boolean(nueva)}
           draft={editing ? toDraft(editing) : { name: "", entries: [] }}
           submitting={submitting}
           onSave={save}
