@@ -30,20 +30,14 @@ test.describe("MENÚ — secciones colapsables", () => {
       page.getByRole("heading", { name: "Plantillas", exact: true }),
     ).toBeVisible();
 
-    // Raíl en las rutas de calendario: la sección activa no despliega submenú
-    // (sus enlaces viven en la fila de chips sobre el calendario).
+    // En las rutas de calendario el submenú de la sección vive también sobre la
+    // rejilla (el raíl plegado no lo despliega; ver calendar-layout.spec.ts).
     await page.goto("/plan-fuerza");
     await expect(
       page
         .getByRole("navigation", { name: "Deporte" })
         .getByRole("link", { name: "Ejercicios" }),
     ).toBeVisible();
-    await expect(sidebar.getByRole("link", { name: "Ejercicios" })).toHaveCount(
-      0,
-    );
-    await expect(
-      sidebar.getByRole("button", { name: "Expandir Deporte" }),
-    ).toHaveCount(0);
     // Y la página ya no lista plantillas.
     await expect(
       page.getByRole("button", { name: "+ Nueva plantilla" }),
@@ -101,12 +95,35 @@ test.describe("MENÚ — secciones colapsables", () => {
     await aside.getByRole("button", { name: "Mostrar menú" }).click();
     await expect.poll(width).toBeGreaterThan(200);
 
-    // La elección manda también en las rutas de calendario, que arrancan en raíl.
+    // La elección manda también en las rutas de calendario.
     await page.goto("/plan-fuerza");
     await expect(
       page.getByRole("button", { name: "Semana siguiente" }),
     ).toBeVisible();
     await expect.poll(width).toBeGreaterThan(200);
+  });
+
+  test("pulsar Deporte o Nutrición con el menú desplegado no lo pliega", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const aside = page.locator("aside");
+    const width = () =>
+      aside.evaluate((el) => el.getBoundingClientRect().width);
+    await expect.poll(width).toBeGreaterThan(200);
+
+    for (const [name, url] of [
+      ["Deporte", /\/plan-fuerza$/],
+      ["Nutrición", /\/plan-recetas$/],
+    ] as const) {
+      await aside.getByRole("link", { name }).click();
+      await expect(page).toHaveURL(url);
+      await expect(
+        aside.getByRole("button", { name: "Ocultar menú" }),
+      ).toBeVisible();
+      await expect.poll(width).toBeGreaterThan(200);
+    }
   });
 
   test("con una página larga, el menú lateral se queda a la vista", async ({
@@ -135,5 +152,36 @@ test.describe("MENÚ — secciones colapsables", () => {
     );
     await expect(search).toBeInViewport({ ratio: 1 });
     await expect(aside.getByRole("link", { name: "Hoy" })).toBeInViewport();
+  });
+
+  test("el menú de crear no se recorta en el raíl compacto", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.addInitScript(() =>
+      localStorage.setItem("esencial.sidebar", "collapsed"),
+    );
+    await page.goto("/plan-fuerza");
+    const aside = page.locator("aside");
+    await expect.poll(() => aside.evaluate((el) => el.clientWidth)).toBe(80);
+    await aside.getByRole("button", { name: "Crear" }).click();
+    const items = page.getByRole("menuitem");
+    await expect(items).toHaveCount(3);
+    // Las píldoras son más anchas que el raíl: su borde derecho tiene que
+    // quedar encima del calendario, no recortado por el `overflow` del raíl.
+    for (const item of await items.all()) {
+      await expect
+        .poll(() =>
+          item.evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            const hit = document.elementFromPoint(
+              r.right - 4,
+              r.top + r.height / 2,
+            );
+            return r.right > 80 && el.contains(hit);
+          }),
+        )
+        .toBe(true);
+    }
   });
 });

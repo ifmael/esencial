@@ -1,8 +1,8 @@
 // Armazón de la app (M3 Expressive):
 // - Escritorio: raíl de navegación M3E con el menú FAB arriba y el indicador
-//   activo en pastilla (cambia de forma y la etiqueta gana peso). Fuera del
-//   calendario el raíl se puede expandir a cajón con submenús; en las rutas de
-//   calendario arranca colapsado (≤ 80 px, AGENTS.md) para ceder ancho.
+//   activo en pastilla (cambia de forma y la etiqueta gana peso). El usuario lo
+//   expande a cajón con submenús o lo pliega; en las rutas de calendario el
+//   raíl plegado es compacto (80 px, AGENTS.md) para ceder ancho.
 // - Móvil: barra de navegación inferior M3 con área segura y FAB flotante.
 // - Submenú de la sección en las rutas de calendario: grupo de botones
 //   conectados sobre la rejilla.
@@ -76,8 +76,8 @@ const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href);
 
 /** Rutas de calendario (fuerza y comidas): el calendario manda, así que la
- * página se queda sin cabecera y ocupa la ventana entera. El raíl arranca
- * colapsado y el submenú de la sección va como grupo conectado sobre la
+ * página se queda sin cabecera y ocupa la ventana entera. Plegado, el raíl
+ * es compacto, y el submenú de la sección va como grupo conectado sobre la
  * rejilla; abajo, un hueco reservado para acciones futuras. */
 const CALENDAR_ROUTES: Record<string, true> = {
   "/plan-fuerza": true,
@@ -198,6 +198,9 @@ function FabMenu({
   placement: "rail" | "float";
 }) {
   const [open, setOpen] = useState(false);
+  // El raíl tiene `overflow-y-auto` (y con él `overflow-x`), que recortaría un
+  // menú `absolute` a sus 80–96 px: en el raíl el menú va `fixed`, bajo el FAB.
+  const [anchor, setAnchor] = useState<{ top: number; left: number }>();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   useEffect(() => setOpen(false), [pathname]);
@@ -239,7 +242,11 @@ function FabMenu({
         aria-label={open ? "Cerrar menú de crear" : "Crear"}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setAnchor({ top: r.bottom + 8, left: r.left });
+          setOpen((o) => !o);
+        }}
         // FAB → formulario: el FAB y el formulario de destino comparten
         // nombre de transición; en la ruta de destino el FAB lo suelta, porque
         // dos nombres iguales en la misma foto anulan la transición.
@@ -256,11 +263,12 @@ function FabMenu({
         <div
           role="menu"
           aria-label="Crear"
+          style={placement === "rail" ? anchor : undefined}
           className={cx(
-            "stagger absolute z-40 flex flex-col gap-1",
+            "stagger z-40 flex flex-col gap-1",
             placement === "rail"
-              ? "top-16 left-0 items-start"
-              : "right-0 bottom-16 items-end",
+              ? "fixed items-start"
+              : "absolute right-0 bottom-16 items-end",
           )}
         >
           {items.map((item, i) => (
@@ -290,8 +298,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [menuPref, setMenuPref] = useState(readMenuPref);
   const calendarRoute = CALENDAR_ROUTES[pathname] === true;
-  const collapsed =
-    menuPref === null ? calendarRoute : menuPref === "collapsed";
+  // Solo lo pliega el usuario: navegar nunca cambia el menú.
+  const collapsed = menuPref === "collapsed";
   // Raíl compacto de 80 px (sin etiquetas) solo en el calendario; el resto del
   // tiempo el raíl colapsado mide 96 px con etiquetas, como pide M3E.
   const compact = collapsed && calendarRoute;
@@ -457,7 +465,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
       >
         <aside
           className={cx(
-            "hidden shrink-0 flex-col bg-surface py-5 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:overflow-y-auto transition-[width] motion-spatial",
+            // `lg:z-10`: `sticky` abre un contexto de apilamiento; sin z-index el
+            // `main` (posterior en el DOM) pinta encima del menú de crear.
+            "hidden shrink-0 flex-col bg-surface py-5 lg:sticky lg:top-0 lg:z-10 lg:flex lg:h-dvh lg:overflow-y-auto transition-[width] motion-spatial",
             collapsed
               ? compact
                 ? "w-20 items-center gap-6 px-2"

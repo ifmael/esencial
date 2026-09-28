@@ -122,7 +122,12 @@ página), con un hueco vacío reservado abajo para acciones futuras. Las dos rut
 están en `CALENDAR_ROUTES` (`web/src/components/shell.tsx`): añadir una ahí le da
 el mismo trato (sin título, alto completo, hueco inferior).
 
-En esas rutas **el raíl M3E arranca colapsado en su versión compacta de 80 px**
+**El menú lateral solo lo pliega el usuario** (botón «Ocultar menú», recordado en
+`localStorage` `esencial.sidebar`): navegar nunca lo cambia. Antes las rutas de
+calendario lo plegaban solas y al pulsar Deporte o Nutrición en el cajón este se
+cerraba bajo el cursor (bug; lo cubren `shell.test.tsx` y `nav.spec.ts`).
+
+En esas rutas, **plegado, el raíl M3E es su versión compacta de 80 px**
 (`w-20`): iconos con el nombre en `aria-label`/`title`, menú FAB, búsqueda y tema,
 sin desplegables de sección. El catálogo y «Cerrar sesión» ceden su sitio, y siguen
 disponibles en la búsqueda y al desplegar el menú. Fuera del calendario el raíl
@@ -130,8 +135,10 @@ colapsado mide 96 px (con etiquetas) y el expandido 288 px. El submenú de la se
 va como **grupo de botones conectados sobre el calendario**, en escritorio y en móvil.
 El `main` de estas rutas es `max-w-calendar` —el token `--container-calendar`,
 110rem = 1760 px— con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
-1280×800: columna de día **153,14 px**, sin scroll de página ni horizontal. Techo del ancho: a 1280 no
-cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracteres)
+1280×800 con el raíl plegado: columna de día **153,14 px**, sin scroll de página ni
+horizontal (los e2e de `calendar-layout.spec.ts` miden con la preferencia plegada).
+Techo del ancho: a 1280 no cabe más de ~153 px por columna con el raíl; con el cajón
+de 288 px abierto la columna encoge. Con títulos largos (>20 caracteres)
 el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
 celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
 
@@ -139,6 +146,11 @@ En todas las rutas el raíl es `lg:sticky lg:top-0 lg:h-dvh`: mide la ventana, n
 la página. Sin eso, en la fila `lg:flex-row` se estira al alto del `main` y en
 una página larga (`/ejercicios`) empuja la búsqueda y el tema hasta el final (lo
 cubre `nav.spec.ts`).
+
+Ese `lg:overflow-y-auto` del raíl implica también `overflow-x`, así que cualquier
+desplegable `absolute` dentro de él se recorta a sus 80–96 px. El menú del FAB va
+por eso `fixed`, anclado al FAB al abrirse, y el raíl lleva `lg:z-10`: `sticky`
+abre su propio contexto de apilamiento y, sin z-index, el `main` pinta encima.
 
 Las dos pantallas comparten la **rejilla semanal** (`web/src/components/week-grid.tsx`):
 un único contenedor con la navegación de semana y las siete columnas, con la

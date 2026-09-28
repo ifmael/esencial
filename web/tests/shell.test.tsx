@@ -104,7 +104,8 @@ describe("Shell", () => {
     ).toBe(true);
   });
 
-  it("en las rutas de calendario la barra lateral es un raíl de iconos", async () => {
+  it("en las rutas de calendario el raíl plegado es de iconos", async () => {
+    window.localStorage.setItem("esencial.sidebar", "collapsed");
     renderAt("/plan-fuerza");
     // El submenú de la sección vive sobre el calendario (misma fila que en móvil).
     const chips = await screen.findByRole("navigation", { name: "Deporte" });
@@ -156,23 +157,24 @@ describe("Shell", () => {
     expect(aside().textContent).not.toContain("Sistema de diseño");
   });
 
-  it("en las rutas de calendario el menú arranca en raíl y el botón lo despliega", async () => {
-    renderAt("/plan-fuerza");
-    // El submenú de la sección sigue viviendo sobre el calendario.
-    const chips = await screen.findByRole("navigation", { name: "Deporte" });
-    expect(chips.textContent).toContain("Ejercicios");
-
+  it("pulsar Deporte o Nutrición con el menú desplegado no lo pliega", async () => {
+    renderAt("/");
+    await screen.findByRole("button", { name: "Ocultar menú" });
     const aside = () => document.querySelector("aside") as HTMLElement;
-    expect(aside().textContent).not.toContain("Sistema de diseño");
 
-    fireEvent.click(screen.getByRole("button", { name: "Mostrar menú" }));
+    fireEvent.click(within(aside()).getByRole("link", { name: "Deporte" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/plan-fuerza"));
+    expect(screen.getByRole("button", { name: "Ocultar menú" })).toBeDefined();
     expect(aside().textContent).toContain("Sistema de diseño");
-    expect(aside().textContent).toContain("Cerrar sesión");
 
+    fireEvent.click(within(aside()).getByRole("link", { name: "Nutrición" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/plan-recetas"));
+    expect(screen.getByRole("button", { name: "Ocultar menú" })).toBeDefined();
+
+    // Tampoco al entrar directo: solo lo pliega el usuario.
     cleanup();
     renderAt("/plan-fuerza");
     await screen.findByRole("button", { name: "Ocultar menú" });
-    expect(aside().textContent).toContain("Sistema de diseño");
   });
 
   it("navega entre secciones con el enlace principal", async () => {

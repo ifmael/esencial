@@ -44,6 +44,14 @@ async function resetPlanned(request: APIRequestContext, date: string) {
 }
 
 test.describe("CALENDARIO — alto de ventana", () => {
+  // Las medidas son con el raíl plegado (80 px): el menú lo pliega el usuario,
+  // navegar no lo cambia, y desplegado el cajón de 288 px come ancho de día.
+  test.beforeEach(({ page }) =>
+    page.addInitScript(() =>
+      localStorage.setItem("esencial.sidebar", "collapsed"),
+    ),
+  );
+
   test("escritorio: llena la ventana sin scroll de página", async ({
     page,
   }) => {
@@ -63,8 +71,7 @@ test.describe("CALENDARIO — alto de ventana", () => {
         1,
       );
 
-      // El submenú de la sección vive sobre el calendario, también en escritorio
-      // (la barra lateral va en raíl y no lo despliega).
+      // El submenú de la sección vive sobre el calendario, también en escritorio.
       await expect(
         page.getByRole("navigation", { name: /Deporte|Nutrición/ }),
       ).toBeVisible();
@@ -130,7 +137,7 @@ test.describe("CALENDARIO — alto de ventana", () => {
     }
   });
 
-  test("escritorio: el raíl conserva las secciones y el submenú vive sobre el calendario", async ({
+  test("escritorio: plegado, el raíl conserva las secciones y el submenú vive sobre el calendario", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
