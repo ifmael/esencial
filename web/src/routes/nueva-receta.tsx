@@ -11,7 +11,6 @@ import {
   AddIcon,
   BookIcon,
   CheckIcon,
-  ChevronDownIcon,
   CloseIcon,
   PhotoIcon,
 } from "../components/icons";
@@ -20,12 +19,12 @@ import {
   type RecipeInput,
   useRecipes,
 } from "../components/recipes/use-recipes";
+import { StepsEditor } from "../components/steps-editor";
 import {
   Alert,
   Button,
   Card,
   Chip,
-  cx,
   Field,
   Input,
   ripple,
@@ -62,13 +61,6 @@ const at = (i: number) => ({ ["--i" as string]: i });
 
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
   rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
-
-const move = (items: string[], from: number, to: number): string[] => {
-  const next = [...items];
-  const [x] = next.splice(from, 1);
-  next.splice(to, 0, x);
-  return next;
-};
 
 export function NuevaRecetaPage() {
   const api = useRecipes();
@@ -573,83 +565,10 @@ export function NuevaRecetaPage() {
         <Card className="min-w-0 rounded-xl lg:col-span-2" style={at(4)}>
           <section className="flex flex-col gap-3">
             <h2 className="text-title-m">Pasos</h2>
-            <ol className="flex flex-col gap-3">
-              {draft.steps.map((text, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <Shape
-                    name="cookie-4"
-                    size={40}
-                    className="mt-1 text-accent-container"
-                  >
-                    <span className="text-label-l text-e text-on-accent-container tabular">
-                      {i + 1}
-                    </span>
-                  </Shape>
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                    <Input
-                      aria-label={`Paso ${i + 1}`}
-                      className="basis-full sm:basis-0 sm:flex-1"
-                      value={text}
-                      onChange={(e) =>
-                        set(
-                          "steps",
-                          draft.steps.map((s, j) =>
-                            j === i ? e.target.value : s,
-                          ),
-                        )
-                      }
-                    />
-                    <div className="ml-auto flex">
-                      {i > 0 && (
-                        <Button
-                          variant="text"
-                          size="icon"
-                          aria-label={`Subir paso ${i + 1}`}
-                          onClick={() =>
-                            set("steps", move(draft.steps, i, i - 1))
-                          }
-                        >
-                          <ChevronDownIcon className="rotate-180" />
-                        </Button>
-                      )}
-                      {i < draft.steps.length - 1 && (
-                        <Button
-                          variant="text"
-                          size="icon"
-                          aria-label={`Bajar paso ${i + 1}`}
-                          onClick={() =>
-                            set("steps", move(draft.steps, i, i + 1))
-                          }
-                        >
-                          <ChevronDownIcon />
-                        </Button>
-                      )}
-                      <Button
-                        variant="text"
-                        size="icon"
-                        aria-label={`Quitar paso ${i + 1}`}
-                        onClick={() =>
-                          set(
-                            "steps",
-                            draft.steps.filter((_, j) => j !== i),
-                          )
-                        }
-                      >
-                        <CloseIcon />
-                      </Button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <Button
-              variant="outlined"
-              className={cx("self-start", draft.steps.length > 0 && "ml-13")}
-              onClick={() => set("steps", [...draft.steps, ""])}
-            >
-              <AddIcon />
-              Añadir paso
-            </Button>
+            <StepsEditor
+              steps={draft.steps}
+              onChange={(steps) => set("steps", steps)}
+            />
           </section>
         </Card>
       </div>

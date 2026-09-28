@@ -293,6 +293,12 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
   de los grupos ya elegidos como tag (el invariante de arriba): elegir un músculo
   añade su grupo si falta, quitar un grupo se lleva sus músculos, y guardar exige
   al menos uno.
+- El editor de ejercicios (crear y editar) tiene **la piel de «Nueva receta»**:
+  página propia que sustituye a la lista o al detalle, cabecera de sección con
+  Cancelar/Guardar y tarjetas en dos columnas desde `lg` (dibujo de los músculos
+  elegidos, nombre + tipo en botones conectados + los diez grupos como fichas,
+  músculos por grupo, preparación y técnica, pasos). Los pasos numerados son
+  `web/src/components/steps-editor.tsx`, compartido con la receta.
 
 ## Despliegue: dos Workers (B')
 

@@ -176,11 +176,13 @@ describe("catalog", () => {
     expect(morphing()[0].contains(form)).toBe(true);
   });
 
-  it("create flow: name required, ≥1 tag, valid save → POST 201 + detail shows data", async () => {
+  it("create flow: name required, ≥1 group, ≥1 muscle, valid save → POST 201 + detail shows data", async () => {
     renderAt("/ejercicios");
     fireEvent.click(
       await screen.findByRole("button", { name: "Nuevo ejercicio" }),
     );
+    // Página de creación propia: la lista y su cabecera ceden el sitio.
+    expect(screen.queryByRole("heading", { name: "Ejercicios" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/nombre es obligatorio/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
@@ -189,27 +191,36 @@ describe("catalog", () => {
       target: { value: "Hip thrust" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    expect(screen.getByText(/tag es obligatorio/i)).toBeDefined();
+    expect(screen.getByText(/elige al menos un grupo/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
 
-    fireEvent.change(screen.getByPlaceholderText(/añadir tag/i), {
-      target: { value: "glúteo" },
-    });
-    fireEvent.keyDown(screen.getByPlaceholderText(/añadir tag/i), {
-      key: "Enter",
-    });
+    // Los diez grupos están a la vista como fichas: se eligen con un toque.
+    const groups = screen.getByRole("group", { name: "Grupos musculares" });
+    fireEvent.click(within(groups).getByRole("button", { name: "Glúteo" }));
     // El grupo abre sus músculos, y sin elegir uno no se guarda.
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/elige al menos un músculo/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Glúteo mayor" }));
 
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "Tipo" })).getByRole("button", {
+        name: "Bici",
+      }),
+    );
     fireEvent.change(screen.getByLabelText(/técnica/i), {
       target: { value: "https://youtu.be/ht" },
     });
-    fireEvent.change(screen.getByLabelText(/pasos de ejecución/i), {
-      target: { value: "Paso uno\nPaso dos" },
+    // Pasos numerados como en una receta: uno por campo, el vacío no viaja.
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
+      target: { value: "Paso uno" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Añadir paso" }));
+    fireEvent.click(screen.getByRole("button", { name: "Añadir paso" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 3" }), {
+      target: { value: "Paso dos" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Subir paso 3" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.exercises).toHaveLength(4));
     await screen.findByRole("heading", { name: "Hip thrust" });
@@ -219,9 +230,28 @@ describe("catalog", () => {
       (c) => c.method === "POST" && c.url === "/api/exercises",
     )!;
     // `post.body` es el JSON que mandó el cliente al mock: es lo que se comprueba.
-    const body = post.body as { steps: string[] | null; regions: string[] };
+    const body = post.body as {
+      steps: string[] | null;
+      regions: string[];
+      kind: string;
+    };
     expect(body.steps).toEqual(["Paso uno", "Paso dos"]);
     expect(body.regions).toEqual(["gluteus-maximus"]);
+    expect(body.kind).toBe("bike");
+  });
+
+  it("quitar un grupo se lleva sus músculos", async () => {
+    renderAt("/ejercicios");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Nuevo ejercicio" }),
+    );
+    const groups = screen.getByRole("group", { name: "Grupos musculares" });
+    const gluteo = within(groups).getByRole("button", { name: "Glúteo" });
+    fireEvent.click(gluteo);
+    fireEvent.click(screen.getByRole("button", { name: "Glúteo mayor" }));
+    fireEvent.click(gluteo);
+    expect(gluteo.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("button", { name: "Glúteo mayor" })).toBeNull();
   });
 });
 
