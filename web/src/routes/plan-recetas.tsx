@@ -4,8 +4,11 @@
 // y el estado local se reemplaza con la respuesta del servidor.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { Loader, Monogram } from "../components/expressive";
+import { AddIcon, CartIcon, CloseIcon } from "../components/icons";
+import { Dialog, OverlayHeader } from "../components/overlay";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
-import { Button, Card, Input } from "../components/ui";
+import { Button, ripple, SearchBar } from "../components/ui";
 import { WeekGrid } from "../components/week-grid";
 import { apiFetchRaw, photoSrc } from "../lib/api";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
@@ -19,13 +22,16 @@ export type Slot = {
   recipeName: string | null;
   recipePhoto: string | null;
 };
-export type RecipeSummary = { id: number; name: string };
+export type RecipeSummary = { id: number; name: string; photo: string | null };
 
 const slotKey = (day: number, meal: string) => `${day}|${meal}`;
 
 /** GET/PUT de la semana completa; PUT fallido recarga el estado del servidor. */
 export function useMealPlan(isoWeek: string) {
   const [slots, setSlots] = useState<Slot[] | null>(null);
+  // Semana a la que pertenecen `slots` (al navegar, las de la anterior siguen
+  // pintadas hasta que llega la nueva: la rejilla espera con `busy`).
+  const [loadedWeek, setLoadedWeek] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -36,7 +42,10 @@ export function useMealPlan(isoWeek: string) {
       .then(async (res) => {
         const data: { slots: Slot[]; error?: string } = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Error");
-        if (!cancelled) setSlots(data.slots);
+        if (!cancelled) {
+          setSlots(data.slots);
+          setLoadedWeek(isoWeek);
+        }
       })
       .catch(() => {
         if (!cancelled) {
@@ -82,7 +91,37 @@ export function useMealPlan(isoWeek: string) {
     [isoWeek],
   );
 
-  return { slots, error, save, retry: () => setAttempt((a) => a + 1) };
+  return {
+    slots,
+    busy: loadedWeek !== isoWeek && !error,
+    error,
+    save,
+    retry: () => setAttempt((a) => a + 1),
+  };
+}
+
+/** Miniatura de receta: su foto o, sin ella, el monograma M3E de su nombre. */
+function RecipeThumb({
+  name,
+  photo,
+  size,
+}: {
+  name: string;
+  photo: string | null;
+  size: number;
+}) {
+  return photo ? (
+    <img
+      src={photoSrc(photo)}
+      alt=""
+      width={size}
+      height={size}
+      className="shrink-0 rounded-s object-cover"
+      style={{ width: size, height: size }}
+    />
+  ) : (
+    <Monogram name={name} size={size} />
+  );
 }
 
 function RecipePicker({
@@ -98,9 +137,16 @@ function RecipePicker({
   useEffect(() => {
     apiFetchRaw("/api/recipes")
       .then(async (res) => {
-        const all: RecipeSummary[] = await res.json();
-        // El backend devuelve recetas completas; solo se necesita id + nombre.
-        setRecipes(all.map((r) => ({ id: r.id, name: r.name })));
+        const all: { id: number; name: string; photo_path?: string | null }[] =
+          await res.json();
+        // El backend devuelve recetas completas; solo se necesita id, nombre y foto.
+        setRecipes(
+          all.map((r) => ({
+            id: r.id,
+            name: r.name,
+            photo: r.photo_path ?? null,
+          })),
+        );
       })
       .catch(() => setRecipes([]));
   }, []);
@@ -112,48 +158,51 @@ function RecipePicker({
       : recipes
     : [];
 
+  // A pantalla completa en móvil: la búsqueda convive con el teclado.
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
-      onClick={onClose}
+    <Dialog
+      onClose={onClose}
+      label="Elegir receta"
+      className="md:max-h-[80vh] md:max-w-md"
     >
-      <Card
-        role="dialog"
-        aria-label="Elegir receta"
-        className="flex max-h-[80vh] w-full max-w-md flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Input
-          type="text"
-          autoFocus
-          placeholder="Buscar receta…"
-          aria-label="Buscar receta"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <ul className="flex flex-col gap-1 overflow-y-auto">
-          {recipes === null ? (
-            <li className="text-text-secondary">Cargando…</li>
-          ) : null}
-          {shown.map((r) => (
-            <li key={r.id}>
-              <button
-                className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted"
-                onClick={() => onPick(r)}
-              >
+      <OverlayHeader title="Elegir receta" onClose={onClose} />
+      <SearchBar
+        tone="high"
+        className="mx-4 md:mx-6"
+        autoFocus
+        placeholder="Buscar receta…"
+        aria-label="Buscar receta"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <ul className="stagger flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2 pb-4 md:px-4">
+        {recipes === null ? (
+          <li>
+            <Loader label="Cargando recetas…" className="mx-auto my-6" />
+          </li>
+        ) : null}
+        {shown.map((r, i) => (
+          <li key={r.id} style={{ ["--i" as string]: i }}>
+            <button
+              type="button"
+              onPointerDown={ripple}
+              className="state list-row min-h-12 w-full px-3 py-1 text-left text-on-surface"
+              onClick={() => onPick(r)}
+            >
+              <RecipeThumb name={r.name} photo={r.photo} size={40} />
+              <span className="min-w-0 flex-1 truncate text-title-m">
                 {r.name}
-              </button>
-            </li>
-          ))}
-          {recipes !== null && shown.length === 0 ? (
-            <li className="px-3 text-text-secondary">Sin resultados.</li>
-          ) : null}
-        </ul>
-        <Button variant="secondary" onClick={onClose}>
-          Cerrar
-        </Button>
-      </Card>
-    </div>
+              </span>
+            </button>
+          </li>
+        ))}
+        {recipes !== null && shown.length === 0 ? (
+          <li className="px-4 py-6 text-center text-body-m text-on-surface-variant">
+            Sin resultados.
+          </li>
+        ) : null}
+      </ul>
+    </Dialog>
   );
 }
 
@@ -169,46 +218,47 @@ function SlotCell({
   const [confirming, setConfirming] = useState(false);
   if (!slot?.recipeId) {
     return (
-      <button
+      <Button
+        variant="text"
+        aria-label="+ añadir"
         onClick={onAdd}
-        className="flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border text-text-secondary hover:border-primary hover:text-primary"
+        className="w-full justify-start px-3"
       >
-        <span className="text-sm">+ añadir</span>
-      </button>
+        <AddIcon width={20} height={20} />
+        añadir
+      </Button>
     );
   }
+  const name = slot.recipeName ?? "Receta";
   return (
-    <div className="flex min-h-11 flex-1 flex-col gap-1 rounded-lg border border-border bg-surface p-2">
-      <div className="flex items-center gap-2">
-        {slot.recipePhoto ? (
-          <img
-            src={photoSrc(slot.recipePhoto)}
-            alt=""
-            className="size-8 shrink-0 rounded object-cover"
-          />
-        ) : (
-          <span
-            aria-hidden
-            className="size-8 shrink-0 rounded bg-surface-muted"
-          />
-        )}
+    <div className="flex flex-col gap-1 rounded-m bg-surface-container-high p-1">
+      <div className="flex items-center">
         <Link
           to={`/recetario/${slot.recipeId}`}
-          className="min-h-11 flex-1 truncate text-left text-sm font-semibold text-primary"
+          onPointerDown={ripple}
+          className="state flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-s p-1 text-on-surface"
         >
-          {slot.recipeName ?? "Receta"}
+          <RecipeThumb name={name} photo={slot.recipePhoto} size={32} />
+          <span className="line-clamp-2 min-w-0 text-title-s text-e">
+            {name}
+          </span>
         </Link>
-        <button
-          aria-label={`Quitar ${slot.recipeName ?? "receta"}`}
-          onClick={() => setConfirming(true)}
-          className="min-h-11 px-2 text-text-secondary hover:text-error"
+        {/* 40 px: fila densa dentro de una columna estrecha (guía de migración). */}
+        <Button
+          variant="text"
+          size="icon-sm"
+          aria-label={`Quitar ${name}`}
+          onClick={() => setConfirming((c) => !c)}
+          className="text-on-surface-variant"
         >
-          ✕
-        </button>
+          <CloseIcon width={20} height={20} />
+        </Button>
       </div>
       {confirming ? (
         <Button
-          className="bg-error min-h-11 text-xs"
+          variant="danger"
+          size="sm"
+          className="animate-pop"
           onClick={() => {
             setConfirming(false);
             onRemove();
@@ -224,7 +274,7 @@ function SlotCell({
 export function PlanRecetasPage() {
   const [params, setParams] = useSearchParams();
   const isoWeek = params.get("week") ?? currentIsoWeek();
-  const { slots, error, save, retry } = useMealPlan(isoWeek);
+  const { slots, busy, error, save, retry } = useMealPlan(isoWeek);
   const [picker, setPicker] = useState<{ day: number; meal: string } | null>(
     null,
   );
@@ -250,34 +300,30 @@ export function PlanRecetasPage() {
       <WeekGrid
         isoWeek={isoWeek}
         loading={slots === null && !error}
+        busy={busy}
         error={error}
         onRetry={retry}
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
+        aside={
+          <Button variant="tonal" onClick={() => setSheetOpen(true)}>
+            <CartIcon width={20} height={20} />
+            Lista de la compra
+          </Button>
+        }
       >
-        {({ index }) => (
-          <>
-            {MEALS.map((meal) => (
-              <div key={meal} className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-wide text-text-secondary">
-                  {meal}
-                </span>
-                <SlotCell
-                  slot={bySlot.get(slotKey(index, meal))}
-                  onAdd={() => setPicker({ day: index, meal })}
-                  onRemove={() => write(index, meal, null)}
-                />
-              </div>
-            ))}
-          </>
-        )}
+        {({ index }) =>
+          MEALS.map((meal) => (
+            <div key={meal} className="flex flex-col gap-1">
+              <span className="section-label px-1">{meal}</span>
+              <SlotCell
+                slot={bySlot.get(slotKey(index, meal))}
+                onAdd={() => setPicker({ day: index, meal })}
+                onRemove={() => write(index, meal, null)}
+              />
+            </div>
+          ))
+        }
       </WeekGrid>
-
-      <Button
-        className="sticky bottom-4 self-start md:self-end"
-        onClick={() => setSheetOpen(true)}
-      >
-        Lista de la compra
-      </Button>
 
       {picker ? (
         <RecipePicker

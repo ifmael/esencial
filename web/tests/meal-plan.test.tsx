@@ -104,7 +104,9 @@ afterEach(() => {
 describe("rejilla 7×3", () => {
   it("semana vacía: 21 celdas '+ añadir' y etiquetas de días en español", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    expect((await screen.findAllByText("+ añadir")).length).toBe(21);
+    expect(
+      (await screen.findAllByRole("button", { name: "+ añadir" })).length,
+    ).toBe(21);
     for (const day of [
       "Lunes",
       "Martes",
@@ -133,7 +135,9 @@ describe("rejilla 7×3", () => {
     ];
     renderAt("/plan-recetas?week=2026-W36");
     expect(await screen.findByText("Pollo al horno")).toBeDefined();
-    expect((await screen.findAllByText("+ añadir")).length).toBe(20);
+    expect(
+      (await screen.findAllByRole("button", { name: "+ añadir" })).length,
+    ).toBe(20);
   });
 
   it("fallo de API → tarjeta de error con reintento; reintentar carga la rejilla", async () => {
@@ -142,7 +146,9 @@ describe("rejilla 7×3", () => {
     const retry = await screen.findByRole("button", { name: "Reintentar" });
     apiDown = false;
     fireEvent.click(retry);
-    expect((await screen.findAllByText("+ añadir")).length).toBe(21);
+    expect(
+      (await screen.findAllByRole("button", { name: "+ añadir" })).length,
+    ).toBe(21);
   });
 });
 
@@ -152,7 +158,7 @@ describe("una sola rejilla semanal", () => {
   // columna sigue siendo el de comidas.
   it("los 7 días comparten contenedor con la cabecera de la semana dentro", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    await screen.findAllByText("+ añadir");
+    await screen.findAllByRole("button", { name: "+ añadir" });
     const main = within(screen.getByRole("main"));
     const cards = [
       "Lunes",
@@ -175,7 +181,7 @@ describe("una sola rejilla semanal", () => {
 describe("navegación de semana", () => {
   it("‹ y › cambian la semana pedida y el query ?week=", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    await screen.findAllByText("+ añadir");
+    await screen.findAllByRole("button", { name: "+ añadir" });
     fireEvent.click(screen.getByRole("button", { name: "Semana anterior" }));
     await waitFor(() => expect(window.location.search).toBe("?week=2026-W35"));
     await waitFor(() => expect(mealPlanCalls).toContain("GET 2026-W35"));
@@ -196,13 +202,16 @@ describe("navegación de semana", () => {
 describe("picker de recetas", () => {
   it("abre overlay con recetas; buscar filtra sin más fetch; elegir guarda el slot", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    await screen.findAllByText("+ añadir");
-    fireEvent.click(screen.getAllByText("+ añadir")[0]);
+    await screen.findAllByRole("button", { name: "+ añadir" });
+    fireEvent.click(screen.getAllByRole("button", { name: "+ añadir" })[0]);
     const dialog = await screen.findByRole("dialog");
     await within(dialog).findByText("Pollo al horno");
-    fireEvent.change(within(dialog).getByRole("textbox"), {
-      target: { value: "pol" },
-    });
+    fireEvent.change(
+      within(dialog).getByRole("searchbox", { name: "Buscar receta" }),
+      {
+        target: { value: "pol" },
+      },
+    );
     expect(within(dialog).getByText("Pollo al horno")).toBeDefined();
     expect(within(dialog).getByText("Tarta de polen")).toBeDefined();
     expect(within(dialog).queryByText("Lentejas")).toBeNull();
@@ -229,7 +238,7 @@ describe("picker de recetas", () => {
     failNextPut = true;
     renderAt("/plan-recetas?week=2026-W36");
     await screen.findByText("Lentejas");
-    fireEvent.click(screen.getAllByText("+ añadir")[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ añadir" })[0]);
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(await within(dialog).findByText("Pollo al horno"));
     expect(await screen.findByRole("alert")).toBeDefined();
@@ -297,7 +306,7 @@ describe("celda rellena", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Confirmar quitar" }),
     );
-    await screen.findAllByText("+ añadir");
+    await screen.findAllByRole("button", { name: "+ añadir" });
     await waitFor(() => expect(slots.length).toBe(0));
     expect(mealPlanCalls).toContain("PUT 2026-W36");
   });

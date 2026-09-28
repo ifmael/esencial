@@ -11,6 +11,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
+import { SnackbarHost } from "../src/components/overlay";
+import { ShoppingListSheet } from "../src/components/shopping-list-sheet";
+import { manualSet } from "../src/lib/shopping-list";
 
 type Item = {
   id?: number;
@@ -24,7 +27,7 @@ type Section = { section: string; items: Item[] };
 
 let sections: Section[] = [];
 let patchCalls: { id: number; body: Record<string, unknown> }[] = [];
-let putItemsBodies: unknown[] = [];
+let putItemsBodies: { items: { food: string }[] }[] = [];
 let apiDown = false;
 
 const jsonResponse = (data: unknown, status = 200) =>
@@ -199,7 +202,7 @@ describe("hoja de la compra", () => {
     fireEvent.change(input, { target: { value: "Detergente" } });
     fireEvent.keyDown(input, { key: "Enter" });
     await waitFor(() => expect(putItemsBodies.length).toBe(1));
-    const sent = putItemsBodies[0] as { items: { food: string }[] };
+    const sent = putItemsBodies[0];
     expect(sent.items.map((i) => i.food)).toEqual(
       expect.arrayContaining(["Pan", "Aguacate", "Detergente"]),
     );
@@ -222,14 +225,110 @@ describe("hoja de la compra", () => {
     apiDown = true;
     await openSheet();
     // La rejilla también falla con la API caída; el Reintentar de la hoja vive en su contenedor.
-    const sheet = screen
-      .getByRole("heading", { name: "Lista de la compra" })
-      .closest("div.fixed") as HTMLElement;
+    const sheet = screen.getByRole("region", { name: "Lista de la compra" });
     const retry = await within(sheet).findByRole("button", {
       name: "Reintentar",
     });
     apiDown = false;
     fireEvent.click(retry);
     expect(await screen.findByText("Frutas y verduras")).toBeDefined();
+  });
+});
+
+describe("manualSet: set manual completo para el PUT", () => {
+  const list = [
+    {
+      section: "Frutas y verduras",
+      items: [
+        {
+          id: null,
+          source: "recipe" as const,
+          food: "tomate",
+          quantity: 500,
+          unit: "g",
+        },
+        {
+          id: 11,
+          source: "manual" as const,
+          food: "Aguacate",
+          quantity: 2,
+          unit: "ud",
+          checked: true,
+        },
+      ],
+    },
+    {
+      section: "Despensa",
+      items: [
+        {
+          id: 12,
+          source: "manual" as const,
+          food: "Pan",
+          quantity: null,
+          unit: null,
+        },
+      ],
+    },
+  ];
+
+  it("solo los manuales, con su sección y su estado, en orden", () => {
+    expect(manualSet(list)).toEqual([
+      {
+        food: "Aguacate",
+        quantity: 2,
+        unit: "ud",
+        checked: true,
+        section: "Frutas y verduras",
+      },
+      {
+        food: "Pan",
+        quantity: null,
+        unit: null,
+        checked: false,
+        section: "Despensa",
+      },
+    ]);
+  });
+
+  it("sin un artículo: lo quita por id y deja el resto", () => {
+    expect(manualSet(list, { drop: 11 }).map((i) => i.food)).toEqual(["Pan"]);
+  });
+
+  it("con un artículo nuevo: lo añade al final sin marcar", () => {
+    expect(
+      manualSet(list, { add: { food: "Sal", section: "Despensa" } }).at(-1),
+    ).toEqual({
+      food: "Sal",
+      quantity: null,
+      unit: null,
+      checked: false,
+      section: "Despensa",
+    });
+  });
+});
+
+describe("quitar un manual con Deshacer", () => {
+  it("Quitar → PUT sin él y snackbar; Deshacer → PUT con él de vuelta", async () => {
+    render(
+      <SnackbarHost>
+        <ShoppingListSheet isoWeek="2026-W36" open onClose={() => {}} />
+      </SnackbarHost>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Quitar Pan" }));
+    await waitFor(() => expect(putItemsBodies.length).toBe(1));
+    expect(putItemsBodies[0].items.map((x) => x.food)).toEqual(["Aguacate"]);
+    expect(await screen.findByText("Pan quitado")).toBeDefined();
+    await waitFor(() =>
+      expect(screen.queryByRole("checkbox", { name: /Pan/ })).toBeNull(),
+    );
+    // las líneas de receta no se pueden quitar a mano
+    expect(screen.queryByRole("button", { name: /Quitar tomate/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+    await waitFor(() => expect(putItemsBodies.length).toBe(2));
+    expect(putItemsBodies[1].items.map((x) => x.food)).toEqual(
+      expect.arrayContaining(["Aguacate", "Pan"]),
+    );
+    expect(await screen.findByRole("checkbox", { name: /Pan/ })).toBeDefined();
   });
 });
