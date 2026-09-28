@@ -2,7 +2,12 @@
 // ángulos, así que cualquier pareja se puede transformar (morph) interpolando
 // el atributo `d`.
 import { describe, expect, it } from "vitest";
-import { SHAPES, type ShapeName, shapePath, shapePoints } from "../src/lib/shapes";
+import {
+  SHAPES,
+  type ShapeName,
+  shapePath,
+  shapePoints,
+} from "../src/lib/shapes";
 
 const names = Object.keys(SHAPES) as ShapeName[];
 
@@ -42,7 +47,13 @@ describe("formas M3E", () => {
       const ys = pts.map(([, y]) => y);
       expect(Math.min(...xs, ...ys), n).toBeGreaterThanOrEqual(0);
       expect(Math.max(...xs, ...ys), n).toBeLessThanOrEqual(1);
-      expect(Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)), n).toBeCloseTo(1, 2);
+      expect(
+        Math.max(
+          Math.max(...xs) - Math.min(...xs),
+          Math.max(...ys) - Math.min(...ys),
+        ),
+        n,
+      ).toBeCloseTo(1, 2);
     }
   });
 

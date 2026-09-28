@@ -13,9 +13,8 @@ const BASE = `http://127.0.0.1:${WEB_PORT}`;
 // B' (dos despliegues): la API es su propio Worker, en su propio puerto. El SPA
 // se construye apuntando ahí (VITE_API_URL) y el frontal autoriza ese origen en
 // su CSP (API_ORIGIN): los dos valores tienen que ser el mismo.
+// helpers.ts deriva la misma URL de E2E_API_PORT (los workers heredan el entorno).
 const API = `http://127.0.0.1:${API_PORT}`;
-// Los tests leen la API de aquí (helpers.ts: E2E_API_URL).
-process.env.E2E_API_URL = API;
 
 // La base de e2e se DERIVA de api/migrations/ en cada corrida y vive en
 // e2e/.state: nunca se lee ni se escribe .wrangler/state. Añadir una migración

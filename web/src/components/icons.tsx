@@ -11,7 +11,12 @@ type IconProps = ComponentProps<"svg"> & { filled?: boolean };
 
 /** Decorativos por definición: el texto que los acompaña ya nombra la acción. */
 function icon(outline: string, fill = outline) {
-  return function Icon({ filled = false, width = 24, height = 24, ...props }: IconProps) {
+  return function Icon({
+    filled = false,
+    width = 24,
+    height = 24,
+    ...props
+  }: IconProps) {
     return (
       <svg
         xmlns="http://www.w3.org/2000/svg"

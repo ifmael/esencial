@@ -7,8 +7,11 @@
 const POINTS = 120;
 
 /** Superelipse |x/a|^p + |y/b|^p = 1 en polar. */
-const superellipse = (p: number, a = 1, b = 1) => (t: number) =>
-  (Math.abs(Math.cos(t) / a) ** p + Math.abs(Math.sin(t) / b) ** p) ** (-1 / p);
+const superellipse =
+  (p: number, a = 1, b = 1) =>
+  (t: number) =>
+    (Math.abs(Math.cos(t) / a) ** p + Math.abs(Math.sin(t) / b) ** p) **
+    (-1 / p);
 
 /** Galleta: n festones redondos de profundidad `depth`. */
 const cookie = (n: number, depth: number) => (t: number) =>
@@ -46,7 +49,12 @@ export function shapePoints(name: ShapeName): [number, number][] {
   });
   const xs = raw.map(([x]) => x);
   const ys = raw.map(([, y]) => y);
-  const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const [minX, maxX, minY, maxY] = [
+    Math.min(...xs),
+    Math.max(...xs),
+    Math.min(...ys),
+    Math.max(...ys),
+  ];
   const span = Math.max(maxX - minX, maxY - minY);
   const ox = (span - (maxX - minX)) / 2 - minX;
   const oy = (span - (maxY - minY)) / 2 - minY;
@@ -56,7 +64,8 @@ export function shapePoints(name: ShapeName): [number, number][] {
 /** Trazo SVG cerrado de la forma en una caja de `size`×`size`. */
 export function shapePath(name: ShapeName, size = 100): string {
   const pts = shapePoints(name).map(
-    ([x, y]) => `${Number((x * size).toFixed(2))} ${Number((y * size).toFixed(2))}`,
+    ([x, y]) =>
+      `${Number((x * size).toFixed(2))} ${Number((y * size).toFixed(2))}`,
   );
   return `M${pts.join("L")}Z`;
 }
