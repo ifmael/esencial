@@ -386,16 +386,16 @@ function Header({
   progress?: { done: number; total: number };
 }) {
   return (
-    <header className="relative mb-6 flex items-center gap-4 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-5 md:p-6">
+    <header className="relative mb-6 flex flex-col items-start gap-4 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-5 sm:flex-row sm:items-center md:p-6">
       <Shape
         name="sunny"
         size={220}
         className="pointer-events-none absolute -top-20 -right-16 text-accent-container opacity-60"
       />
-      <div className="relative flex min-w-0 flex-1 flex-col gap-2">
-        <div className="-ml-3 flex items-center gap-1">
+      <div className="relative flex w-full min-w-0 flex-1 flex-col gap-2">
+        <div className="-ml-3 flex min-w-0 items-center gap-1">
           <BackLink />
-          <h1 className="text-headline-l text-e first-letter:uppercase">
+          <h1 className="min-w-0 text-headline-m text-e first-letter:uppercase md:text-headline-l">
             {formatDateEs(parseDateEs(date))}
           </h1>
         </div>
