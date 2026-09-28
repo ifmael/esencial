@@ -12,7 +12,11 @@ import {
   useSyncExternalStore,
 } from "react";
 import { sheetDrag, sheetRelease } from "../lib/sheet";
-import { createSnackbarStore, type SnackbarInput, type SnackbarStore } from "../lib/snackbar";
+import {
+  createSnackbarStore,
+  type SnackbarInput,
+  type SnackbarStore,
+} from "../lib/snackbar";
 import { CloseIcon } from "./icons";
 import { Button, cx } from "./ui";
 
@@ -61,7 +65,15 @@ export function Dialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <Scrim onClose={onClose} className={cx("flex justify-center", fullscreenOnMobile ? "items-stretch md:items-center md:p-6" : "items-center p-4")}>
+    <Scrim
+      onClose={onClose}
+      className={cx(
+        "flex justify-center",
+        fullscreenOnMobile
+          ? "items-stretch md:items-center md:p-6"
+          : "items-center p-4",
+      )}
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -97,7 +109,12 @@ export function Sheet({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [dy, setDy] = useState(0);
-  const drag = useRef<{ y: number; t: number; lastY: number; lastT: number } | null>(null);
+  const drag = useRef<{
+    y: number;
+    t: number;
+    lastY: number;
+    lastT: number;
+  } | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -112,7 +129,12 @@ export function Sheet({
       className="flex h-9 shrink-0 cursor-grab touch-none items-center justify-center md:hidden"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
-        drag.current = { y: e.clientY, t: e.timeStamp, lastY: e.clientY, lastT: e.timeStamp };
+        drag.current = {
+          y: e.clientY,
+          t: e.timeStamp,
+          lastY: e.clientY,
+          lastT: e.timeStamp,
+        };
       }}
       onPointerMove={(e) => {
         const d = drag.current;
@@ -127,7 +149,11 @@ export function Sheet({
         if (!d) return;
         const moved = e.clientY - d.y;
         const dt = Math.max(1, e.timeStamp - d.t);
-        const result = sheetRelease({ dy: moved, velocity: moved / dt, height: ref.current?.offsetHeight ?? 600 });
+        const result = sheetRelease({
+          dy: moved,
+          velocity: moved / dt,
+          height: ref.current?.offsetHeight ?? 600,
+        });
         setDy(0);
         if (result === "close") onClose();
       }}
@@ -158,20 +184,40 @@ export function Sheet({
   if (!modal) return sheet;
   return (
     <>
-      <div className="scrim fixed inset-0 z-40 md:hidden" onClick={onClose} aria-hidden="true" />
+      <div
+        className="scrim fixed inset-0 z-40 md:hidden"
+        onClick={onClose}
+        aria-hidden="true"
+      />
       {sheet}
     </>
   );
 }
 
 /** Cabecera estándar de hoja/diálogo: título y botón de cerrar. */
-export function OverlayHeader({ title, id, onClose, closeLabel = "Cerrar" }: { title: ReactNode; id?: string; onClose: () => void; closeLabel?: string }) {
+export function OverlayHeader({
+  title,
+  id,
+  onClose,
+  closeLabel = "Cerrar",
+}: {
+  title: ReactNode;
+  id?: string;
+  onClose: () => void;
+  closeLabel?: string;
+}) {
   return (
     <div className="flex items-center justify-between gap-2 px-6 pt-2 pb-2 md:pt-5">
       <h2 id={id} className="text-headline-s">
         {title}
       </h2>
-      <Button variant="text" size="icon" aria-label={closeLabel} onClick={onClose} className="text-on-surface-variant">
+      <Button
+        variant="text"
+        size="icon"
+        aria-label={closeLabel}
+        onClick={onClose}
+        className="text-on-surface-variant"
+      >
         <CloseIcon />
       </Button>
     </div>
@@ -189,16 +235,31 @@ export function SnackbarHost({ children }: { children: ReactNode }) {
   return (
     <SnackbarContext.Provider value={store}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 lg:bottom-6">
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 lg:bottom-6"
+      >
         {view ? (
-          <div key={view.id} className="snackbar pointer-events-auto flex min-h-12 w-full max-w-md items-center gap-2 py-1 pl-4 pr-2">
+          <div
+            key={view.id}
+            className="snackbar pointer-events-auto flex min-h-12 w-full max-w-md items-center gap-2 py-1 pl-4 pr-2"
+          >
             <span className="flex-1 py-2 text-body-m">{view.message}</span>
             {view.canUndo ? (
-              <button type="button" onClick={store.undo} className="snackbar-action state h-10 rounded-full px-3 text-label-l">
+              <button
+                type="button"
+                onClick={store.undo}
+                className="snackbar-action state h-10 rounded-full px-3 text-label-l"
+              >
                 Deshacer
               </button>
             ) : null}
-            <button type="button" aria-label="Cerrar aviso" onClick={store.dismiss} className="state grid size-10 place-items-center rounded-full">
+            <button
+              type="button"
+              aria-label="Cerrar aviso"
+              onClick={store.dismiss}
+              className="state grid size-10 place-items-center rounded-full"
+            >
               <CloseIcon width={20} height={20} />
             </button>
           </div>

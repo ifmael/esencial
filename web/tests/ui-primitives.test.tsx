@@ -1,11 +1,17 @@
-// Primitivas de UI (variante A): contrato de variantes/tonos y comportamiento
-// del botón. Lo que se prueba es lo que un consumidor observa —la superficie
-// que pinta cada variante, que `disabled` bloquee el click y que los campos
-// expongan su estado de error—, no el detalle interno del componente.
+// Primitivas M3E: contrato que observa un consumidor —la superficie que pinta
+// cada variante, que `disabled` bloquee el click, el enlace etiqueta/ayuda/error
+// de los campos y el menú del botón dividido—, no el detalle de su piel.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Badge, Button, Card, Input } from "../src/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Field,
+  Input,
+  SplitButton,
+} from "../src/components/ui";
 
 afterEach(cleanup);
 
@@ -32,39 +38,91 @@ describe("Button", () => {
   });
 
   it("cada variante pinta una superficie distinta", () => {
+    const seen = new Set<string>();
     const { rerender } = render(<Button>Uno</Button>);
-    const primary = screen.getByRole("button").className;
-    rerender(<Button variant="secondary">Uno</Button>);
-    const secondary = screen.getByRole("button").className;
-    rerender(<Button variant="ghost">Uno</Button>);
-    const ghost = screen.getByRole("button").className;
-    expect(primary).not.toBe(secondary);
-    expect(secondary).not.toBe(ghost);
-    expect(secondary).toContain("btn-secondary");
-    expect(ghost).toContain("btn-ghost");
-  });
-
-  it("size sm reduce la altura y size md la mantiene en área táctil", () => {
-    const { rerender } = render(<Button size="sm">Uno</Button>);
-    expect(screen.getByRole("button").className).toContain("h-9");
-    rerender(<Button>Uno</Button>);
-    expect(screen.getByRole("button").className).toContain("h-11");
+    for (const variant of [
+      "filled",
+      "tonal",
+      "outlined",
+      "text",
+      "danger",
+    ] as const) {
+      rerender(<Button variant={variant}>Uno</Button>);
+      seen.add(screen.getByRole("button").className);
+    }
+    expect(seen.size).toBe(5);
   });
 });
 
-describe("Input", () => {
-  it("marca el estado de error con aria-invalid y la superficie de error", () => {
-    render(<Input aria-label="Contraseña" aria-invalid />);
-    const input = screen.getByLabelText("Contraseña");
-    expect(input.getAttribute("aria-invalid")).toBe("true");
-    expect(input.className).toContain("input-error");
+describe("Field", () => {
+  it("la etiqueta nombra el campo y la ayuda lo describe", () => {
+    render(
+      <Field label="Nombre" support="Visible en el recetario">
+        {(a) => <Input {...a} />}
+      </Field>,
+    );
+    const input = screen.getByLabelText("Nombre");
+    expect(input.getAttribute("aria-invalid")).toBeNull();
+    expect(
+      document.getElementById(input.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("Visible en el recetario");
   });
 
-  it("sin error no pinta la superficie de error", () => {
-    render(<Input aria-label="Contraseña" />);
-    expect(screen.getByLabelText("Contraseña").className).not.toContain(
-      "input-error",
+  it("con error marca aria-invalid y el error sustituye a la ayuda", () => {
+    render(
+      <Field label="Nombre" support="Ayuda" error="Obligatorio">
+        {(a) => <Input {...a} />}
+      </Field>,
     );
+    const input = screen.getByLabelText("Nombre");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(
+      document.getElementById(input.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("Obligatorio");
+    expect(screen.queryByText("Ayuda")).toBeNull();
+  });
+});
+
+describe("SplitButton", () => {
+  it("la flecha abre un menú; elegir una variante la ejecuta y lo cierra", () => {
+    const main = vi.fn();
+    const other = vi.fn();
+    render(
+      <SplitButton
+        onClick={main}
+        menuLabel="Más formas de guardar"
+        items={[{ label: "Guardar y otra", onSelect: other }]}
+      >
+        Guardar
+      </SplitButton>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    expect(main).toHaveBeenCalledTimes(1);
+    const arrow = screen.getByRole("button", { name: "Más formas de guardar" });
+    fireEvent.click(arrow);
+    expect(arrow.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Guardar y otra" }));
+    expect(other).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("Escape cierra el menú y devuelve el foco a la flecha", () => {
+    render(
+      <SplitButton
+        onClick={() => {}}
+        menuLabel="Más"
+        items={[{ label: "Otra", onSelect: () => {} }]}
+      >
+        Guardar
+      </SplitButton>,
+    );
+    const arrow = screen.getByRole("button", { name: "Más" });
+    fireEvent.click(arrow);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(arrow);
   });
 });
 

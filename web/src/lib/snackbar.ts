@@ -27,7 +27,10 @@ export function createSnackbarStore({
     set: (fn, ms) => setTimeout(fn, ms),
     clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
   },
-}: { duration?: number; timers?: Timers } = {}): SnackbarStore {
+}: {
+  duration?: number;
+  timers?: Timers;
+} = {}): SnackbarStore {
   let view: SnackbarView | null = null;
   let undo: (() => void) | undefined;
   let timer: unknown = null;

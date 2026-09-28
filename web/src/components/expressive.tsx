@@ -24,13 +24,22 @@ export function Shape({
 }) {
   return (
     <span
-      className={cx("relative inline-grid shrink-0 place-items-center", className)}
+      className={cx(
+        "relative inline-grid shrink-0 place-items-center",
+        className,
+      )}
       style={{ width: size, height: size }}
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
-      <svg viewBox="0 0 100 100" width={size} height={size} className="shape absolute inset-0" aria-hidden="true">
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        className="shape absolute inset-0"
+        aria-hidden="true"
+      >
         <path d={shapePath(name)} fill="currentColor" />
       </svg>
       {children ? <span className="relative">{children}</span> : null}
@@ -38,11 +47,20 @@ export function Shape({
   );
 }
 
-const LOADER_SEQUENCE: ShapeName[] = ["cookie-9", "pill", "sunny", "cookie-4", "soft-diamond", "flower"];
+const LOADER_SEQUENCE: ShapeName[] = [
+  "cookie-9",
+  "pill",
+  "sunny",
+  "cookie-4",
+  "soft-diamond",
+  "flower",
+];
 
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
-    () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () =>
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   useEffect(() => {
     if (typeof matchMedia !== "function") return;
@@ -56,17 +74,40 @@ function useReducedMotion(): boolean {
 
 /** Indicador de carga M3E: una forma que gira y se transforma en la
  * siguiente. Sustituye a «Cargando…» (el texto queda para el lector). */
-export function Loader({ label = "Cargando…", size = 48, className }: { label?: string; size?: number; className?: string }) {
+export function Loader({
+  label = "Cargando…",
+  size = 48,
+  className,
+}: {
+  label?: string;
+  size?: number;
+  className?: string;
+}) {
   const reduced = useReducedMotion();
   const [i, setI] = useState(0);
   useEffect(() => {
     if (reduced) return;
-    const id = setInterval(() => setI((n) => (n + 1) % LOADER_SEQUENCE.length), 650);
+    const id = setInterval(
+      () => setI((n) => (n + 1) % LOADER_SEQUENCE.length),
+      650,
+    );
     return () => clearInterval(id);
   }, [reduced]);
   return (
-    <div role="status" className={cx("flex items-center justify-center gap-3 py-6 text-accent", className)}>
-      <svg viewBox="0 0 100 100" width={size} height={size} className="loader shape-spin" aria-hidden="true">
+    <div
+      role="status"
+      className={cx(
+        "flex items-center justify-center gap-3 py-6 text-accent",
+        className,
+      )}
+    >
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        className="loader shape-spin"
+        aria-hidden="true"
+      >
         <path d={shapePath(LOADER_SEQUENCE[i])} fill="currentColor" />
       </svg>
       <span className="sr-only">{label}</span>
@@ -75,10 +116,17 @@ export function Loader({ label = "Cargando…", size = 48, className }: { label?
 }
 
 /** Onda senoidal de `width` px como trazo SVG (para el progreso ondulado). */
-function wavePath(width: number, amplitude: number, wavelength: number, y: number): string {
+function wavePath(
+  width: number,
+  amplitude: number,
+  wavelength: number,
+  y: number,
+): string {
   const pts: string[] = [];
   for (let x = 0; x <= width; x += 2) {
-    pts.push(`${x} ${(y + amplitude * Math.sin((x / wavelength) * 2 * Math.PI)).toFixed(2)}`);
+    pts.push(
+      `${x} ${(y + amplitude * Math.sin((x / wavelength) * 2 * Math.PI)).toFixed(2)}`,
+    );
   }
   return `M${pts.join("L")}`;
 }
@@ -108,16 +156,39 @@ export function WavyProgress({
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={now}
-      className={cx("relative h-3 w-full overflow-hidden text-accent", className)}
+      className={cx(
+        "relative h-3 w-full overflow-hidden text-accent",
+        className,
+      )}
     >
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden="true">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="absolute inset-0 h-full w-full"
+        aria-hidden="true"
+      >
         {/* Pista pendiente: recta y a la derecha, con un hueco de 4 px. */}
-        <line x1={0} x2={W} y1={H / 2} y2={H / 2} stroke="var(--color-accent-container)" strokeWidth={4} strokeLinecap="round" />
+        <line
+          x1={0}
+          x2={W}
+          y1={H / 2}
+          y2={H / 2}
+          stroke="var(--color-accent-container)"
+          strokeWidth={4}
+          strokeLinecap="round"
+        />
         <clipPath id={`wavy-${label.replace(/\W/g, "")}`}>
           <rect x={0} y={0} width={(W * pct) / 100} height={H} />
         </clipPath>
         <g clipPath={`url(#wavy-${label.replace(/\W/g, "")})`}>
-          <rect x={0} y={0} width={(W * pct) / 100} height={H} fill="var(--color-surface-container-high)" className="transition-[width] motion-spatial-slow" />
+          <rect
+            x={0}
+            y={0}
+            width={(W * pct) / 100}
+            height={H}
+            fill="var(--color-surface-container-high)"
+            className="transition-[width] motion-spatial-slow"
+          />
           <path
             className="wavy-track"
             style={{ ["--wave-length" as string]: `-${wavelength}px` }}
@@ -161,7 +232,8 @@ export function WavyRing({
     pts.push([c + rr * Math.cos(t), c + rr * Math.sin(t)]);
   }
   let length = 0;
-  for (let i = 1; i < pts.length; i++) length += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  for (let i = 1; i < pts.length; i++)
+    length += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
   const d = `M${pts.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join("L")}`;
   return (
     <div
@@ -173,8 +245,21 @@ export function WavyRing({
       className="relative inline-grid shrink-0 place-items-center text-accent"
       style={{ width: size, height: size }}
     >
-      <svg viewBox="0 0 100 100" width={size} height={size} className="absolute inset-0" aria-hidden="true">
-        <circle cx={c} cy={c} r={r} fill="none" stroke="var(--color-accent-container)" strokeWidth={6} />
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        className="absolute inset-0"
+        aria-hidden="true"
+      >
+        <circle
+          cx={c}
+          cy={c}
+          r={r}
+          fill="none"
+          stroke="var(--color-accent-container)"
+          strokeWidth={6}
+        />
         <path
           d={d}
           fill="none"
@@ -201,7 +286,15 @@ export function countUpValue(target: number, t: number): number {
 }
 
 /** Cifra que cuenta hasta `value`; el lector oye solo el valor final. */
-export function CountUp({ value, label, className }: { value: number; label?: string; className?: string }) {
+export function CountUp({
+  value,
+  label,
+  className,
+}: {
+  value: number;
+  label?: string;
+  className?: string;
+}) {
   const reduced = useReducedMotion();
   const [shown, setShown] = useState(reduced ? value : 0);
   const from = useRef(shown);
@@ -234,15 +327,31 @@ export function CountUp({ value, label, className }: { value: number; label?: st
 
 /** Sello de recompensa: galleta de 12 lados (sol) que entra con el muelle
  * espacial lento, con la cifra de series dentro. Sin confeti. */
-export function RewardSeal({ sets, title = "¡Sesión completa!" }: { sets: number; title?: string }) {
+export function RewardSeal({
+  sets,
+  title = "¡Sesión completa!",
+}: {
+  sets: number;
+  title?: string;
+}) {
   return (
-    <div role="status" className="seal flex items-center gap-4 rounded-xl bg-primary-container p-4 text-on-primary-container">
+    <div
+      role="status"
+      className="seal flex items-center gap-4 rounded-xl bg-primary-container p-4 text-on-primary-container"
+    >
       <span className="relative grid size-24 shrink-0 place-items-center text-primary">
-        <svg viewBox="0 0 100 100" className="seal-shape absolute inset-0 size-24" aria-hidden="true">
+        <svg
+          viewBox="0 0 100 100"
+          className="seal-shape absolute inset-0 size-24"
+          aria-hidden="true"
+        >
           <path d={shapePath("sunny")} fill="currentColor" />
         </svg>
         <span className="relative flex flex-col items-center text-on-primary">
-          <CountUp value={sets} className="text-headline-m text-e leading-none" />
+          <CountUp
+            value={sets}
+            className="text-headline-m text-e leading-none"
+          />
           <span className="text-label-s">series</span>
         </span>
       </span>
@@ -268,11 +377,28 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cx("flex flex-col items-center gap-4 px-4 py-8 text-center", className)}>
+    <div
+      className={cx(
+        "flex flex-col items-center gap-4 px-4 py-8 text-center",
+        className,
+      )}
+    >
       <span className="relative block h-24 w-32" aria-hidden="true">
-        <Shape name={shapes[0]} size={72} className="absolute left-0 top-2 text-accent-container" />
-        <Shape name={shapes[1]} size={48} className="absolute right-2 top-0 rotate-12 text-accent" />
-        <Shape name={shapes[2]} size={40} className="absolute bottom-0 right-8 text-surface-container-highest" />
+        <Shape
+          name={shapes[0]}
+          size={72}
+          className="absolute left-0 top-2 text-accent-container"
+        />
+        <Shape
+          name={shapes[1]}
+          size={48}
+          className="absolute right-2 top-0 rotate-12 text-accent"
+        />
+        <Shape
+          name={shapes[2]}
+          size={40}
+          className="absolute bottom-0 right-8 text-surface-container-highest"
+        />
       </span>
       <p className="text-title-m">{title}</p>
       {children}
@@ -280,16 +406,40 @@ export function EmptyState({
   );
 }
 
-const THUMB_SHAPES: ShapeName[] = ["cookie-7", "clover", "soft-diamond", "flower", "cookie-4", "sunny", "cookie-12", "pill"];
+const THUMB_SHAPES: ShapeName[] = [
+  "cookie-7",
+  "clover",
+  "soft-diamond",
+  "flower",
+  "cookie-4",
+  "sunny",
+  "cookie-12",
+  "pill",
+];
 
 /** Miniatura sin foto: una forma M3E estable por nombre, con la inicial. */
-export function Monogram({ name, size = 56, className }: { name: string; size?: number; className?: string }) {
+export function Monogram({
+  name,
+  size = 56,
+  className,
+}: {
+  name: string;
+  size?: number;
+  className?: string;
+}) {
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const shape = THUMB_SHAPES[h % THUMB_SHAPES.length];
   return (
-    <Shape name={shape} size={size} className={cx("text-accent-container", className)}>
-      <span className="text-title-l text-e text-on-accent-container" style={{ fontSize: size * 0.4 }}>
+    <Shape
+      name={shape}
+      size={size}
+      className={cx("text-accent-container", className)}
+    >
+      <span
+        className="text-title-l text-e text-on-accent-container"
+        style={{ fontSize: size * 0.4 }}
+      >
         {name.trim().charAt(0).toUpperCase()}
       </span>
     </Shape>

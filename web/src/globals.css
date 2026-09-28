@@ -34,8 +34,16 @@
   --color-on-photo: #ffffff;
   --color-photo-veil: color-mix(in srgb, var(--color-scrim) 62%, transparent);
   /* Mapa corporal: músculo en reposo y su realce (el elegido: primary). */
-  --color-muscle: color-mix(in srgb, var(--color-primary) 38%, var(--color-surface-container-high));
-  --color-muscle-strong: color-mix(in srgb, var(--color-primary) 58%, var(--color-surface-container-high));
+  --color-muscle: color-mix(
+    in srgb,
+    var(--color-primary) 38%,
+    var(--color-surface-container-high)
+  );
+  --color-muscle-strong: color-mix(
+    in srgb,
+    var(--color-primary) 58%,
+    var(--color-surface-container-high)
+  );
   --color-body: var(--color-outline-variant);
 
   /* Color de la sección activa: lo reescriben [data-section] y el color
@@ -123,7 +131,8 @@
   --color-transparent: transparent;
   --color-current: currentColor;
 
-  --font-sans: "Google Sans Flex", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Google Sans Flex", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Escala tipográfica M3 (tamaño / interlineado / peso / tracking). Las
      variantes *-e (emphasized) suben peso y anchura: momentos clave. */
@@ -206,7 +215,6 @@
   --shadow-2: var(--shadow-2);
   --shadow-3: var(--shadow-3);
 
-
   --animate-*: initial;
 }
 
@@ -288,7 +296,15 @@
   }
 
   /* Un solo anillo de foco para toda la app. */
-  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  :where(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [tabindex]
+  ):focus-visible {
     outline: 3px solid var(--color-primary);
     outline-offset: 2px;
   }
@@ -338,7 +354,8 @@
     opacity: 0.12;
     transform: scale(0);
     pointer-events: none;
-    animation: ripple var(--duration-effects-slow) var(--ease-emphasized) forwards;
+    animation: ripple var(--duration-effects-slow) var(--ease-emphasized)
+      forwards;
   }
 
   /* --- Tarjetas: elevated / filled / outlined ---------------------------- */
@@ -350,9 +367,11 @@
     color: var(--color-on-surface);
   }
   .card-filled {
+    --field-bg: var(--color-surface-container-highest);
     background: var(--color-surface-container-highest);
   }
   .card-elevated {
+    --field-bg: var(--color-surface-container-low);
     background: var(--color-surface-container-low);
     box-shadow: var(--shadow-1);
   }
@@ -361,6 +380,7 @@
     border: 1px solid var(--color-outline-variant);
   }
   .card-tonal {
+    --field-bg: var(--color-surface-container);
     background: var(--color-surface-container);
   }
 
@@ -412,7 +432,8 @@
     transition:
       border-radius var(--duration-spatial-fast) var(--ease-spatial-fast),
       transform var(--duration-spatial-fast) var(--ease-spatial-fast),
-      background-color var(--duration-effects-default) var(--ease-effects-default),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
       color var(--duration-effects-default) var(--ease-effects-default),
       font-weight var(--duration-effects-default) var(--ease-effects-default),
       box-shadow var(--duration-effects-default) var(--ease-effects-default);
@@ -428,7 +449,11 @@
   .btn[aria-disabled="true"] {
     cursor: not-allowed;
     color: color-mix(in srgb, var(--color-on-surface) 38%, transparent);
-    background-color: color-mix(in srgb, var(--color-on-surface) 10%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--color-on-surface) 10%,
+      transparent
+    );
     box-shadow: none;
     border-color: transparent;
   }
@@ -502,7 +527,8 @@
     transition:
       flex-grow var(--duration-spatial-fast) var(--ease-spatial-fast),
       border-radius var(--duration-spatial-fast) var(--ease-spatial-fast),
-      background-color var(--duration-effects-default) var(--ease-effects-default),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
       color var(--duration-effects-default) var(--ease-effects-default),
       font-weight var(--duration-effects-default) var(--ease-effects-default);
   }
@@ -540,7 +566,8 @@
     font-weight: 600;
     transition:
       border-radius var(--duration-spatial-fast) var(--ease-spatial-fast),
-      background-color var(--duration-effects-default) var(--ease-effects-default),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
       color var(--duration-effects-default) var(--ease-effects-default);
   }
   .chip[aria-pressed="true"],
@@ -701,7 +728,8 @@
     position: relative;
     cursor: pointer;
     transition:
-      background-color var(--duration-effects-default) var(--ease-effects-default),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
       border-color var(--duration-effects-default) var(--ease-effects-default);
   }
   .switch::after {
@@ -718,7 +746,8 @@
       left var(--duration-spatial-fast) var(--ease-spatial-fast),
       width var(--duration-spatial-fast) var(--ease-spatial-fast),
       height var(--duration-spatial-fast) var(--ease-spatial-fast),
-      background-color var(--duration-effects-default) var(--ease-effects-default);
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default);
   }
   .switch:active::after {
     width: 1.75rem;
@@ -793,22 +822,29 @@
   /* --- Superficies superpuestas ------------------------------------------ */
   .scrim {
     background: color-mix(in srgb, var(--color-scrim) 40%, transparent);
-    animation: fade-in var(--duration-effects-default) var(--ease-effects-default) both;
+    animation: fade-in var(--duration-effects-default)
+      var(--ease-effects-default) both;
   }
+  /* Cada superficie declara su `--field-bg`: la etiqueta flotante de un campo
+     outlined tapa el borde con el color de lo que tiene debajo. */
   .dialog {
+    --field-bg: var(--color-surface-container-high);
     background: var(--color-surface-container-high);
     color: var(--color-on-surface);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-3);
-    animation: dialog-in var(--duration-spatial-default) var(--ease-spatial-default) both;
+    animation: dialog-in var(--duration-spatial-default)
+      var(--ease-spatial-default) both;
   }
   /* Hoja inferior: esquinas grandes arriba, planas abajo (asimetría M3). */
   .sheet {
+    --field-bg: var(--color-surface-container-low);
     background: var(--color-surface-container-low);
     color: var(--color-on-surface);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow: var(--shadow-3);
-    animation: sheet-in var(--duration-spatial-default) var(--ease-spatial-default) both;
+    animation: sheet-in var(--duration-spatial-default)
+      var(--ease-spatial-default) both;
     transition: transform var(--duration-spatial-fast) var(--ease-spatial-fast);
   }
   .sheet[data-dragging="true"] {
@@ -822,11 +858,13 @@
     opacity: 0.4;
   }
   .menu {
+    --field-bg: var(--color-surface-container);
     background: var(--color-surface-container);
     color: var(--color-on-surface);
     border-radius: var(--radius-l);
     box-shadow: var(--shadow-2);
-    animation: menu-in var(--duration-spatial-fast) var(--ease-spatial-fast) both;
+    animation: menu-in var(--duration-spatial-fast) var(--ease-spatial-fast)
+      both;
     transform-origin: top left;
   }
   .toolbar {
@@ -834,14 +872,16 @@
     color: var(--color-on-surface);
     border-radius: var(--radius-full);
     box-shadow: var(--shadow-3);
-    animation: toolbar-in var(--duration-spatial-default) var(--ease-spatial-default) both;
+    animation: toolbar-in var(--duration-spatial-default)
+      var(--ease-spatial-default) both;
   }
   .snackbar {
     background: var(--color-inverse-surface);
     color: var(--color-inverse-on-surface);
     border-radius: var(--radius-s);
     box-shadow: var(--shadow-3);
-    animation: snackbar-in var(--duration-spatial-default) var(--ease-spatial-default) both;
+    animation: snackbar-in var(--duration-spatial-default)
+      var(--ease-spatial-default) both;
   }
   .snackbar-action {
     color: var(--color-inverse-primary);
@@ -850,7 +890,8 @@
     background: var(--color-surface-container-high);
     color: var(--color-on-surface);
     box-shadow: var(--shadow-3);
-    animation: dialog-in var(--duration-spatial-default) var(--ease-spatial-default) both;
+    animation: dialog-in var(--duration-spatial-default)
+      var(--ease-spatial-default) both;
   }
 }
 
@@ -858,11 +899,13 @@
 /* Los hijos directos de `.stagger` entran con el muelle espacial por turno
    (`--i` lo pone la pantalla; sin él entran juntos). */
 .stagger > * {
-  animation: rise var(--duration-spatial-default) var(--ease-spatial-default) both;
+  animation: rise var(--duration-spatial-default) var(--ease-spatial-default)
+    both;
   animation-delay: calc(min(var(--i, 0), 8) * 40ms);
 }
 .animate-rise {
-  animation: rise var(--duration-spatial-default) var(--ease-spatial-default) both;
+  animation: rise var(--duration-spatial-default) var(--ease-spatial-default)
+    both;
 }
 .animate-pop {
   animation: pop var(--duration-spatial-fast) var(--ease-spatial-fast) both;
@@ -896,7 +939,8 @@
   animation: wave-drift 1.2s linear infinite;
 }
 .wavy-fill {
-  transition: stroke-dashoffset var(--duration-spatial-slow) var(--ease-spatial-slow);
+  transition: stroke-dashoffset var(--duration-spatial-slow)
+    var(--ease-spatial-slow);
 }
 
 /* Sello de recompensa: entra con el muelle espacial lento (rebota). */
@@ -925,7 +969,8 @@
   animation: axis-out var(--duration-spatial-fast) var(--ease-emphasized) both;
 }
 ::view-transition-new(week-grid) {
-  animation: axis-in var(--duration-spatial-default) var(--ease-spatial-default) both;
+  animation: axis-in var(--duration-spatial-default) var(--ease-spatial-default)
+    both;
 }
 :root[data-week-dir="prev"]::view-transition-old(week-grid) {
   animation-name: axis-out-prev;
