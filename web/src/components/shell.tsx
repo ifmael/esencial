@@ -177,12 +177,14 @@ function RailItem({
   );
 }
 
-/** Fila del cajón expandido: 56 px, pastilla completa en activo. */
-const drawerRow = (active: boolean) =>
+/** Fila del cajón expandido: 56 px, pastilla completa en activo. `fill` en
+ * false cuando la pastilla la pinta el contenedor (sección con desplegable). */
+const drawerRow = (active: boolean, fill = active) =>
   cx(
     "state flex h-14 items-center gap-3 rounded-full px-4 text-label-l type-move transition-colors motion-effects",
+    fill && "bg-accent-container",
     active
-      ? "bg-accent-container font-extrabold text-on-accent-container"
+      ? "font-extrabold text-on-accent-container"
       : "font-semibold text-on-surface-variant",
   );
 
@@ -390,11 +392,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 to={s.href}
                 aria-current={active ? "page" : undefined}
-                className={cx(
-                  drawerRow(false),
-                  "flex-1",
-                  active && "font-extrabold text-on-accent-container",
-                )}
+                className={cx(drawerRow(active, false), "flex-1")}
                 onPointerDown={ripple}
               >
                 <Icon filled={active} />

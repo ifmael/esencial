@@ -50,6 +50,31 @@ test.describe("MENÚ — secciones colapsables", () => {
     ).toHaveCount(0);
   });
 
+  test("la sección activa pinta texto e icono con on-accent-container", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/ejercicios");
+    const aside = page.locator("aside");
+    const link = aside.getByRole("link", { name: "Deporte" });
+    const chevron = aside.getByRole("button", { name: "Contraer Deporte" });
+    await expect(chevron).toBeVisible();
+    // Lo calculado, no las clases: el bug era un choque de utilidades que
+    // resolvía el orden del CSS generado, no el del className.
+    const style = (el: Element) => {
+      const s = getComputedStyle(el);
+      return { color: s.color, weight: s.fontWeight };
+    };
+    const onContainer = (await chevron.evaluate(style)).color;
+    expect(await link.evaluate(style)).toEqual({
+      color: onContainer,
+      weight: "800",
+    });
+    expect(
+      await link.locator("svg").evaluate((el) => getComputedStyle(el).color),
+    ).toBe(onContainer);
+  });
+
   test("plegar/desplegar el menú lateral y recordar la elección", async ({
     page,
   }) => {
