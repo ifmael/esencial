@@ -19,9 +19,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { GroupedExercises } from "../components/grouped-exercises";
+import { GripIcon } from "../components/icons";
 import {
   DRAG_INSTRUCTIONS,
-  GripIcon,
   sortableAnnouncements,
   useDragSensors,
 } from "../components/sortable";

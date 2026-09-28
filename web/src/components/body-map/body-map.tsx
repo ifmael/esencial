@@ -76,7 +76,7 @@ export function BodyMap({
       className={className}
     >
       {/* Relleno: cabeza, manos, pies y articulaciones. Se dibujan, no se pulsan. */}
-      <g className="fill-border-strong">
+      <g className="fill-body">
         {shapes
           .filter((r) => r.tag === null)
           .map((r) => (
@@ -95,7 +95,7 @@ export function BodyMap({
           ? "fill-primary"
           : onSelect
             ? "fill-muscle"
-            : "fill-border-strong";
+            : "fill-body";
         const pieces = list.map((r) => <Muscle key={r.id} region={r} />);
         if (!onSelect)
           return (
@@ -110,7 +110,7 @@ export function BodyMap({
             tabIndex={0}
             aria-pressed={on}
             aria-label={regionLabel(id)}
-            className={`cursor-pointer transition-colors duration-150 ease-out-quart ${skin} ${
+            className={`cursor-pointer transition-colors motion-effects ${skin} ${
               on ? "" : "hover:fill-muscle-strong"
             }`}
             // El ratón no roba el foco: si lo robara, el navegador pintaría su

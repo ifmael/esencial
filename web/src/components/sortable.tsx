@@ -25,22 +25,6 @@ export function useDragSensors() {
   );
 }
 
-/** Asa de arrastre: 6 puntos. Va dentro de un <button> con aria-label. */
-export function GripIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      className="h-4 w-4 fill-current"
-    >
-      {[3, 8, 13].map((cy) =>
-        [6, 10].map((cx) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.5" />
-        )),
-      )}
-    </svg>
-  );
-}
 
 /** Anuncios del lector de pantalla; `positionOf` añade «en la posición N» al
  *  soltar (la posición del destino en el orden actual). */

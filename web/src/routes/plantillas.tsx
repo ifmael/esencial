@@ -24,10 +24,10 @@ import {
 } from "../components/grouped-exercises";
 import {
   DRAG_INSTRUCTIONS,
-  GripIcon,
   sortableAnnouncements,
   useDragSensors,
 } from "../components/sortable";
+import { GripIcon } from "../components/icons";
 import { Badge, Button, Card, cardClass, Input } from "../components/ui";
 import { apiField } from "../lib/api";
 import {

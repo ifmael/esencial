@@ -1,0 +1,134 @@
+/* GENERADO por web/scripts/gen-tokens.ts — no editar a mano.
+   Esquema tonal M3 desde la semilla #15803d y muelles M3E (esquema
+   expressive) muestreados en linear(). Contraste WCAG de cada pareja
+   texto/fondo (todas ≥ 4,5):
+   claro
+   on-primary / primary: 7.25
+   on-primary-container / primary-container: 4.55
+   on-secondary / secondary: 6.49
+   on-secondary-container / secondary-container: 4.53
+   on-tertiary / tertiary: 7.20
+   on-tertiary-container / tertiary-container: 4.54
+   on-error / error: 6.46
+   on-error-container / error-container: 7.24
+   on-surface / surface: 16.32
+   on-surface / surface-container-highest: 13.25
+   on-surface-variant / surface: 8.96
+   on-surface-variant / surface-container-highest: 7.28
+   primary / surface: 6.91
+   primary / surface-container-high: 5.93
+   tertiary / surface: 6.87
+   secondary / surface: 6.19
+   error / surface: 6.16
+   inverse-on-surface / inverse-surface: 11.55
+   inverse-primary / inverse-surface: 7.69
+   oscuro
+   on-primary / primary: 7.72
+   on-primary-container / primary-container: 4.55
+   on-secondary / secondary: 7.75
+   on-secondary-container / secondary-container: 4.54
+   on-tertiary / tertiary: 7.73
+   on-tertiary-container / tertiary-container: 4.54
+   on-error / error: 7.72
+   on-error-container / error-container: 7.24
+   on-surface / surface: 14.31
+   on-surface / surface-container-highest: 9.55
+   on-surface-variant / surface: 10.82
+   on-surface-variant / surface-container-highest: 7.22
+   primary / surface: 10.85
+   primary / surface-container-high: 8.47
+   tertiary / surface: 10.87
+   secondary / surface: 10.86
+   error / surface: 10.88
+   inverse-on-surface / inverse-surface: 10.14
+   inverse-primary / inverse-surface: 5.04
+*/
+
+:root {
+  --color-primary: #00652c;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #15803d;
+  --color-on-primary-container: #d3ffd5;
+  --color-secondary: #3c6659;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #bbe9d8;
+  --color-on-secondary-container: #406b5d;
+  --color-tertiary: #894500;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #a95b13;
+  --color-on-tertiary-container: #fff1ea;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-surface: #f7fbf2;
+  --color-surface-dim: #d7dbd3;
+  --color-surface-bright: #f7fbf2;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f5ed;
+  --color-surface-container: #ebefe7;
+  --color-surface-container-high: #e5eae1;
+  --color-surface-container-highest: #dfe4dc;
+  --color-on-surface: #181d18;
+  --color-on-surface-variant: #3f493f;
+  --color-outline: #707a6e;
+  --color-outline-variant: #bfc9bc;
+  --color-inverse-surface: #2d322c;
+  --color-inverse-on-surface: #eef2ea;
+  --color-inverse-primary: #79db8d;
+  --color-scrim: #000000;
+  /* k=800, ζ=0.6 (ω=28.3 rad/s) */
+  --ease-spatial-fast: linear(0, 0.029, 0.105, 0.21, 0.331, 0.458, 0.581, 0.696, 0.797, 0.882, 0.952, 1.006, 1.045, 1.072, 1.088, 1.094, 1.094, 1.088, 1.079, 1.068, 1.056, 1.045, 1.033, 1.023, 1.014, 1.007, 1.001, 0.997, 0.994, 0.992, 0.991, 0.991, 0.991, 0.992, 0.993, 0.994, 0.995, 0.996, 0.997, 0.998, 1);
+  --duration-spatial-fast: 360ms;
+  /* k=380, ζ=0.8 (ω=19.5 rad/s) */
+  --ease-spatial-default: linear(0, 0.02, 0.072, 0.143, 0.227, 0.316, 0.406, 0.492, 0.573, 0.646, 0.712, 0.77, 0.82, 0.863, 0.898, 0.927, 0.951, 0.969, 0.984, 0.995, 1.003, 1.008, 1.012, 1.014, 1.015, 1.015, 1.015, 1.014, 1.013, 1.011, 1.01, 1.009, 1.007, 1.006, 1.005, 1.004, 1.003, 1.003, 1.002, 1.001, 1);
+  --duration-spatial-default: 435ms;
+  /* k=200, ζ=0.8 (ω=14.1 rad/s) */
+  --ease-spatial-slow: linear(0, 0.02, 0.072, 0.144, 0.227, 0.317, 0.406, 0.492, 0.573, 0.647, 0.713, 0.771, 0.821, 0.863, 0.898, 0.927, 0.951, 0.969, 0.984, 0.995, 1.003, 1.008, 1.012, 1.014, 1.015, 1.015, 1.015, 1.014, 1.013, 1.011, 1.01, 1.009, 1.007, 1.006, 1.005, 1.004, 1.003, 1.003, 1.002, 1.001, 1);
+  --duration-spatial-slow: 600ms;
+  /* k=3800, ζ=1 (ω=61.6 rad/s) */
+  --ease-effects-fast: linear(0, 0.023, 0.079, 0.154, 0.237, 0.321, 0.404, 0.481, 0.552, 0.615, 0.672, 0.721, 0.764, 0.802, 0.833, 0.861, 0.884, 0.903, 0.92, 0.933, 0.945, 0.954, 0.962, 0.969, 0.974, 0.979, 0.983, 0.986, 0.988, 0.991, 0.992, 0.994, 0.995, 0.996, 0.997, 0.997, 0.998, 0.998, 0.999, 0.999, 1);
+  --duration-effects-fast: 150ms;
+  /* k=1600, ζ=1 (ω=40.0 rad/s) */
+  --ease-effects-default: linear(0, 0.023, 0.079, 0.153, 0.236, 0.321, 0.403, 0.481, 0.551, 0.615, 0.671, 0.721, 0.764, 0.801, 0.833, 0.86, 0.883, 0.903, 0.919, 0.933, 0.945, 0.954, 0.962, 0.969, 0.974, 0.979, 0.983, 0.986, 0.988, 0.991, 0.992, 0.994, 0.995, 0.996, 0.997, 0.997, 0.998, 0.998, 0.998, 0.999, 1);
+  --duration-effects-default: 231ms;
+  /* k=800, ζ=1 (ω=28.3 rad/s) */
+  --ease-effects-slow: linear(0, 0.023, 0.079, 0.154, 0.237, 0.321, 0.404, 0.481, 0.552, 0.615, 0.672, 0.722, 0.765, 0.802, 0.834, 0.861, 0.884, 0.903, 0.92, 0.933, 0.945, 0.954, 0.962, 0.969, 0.975, 0.979, 0.983, 0.986, 0.988, 0.991, 0.992, 0.994, 0.995, 0.996, 0.997, 0.997, 0.998, 0.998, 0.999, 0.999, 1);
+  --duration-effects-slow: 327ms;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-primary: #79db8d;
+  --color-on-primary: #003916;
+  --color-primary-container: #15803d;
+  --color-on-primary-container: #d3ffd5;
+  --color-secondary: #a3d0c0;
+  --color-on-secondary: #08372c;
+  --color-secondary-container: #265144;
+  --color-on-secondary-container: #95c2b2;
+  --color-tertiary: #ffb783;
+  --color-on-tertiary: #4f2500;
+  --color-tertiary-container: #a95b13;
+  --color-on-tertiary-container: #fff1ea;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-surface: #101510;
+  --color-surface-dim: #101510;
+  --color-surface-bright: #363a35;
+  --color-surface-container-lowest: #0b0f0b;
+  --color-surface-container-low: #181d18;
+  --color-surface-container: #1c211c;
+  --color-surface-container-high: #262b26;
+  --color-surface-container-highest: #313631;
+  --color-on-surface: #dfe4dc;
+  --color-on-surface-variant: #bfc9bc;
+  --color-outline: #899487;
+  --color-outline-variant: #3f493f;
+  --color-inverse-surface: #dfe4dc;
+  --color-inverse-on-surface: #2d322c;
+  --color-inverse-primary: #006d30;
+  --color-scrim: #000000;
+}

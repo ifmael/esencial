@@ -63,7 +63,7 @@ export function GroupedExercises({
         const isOpen = forceOpen ? open[tag] !== false : open[tag] === true;
         return (
           <section key={tag} className="flex flex-col gap-1">
-            <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
+            <h4 className="font-semibold uppercase tracking-wide text-on-surface-variant">
               <button
                 type="button"
                 className="flex w-full items-center gap-2 text-left"
