@@ -155,19 +155,22 @@ test.describe("MENÚ — secciones colapsables", () => {
   test("el foco de los campos toma el color de su sección", async ({
     page,
   }) => {
-    const accentOf = () =>
-      page.evaluate(() => {
+    // Contra el token de marca (en la raíz, fuera de toda sección), no contra
+    // `--accent`: si Nutrición dejara de reescribirlo, el test lo vería.
+    const brand = (name: string) =>
+      page.evaluate((n) => {
         const probe = document.createElement("div");
-        probe.style.color = "var(--accent)";
-        document.querySelector("main")?.append(probe);
+        probe.style.color = `var(${n})`;
+        document.documentElement.append(probe);
         const c = getComputedStyle(probe).color;
         probe.remove();
         return c;
-      });
+      }, name);
     await page.goto("/recetario/nueva");
+    const tertiary = await brand("--color-tertiary");
+    expect(tertiary).not.toBe(await brand("--color-primary"));
     const nombre = page.getByLabel("Nombre");
     await nombre.focus();
-    const tertiary = await accentOf();
     await expect(nombre).toHaveCSS("border-top-color", tertiary);
     await expect(
       page.locator(".field", { has: nombre }).locator(".field-label"),
