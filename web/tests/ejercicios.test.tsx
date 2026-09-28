@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
@@ -129,20 +130,34 @@ describe("catalog", () => {
     expect(api.calls.length).toBe(calls);
   });
 
+  it("filtro por grupo: el chip elegido se marca y deja solo sus ejercicios", async () => {
+    renderAt("/ejercicios");
+    await screen.findByText("Press banca");
+    const filters = screen.getByRole("group", { name: "Filtrar por grupo" });
+    const espalda = within(filters).getByRole("button", { name: "Espalda" });
+    fireEvent.click(espalda);
+    expect(espalda.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Remo")).toBeDefined();
+    expect(screen.queryByText("Press banca")).toBeNull();
+    expect(screen.queryByText("Peso muerto")).toBeNull();
+    fireEvent.click(within(filters).getByRole("button", { name: "Todos" }));
+    expect(screen.getByText("Press banca")).toBeDefined();
+  });
+
   it("empty catalog invites creating the first exercise", async () => {
     vi.unstubAllGlobals();
     api = mockApi({ templates: [], exercises: [] });
     renderAt("/ejercicios");
     await screen.findByText(/primer ejercicio/i);
     expect(
-      screen.getByRole("button", { name: "+ Nuevo ejercicio" }),
+      screen.getByRole("button", { name: "Nuevo ejercicio" }),
     ).toBeDefined();
   });
 
   it("create flow: name required, ≥1 tag, valid save → POST 201 + detail shows data", async () => {
     renderAt("/ejercicios");
     fireEvent.click(
-      await screen.findByRole("button", { name: "+ Nuevo ejercicio" }),
+      await screen.findByRole("button", { name: "Nuevo ejercicio" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/nombre es obligatorio/i)).toBeDefined();
