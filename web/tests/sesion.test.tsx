@@ -8,6 +8,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
@@ -171,18 +172,14 @@ function mockApi(opts: {
   return { posts, fetchCount: () => count };
 }
 
+/** El botón «Cerrar sesión» de la barra flotante (no el de salir del shell). */
 function primaryClose(): Promise<HTMLButtonElement> {
-  return waitFor(() => {
-    const candidate = [...document.querySelectorAll("button")].find((x) => {
-      const el = x as HTMLButtonElement;
-      return (
-        el.className?.includes("btn-primary") &&
-        /cerrar sesión/i.test(el.textContent ?? "")
-      );
-    });
-    if (!candidate) throw new Error("primary close button not found");
-    return candidate as HTMLButtonElement;
-  });
+  return waitFor(
+    () =>
+      within(
+        screen.getByRole("toolbar", { name: /acciones de la sesión/i }),
+      ).getByRole("button", { name: /cerrar sesión/i }) as HTMLButtonElement,
+  );
 }
 function renderAt(path: string) {
   window.history.pushState({}, "", path);
@@ -440,6 +437,24 @@ describe("state A: editable", () => {
     ).toBe(true);
   });
 
+  it("marcar todas las series y el cardio muestra el sello; desmarcar una lo retira", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    const seal = () =>
+      screen
+        .queryAllByRole("status")
+        .find((el) => /sesión completa/i.test(el.textContent ?? ""));
+    const boxes = await screen.findAllByRole("checkbox");
+    for (const box of boxes.slice(0, -1)) fireEvent.click(box);
+    expect(seal()).toBeUndefined(); // falta el cardio
+    fireEvent.click(boxes[boxes.length - 1]);
+    await waitFor(() => expect(seal()).toBeDefined());
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /press banca serie 2/i }),
+    );
+    await waitFor(() => expect(seal()).toBeUndefined());
+  });
+
   it("409 → reload into read-only state B with persisted data", async () => {
     mockApi({
       postReply: {
@@ -514,14 +529,14 @@ describe("state B: read-only", () => {
     expect(container.querySelectorAll("input, textarea, select").length).toBe(
       0,
     );
-    // No primary (workout) close button in read-only state; the shell logout
-    // (desktop, text-secondary) is unrelated.
-    const closeBtns = [...document.querySelectorAll("button")].filter(
-      (x) =>
-        (x as HTMLButtonElement).className?.includes("btn-primary") &&
-        /cerrar sesión/i.test(x.textContent ?? ""),
-    );
-    expect(closeBtns).toHaveLength(0);
+    // Sin barra de acciones ni botón de cerrar la sesión de entreno (el de
+    // salir del shell no está en main).
+    expect(screen.queryByRole("toolbar")).toBeNull();
+    expect(
+      within(screen.getByRole("main")).queryByRole("button", {
+        name: /cerrar sesión/i,
+      }),
+    ).toBeNull();
     // effort 2 of 5 filled
     const dots = screen.getAllByTestId("effort-dot");
     expect(

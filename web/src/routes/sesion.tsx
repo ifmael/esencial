@@ -1,19 +1,39 @@
 // /sesion/:date — registro del día (wireframe pantalla-3). El estado planned es
 // un borrador en memoria sobre los ejercicios de la sesión (fuerza y cardio);
 // el estado logged es solo lectura desde GET /api/workout-logs/:date.
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
+  CountUp,
+  EmptyState,
+  Loader,
+  RewardSeal,
+  Shape,
+  WavyRing,
+} from "../components/expressive";
+import {
+  BackIcon,
+  BikeIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  RunIcon,
+} from "../components/icons";
+import {
+  Alert,
   Badge,
   Button,
   buttonClass,
   Card,
-  cardClass,
+  Checkbox,
+  cx,
+  Field,
   Input,
   Textarea,
 } from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import type { PlanSession, SessionExercise } from "../lib/plan-week";
+import { isSessionComplete } from "../lib/reward";
+import type { ShapeName } from "../lib/shapes";
 import {
   defaultSetCount,
   formatLast,
@@ -22,6 +42,7 @@ import {
   noteOrNull,
   numOrNull,
   parseDateEs,
+  setsProgress,
 } from "../lib/workout";
 import { formatDateEs } from "./dia";
 
@@ -91,6 +112,14 @@ type View =
   | { kind: "logged"; session: PlanSession | null; log: LoggedDay };
 
 const EFFORT_LABELS = ["Muy fácil", "Fácil", "Moderado", "Duro", "Máximo"];
+/** Cada punto de esfuerzo gana lóbulos al llenarse: de círculo a sol. */
+const EFFORT_SHAPES: ShapeName[] = [
+  "circle",
+  "cookie-4",
+  "cookie-7",
+  "cookie-9",
+  "sunny",
+];
 
 // --- Hook: orchestrates reads + the close POST -------------------------------
 
@@ -219,6 +248,15 @@ export function useWorkoutDay(date: string) {
   const toggleDone = (seId: number, setIdx: number) =>
     mutateSet(seId, setIdx, (s) => ({ ...s, done: !s.done }));
 
+  const completeExercise = (seId: number) =>
+    patchDraft((v) => ({
+      exercises: v.exercises.map((ex) =>
+        ex.se.id !== seId
+          ? ex
+          : { ...ex, sets: ex.sets.map((s) => ({ ...s, done: true })) },
+      ),
+    }));
+
   const mutateCardio = (seId: number, patch: (c: CardioDraft) => CardioDraft) =>
     patchDraft((v) => ({
       cardio: v.cardio.map((c) => (c.se.id === seId ? patch(c) : c)),
@@ -313,6 +351,7 @@ export function useWorkoutDay(date: string) {
     setDraftValue,
     stepValue,
     toggleDone,
+    completeExercise,
     setCardioValue,
     toggleCardioDone,
     toggleExpand,
@@ -323,36 +362,59 @@ export function useWorkoutDay(date: string) {
 
 // --- Small presentational pieces --------------------------------------------
 
+function BackLink() {
+  return (
+    <Link
+      to="/"
+      aria-label="Volver al día"
+      className={buttonClass({ variant: "text", size: "icon" })}
+    >
+      <BackIcon />
+    </Link>
+  );
+}
+
 function Header({
   date,
   name,
   logged,
+  progress,
 }: {
   date: string;
   name: string;
   logged: boolean;
+  progress?: { done: number; total: number };
 }) {
   return (
-    <header className="mb-6">
-      <div className="mb-2 flex items-center gap-3">
-        <Link
-          to="/"
-          aria-label="Volver al día"
-          className={buttonClass({
-            variant: "secondary",
-            className: "min-h-11 min-w-11",
-          })}
+    <header className="mb-6 flex items-center gap-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="-ml-3 flex items-center gap-1">
+          <BackLink />
+          <h1 className="text-headline-l text-e first-letter:uppercase">
+            {formatDateEs(parseDateEs(date))}
+          </h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-title-l text-accent">{name}</span>
+          {logged && <Badge tone="done">Registrado</Badge>}
+        </div>
+      </div>
+      {progress && progress.total > 0 && (
+        <WavyRing
+          value={progress.done}
+          max={progress.total}
+          label="Series hechas"
+          size={96}
         >
-          ←
-        </Link>
-        <h1 className="text-2xl font-bold capitalize">
-          {formatDateEs(parseDateEs(date))}
-        </h1>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="font-semibold">{name}</span>
-        {logged && <Badge tone="done">Registrado</Badge>}
-      </div>
+          <CountUp
+            value={progress.done}
+            className="block text-headline-m text-e leading-none text-on-surface"
+          />
+          <span className="tabular text-label-s text-on-surface-variant">
+            de {progress.total}
+          </span>
+        </WavyRing>
+      )}
     </header>
   );
 }
@@ -377,14 +439,17 @@ function Stepper({
 }) {
   const label = `${caption} · ${context}`;
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col gap-1">
       {/* Sin `<label>`: el primer control etiquetable sería el botón «−». */}
-      <span className="text-caption text-text-secondary">{caption}</span>
+      <span className="px-1 text-label-m text-on-surface-variant">
+        {caption}
+      </span>
       <div className="flex items-center gap-1">
         <Button
           aria-label={`Reducir ${label}`}
-          variant="secondary"
-          className="min-h-11 min-w-11"
+          variant="tonal"
+          size="icon"
+          className="text-title-l"
           onClick={() => onStep(-step)}
         >
           −
@@ -393,14 +458,15 @@ function Stepper({
           type="number"
           inputMode="decimal"
           aria-label={label}
-          className="w-20 text-center"
+          className="tabular min-w-0 flex-1 px-0 text-center text-title-m"
           value={value === null ? "" : String(value)}
           onChange={(e) => onValue(e.target.value)}
         />
         <Button
           aria-label={`Aumentar ${label}`}
-          variant="secondary"
-          className="min-h-11 min-w-11"
+          variant="tonal"
+          size="icon"
+          className="text-title-l"
           onClick={() => onStep(step)}
         >
           +
@@ -410,6 +476,8 @@ function Stepper({
   );
 }
 
+/** Esfuerzo percibido: cinco formas que ganan lóbulos al llenarse (de círculo
+ * a sol). Con `onSelect` es un grupo de radios; sin él, solo lectura. */
 function EffortDots({
   effort,
   onSelect,
@@ -421,29 +489,53 @@ function EffortDots({
     <div
       role="radiogroup"
       aria-label="Esfuerzo percibido"
-      className="flex justify-between gap-2"
+      className="flex justify-between gap-1"
     >
       {EFFORT_LABELS.map((label, i) => {
         const value = i + 1;
         const filled = effort !== null && effort >= value;
+        const chosen = effort === value;
         return (
           <label
             key={value}
-            className="flex min-h-11 flex-1 cursor-pointer flex-col items-center gap-1"
+            className={cx(
+              "flex min-h-12 flex-1 flex-col items-center gap-1 rounded-m py-1",
+              onSelect &&
+                "state cursor-pointer has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary",
+            )}
           >
             <span
               data-testid="effort-dot"
               data-filled={String(filled)}
-              className={`min-h-11 min-w-11 rounded-full border-2 ${filled ? "border-primary bg-primary" : "border-border bg-surface"}`}
-            />
-            <span className="text-micro text-text-secondary">{label}</span>
+              className={cx(
+                "grid size-12 place-items-center transition-transform motion-spatial-fast",
+                chosen && "scale-115",
+              )}
+            >
+              <Shape
+                name={filled ? EFFORT_SHAPES[i] : "circle"}
+                size={filled ? 44 : 28}
+                className={cx(
+                  "transition-colors motion-effects",
+                  filled ? "text-accent" : "text-outline-variant",
+                )}
+              />
+            </span>
+            <span
+              className={cx(
+                "text-center text-label-s",
+                chosen ? "text-e text-on-surface" : "text-on-surface-variant",
+              )}
+            >
+              {label}
+            </span>
             {onSelect && (
               <input
                 type="radio"
                 name="effort"
                 aria-label={`Esfuerzo ${value}: ${label}`}
                 className="sr-only"
-                checked={effort === value}
+                checked={chosen}
                 onChange={() => onSelect(value)}
               />
             )}
@@ -453,6 +545,42 @@ function EffortDots({
     </div>
   );
 }
+
+/** Marca de fila: una forma que pasa de galleta a sol al completarse. */
+function RowMark({ done, children }: { done: boolean; children: ReactNode }) {
+  return (
+    <Shape
+      name={done ? "sunny" : "cookie-9"}
+      size={40}
+      className={cx(
+        "transition-colors motion-effects",
+        done ? "text-on-accent-container" : "text-accent-container",
+      )}
+    >
+      <span
+        className={cx(
+          "grid place-items-center text-label-l tabular",
+          done ? "text-accent-container" : "text-on-accent-container",
+        )}
+      >
+        {done ? <CheckIcon width={20} height={20} /> : children}
+      </span>
+    </Shape>
+  );
+}
+
+const doneCard = (done: boolean) =>
+  cx(
+    "transition-colors motion-effects",
+    done && "bg-accent-container text-on-accent-container",
+  );
+
+const Stat = ({ value, label }: { value: string; label: string }) => (
+  <div className="flex flex-col">
+    <span className="text-display-s text-e tabular">{value}</span>
+    <span className="text-label-m">{label}</span>
+  </div>
+);
 
 // --- Page ---------------------------------------------------------------------
 
@@ -464,58 +592,44 @@ export function SesionPage() {
   if (view.kind === "invalid")
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Fecha no válida</h1>
-        <Card className="text-text-secondary">
-          La dirección debe terminar en una fecha con formato AAAA-MM-DD.
-        </Card>
-        <Link
-          to="/"
-          className={buttonClass({
-            variant: "secondary",
-            className: "self-start",
-          })}
+        <h1 className="text-headline-l text-e">Fecha no válida</h1>
+        <EmptyState
+          title="La dirección debe terminar en una fecha con formato AAAA-MM-DD."
+          shapes={["soft-diamond", "pill", "clover"]}
         >
-          ← Volver al día
-        </Link>
+          <Link to="/" className={buttonClass({ variant: "tonal" })}>
+            <BackIcon /> Volver al día
+          </Link>
+        </EmptyState>
       </div>
     );
 
   if (view.kind === "empty")
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold capitalize">
-          {isValidDateStr(date) ? formatDateEs(parseDateEs(date)) : "Día"}
+        <h1 className="text-headline-l text-e first-letter:uppercase">
+          {formatDateEs(parseDateEs(date))}
         </h1>
-        <Card className="text-text-secondary">
-          Sin sesión asignada para este día.
-        </Card>
-        <Link
-          to="/plan-fuerza"
-          className={buttonClass({ className: "self-start" })}
-        >
-          Planificar en Plan fuerza
-        </Link>
-        <Link
-          to="/"
-          className={buttonClass({
-            variant: "secondary",
-            className: "self-start",
-          })}
-        >
-          ← Volver al día
-        </Link>
+        <EmptyState title="Sin sesión asignada para este día.">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link to="/plan-fuerza" className={buttonClass()}>
+              Planificar en Plan fuerza
+            </Link>
+            <Link to="/" className={buttonClass({ variant: "text" })}>
+              <BackIcon /> Volver al día
+            </Link>
+          </div>
+        </EmptyState>
       </div>
     );
 
   if (view.kind === "error")
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Error</h1>
-        <Card role="alert" className="text-error">
-          {view.message}
-        </Card>
+        <h1 className="text-headline-l text-e">Error</h1>
+        <Alert>{view.message}</Alert>
         <Button
-          variant="secondary"
+          variant="tonal"
           className="self-start"
           onClick={() => void day.reload()}
         >
@@ -525,14 +639,11 @@ export function SesionPage() {
     );
 
   if (view.kind === "loading")
-    return (
-      <Card className="text-text-secondary" role="status">
-        Cargando…
-      </Card>
-    );
+    return <Loader label="Cargando sesión…" className="mx-auto my-16" />;
 
   if (view.kind === "logged") {
-    const byExercise = view.log.sets.reduce<Record<number, SetLogItem[]>>(
+    const { log } = view;
+    const byExercise = log.sets.reduce<Record<number, SetLogItem[]>>(
       (acc, s) => {
         acc[s.planSessionExerciseId] ??= [];
         acc[s.planSessionExerciseId].push(s);
@@ -540,62 +651,106 @@ export function SesionPage() {
       },
       {},
     );
+    const progress = setsProgress(log.sets, log.cardio);
+    const mark = (done: boolean) =>
+      done ? (
+        <CheckIcon filled width={20} height={20} className="text-accent" />
+      ) : (
+        <span className="size-5 rounded-full border-2 border-outline" />
+      );
     return (
-      <div>
+      <div className="pb-8">
         <Header
           date={date}
-          name={view.log.session?.name ?? view.session?.name ?? "Sesión"}
+          name={log.session?.name ?? view.session?.name ?? "Sesión"}
           logged
         />
-        <div className="flex flex-col gap-3">
-          {Object.entries(byExercise).map(([seId, sets]) => (
-            <section key={seId} className={cardClass()}>
-              <h2 className="mb-2 font-semibold">{sets[0].exerciseName}</h2>
+        <section
+          aria-label="Resumen"
+          className="relative mb-4 overflow-hidden rounded-xl rounded-tr-xxl bg-accent-container p-6 text-on-accent-container"
+        >
+          <Shape
+            name="sunny"
+            size={160}
+            className="absolute -top-12 -right-12 text-accent opacity-20"
+          />
+          <div className="relative flex flex-wrap gap-x-10 gap-y-4">
+            <Stat
+              value={`${progress.done}/${progress.total}`}
+              label="Series hechas"
+            />
+            <Stat value={`${log.effort}/5`} label="Esfuerzo" />
+          </div>
+        </section>
+        <div className="stagger flex flex-col gap-3">
+          {Object.entries(byExercise).map(([seId, sets], i) => (
+            <Card
+              key={seId}
+              className="flex flex-col gap-2"
+              style={{ ["--i" as string]: i }}
+            >
+              <h2 className="text-title-m">{sets[0].exerciseName}</h2>
               <ul className="flex flex-col gap-1">
                 {sets.map((s) => (
-                  <li key={s.setIndex} className="flex items-center gap-3">
-                    <span
-                      aria-hidden="true"
-                      className={
-                        s.done ? "text-primary" : "text-text-secondary"
-                      }
-                    >
-                      {s.done ? "✓" : "○"}
+                  <li
+                    key={s.setIndex}
+                    className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3"
+                  >
+                    <span aria-hidden="true" className="grid size-5">
+                      {mark(s.done)}
                     </span>
-                    <span className="text-text-secondary">
+                    <span className="w-16 text-body-m text-on-surface-variant">
                       Serie {s.setIndex + 1}
                     </span>
-                    <span className="font-medium">{formatSetText(s)}</span>
+                    <span
+                      className={cx(
+                        "text-title-m tabular",
+                        !s.done && "text-on-surface-variant",
+                      )}
+                    >
+                      {formatSetText(s)}
+                    </span>
                   </li>
                 ))}
               </ul>
-            </section>
+            </Card>
           ))}
-          {view.log.cardio.map((c) => (
-            <section key={c.planSessionExerciseId} className={cardClass()}>
-              <h2 className="mb-2 font-semibold">{c.exerciseName}</h2>
-              <p className="flex items-center gap-3">
-                <span
-                  aria-hidden="true"
-                  className={c.done ? "text-primary" : "text-text-secondary"}
-                >
-                  {c.done ? "✓" : "○"}
+          {log.cardio.map((c, i) => (
+            <Card
+              key={c.planSessionExerciseId}
+              className="flex flex-col gap-2"
+              style={{
+                ["--i" as string]: Object.keys(byExercise).length + i,
+              }}
+            >
+              <h2 className="text-title-m">{c.exerciseName}</h2>
+              <p className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3">
+                <span aria-hidden="true" className="grid size-5">
+                  {mark(c.done)}
                 </span>
-                <span className="font-medium">
+                <span className="text-title-m tabular">
                   {c.distanceKm === null && c.durationMin === null
                     ? "Hecho sin marcas"
                     : `${c.distanceKm ?? "—"} km · ${c.durationMin ?? "—"} min`}
                 </span>
               </p>
-            </section>
+            </Card>
           ))}
-          <section className={cardClass("flex flex-col gap-3")}>
-            <h2 className="font-semibold">Esfuerzo percibido</h2>
-            <EffortDots effort={view.log.effort} />
-            {view.log.note && (
-              <p className="text-text-secondary">{view.log.note}</p>
+          <Card
+            className="flex flex-col gap-3"
+            style={{
+              ["--i" as string]:
+                Object.keys(byExercise).length + log.cardio.length,
+            }}
+          >
+            <h2 className="text-title-m">Esfuerzo percibido</h2>
+            <EffortDots effort={log.effort} />
+            {log.note && (
+              <p className="rounded-m bg-surface-container-high p-3 text-body-l">
+                {log.note}
+              </p>
             )}
-          </section>
+          </Card>
         </div>
       </div>
     );
@@ -603,187 +758,275 @@ export function SesionPage() {
 
   // state A — editable draft
   const v = view;
+  const progress = setsProgress(
+    v.exercises.flatMap((ex) => ex.sets),
+    v.cardio,
+  );
+  const complete = isSessionComplete(v.exercises, v.cardio);
+  const openPending = v.exercises.find(
+    (ex) => day.expanded[ex.se.id] && ex.sets.some((s) => !s.done),
+  );
   return (
-    <div>
-      <Header date={date} name={v.session.name ?? "Sesión"} logged={false} />
+    <div className="pb-24">
+      <Header
+        date={date}
+        name={v.session.name ?? "Sesión"}
+        logged={false}
+        progress={progress}
+      />
       {v.historyFailed && (
-        <Card role="status" className="mb-3 text-pending-text">
+        <Alert tone="info" className="mb-3">
           No se pudo cargar el histórico de últimos pesos; puedes registrarlo
           igualmente a mano.
-        </Card>
+        </Alert>
       )}
-      {v.submitError && (
-        <Card role="alert" className="mb-3 text-error">
-          {v.submitError}
-        </Card>
-      )}
-      <div className="flex flex-col gap-3">
-        {v.exercises.map((ex) => {
+      {v.submitError && <Alert className="mb-3">{v.submitError}</Alert>}
+      <div className="stagger flex flex-col gap-3">
+        {v.exercises.map((ex, idx) => {
           const open = !!day.expanded[ex.se.id];
           const helper = formatLast(ex.last);
+          const allDone = ex.sets.every((s) => s.done);
           return (
-            <section key={ex.se.id} className={cardClass()}>
+            <Card
+              key={ex.se.id}
+              className={doneCard(allDone)}
+              style={{ ["--i" as string]: idx }}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Link
-                    to={`/ejercicios/${ex.se.exerciseId}`}
-                    className="font-semibold text-primary underline-offset-4 hover:underline"
-                  >
-                    {ex.se.exerciseName}
-                  </Link>
-                  <Button
-                    aria-label={`Series de ${ex.se.exerciseName}`}
-                    variant="secondary"
-                    className="min-h-11"
-                    onClick={() => day.toggleExpand(ex.se.id)}
-                  >
-                    {open ? "Ocultar" : "Registrar series"}
-                  </Button>
-                  {helper && (
-                    <span className="text-sm text-text-secondary">
-                      {helper}
-                    </span>
-                  )}
+                <div className="flex min-w-0 items-center gap-3">
+                  <RowMark done={allDone}>{idx + 1}</RowMark>
+                  <div className="flex min-w-0 flex-col">
+                    <Link
+                      to={`/ejercicios/${ex.se.exerciseId}`}
+                      className="text-title-m text-e underline-offset-4 hover:underline"
+                    >
+                      {ex.se.exerciseName}
+                    </Link>
+                    {helper && (
+                      <span className="tabular text-body-s text-on-surface-variant">
+                        {helper}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {!open && (
-                  <div className="flex gap-2">
-                    {ex.sets.map((s, i) => (
-                      <input
+                <div className="flex flex-wrap items-center gap-1">
+                  {!open &&
+                    ex.sets.map((s, i) => (
+                      <Checkbox
                         key={i}
-                        type="checkbox"
                         aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
-                        className="min-h-11 min-w-11 accent-primary"
                         checked={s.done}
                         onChange={() => day.toggleDone(ex.se.id, i)}
                       />
                     ))}
-                  </div>
-                )}
+                  <Button
+                    aria-label={`Series de ${ex.se.exerciseName}`}
+                    aria-expanded={open}
+                    variant="tonal"
+                    size="sm"
+                    onClick={() => day.toggleExpand(ex.se.id)}
+                  >
+                    {open ? "Ocultar" : "Registrar series"}
+                    <ChevronDownIcon
+                      width={20}
+                      height={20}
+                      className={cx(
+                        "transition-transform motion-spatial-fast",
+                        open && "rotate-180",
+                      )}
+                    />
+                  </Button>
+                </div>
               </div>
               {open && (
-                <ul className="mt-3 flex flex-col gap-2">
+                <ul className="stagger mt-3 flex flex-col gap-2">
                   {ex.sets.map((s, i) => {
                     const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
                     return (
-                      <li key={i} className="flex flex-wrap items-center gap-3">
-                        <input
-                          type="checkbox"
-                          aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
-                          className="min-h-11 min-w-11 accent-primary"
-                          checked={s.done}
-                          onChange={() => day.toggleDone(ex.se.id, i)}
-                        />
-                        <span className="w-16 text-text-secondary">
-                          Serie {i + 1}
-                        </span>
-                        <Stepper
-                          caption="Peso (kg)"
-                          context={ctx}
-                          value={s.weightKg}
-                          step={2.5}
-                          onValue={(val) =>
-                            day.setDraftValue(ex.se.id, i, "weightKg", val)
-                          }
-                          onStep={(d) =>
-                            day.stepValue(ex.se.id, i, "weightKg", d)
-                          }
-                        />
-                        <Stepper
-                          caption="Reps"
-                          context={ctx}
-                          value={s.reps}
-                          step={1}
-                          onValue={(val) =>
-                            day.setDraftValue(ex.se.id, i, "reps", val)
-                          }
-                          onStep={(d) => day.stepValue(ex.se.id, i, "reps", d)}
-                        />
+                      <li
+                        key={i}
+                        style={{ ["--i" as string]: i }}
+                        className={cx(
+                          "flex flex-col gap-2 rounded-l p-2 transition-colors motion-effects sm:flex-row sm:items-end",
+                          s.done
+                            ? "bg-surface-container-lowest"
+                            : "bg-surface-container-high",
+                        )}
+                      >
+                        <div className="flex items-center gap-1">
+                          <Checkbox
+                            aria-label={ctx}
+                            checked={s.done}
+                            onChange={() => day.toggleDone(ex.se.id, i)}
+                          />
+                          <span className="w-14 text-label-l text-on-surface-variant">
+                            Serie {i + 1}
+                          </span>
+                        </div>
+                        <div className="grid flex-1 grid-cols-2 gap-3">
+                          <Stepper
+                            caption="Peso (kg)"
+                            context={ctx}
+                            value={s.weightKg}
+                            step={2.5}
+                            onValue={(val) =>
+                              day.setDraftValue(ex.se.id, i, "weightKg", val)
+                            }
+                            onStep={(d) =>
+                              day.stepValue(ex.se.id, i, "weightKg", d)
+                            }
+                          />
+                          <Stepper
+                            caption="Reps"
+                            context={ctx}
+                            value={s.reps}
+                            step={1}
+                            onValue={(val) =>
+                              day.setDraftValue(ex.se.id, i, "reps", val)
+                            }
+                            onStep={(d) =>
+                              day.stepValue(ex.se.id, i, "reps", d)
+                            }
+                          />
+                        </div>
                       </li>
                     );
                   })}
                 </ul>
               )}
-            </section>
+            </Card>
           );
         })}
 
-        {v.cardio.map((c) => (
-          <section key={c.se.id} className={cardClass()}>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                to={`/ejercicios/${c.se.exerciseId}`}
-                className="font-semibold text-primary underline-offset-4 hover:underline"
-              >
-                {c.se.exerciseName}
-              </Link>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  aria-label={`${c.se.exerciseName} hecho`}
-                  className="min-h-11 min-w-11 accent-primary"
-                  checked={c.done}
-                  onChange={() => day.toggleCardioDone(c.se.id)}
+        {v.cardio.map((c, i) => {
+          const Icon = c.se.kind === "bike" ? BikeIcon : RunIcon;
+          return (
+            <Card
+              key={c.se.id}
+              className={doneCard(c.done)}
+              style={{ ["--i" as string]: v.exercises.length + i }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <RowMark done={c.done}>
+                    <Icon width={20} height={20} />
+                  </RowMark>
+                  <Link
+                    to={`/ejercicios/${c.se.exerciseId}`}
+                    className="text-title-m text-e underline-offset-4 hover:underline"
+                  >
+                    {c.se.exerciseName}
+                  </Link>
+                </div>
+                <label className="flex cursor-pointer items-center pr-3 text-label-l">
+                  <Checkbox
+                    aria-label={`${c.se.exerciseName} hecho`}
+                    checked={c.done}
+                    onChange={() => day.toggleCardioDone(c.se.id)}
+                  />
+                  Hecho
+                </label>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3 rounded-l bg-surface-container-high p-2">
+                <Stepper
+                  caption="Distancia (km)"
+                  context={c.se.exerciseName}
+                  value={c.distanceKm}
+                  step={1}
+                  onValue={(val) =>
+                    day.setCardioValue(c.se.id, "distanceKm", val)
+                  }
+                  onStep={(d) =>
+                    day.setCardioValue(
+                      c.se.id,
+                      "distanceKm",
+                      String(Math.max(0, (c.distanceKm ?? 0) + d)),
+                    )
+                  }
                 />
-                Hecho
-              </label>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <Stepper
-                caption="Distancia (km)"
-                context={c.se.exerciseName}
-                value={c.distanceKm}
-                step={1}
-                onValue={(val) =>
-                  day.setCardioValue(c.se.id, "distanceKm", val)
-                }
-                onStep={(d) =>
-                  day.setCardioValue(
-                    c.se.id,
-                    "distanceKm",
-                    String(Math.max(0, (c.distanceKm ?? 0) + d)),
-                  )
-                }
-              />
-              <Stepper
-                caption="Tiempo (min)"
-                context={c.se.exerciseName}
-                value={c.durationMin}
-                step={5}
-                onValue={(val) =>
-                  day.setCardioValue(c.se.id, "durationMin", val)
-                }
-                onStep={(d) =>
-                  day.setCardioValue(
-                    c.se.id,
-                    "durationMin",
-                    String(Math.max(0, (c.durationMin ?? 0) + d)),
-                  )
-                }
-              />
-            </div>
-          </section>
-        ))}
+                <Stepper
+                  caption="Tiempo (min)"
+                  context={c.se.exerciseName}
+                  value={c.durationMin}
+                  step={5}
+                  onValue={(val) =>
+                    day.setCardioValue(c.se.id, "durationMin", val)
+                  }
+                  onStep={(d) =>
+                    day.setCardioValue(
+                      c.se.id,
+                      "durationMin",
+                      String(Math.max(0, (c.durationMin ?? 0) + d)),
+                    )
+                  }
+                />
+              </div>
+            </Card>
+          );
+        })}
 
-        <section className={cardClass("flex flex-col gap-3")}>
-          <h2 className="font-semibold">Esfuerzo percibido</h2>
+        {/* Justo tras la última fila: donde está la vista al marcarla. */}
+        {complete && (
+          <div>
+            <RewardSeal sets={progress.done} />
+          </div>
+        )}
+
+        <Card
+          className="flex flex-col gap-4"
+          style={{ ["--i" as string]: v.exercises.length + v.cardio.length }}
+        >
+          <div className="flex flex-col gap-1">
+            <h2 className="text-title-m">Esfuerzo percibido</h2>
+            {v.effort === null && (
+              <p className="text-body-s text-on-surface-variant">
+                Elige cómo fue para poder cerrar la sesión.
+              </p>
+            )}
+          </div>
           <EffortDots effort={v.effort} onSelect={day.setEffort} />
-          <label className="flex flex-col gap-1">
-            <span className="font-semibold">Nota</span>
-            <Textarea
-              aria-label="Nota de la sesión"
-              className="min-h-24"
-              value={v.note}
-              onChange={(e) => day.setNote(e.target.value)}
-            />
-          </label>
-          <Button
-            className="min-h-11 disabled:opacity-50"
-            disabled={v.effort === null || v.pending}
-            onClick={day.close}
-          >
-            {v.pending ? "Cerrando…" : "Cerrar sesión"}
-          </Button>
-        </section>
+          <Field label="Nota de la sesión">
+            {(a) => (
+              <Textarea
+                {...a}
+                className="min-h-24"
+                value={v.note}
+                onChange={(e) => day.setNote(e.target.value)}
+              />
+            )}
+          </Field>
+        </Card>
+      </div>
+
+      <div
+        role="toolbar"
+        aria-label="Acciones de la sesión"
+        className="toolbar fixed inset-x-0 bottom-24 z-30 mx-auto flex w-fit items-center gap-2 p-2 lg:bottom-6"
+      >
+        <Button
+          variant="text"
+          size="icon"
+          aria-label={
+            openPending
+              ? `Marcar todas las series de ${openPending.se.exerciseName}`
+              : "Marcar todo el ejercicio abierto"
+          }
+          disabled={!openPending}
+          onClick={() => openPending && day.completeExercise(openPending.se.id)}
+        >
+          <CheckIcon />
+        </Button>
+        <span className="px-2 text-title-m text-e">
+          <span aria-hidden="true" className="tabular">
+            {progress.done}/{progress.total}
+          </span>
+          <span className="sr-only">
+            {progress.done} de {progress.total} series hechas
+          </span>
+        </span>
+        <Button disabled={v.effort === null || v.pending} onClick={day.close}>
+          {v.pending ? "Cerrando…" : "Cerrar sesión"}
+        </Button>
       </div>
     </div>
   );
