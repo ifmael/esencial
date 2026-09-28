@@ -2,6 +2,8 @@
 // conteo. Compartido por el selector del día y el de la modal de plantilla.
 import { type ReactNode, useState } from "react";
 import type { Exercise } from "../lib/exercises";
+import { ChevronDownIcon } from "./icons";
+import { cx, ripple } from "./ui";
 
 export const GROUP_LABELS: Record<string, string> = {
   pecho: "Pecho",
@@ -58,28 +60,45 @@ export function GroupedExercises({
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
-    <>
+    <div className="flex flex-col gap-2">
       {groupByMuscle(exercises).map(([tag, list]) => {
         const isOpen = forceOpen ? open[tag] !== false : open[tag] === true;
         return (
-          <section key={tag} className="flex flex-col gap-1">
-            <h4 className="font-semibold uppercase tracking-wide text-on-surface-variant">
+          <section
+            key={tag}
+            className={cx(
+              "flex flex-col overflow-hidden rounded-l transition-colors motion-effects",
+              isOpen ? "bg-surface-container-high" : "bg-surface-container",
+            )}
+          >
+            <h4 className="section-label">
               <button
                 type="button"
-                className="flex w-full items-center gap-2 text-left"
+                className="state flex min-h-12 w-full items-center gap-2 px-4 text-left"
                 aria-expanded={isOpen}
+                onPointerDown={ripple}
                 onClick={() => setOpen((o) => ({ ...o, [tag]: !isOpen }))}
               >
-                {GROUP_LABELS[tag] ?? tag} ({list.length})
-                <span aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
+                <span className="flex-1">
+                  {GROUP_LABELS[tag] ?? tag}{" "}
+                  <span className="tabular">({list.length})</span>
+                </span>
+                <ChevronDownIcon
+                  className={cx(
+                    "transition-transform motion-spatial-fast",
+                    isOpen && "rotate-180",
+                  )}
+                />
               </button>
             </h4>
             {isOpen ? (
-              <ul className={listClassName}>{list.map(renderItem)}</ul>
+              <ul className={cx("px-2 pb-2", listClassName)}>
+                {list.map(renderItem)}
+              </ul>
             ) : null}
           </section>
         );
       })}
-    </>
+    </div>
   );
 }

@@ -10,6 +10,9 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import type { ComponentProps } from "react";
+import { GripIcon } from "./icons";
+import { cx } from "./ui";
 
 /** Ratón: umbral corto; táctil: mantener pulsado para no robar el scroll;
  *  teclado: espacio/intro para levantar y flechas para mover. */
@@ -25,6 +28,27 @@ export function useDragSensors() {
   );
 }
 
+/** Asa de arrastre de una fila: botón de 48 px con el icono de agarre. Recibe
+ *  los `attributes` y `listeners` de `useSortable` tal cual. */
+export function DragHandle({
+  label,
+  className,
+  ...rest
+}: ComponentProps<"button"> & { label: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={cx(
+        "state grid size-12 shrink-0 cursor-grab touch-none place-items-center rounded-full text-on-surface-variant active:cursor-grabbing",
+        className,
+      )}
+      {...rest}
+    >
+      <GripIcon />
+    </button>
+  );
+}
 
 /** Anuncios del lector de pantalla; `positionOf` añade «en la posición N» al
  *  soltar (la posición del destino en el orden actual). */
