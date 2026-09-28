@@ -847,9 +847,6 @@
       var(--ease-spatial-default) both;
     transition: transform var(--duration-spatial-fast) var(--ease-spatial-fast);
   }
-  .sheet[data-dragging="true"] {
-    transition: none;
-  }
   .sheet-handle {
     width: 2rem;
     height: 0.25rem;

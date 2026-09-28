@@ -40,23 +40,53 @@ export function Scrim({
   );
 }
 
-/** Diálogo M3: en escritorio centrado con esquinas XL; por debajo de `md`, a
- * pantalla completa. Escape cierra. Un solo `role="dialog"`. */
-export function Dialog({
-  onClose,
-  label,
-  labelledBy,
-  className,
-  fullscreenOnMobile = true,
-  children,
-}: {
-  onClose: () => void;
-  label?: string;
-  labelledBy?: string;
-  className?: string;
-  fullscreenOnMobile?: boolean;
-  children: ReactNode;
-}) {
+/** Gesto del asa de una hoja inferior: devuelve el desplazamiento vivo y los
+ * manejadores para el asa. Soltar decide con `sheetRelease` (lib/sheet). */
+function useSheetDrag(onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [dy, setDy] = useState(0);
+  const drag = useRef<{ y: number; t: number } | null>(null);
+  const handle = (
+    <div
+      className="flex h-9 shrink-0 cursor-grab touch-none items-center justify-center md:hidden"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        drag.current = { y: e.clientY, t: e.timeStamp };
+      }}
+      onPointerMove={(e) => {
+        if (drag.current) setDy(sheetDrag(e.clientY - drag.current.y));
+      }}
+      onPointerUp={(e) => {
+        const d = drag.current;
+        drag.current = null;
+        if (!d) return;
+        const moved = e.clientY - d.y;
+        const result = sheetRelease({
+          dy: moved,
+          velocity: moved / Math.max(1, e.timeStamp - d.t),
+          height: ref.current?.offsetHeight ?? 600,
+        });
+        setDy(0);
+        if (result === "close") onClose();
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+        setDy(0);
+      }}
+    >
+      <span className="sheet-handle" aria-hidden="true" />
+    </div>
+  );
+  return {
+    ref,
+    handle,
+    style: dy
+      ? { transform: `translateY(${dy}px)`, transition: "none" }
+      : undefined,
+  };
+}
+
+function useEscape(onClose: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -64,27 +94,56 @@ export function Dialog({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+}
+
+/** Diálogo M3: en escritorio centrado con esquinas XL. Por debajo de `md`,
+ * según `mobile`: a pantalla completa (`fullscreen`, por defecto), como hoja
+ * inferior con asa y arrastre para cerrar (`sheet`) o centrado (`center`).
+ * Escape cierra. Un solo `role="dialog"`. */
+export function Dialog({
+  onClose,
+  label,
+  labelledBy,
+  className,
+  mobile = "fullscreen",
+  children,
+}: {
+  onClose: () => void;
+  label?: string;
+  labelledBy?: string;
+  className?: string;
+  mobile?: "fullscreen" | "sheet" | "center";
+  children: ReactNode;
+}) {
+  useEscape(onClose);
+  const drag = useSheetDrag(onClose);
+  const sheet = mobile === "sheet";
   return (
     <Scrim
       onClose={onClose}
       className={cx(
         "flex justify-center",
-        fullscreenOnMobile
-          ? "items-stretch md:items-center md:p-6"
-          : "items-center p-4",
+        mobile === "fullscreen" && "items-stretch md:items-center md:p-6",
+        sheet && "items-end md:items-center md:p-6",
+        mobile === "center" && "items-center p-4",
       )}
     >
       <div
+        ref={drag.ref}
         role="dialog"
         aria-modal="true"
         aria-label={label}
         aria-labelledby={labelledBy}
+        style={sheet ? drag.style : undefined}
         className={cx(
           "dialog flex w-full flex-col",
-          fullscreenOnMobile && "max-md:rounded-none max-md:shadow-none",
+          mobile === "fullscreen" && "max-md:rounded-none max-md:shadow-none",
+          sheet &&
+            "max-md:max-h-[92dvh] max-md:rounded-t-xl max-md:rounded-b-none max-md:pb-[env(safe-area-inset-bottom)] max-md:[animation-name:sheet-in]",
           className,
         )}
       >
+        {sheet ? drag.handle : null}
         {children}
       </div>
     </Scrim>
@@ -107,77 +166,19 @@ export function Sheet({
   modal?: boolean;
   children: ReactNode;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [dy, setDy] = useState(0);
-  const drag = useRef<{
-    y: number;
-    t: number;
-    lastY: number;
-    lastT: number;
-  } | null>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const handle = (
-    <div
-      className="flex h-9 shrink-0 cursor-grab touch-none items-center justify-center md:hidden"
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        drag.current = {
-          y: e.clientY,
-          t: e.timeStamp,
-          lastY: e.clientY,
-          lastT: e.timeStamp,
-        };
-      }}
-      onPointerMove={(e) => {
-        const d = drag.current;
-        if (!d) return;
-        d.lastY = e.clientY;
-        d.lastT = e.timeStamp;
-        setDy(sheetDrag(e.clientY - d.y));
-      }}
-      onPointerUp={(e) => {
-        const d = drag.current;
-        drag.current = null;
-        if (!d) return;
-        const moved = e.clientY - d.y;
-        const dt = Math.max(1, e.timeStamp - d.t);
-        const result = sheetRelease({
-          dy: moved,
-          velocity: moved / dt,
-          height: ref.current?.offsetHeight ?? 600,
-        });
-        setDy(0);
-        if (result === "close") onClose();
-      }}
-      onPointerCancel={() => {
-        drag.current = null;
-        setDy(0);
-      }}
-    >
-      <span className="sheet-handle" aria-hidden="true" />
-    </div>
-  );
-
+  useEscape(onClose);
+  const drag = useSheetDrag(onClose);
   const sheet = (
     <section
-      ref={ref}
+      ref={drag.ref}
       aria-label={label}
-      data-dragging={drag.current ? "true" : undefined}
-      style={dy ? { transform: `translateY(${dy}px)` } : undefined}
+      style={drag.style}
       className={cx(
         "sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col pb-[env(safe-area-inset-bottom)] md:inset-y-0 md:left-auto md:max-h-none md:w-96 md:rounded-l-xl md:rounded-r-none",
         className,
       )}
     >
-      {handle}
+      {drag.handle}
       {children}
     </section>
   );

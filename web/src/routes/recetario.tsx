@@ -400,7 +400,7 @@ export function RecetarioDetallePage() {
         <Dialog
           onClose={() => setConfirming(false)}
           label="Confirmar eliminación"
-          fullscreenOnMobile={false}
+          mobile="center"
           className="max-w-sm gap-4 p-6"
         >
           <Shape name="cookie-9" size={40} className="self-center text-error">

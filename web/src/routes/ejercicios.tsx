@@ -931,7 +931,7 @@ export function EjercicioDetailPage() {
         <Dialog
           onClose={() => setConfirming(false)}
           labelledBy="ex-delete-title"
-          fullscreenOnMobile={false}
+          mobile="center"
           className="max-w-sm gap-4 p-6"
         >
           <Shape

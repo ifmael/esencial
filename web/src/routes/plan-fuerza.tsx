@@ -1252,6 +1252,7 @@ export function PlanFuerzaPage() {
         <Dialog
           onClose={closeDay}
           labelledBy="day-editor-title"
+          mobile="sheet"
           className="md:h-[88vh] md:max-w-4xl"
         >
           <div
