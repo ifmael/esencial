@@ -12,8 +12,8 @@ import {
   hexFromArgb,
   MaterialDynamicColors as M,
   QuantizerCelebi,
-  Score,
   SchemeFidelity,
+  Score,
   TonalPalette,
 } from "@material/material-color-utilities";
 
@@ -59,7 +59,9 @@ export type Role = (typeof ROLES)[number];
 export type Scheme = Record<Role, string>;
 
 const camel = (role: string) =>
-  role.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()) as keyof typeof M;
+  role.replace(/-([a-z])/g, (_, c: string) =>
+    c.toUpperCase(),
+  ) as keyof typeof M;
 
 function toScheme(s: DynamicScheme): Scheme {
   const out = {} as Scheme;
@@ -129,7 +131,9 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 export function failingPairs(scheme: Scheme): (readonly [Role, Role])[] {
-  return AA_PAIRS.filter(([fg, bg]) => contrastRatio(scheme[fg], scheme[bg]) < 4.5);
+  return AA_PAIRS.filter(
+    ([fg, bg]) => contrastRatio(scheme[fg], scheme[bg]) < 4.5,
+  );
 }
 
 /** Esquema de una receta a partir del color de su foto (fidelidad, para que
@@ -146,15 +150,20 @@ export function recipeScheme(
 }
 
 /** Color semilla de una foto (RGBA ya reducida): cuantiza y puntúa como
- * `sourceColorFromImage`, sin necesitar el `<img>`; sin píxeles opacos, la
- * semilla de marca. */
-export function seedFromPixels(rgba: Uint8ClampedArray): number {
+ * `sourceColorFromImage`, sin necesitar el `<img>`. null si no hay píxeles
+ * opacos o ningún color pasa el filtro de croma de Score (foto gris o
+ * lavada): la pantalla se queda con su esquema de sección en vez de heredar el
+ * azul de reserva de Score. */
+export function seedFromPixels(rgba: Uint8ClampedArray): number | null {
   const pixels: number[] = [];
   for (let i = 0; i < rgba.length; i += 4)
-    if (rgba[i + 3] === 255) pixels.push(argbFromRgb(rgba[i], rgba[i + 1], rgba[i + 2]));
-  const brand = argbFromHex(BRAND_SEED);
-  if (pixels.length === 0) return brand;
-  return Score.score(QuantizerCelebi.quantize(pixels, 128), {
-    fallbackColorARGB: brand,
-  })[0];
+    if (rgba[i + 3] === 255)
+      pixels.push(argbFromRgb(rgba[i], rgba[i + 1], rgba[i + 2]));
+  if (pixels.length === 0) return null;
+  // Centinela transparente: ningún color opaco real puede valer 0.
+  const NONE = 0;
+  const [top] = Score.score(QuantizerCelebi.quantize(pixels, 128), {
+    fallbackColorARGB: NONE,
+  });
+  return top === NONE ? null : top;
 }

@@ -8,8 +8,8 @@ import {
   brandScheme,
   contrastRatio,
   failingPairs,
-  recipeScheme,
   ROLES,
+  recipeScheme,
   seedFromPixels,
 } from "../src/lib/color-scheme";
 
@@ -33,7 +33,8 @@ describe("esquema de marca", () => {
     const theme = dark ? "oscuro" : "claro";
 
     it(`trae todos los roles M3 en ${theme}`, () => {
-      for (const role of ROLES) expect(scheme[role], role).toMatch(/^#[0-9a-f]{6}$/);
+      for (const role of ROLES)
+        expect(scheme[role], role).toMatch(/^#[0-9a-f]{6}$/);
     });
 
     it(`cumple AA en todas las parejas texto/fondo en ${theme}`, () => {
@@ -104,14 +105,23 @@ describe("seedFromPixels", () => {
       px[i + 2] = 40;
       px[i + 3] = 255;
     }
-    const seed = seedFromPixels(px);
+    const seed = seedFromPixels(px) ?? 0;
     const r = (seed >> 16) & 255;
     const b = seed & 255;
     expect(r).toBeGreaterThan(b);
   });
 
-  it("una foto transparente no rompe: cae en la semilla de marca", () => {
-    const seed = seedFromPixels(new Uint8ClampedArray(16 * 4));
-    expect(seed).toBe(argbFromHex(BRAND_SEED));
+  it("una foto transparente no da semilla (manda el esquema de sección)", () => {
+    expect(seedFromPixels(new Uint8ClampedArray(16 * 4))).toBeNull();
+  });
+
+  it("una foto gris no da semilla: nunca el azul de reserva de Score", () => {
+    const px = new Uint8ClampedArray(64 * 64 * 4);
+    for (let i = 0; i < px.length; i += 4) {
+      const v = 90 + ((i / 4) % 64);
+      px[i] = px[i + 1] = px[i + 2] = v;
+      px[i + 3] = 255;
+    }
+    expect(seedFromPixels(px)).toBeNull();
   });
 });

@@ -15,7 +15,9 @@ test.describe("RECIPES — loop end to end", () => {
     );
 
     await page.goto("/recetario");
-    await page.getByRole("button", { name: "+ Nueva receta" }).click();
+    await page
+      .getByRole("button", { name: "Nueva receta", exact: true })
+      .click();
     await expect(page).toHaveURL(/\/recetario\/nueva$/);
 
     await page.getByLabel("Nombre").fill(name);
@@ -46,7 +48,9 @@ test.describe("RECIPES — loop end to end", () => {
     page,
   }) => {
     await page.goto("/recetario");
-    await page.getByRole("button", { name: "+ Nueva receta" }).click();
+    await page
+      .getByRole("button", { name: "Nueva receta", exact: true })
+      .click();
     await expect(page).toHaveURL(/\/recetario\/nueva$/);
 
     await page.getByRole("button", { name: "Guardar" }).click();

@@ -123,6 +123,7 @@ describe("/recetario book", () => {
     renderAt("/recetario");
     fireEvent.click(await screen.findByText("Arroz con pollo"));
     await waitFor(() => expect(window.location.pathname).toBe("/recetario/1"));
-    expect(await screen.findByText("1. Sofreír")).toBeDefined();
+    const step = await screen.findByRole("listitem", { name: "paso 1" });
+    expect(step.textContent).toBe("1. Sofreír");
   });
 });

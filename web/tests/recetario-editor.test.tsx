@@ -38,7 +38,9 @@ describe("editor: edit mode", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(server.calls.some((c) => c.method === "PUT")).toBe(false);
-    expect(screen.getByText("1. Sofreír")).toBeDefined();
+    expect(screen.getByRole("listitem", { name: "paso 1" }).textContent).toBe(
+      "1. Sofreír",
+    );
 
     // save: PUT with edited name
     fireEvent.click(screen.getByRole("button", { name: "Editar receta" }));
