@@ -3,29 +3,47 @@
 // NOTAS con estados vacíos + CTA; autosave de notas (debounce 800 ms, flush al
 // cambiar de fecha vía desmontaje del editor keyed por fecha).
 //
-// Variante A (acabado): misma estructura —mismos bloques, mismo orden, misma
-// rejilla de 3 columnas en escritorio— con el sistema aplicado: etiquetas de
-// sección en micro-mayúsculas, tarjetas de 16px, filas con hover y entrada
-// escalonada de las tres columnas.
+// M3 Expressive: cabecera *hero* (fecha en display + progreso ondulado del
+// día), carrusel de comidas a lo ancho, FUERZA en verde deporte y NOTAS como
+// campo outlined. Jerarquía por tonos, sin sombras; entrada escalonada.
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import {
+  EmptyState,
+  Monogram,
+  Shape,
+  WavyRing,
+} from "../components/expressive";
 import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CloudIcon,
+  DumbbellIcon,
+  PlayIcon,
   UtensilsIcon,
 } from "../components/icons";
 import {
+  Alert,
   Badge,
   Button,
+  buttonClass,
   Card,
+  ConnectedGroup,
   cardClass,
+  Field,
   Input,
+  ripple,
   Textarea,
 } from "../components/ui";
 import { apiFetchRaw, photoSrc } from "../lib/api";
-import { type DayData, type DaySession, toISODate, useDay } from "../lib/day";
+import {
+  type DayData,
+  type DaySession,
+  dayProgress,
+  toISODate,
+  useDay,
+} from "../lib/day";
 import { KIND_LABELS } from "../lib/exercises";
 
 export function formatDateEs(date: Date): string {
@@ -45,118 +63,155 @@ export function addDays(date: Date, days: number): Date {
 export function DayHeader({
   date,
   onChange,
+  progress,
 }: {
   date: Date;
   onChange: (d: Date) => void;
+  /** Pasos del día (`dayProgress`); sin datos aún, no se pinta el anillo. */
+  progress?: { done: number; total: number };
 }) {
   const isToday = toISODate(date) === toISODate(new Date());
   return (
-    <header className="mb-section flex flex-col items-start gap-3">
-      {/* El título abre en el mismo borde que la rejilla de abajo: los
-          controles de fecha van detrás, nunca por delante del texto. */}
-      <div className="flex w-full items-center gap-2">
-        <h1 className="min-w-0 flex-1 text-balance text-title leading-tight font-bold first-letter:uppercase lg:text-display">
-          {isToday ? "Hoy — " : ""}
-          {formatDateEs(date)}
+    <header className="relative mb-section flex flex-col gap-6 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-card md:p-8">
+      {/* Forma decorativa de fondo: el tono sube un escalón, sin contraste que leer. */}
+      <span className="pointer-events-none absolute -top-20 -right-16">
+        <Shape
+          name="flower"
+          size={240}
+          className="text-surface-container-high"
+        />
+      </span>
+      <div className="relative flex items-start justify-between gap-4">
+        <h1 className="min-w-0 text-balance text-display-s text-e md:text-display-m">
+          {isToday && (
+            <span className="block text-title-l text-e text-accent">
+              Hoy<span className="sr-only"> — </span>
+            </span>
+          )}
+          <span className="block first-letter:uppercase">
+            {formatDateEs(date)}
+          </span>
         </h1>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Día anterior"
-          className="text-text"
-          onClick={() => onChange(addDays(date, -1))}
-        >
-          <ChevronLeftIcon width={22} height={22} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Día siguiente"
-          className="text-text"
-          onClick={() => onChange(addDays(date, 1))}
-        >
-          <ChevronRightIcon width={22} height={22} />
-        </Button>
+        {progress && (
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <WavyRing
+              value={progress.done}
+              max={progress.total}
+              size={96}
+              label={`Progreso del día: ${progress.done} de ${progress.total} pasos`}
+            >
+              <span className="text-headline-m text-e tabular leading-none text-on-surface">
+                {progress.done}
+              </span>
+              <span className="block text-label-m tabular text-on-surface-variant">
+                de {progress.total}
+              </span>
+            </WavyRing>
+            <span className="text-label-m text-on-surface-variant">
+              Pasos del día
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Una fila, dos naturalezas: el control de fecha (con caja) a la
-          izquierda y la navegación a los planes (sin caja) a la derecha. */}
-      <div className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        {/* Un solo control de fecha: "Hoy" y el selector comparten caja, así
-            que hay una sola affordance de calendario y un solo borde. */}
-        <div className="inline-flex h-9 items-center rounded-control border border-border bg-surface p-0.5">
-          {/* Radio interior: el de fuera (control) menos el borde de 1px y el
-              relleno de 2px. Es la resta de esquinas anidadas, no un valor suelto. */}
-          <button
-            type="button"
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
+        <ConnectedGroup label="Cambiar de día" className="w-full sm:w-auto">
+          <Button
+            variant="tonal"
+            size="icon"
+            aria-label="Día anterior"
+            onClick={() => onChange(addDays(date, -1))}
+          >
+            <ChevronLeftIcon />
+          </Button>
+          <Button
+            variant="tonal"
             aria-label="Ir a hoy"
             onClick={() => onChange(new Date())}
-            className="grid h-8 place-items-center rounded-[calc(var(--radius-control)-3px)] px-2.5 text-caption font-semibold text-primary transition-colors duration-150 ease-out-quart hover:bg-primary-soft"
           >
             Hoy
-          </button>
-          <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
+          </Button>
           {/* ponytail: input nativo; un picker con librería si saltar fechas fine. */}
           <Input
             type="date"
             aria-label="Ir a una fecha"
-            className="h-8 min-h-0 w-auto border-0 bg-transparent px-1.5 text-caption shadow-none"
+            className="w-auto rounded-s border-0 bg-secondary-container px-4 text-label-l text-on-secondary-container"
             value={toISODate(date)}
             onChange={(e) => {
               if (e.target.value)
                 onChange(new Date(`${e.target.value}T00:00:00`));
             }}
           />
-        </div>
+          <Button
+            variant="tonal"
+            size="icon"
+            aria-label="Día siguiente"
+            onClick={() => onChange(addDays(date, 1))}
+          >
+            <ChevronRightIcon />
+          </Button>
+        </ConnectedGroup>
 
-        <nav className="flex flex-wrap items-center gap-1">
-          <QuickLink to="/plan-recetas">Plan recetas</QuickLink>
-          <QuickLink to="/plan-fuerza">Plan fuerza</QuickLink>
+        <nav aria-label="Planes" className="flex flex-wrap items-center gap-2">
+          <QuickLink to="/plan-recetas" section="nutricion" icon={UtensilsIcon}>
+            Plan recetas
+          </QuickLink>
+          <QuickLink to="/plan-fuerza" section="deporte" icon={DumbbellIcon}>
+            Plan fuerza
+          </QuickLink>
         </nav>
       </div>
     </header>
   );
 }
 
+/** Enlace tonal a un plan, en el color de su sección. */
 function QuickLink({
   to,
+  section,
+  icon: Icon,
   children,
 }: {
   to: string;
+  section: "nutricion" | "deporte";
+  icon: typeof UtensilsIcon;
   children: React.ReactNode;
 }) {
   return (
     <Link
       to={to}
-      className="group inline-flex h-9 items-center rounded-control pr-2.5 pl-3 text-caption font-semibold text-text-secondary transition-colors duration-150 ease-out-quart hover:bg-primary-soft hover:text-primary"
+      data-section={section}
+      onPointerDown={ripple}
+      className={buttonClass({
+        variant: "tonal",
+        className: "bg-accent-container pl-4 text-on-accent-container",
+      })}
     >
+      <Icon width={20} height={20} />
       {children}
-      <ChevronRightIcon
-        width={16}
-        height={16}
-        className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5"
-      />
     </Link>
   );
 }
 
 function Section({
   title,
+  section,
   children,
 }: {
   title: string;
+  section?: "nutricion" | "deporte";
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3">
+    <section data-section={section} className="flex min-w-0 flex-col gap-3">
       <h2 className="section-label">{title}</h2>
       {children}
     </section>
   );
 }
 
-/** Estado vacío de una sección: mismo molde para receta y fuerza. */
-function EmptyState({
+/** Estado vacío de una sección: formas M3E + CTA tonal. */
+function SectionEmpty({
   text,
   action,
 }: {
@@ -164,30 +219,29 @@ function EmptyState({
   action: { to: string; label: string };
 }) {
   return (
-    <Card className="flex min-h-28 flex-col justify-center items-start gap-2">
-      <p className="text-body text-text-secondary">{text}</p>
-      <Link
-        to={action.to}
-        className="group inline-flex items-center gap-1 text-body font-semibold text-primary transition-colors duration-150 ease-out-quart hover:text-primary-dark"
-      >
-        {action.label}
-        <ChevronRightIcon
-          width={16}
-          height={16}
-          className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5"
-        />
-      </Link>
+    <Card className="rounded-xl">
+      <EmptyState title={text}>
+        <Link
+          to={action.to}
+          onPointerDown={ripple}
+          className={buttonClass({ variant: "tonal", className: "pr-4" })}
+        >
+          {action.label}
+          <ChevronRightIcon width={20} height={20} />
+        </Link>
+      </EmptyState>
     </Card>
   );
 }
 
+/** Carrusel M3 *multi-browse*: la primera comida grande, las demás más
+ * estrechas, todas de la misma altura; se desliza con `scroll-snap`. */
 function MealsSection({ meals }: { meals: DayData["meals"] }) {
-  const navigate = useNavigate();
   const planned = meals.filter((m) => m.recipeName !== null);
   if (planned.length === 0) {
     return (
-      <Section title="RECETA">
-        <EmptyState
+      <Section title="RECETA" section="nutricion">
+        <SectionEmpty
           text="Aún no has planificado comidas para este día"
           action={{ to: "/plan-recetas", label: "Ir al plan semanal" }}
         />
@@ -195,45 +249,57 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
     );
   }
   return (
-    <Section title="RECETA">
-      <div className="flex flex-col gap-2">
-        {planned.map((m) => (
-          <button
-            type="button"
+    <Section title="RECETA" section="nutricion">
+      <ul
+        aria-label="Comidas del día"
+        className="stagger flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1"
+      >
+        {planned.map((m, i) => (
+          <li
             key={m.meal}
-            className={cardClass(
-              "card-interactive group flex w-full items-center gap-3 p-3 text-left",
-            )}
-            onClick={() => navigate(`/recetario/${m.recipeId}`)}
+            style={{ ["--i" as string]: i }}
+            className={`h-56 shrink-0 snap-start md:h-64 ${
+              i === 0
+                ? "basis-4/5 sm:basis-1/2 lg:basis-5/12"
+                : "basis-3/5 sm:basis-1/3 lg:basis-1/4"
+            }`}
           >
-            {m.recipePhoto ? (
-              <img
-                src={photoSrc(m.recipePhoto)}
-                alt=""
-                className="size-14 shrink-0 rounded-panel object-cover"
-              />
-            ) : (
+            <Link
+              to={`/recetario/${m.recipeId}`}
+              onPointerDown={ripple}
+              className="state group flex size-full flex-col justify-between overflow-hidden rounded-xl bg-surface-container-high text-on-surface transition-[border-radius] motion-spatial-fast active:rounded-l"
+            >
+              {m.recipePhoto ? (
+                <img
+                  src={photoSrc(m.recipePhoto)}
+                  alt=""
+                  className="absolute inset-0 -z-10 size-full object-cover transition-transform motion-spatial group-hover:scale-105"
+                />
+              ) : (
+                <Monogram
+                  name={m.recipeName ?? ""}
+                  size={i === 0 ? 112 : 80}
+                  className="m-4 transition-transform motion-spatial group-hover:rotate-12"
+                />
+              )}
               <span
-                aria-hidden
-                className="grid size-14 shrink-0 place-items-center rounded-panel bg-surface-muted text-text-secondary"
+                className={`mt-auto flex flex-col gap-1 p-4 ${
+                  m.recipePhoto ? "bg-photo-veil text-on-photo" : ""
+                }`}
               >
-                <UtensilsIcon />
+                <span className="text-label-m text-e uppercase">{m.meal}</span>
+                <span
+                  className={`line-clamp-2 text-e ${
+                    i === 0 ? "text-headline-s" : "text-title-l"
+                  }`}
+                >
+                  {m.recipeName}
+                </span>
               </span>
-            )}
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="section-label">{m.meal}</span>
-              <span className="line-clamp-2 text-lead font-semibold">
-                {m.recipeName}
-              </span>
-            </span>
-            <ChevronRightIcon
-              width={18}
-              height={18}
-              className="shrink-0 text-text-secondary transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5"
-            />
-          </button>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </Section>
   );
 }
@@ -246,11 +312,10 @@ function StrengthSection({
   date: string;
 }) {
   const navigate = useNavigate();
-  const openWorkout = () => navigate(`/sesion/${date}`);
   if (!session) {
     return (
-      <Section title="FUERZA">
-        <EmptyState
+      <Section title="FUERZA" section="deporte">
+        <SectionEmpty
           text="Sin sesión asignada"
           action={{ to: "/plan-fuerza", label: "Ver el plan de fuerza" }}
         />
@@ -258,41 +323,64 @@ function StrengthSection({
     );
   }
   if (session.status === "logged" && session.summary) {
+    const stats = [
+      ["Ejercicios", String(session.summary.exercises)],
+      ["Series", String(session.summary.sets)],
+      ["Esfuerzo", `${session.summary.effort}/5`],
+    ];
     return (
-      <Section title="FUERZA">
-        <button
-          type="button"
+      <Section title="FUERZA" section="deporte">
+        <Link
+          to={`/sesion/${date}`}
+          onPointerDown={ripple}
           className={cardClass(
-            "card-interactive flex w-full flex-col gap-2 text-left",
+            "tonal",
+            "card-interactive state flex flex-col gap-4 rounded-xl",
           )}
-          onClick={openWorkout}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-lead font-semibold">
+            <span className="min-w-0 truncate text-title-l text-e">
               {session.name ?? "Sesión"}
             </span>
-            <Badge tone="done">Hecho</Badge>
+            <Badge tone="done">
+              <CheckIcon width={16} height={16} />
+              Hecho
+            </Badge>
           </div>
-          <p className="text-caption text-done-text">
+          <p className="sr-only">
             Sesión completada · {session.summary.exercises} ejercicios ·{" "}
             {session.summary.sets} series · esfuerzo {session.summary.effort}/5
           </p>
-        </button>
+          <dl aria-hidden="true" className="stagger grid grid-cols-3 gap-2">
+            {stats.map(([label, value], i) => (
+              <div
+                key={label}
+                style={{ ["--i" as string]: i }}
+                className="flex flex-col-reverse gap-1 rounded-l bg-primary-container p-3 text-on-primary-container"
+              >
+                <dt className="text-label-m">{label}</dt>
+                <dd className="text-headline-m text-e tabular leading-none">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Link>
       </Section>
     );
   }
   const exercises = session.exercises ?? [];
   const sets = exercises.reduce((sum, e) => sum + (e.targetSets ?? 0), 0);
   return (
-    <Section title="FUERZA">
-      <Card className="flex flex-col gap-3">
+    <Section title="FUERZA" section="deporte">
+      <Card className="flex flex-col gap-4 rounded-xl">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-lead font-semibold">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="truncate text-title-l text-e">
               {session.name ?? "Sesión"}
             </span>
             {exercises.length > 0 && (
-              <span className="text-caption text-text-secondary">
+              <span className="text-body-m tabular text-on-surface-variant">
                 {exercises.length} ejercicios · {sets} series
               </span>
             )}
@@ -300,16 +388,23 @@ function StrengthSection({
           <Badge tone="pending">Pendiente</Badge>
         </div>
         {exercises.length > 0 && (
-          <ol className="flex flex-col rounded-panel bg-surface-muted p-1">
+          <ol className="stagger flex flex-col gap-1">
             {exercises.map((e, i) => (
               <li
                 key={e.exerciseId}
-                className="flex items-center gap-3 rounded-panel px-2 py-2"
+                style={{ ["--i" as string]: i }}
+                className="flex min-h-12 items-center gap-3 rounded-m bg-surface-container-high px-3 py-2"
               >
-                <span className="grid size-6 shrink-0 place-items-center rounded-chip bg-surface text-micro font-bold text-text-secondary">
-                  {i + 1}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-body">
+                <Shape
+                  name="cookie-9"
+                  size={32}
+                  className="text-accent-container"
+                >
+                  <span className="text-label-l text-e tabular text-on-accent-container">
+                    {i + 1}
+                  </span>
+                </Shape>
+                <span className="min-w-0 flex-1 truncate text-body-l">
                   {e.exerciseName}
                   {e.kind === "strength"
                     ? null
@@ -319,7 +414,12 @@ function StrengthSection({
             ))}
           </ol>
         )}
-        <Button className="w-full" onClick={openWorkout}>
+        <Button
+          size="lg"
+          className="w-full"
+          onClick={() => navigate(`/sesion/${date}`)}
+        >
+          <PlayIcon />
           Registrar sesión
         </Button>
       </Card>
@@ -387,45 +487,44 @@ export function NoteEditor({
   );
 
   return (
-    <Card className="flex flex-col gap-2 p-3">
-      <Textarea
-        className="min-h-44 w-full bg-background p-3"
-        placeholder="Escribe algo sobre hoy"
-        value={text}
-        onChange={(e) => onChange(e.target.value)}
-      />
+    // La etiqueta flotante tapa el borde con el tono de la tarjeta.
+    <Card className="flex flex-col gap-3 rounded-xl">
+      <Field label="Escribe algo sobre hoy">
+        {(a) => (
+          <Textarea
+            {...a}
+            className="min-h-44"
+            value={text}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        )}
+      </Field>
       <div
         aria-live="polite"
-        className="flex min-h-5 items-center gap-2 px-1 text-caption"
+        className="flex min-h-5 items-center gap-2 px-1 text-body-s text-on-surface-variant"
       >
         {status === "idle" && (
           <>
-            <CloudIcon width={16} height={16} className="text-text-secondary" />
-            <span className="text-text-secondary">Autoguardado</span>
+            <CloudIcon width={16} height={16} />
+            <span>Autoguardado</span>
           </>
         )}
-        {status === "saving" && (
-          <span className="text-text-secondary">Guardando…</span>
-        )}
+        {status === "saving" && <span>Guardando…</span>}
         {status === "saved" && (
           <>
-            <CheckIcon width={16} height={16} className="text-done-text" />
-            <span className="text-done-text">Guardado</span>
-          </>
-        )}
-        {status === "error" && (
-          <>
-            <span className="text-error">No guardado</span>
-            <button
-              type="button"
-              className="font-semibold text-primary underline-offset-2 transition-colors duration-150 ease-out-quart hover:underline"
-              onClick={() => void save(text)}
-            >
-              Reintentar guardar
-            </button>
+            <CheckIcon width={16} height={16} className="text-accent" />
+            <span>Guardado</span>
           </>
         )}
       </div>
+      {status === "error" && (
+        <Alert>
+          <p className="text-body-m">No se ha guardado la nota.</p>
+          <Button variant="outlined" onClick={() => void save(text)}>
+            Reintentar guardar
+          </Button>
+        </Alert>
+      )}
     </Card>
   );
 }
@@ -433,18 +532,18 @@ export function NoteEditor({
 function Skeleton() {
   return (
     <div
-      className="grid grid-cols-1 gap-x-gutter gap-y-section lg:grid-cols-3"
+      className="stagger grid grid-cols-1 gap-x-gutter gap-y-section lg:grid-cols-2"
       aria-busy="true"
     >
-      {[0, 1, 2].map((i) => (
+      {["h-56 md:h-64 lg:col-span-2", "h-72", "h-72"].map((box, i) => (
         <div
-          key={i}
+          key={box + i}
           data-testid="skeleton"
-          className="flex flex-col gap-3"
-          style={{ animationDelay: `${i * 60}ms` }}
+          className={`flex flex-col gap-3 ${i === 0 ? "lg:col-span-2" : ""}`}
+          style={{ ["--i" as string]: i }}
         >
           <span className="skeleton block h-4 w-24" />
-          <span className="skeleton block h-44 w-full" />
+          <span className={`skeleton block w-full rounded-xl ${box}`} />
         </div>
       ))}
     </div>
@@ -457,25 +556,32 @@ export function DiaPage() {
   const { data, loading, error, reload } = useDay(iso);
   return (
     <>
-      <DayHeader date={date} onChange={setDate} />
+      <DayHeader
+        date={date}
+        onChange={setDate}
+        progress={data ? dayProgress(data) : undefined}
+      />
       {loading ? (
         <Skeleton />
       ) : error ? (
-        <Card className="flex flex-col items-start gap-3">
-          <p className="text-body text-error">{error}</p>
-          <Button variant="secondary" onClick={reload}>
+        <Alert>
+          <p className="text-body-m">{error}</p>
+          <Button variant="outlined" onClick={reload}>
             Reintentar
           </Button>
-        </Card>
+        </Alert>
       ) : data ? (
-        <div className="grid grid-cols-1 gap-x-gutter gap-y-section lg:grid-cols-3">
-          <div className="animate-rise">
+        <div className="stagger grid grid-cols-1 gap-x-gutter gap-y-section lg:grid-cols-2">
+          <div
+            className="min-w-0 lg:col-span-2"
+            style={{ ["--i" as string]: 0 }}
+          >
             <MealsSection meals={data.meals ?? []} />
           </div>
-          <div className="animate-rise" style={{ animationDelay: "60ms" }}>
+          <div className="min-w-0" style={{ ["--i" as string]: 1 }}>
             <StrengthSection session={data.session} date={iso} />
           </div>
-          <div className="animate-rise" style={{ animationDelay: "120ms" }}>
+          <div className="min-w-0" style={{ ["--i" as string]: 2 }}>
             <Section title="NOTAS DEL DÍA">
               <NoteEditor
                 key={iso}
