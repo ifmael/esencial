@@ -226,8 +226,9 @@ y editar no animan. El destino apaga su animación de entrada propia (la hace la
 transición). Los tests usan `tests/view-transition-stub.ts`.
 
 El **menú FAB** sigue el M3E: velo (`Scrim`) que tapa la página y la cierra al
-pulsarlo, y acciones planas del mismo color (`accent-container`), sin sombra ni
-colores por sección.
+pulsarlo, y acciones planas sin sombra, cada una con el `accent-container` de la
+sección a la que lleva (`data-section={sectionOf(to)}`: Sesión y Plantilla en
+verde de Deporte, Receta en el de Nutrición).
 
 Desde `md` la modal mide **siempre lo mismo** (`h-[88vh]`, `max-w-6xl`; nada de `max-h`), así
 que no se redimensiona al cambiar el borrador ni la lista del selector. Desde

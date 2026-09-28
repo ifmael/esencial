@@ -244,6 +244,18 @@ describe("Shell M3E", () => {
     );
   });
 
+  it("cada acción del menú FAB lleva el color de su sección", async () => {
+    renderAt("/");
+    await screen.findAllByText("Deporte");
+    const aside = document.querySelector("aside") as HTMLElement;
+    fireEvent.click(within(aside).getByRole("button", { name: "Crear" }));
+    const menu = within(aside).getByRole("menu", { name: "Crear" });
+    const sections = within(menu)
+      .getAllByRole("menuitem")
+      .map((m) => m.dataset.section);
+    expect(sections).toEqual(["deporte", "deporte", "nutricion"]);
+  });
+
   it("cada acción del menú FAB se transforma en su destino", async () => {
     for (const label of ["Sesión de hoy", "Plantilla", "Receta"]) {
       const before = stubViewTransitions();

@@ -261,14 +261,15 @@ function FabMenu({
                 : "absolute right-0 bottom-16 items-end",
             )}
           >
-            {/* Menú FAB M3E: todas las acciones del mismo color (el contenedor
-                de la sección), planas sobre el velo; el botón de cerrar
-                contrasta con el tono fuerte. */}
+            {/* Menú FAB M3E: cada acción con el contenedor de la sección a la
+                que lleva (Deporte o Nutrición), plana sobre el velo; el botón
+                de cerrar contrasta con el tono fuerte. */}
             {items.map((item, i) => (
               <div key={item.label} style={{ ["--i" as string]: i }}>
                 <button
                   type="button"
                   role="menuitem"
+                  data-section={sectionOf(item.to)}
                   onClick={(e) => {
                     // Lo pulsado crece hasta el formulario (transición de vista).
                     morphFrom(e.currentTarget);
