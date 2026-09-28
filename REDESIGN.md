@@ -285,6 +285,17 @@ JS, unos 29 kB en crudo son los paths de los iconos y el resto las primitivas nu
   ignora un Escape ya gestionado (dnd-kit cancelando un arrastre de teclado). La
   búsqueda ⌘K sigue con su propio manejador en el campo, porque es la capa más
   alta y atrapa el foco.
+- **Fotos en caché de antes del rediseño.** Todas las `<img>` de fotos piden ahora
+  con `crossOrigin="use-credentials"` (lo exige el color dinámico). Las fotos se
+  sirven con `Cache-Control: immutable` de un año. Si un navegador guardó una
+  foto pedida sin CORS con la versión anterior, la copia en caché no lleva
+  cabeceras CORS y la foto sale rota hasta que caduque o se limpie la caché
+  (medido: con la caché limpia cargan todas). El arreglo completo es versionar la
+  URL (`?v=2`) en `photoSrc`, pero toca el contrato de las claves de foto y queda
+  para una decisión aparte.
+- `recetario-detail` «unknown id» falló 2 veces en unas 26 ejecuciones de la suite
+  entera (nunca solo). Se le dio margen a la espera de navegación (3 s); no es
+  seguro que la causa sea la carga en paralelo.
 - Mientras dura la transición día → modal (~0,4 s) la capa de la transición se
   queda con el puntero: un toque inmediato no llega al diálogo. Es cosa de la API
   de View Transitions; con movimiento reducido no hay transición.

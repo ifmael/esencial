@@ -386,8 +386,13 @@ function Header({
   progress?: { done: number; total: number };
 }) {
   return (
-    <header className="mb-6 flex items-center gap-4">
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+    <header className="relative mb-6 flex items-center gap-4 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-5 md:p-6">
+      <Shape
+        name="sunny"
+        size={220}
+        className="pointer-events-none absolute -top-20 -right-16 text-accent-container opacity-60"
+      />
+      <div className="relative flex min-w-0 flex-1 flex-col gap-2">
         <div className="-ml-3 flex items-center gap-1">
           <BackLink />
           <h1 className="text-headline-l text-e first-letter:uppercase">
@@ -400,20 +405,22 @@ function Header({
         </div>
       </div>
       {progress && progress.total > 0 && (
-        <WavyRing
-          value={progress.done}
-          max={progress.total}
-          label="Series hechas"
-          size={96}
-        >
-          <CountUp
+        <div className="relative rounded-full bg-surface-container-lowest p-1">
+          <WavyRing
             value={progress.done}
-            className="block text-headline-m text-e leading-none text-on-surface"
-          />
-          <span className="tabular text-label-s text-on-surface-variant">
-            de {progress.total}
-          </span>
-        </WavyRing>
+            max={progress.total}
+            label="Series hechas"
+            size={112}
+          >
+            <CountUp
+              value={progress.done}
+              className="block text-headline-m text-e leading-none text-on-surface"
+            />
+            <span className="tabular text-label-s text-on-surface-variant">
+              de {progress.total}
+            </span>
+          </WavyRing>
+        </div>
       )}
     </header>
   );

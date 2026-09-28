@@ -183,8 +183,10 @@ export function WeekGrid({
                 style={{ ["--i" as string]: index }}
                 className={cx(
                   "flex flex-col gap-2 rounded-l p-2 md:min-h-0",
+                  // Hoy: tono de su sección y esquina asimétrica, además de su
+                  // número dentro de la galleta.
                   isToday
-                    ? "bg-surface-container-lowest"
+                    ? "rounded-tr-xl-inc bg-accent-container/40"
                     : "bg-surface-container-low",
                 )}
               >

@@ -74,7 +74,11 @@ describe("/recetario/:id", () => {
     renderAt("/recetario/999");
     expect(await screen.findByText("Receta no encontrada")).toBeDefined();
     fireEvent.click(screen.getByRole("link", { name: "Volver al recetario" }));
-    await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
+    // Con la suite entera en paralelo el router de datos puede tardar más del
+    // segundo por defecto; lo que se prueba es que navega, no cuánto tarda.
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario"), {
+      timeout: 3000,
+    });
   });
 
   it("delete: cancel changes nothing; confirm calls DELETE, shows success on the book", async () => {

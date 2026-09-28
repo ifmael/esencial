@@ -25,7 +25,10 @@ export function Shape({
   return (
     <span
       className={cx(
-        "relative inline-grid shrink-0 place-items-center",
+        // `relative` solo si el consumidor no la posiciona: con las dos clases
+        // gana la que Tailwind emite después y `absolute` se perdía.
+        !/\b(absolute|fixed|sticky)\b/.test(className ?? "") && "relative",
+        "inline-grid shrink-0 place-items-center",
         className,
       )}
       style={{ width: size, height: size }}
