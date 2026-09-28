@@ -225,11 +225,13 @@ function FabMenu({
   ] as const;
   return (
     <div
-      className={cx(
-        "relative",
-        placement === "float" &&
-          "fixed right-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 lg:hidden",
-      )}
+      // `relative` y `fixed` a la vez: gana el que Tailwind emita después
+      // (relative), y el FAB flotante acababa al final del documento.
+      className={
+        placement === "float"
+          ? "fixed right-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 lg:hidden"
+          : "relative"
+      }
     >
       <Fab
         aria-label={open ? "Cerrar menú de crear" : "Crear"}

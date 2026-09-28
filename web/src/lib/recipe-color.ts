@@ -33,7 +33,10 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     Promise.withResolvers<HTMLImageElement>();
   const img = new Image();
   // La foto viene de la API (otro origen, con cookie): sin CORS el canvas
-  // queda contaminado y getImageData lanza.
+  // queda contaminado y getImageData lanza. OJO: todos los <img> de fotos de
+  // la app piden también con crossOrigin="use-credentials"; si alguno la
+  // pidiera sin CORS, el navegador serviría esa copia de caché (sin cabeceras
+  // CORS) a esta petición y fallaría.
   img.crossOrigin = "use-credentials";
   img.onload = () => resolve(img);
   img.onerror = reject;

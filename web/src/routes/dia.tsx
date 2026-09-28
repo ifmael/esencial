@@ -271,6 +271,7 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
             >
               {m.recipePhoto ? (
                 <img
+                  crossOrigin="use-credentials"
                   src={photoSrc(m.recipePhoto)}
                   alt=""
                   className="absolute inset-0 -z-10 size-full object-cover transition-transform motion-spatial group-hover:scale-105"

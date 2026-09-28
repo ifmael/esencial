@@ -112,6 +112,7 @@ function RecipeThumb({
 }) {
   return photo ? (
     <img
+      crossOrigin="use-credentials"
       src={photoSrc(photo)}
       alt=""
       width={size}

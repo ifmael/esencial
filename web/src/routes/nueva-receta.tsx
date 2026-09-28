@@ -323,6 +323,7 @@ export function NuevaRecetaPage() {
             <h2 className="text-title-m">Foto principal</h2>
             {draft.photo_path ? (
               <img
+                crossOrigin="use-credentials"
                 src={photoSrc(draft.photo_path)}
                 alt="Vista previa de la foto"
                 className="h-48 w-full rounded-l object-cover"

@@ -64,6 +64,11 @@
   --radius-xl-inc: 32px;
   --radius-xxl: 48px;
   --radius-full: 9999px;
+  /* «Completo» de las piezas que cambian de forma: la mitad del alto de un
+     control de 56 px. Con 9999px la interpolación del morph (9999 → 12) pasa
+     casi toda por valores imposibles y el muelle cruza el cero: se ve como un
+     salto. Con un radio real el muelle se ve redondeando → cuadrando. */
+  --radius-pill: 28px;
 
   /* --- Espaciado semántico (ritmo) --------------------------------------- */
   --spacing-card: 1.25rem; /* 20 */
@@ -423,7 +428,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-pill);
     font-weight: 600;
     font-stretch: 104%;
     line-height: 1;
@@ -509,7 +514,7 @@
   }
   /* Abierto: se vuelve un círculo del color fuerte (se transforma). */
   .fab[aria-expanded="true"] {
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-pill);
     background: var(--accent);
     color: var(--on-accent);
   }
@@ -533,12 +538,12 @@
       font-weight var(--duration-effects-default) var(--ease-effects-default);
   }
   .connected > :first-child {
-    border-start-start-radius: var(--radius-full);
-    border-end-start-radius: var(--radius-full);
+    border-start-start-radius: var(--radius-pill);
+    border-end-start-radius: var(--radius-pill);
   }
   .connected > :last-child {
-    border-start-end-radius: var(--radius-full);
-    border-end-end-radius: var(--radius-full);
+    border-start-end-radius: var(--radius-pill);
+    border-end-end-radius: var(--radius-pill);
   }
   .connected > :active {
     flex-grow: 1.35;
@@ -546,7 +551,7 @@
   .connected > [aria-pressed="true"],
   .connected > [aria-current="page"],
   .connected > [aria-selected="true"] {
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-pill);
     background: var(--accent);
     color: var(--on-accent);
     font-weight: 700;

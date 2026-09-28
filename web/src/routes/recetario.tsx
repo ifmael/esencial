@@ -36,6 +36,7 @@ function Thumb({ recipe, hero }: { recipe: Recipe; hero?: boolean }) {
     : "aspect-square w-full rounded-m";
   return recipe.photo_path ? (
     <img
+      crossOrigin="use-credentials"
       src={photoSrc(recipe.photo_path)}
       alt=""
       style={morph(recipe.id)}
@@ -262,6 +263,7 @@ export function RecetarioDetallePage() {
       >
         {photo ? (
           <img
+            crossOrigin="use-credentials"
             src={photoSrc(photo)}
             alt=""
             className="h-72 w-full object-cover md:h-96"

@@ -295,6 +295,7 @@ export function RecipeEditor({
             {draft.photo_path ? (
               <div className="flex items-center gap-3 rounded-l bg-surface-container-highest p-2">
                 <img
+                  crossOrigin="use-credentials"
                   src={photoSrc(draft.photo_path)}
                   alt="Foto actual"
                   className="size-12 rounded-m object-cover"
