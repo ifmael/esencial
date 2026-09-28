@@ -122,15 +122,15 @@ página), con un hueco vacío reservado abajo para acciones futuras. Las dos rut
 están en `CALENDAR_ROUTES` (`web/src/components/shell.tsx`): añadir una ahí le da
 el mismo trato (sin título, alto completo, hueco inferior).
 
-En esas rutas **la barra lateral se colapsa a un raíl de iconos** (`w-18` = 72px,
-iconos con el nombre en `aria-label`/`title`, sin desplegables) y su ancho es
-para la rejilla; el submenú de la sección queda como **fila de chips sobre el
-calendario**, en escritorio y en móvil (donde no hay raíl). El `main` de estas
-rutas es `max-w-calendar` —el token `--container-calendar`, 110rem = 1760 px—
-con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
-1280×800: columna de día **152,84 px** (antes 124,28 con la barra de 256px) y
-espacio de texto por nombre ~2,2× (título de sesión 36→75 px, ejercicio 15→54 px,
-receta 29→68 px), sin scroll de página ni horizontal. Techo del ancho: a 1280 no
+En esas rutas **el raíl M3E arranca colapsado en su versión compacta de 80 px**
+(`w-20`): iconos con el nombre en `aria-label`/`title`, menú FAB, búsqueda y tema,
+sin desplegables de sección. El catálogo y «Cerrar sesión» ceden su sitio, y siguen
+disponibles en la búsqueda y al desplegar el menú. Fuera del calendario el raíl
+colapsado mide 96 px (con etiquetas) y el expandido 288 px. El submenú de la sección
+va como **grupo de botones conectados sobre el calendario**, en escritorio y en móvil.
+El `main` de estas rutas es `max-w-calendar` —el token `--container-calendar`,
+110rem = 1760 px— con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
+1280×800: columna de día **153,14 px**, sin scroll de página ni horizontal. Techo del ancho: a 1280 no
 cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracteres)
 el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
 celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
@@ -144,22 +144,26 @@ inyecta el contenido de sus días por el render prop (`children`), que es lo
 En la columna de un día de fuerza (`SessionCell`, `web/src/routes/plan-fuerza.tsx`)
 los ejercicios **se reparten la altura de la columna** en vez de quedarse
 apiñados arriba: la lista (`<ol>`) se queda con el espacio libre y cada fila
-(`flex-1`, `min-h-11`) es un bloque `bg-surface-muted` con el nombre en
-`text-body` —hasta dos líneas (`line-clamp-2`), así que cabe el nombre entero de
-casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo en
-`text-caption`. Con muchas filas el mínimo manda y el desborde sigue quedando
+(`flex-1`, `min-h-11`) es un bloque `bg-surface-container-high rounded-m` con el
+nombre en `text-body-m` —hasta dos líneas (`line-clamp-2`), así que cabe el nombre
+entero de casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo
+en `text-body-s`. **No lleva `.stagger`**: dnd-kit mide las filas al empezar a
+arrastrar, y una fila a mitad de su animación de entrada está desplazada. Con muchas filas el mínimo manda y el desborde sigue quedando
 dentro del calendario (lo cubre `calendar-layout.spec.ts`).
 
 Cada fila lleva su propia **✕ para desprogramar ese ejercicio** sin abrir el
 modal: la fila se convierte en su confirmación en línea (nombre truncado +
 **Sí/No**, con el nombre completo en el `aria-label`) y, al confirmar, el día se
 guarda con el mismo PUT de los items que usa el arrastre (`usePlanWeek.saveItems`,
-optimista y con recarga). Los dos botones van en **una sola línea** a propósito:
-la columna mide ~152 px y dos botones de texto largo (`size="sm"` = `px-3` +
-`text-caption`, ~86 y ~77 px) se salían de la fila y quedaban tapados por el día
-siguiente — de ahí las etiquetas cortas. Quitar el **último** ejercicio deja el
+optimista y con recarga). Después aparece un snackbar con **Deshacer**, que vuelve
+a guardar los items de antes. Los dos botones van en **una sola línea** a propósito:
+la columna mide ~153 px y dos botones de texto largo se salían de la fila y
+quedaban tapados por el día siguiente — de ahí las etiquetas cortas y los 44 px
+(excepción táctil documentada). Quitar el **último** ejercicio deja el
 día sin items, que no es representable (la API exige ≥1): desprograma la sesión
-(DELETE) y el día vuelve a su «+ añadir», igual que con la ✕ de la sesión.
+(DELETE) y el día vuelve a su «+ añadir», igual que con la ✕ de la sesión. Su
+Deshacer la **recrea** con POST (misma fecha, nombre e items). Solo sirve para las
+planificadas: una registrada no tiene ✕, porque recrearla perdería su registro.
 
 ### Modal de plantillas (crear y editar)
 
@@ -173,7 +177,13 @@ muscular y grupos plegables) — nunca una segunda modal encima. Guardar manda u
 solo POST (crear) o PUT (editar) con las posiciones 0..n-1; Cancelar, Escape o el
 fondo descartan el borrador sin llamadas a la API.
 
-La modal mide **siempre lo mismo** (`h-[88vh]`, `max-w-6xl`; nada de `max-h`), así
+Es un **diálogo M3** (`Dialog` de `overlay.tsx`; a pantalla completa en móvil) con
+una **barra de herramientas flotante** abajo (contador, Cancelar, Guardar). Escape
+va por la pila de capas (`lib/escape-stack.ts`), que ignora el Escape con el que
+dnd-kit cancela un arrastre de teclado, así que la modal no se cierra a media
+operación.
+
+Desde `md` la modal mide **siempre lo mismo** (`h-[88vh]`, `max-w-6xl`; nada de `max-h`), así
 que no se redimensiona al cambiar el borrador ni la lista del selector. Desde
 `md`, dentro de la columna derecha el **mapa muscular se lleva el alto libre**
 (`md:h-full`, `w-auto`: crece y encoge con la ventana) y la lista de ejercicios
@@ -408,6 +418,15 @@ termina el `pnpm dev` entero con el código de salida del hijo.
 Los `--var` son imprescindibles: sin ellos los Workers usarían los orígenes de
 **producción** (los del `wrangler.toml`) y el navegador cruzaría a la API
 equivocada (CORS/CSP fallan).
+
+Los dos puertos se cambian por entorno para correr la suite junto a otros
+worktrees: `E2E_WEB_PORT=8863 E2E_API_PORT=8864 pnpm e2e` (por defecto 8788 y
+8790). La config deriva de ahí las URLs, los `--var` y `VITE_API_URL`, y
+`e2e/tests/helpers.ts` (`API_BASE`) lee el mismo `E2E_API_PORT`.
+
+Si un test arrastra o pulsa justo después de abrir un diálogo, espera antes a que
+acaben las animaciones (`settle` en `strength.spec.ts`): mientras dura la
+transición de vista día → modal, su capa se queda con el puntero.
 
 Lo que hay que respetar al escribir tests:
 

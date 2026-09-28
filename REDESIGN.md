@@ -206,9 +206,9 @@ La lista completa está en la cabecera de `tokens.css`. Mínimos: claro 4,53
 
 | | Antes | Después |
 |---|---|---|
-| JS principal | 421,8 kB (127,1 gz) | 568,7 kB (168,1 gz) |
+| JS principal | 421,8 kB (127,1 gz) | 569,1 kB (170,7 gz) |
 | JS perezoso (color dinámico) | — | 53,9 kB (16,6 gz), solo en `/recetario/:id` con foto |
-| CSS | 39,4 kB (8,3 gz) | 63,2 kB (12,3 gz) |
+| CSS | 39,4 kB (8,3 gz) | 63,2 kB (12,5 gz) |
 | Fuentes | — (sistema) | 168,8 kB woff2 |
 
 Dependencia nueva: `@material/material-color-utilities` 0.3.0 (Apache-2.0). Solo
@@ -218,32 +218,51 @@ JS, unos 29 kB en crudo son los paths de los iconos y el resto las primitivas nu
 
 ## Verificación
 
-- `pnpm lint` (biome sin errores + lint de tokens en 48 ficheros), `pnpm typecheck`
-  y `pnpm test` en verde: API 210, web 372. Tests nuevos: muelles, color (AA, caída
-  por gris y por AA), formas, tema + `theme.js`, tokens generados, snackbar, hoja,
-  ranking y UI de la búsqueda (tipo `action`, `role=group`, «Sin resultados» en una
-  región viva), shell (tema, FAB, color de sección), primitivas (Field, SplitButton),
-  catálogo, racha y recreación de sesión, deshacer, `manualSet`, `dayProgress`,
-  sello, «Guardar y añadir otra» y «Guardar y registrar».
-- `pnpm e2e` con `E2E_WEB_PORT=8863 E2E_API_PORT=8864`: ver el resultado al final.
-- **48 capturas** (12 rutas × 1280×800 y 390×844 × claro y oscuro), revisadas en hojas
-  de contactos. En cada una se comprobó por programa: sin desborde horizontal,
-  `data-theme` aplicado, y `/plan-fuerza` y `/plan-recetas` sin scroll de página a
-  1280.
+- `pnpm lint` (biome sin errores + lint de tokens en 49 ficheros), `pnpm typecheck`
+  y `pnpm test` en verde: API 210, web 377. Tests nuevos:
+  - Sistema: muelles, color (AA, caída por foto gris, caída por AA), formas, tema
+    + `theme.js`, tokens generados.
+  - Primitivas: snackbar, hoja, pila de Escape (capa de encima, evento ya
+    gestionado), Field (error como `alert`), SplitButton, Escape por capas en un
+    diálogo, catálogo.
+  - Búsqueda: ranking y UI (tipo `action`, `role=group`, «Sin resultados» en una
+    región viva).
+  - Shell: tema, FAB, color de sección.
+  - Pantallas: racha y recreación de sesión, deshacer, `manualSet`, `dayProgress`,
+    sello, «Guardar y añadir otra» y «Guardar y registrar».
+- `pnpm e2e` con `E2E_WEB_PORT=8863 E2E_API_PORT=8864`: **43/43**.
+  - Ajustes a la UI nueva: nombres exactos donde el botón dividido duplica
+    «Guardar», etiqueta flotante en vez de placeholder, raíl de 96 px fuera del
+    calendario, submenús por `aria-controls`.
+  - Una espera a que acaben las animaciones antes de arrastrar: la transición día
+    → modal tapa la página mientras dura.
+- **48 capturas** a exactamente **1280×800 y 390×844** (viewport y píxeles
+  comprobados), 12 rutas × 2 tamaños × 2 temas, revisadas en hojas de contactos.
+  En cada una se comprobó por programa: sin desborde horizontal, `data-theme`
+  aplicado, y el calendario sin scroll de página a 1280.
+- Calendario a 1280×800: raíl de **80 px**, columna de día de **153,14 px**, sin
+  scroll de página ni horizontal, en `/plan-fuerza` y en `/plan-recetas`. Fuera del
+  calendario el menú arranca expandido (288 px) y colapsa a 96 px.
 - Piezas estrella demostradas en Chromium con datos reales de dev:
-  - FAB → menú (el FAB pasa a círculo y salen tres acciones).
-  - ⌘K «cala» → Enter lleva a `/recetario/1`.
+  - FAB → menú: el FAB pasa a círculo y salen tres acciones.
+  - ⌘K «cala» → Enter lleva a `/recetario/1`; los grupos se anuncian con nombre.
   - Marcar 9/9 series → sello; desmarcar una → se retira.
-  - ✕ de «Press banca» → snackbar → Deshacer → los ejercicios del día vuelven a 3
-    (comprobado en la API).
+  - Deshacer de un ejercicio, comprobado en la API: «Press banca | Sentadilla
+    búlgara | Remo» → sin Press → Deshacer → los tres, en el mismo orden.
+  - Deshacer de una sesión: «Tirón B» (4 ejercicios × 3 series) → borrada →
+    Deshacer → recreada con el mismo nombre y los mismos objetivos.
   - Color dinámico en cinco recetas (valores arriba).
+  - Hoja de la compra: un arrastre corto la devuelve a su sitio; uno largo la
+    cierra.
   - Tema con el bundle bloqueado.
   - Morph medido en el tiempo.
-- `prefers-reduced-motion: reduce` (con `matchMedia` confirmado a `true`):
-  - Transiciones a 1 ms.
-  - El morph salta directo a 12 px, sin curva.
+- `prefers-reduced-motion: reduce` (con `matchMedia` confirmado a `true` en la
+  misma ejecución):
+  - Transiciones a 1 ms; el morph salta de 28 a 12 px sin pasar por valores
+    intermedios (7 muestras a 12,0).
   - Sello, diálogos y hojas entran con un fundido de 150 ms.
-  - Sin giro del sello ni del cargador, sin deriva de la onda, sin View Transitions.
+  - Sin giro del sello ni del cargador, sin deriva de la onda, sin View
+    Transitions.
 
 ## Fuera
 
@@ -256,3 +275,16 @@ JS, unos 29 kB en crudo son los paths de los iconos y el resto las primitivas nu
   anterior (manda `globals.css`).
 - La hoja inferior se cierra arrastrando el asa, no desde cualquier punto del
   contenido (así no compite con el scroll de la lista).
+- **Deshacer solo en sesiones planificadas.** Una sesión registrada no se puede
+  desprogramar desde la rejilla (ni tiene ✕), y `unschedule` la rechaza: recrearla
+  con POST perdería su registro de series. Para ofrecer un deshacer ahí haría falta
+  un borrado blando en la API.
+- **Escape por capas** (`lib/escape-stack.ts`): diálogos, hojas, el menú del botón
+  dividido y el menú FAB se apilan, y Escape cierra solo el de encima. Sustituye a
+  la guarda de plantillas que miraba `window.event.defaultPrevented`: la pila
+  ignora un Escape ya gestionado (dnd-kit cancelando un arrastre de teclado). La
+  búsqueda ⌘K sigue con su propio manejador en el campo, porque es la capa más
+  alta y atrapa el foco.
+- Mientras dura la transición día → modal (~0,4 s) la capa de la transición se
+  queda con el puntero: un toque inmediato no llega al diálogo. Es cosa de la API
+  de View Transitions; con movimiento reducido no hay transición.
