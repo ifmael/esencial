@@ -4,11 +4,18 @@ import { defineConfig, devices } from "@playwright/test";
 const BRAVE = "/usr/bin/brave-browser";
 // Puerto propio de e2e: con 8787 + reuseExistingServer, un `pnpm dev` en marcha
 // sería adoptado y la suite escribiría en la base de desarrollo.
-const BASE = "http://127.0.0.1:8788";
+// Los dos puertos se pueden cambiar por entorno (E2E_WEB_PORT / E2E_API_PORT)
+// para correr la suite en paralelo con otros worktrees; por defecto, los de
+// siempre.
+const WEB_PORT = process.env.E2E_WEB_PORT ?? "8788";
+const API_PORT = process.env.E2E_API_PORT ?? "8790";
+const BASE = `http://127.0.0.1:${WEB_PORT}`;
 // B' (dos despliegues): la API es su propio Worker, en su propio puerto. El SPA
 // se construye apuntando ahí (VITE_API_URL) y el frontal autoriza ese origen en
 // su CSP (API_ORIGIN): los dos valores tienen que ser el mismo.
-const API = "http://127.0.0.1:8790";
+const API = `http://127.0.0.1:${API_PORT}`;
+// Los tests leen la API de aquí (helpers.ts: E2E_API_URL).
+process.env.E2E_API_URL = API;
 
 // La base de e2e se DERIVA de api/migrations/ en cada corrida y vive en
 // e2e/.state: nunca se lee ni se escribe .wrangler/state. Añadir una migración
@@ -21,7 +28,7 @@ const API_SERVER =
   // --var WEB_ORIGIN: el [vars] de api/wrangler.toml es el origen de producción;
   // en e2e el navegador viene de http://127.0.0.1:8788 y sin esto la API no le
   // daría permiso CORS (el login fallaría).
-  `npx wrangler dev -c api/wrangler.toml --port 8790 --var WEB_ORIGIN:${BASE} --persist-to e2e/.state`;
+  `npx wrangler dev -c api/wrangler.toml --port ${API_PORT} --var WEB_ORIGIN:${BASE} --persist-to e2e/.state`;
 
 // El Worker del frontal no toca D1: se le da su propio estado local para que el
 // `rm -rf e2e/.state` del arranque de la API no le pise la caché a mitad de
@@ -29,7 +36,7 @@ const API_SERVER =
 const WEB_SERVER =
   "ESENCIAL_DEV_PASSWORD=hola pnpm predev && " +
   `VITE_API_URL=${API} pnpm build && ` +
-  `npx wrangler dev --port 8788 --var API_ORIGIN:${API} --persist-to e2e/.state-web`;
+  `npx wrangler dev --port ${WEB_PORT} --var API_ORIGIN:${API} --persist-to e2e/.state-web`;
 
 export default defineConfig({
   testDir: "./tests",

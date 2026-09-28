@@ -13,5 +13,8 @@ export default defineConfig({
     environment: "jsdom",
     include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["tests/setup.ts"],
+    // Node ≥25 trae un `localStorage` propio (vacío, sin `clear`) que tapa el
+    // de jsdom en los workers de test: se apaga para que mande el de jsdom.
+    execArgv: ["--no-experimental-webstorage"],
   },
 });
