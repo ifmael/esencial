@@ -1,14 +1,37 @@
 // E8: página "Nueva receta" en /recetario/nueva. Misma mecánica de draft que el
-// modal recipe-editor (D2), pero como página: grid de dos columnas, dropzone
-// con subida a /api/uploads (contrato fail-closed: 200 {photo_path}, 400 {error,
-// field:"file"}) y preview por photo_path. description/servings salen null.
-import { useRef, useState } from "react";
+// modal recipe-editor (D2), pero como página: una columna en móvil y dos en lg,
+// dropzone con subida a /api/uploads (contrato fail-closed: 200 {photo_path},
+// 400 {error, field:"file"}) y preview por photo_path. description/servings
+// salen null. Guardar es un botón dividido: «Guardar receta» vuelve al
+// recetario; «Guardar y añadir otra» (mismo POST) deja el formulario vacío.
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { Loader, Shape } from "../components/expressive";
+import {
+  AddIcon,
+  BookIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  CloseIcon,
+  PhotoIcon,
+} from "../components/icons";
+import { useSnackbar } from "../components/overlay";
 import {
   type RecipeInput,
   useRecipes,
 } from "../components/recipes/use-recipes";
-import { Button, buttonClass, Card, Input, Select } from "../components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  Chip,
+  cx,
+  Field,
+  Input,
+  ripple,
+  Select,
+  SplitButton,
+} from "../components/ui";
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
 
 type IngRow = { food: string; quantity: string; unit: string };
@@ -33,12 +56,8 @@ const blank = (): Draft => ({
 
 const BASE_TAGS = ["Desayuno", "Almuerzo", "Cena", "Snack"];
 
-const chip = (active: boolean) =>
-  `rounded-full border border-border px-3 py-1 text-sm transition-colors ${
-    active ? "bg-primary-container text-white" : "bg-surface-muted"
-  }`;
-const small = "rounded-lg border border-border bg-surface px-2 py-1";
-const label = "mb-1 block text-sm font-medium text-text-secondary";
+/** Posición en la entrada escalonada (`.stagger`). */
+const at = (i: number) => ({ ["--i" as string]: i });
 
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
   rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
@@ -62,6 +81,8 @@ export function NuevaRecetaPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const snackbar = useSnackbar();
   const uploadingRef = useRef(false);
   const pendingFileRef = useRef<File | null>(null);
   // Id de la selección activa: cualquier invalidación lo incrementa y las
@@ -201,350 +222,436 @@ export function NuevaRecetaPage() {
     tags: draftRef.current.tags,
   });
 
-  const save = async () => {
-    if (api.saving || uploading) return;
+  const busy = api.saving || uploading;
+
+  /** Un solo POST. Sin `another` vuelve al recetario; con él deja el
+   * formulario vacío (y la subida pendiente descartada) para la siguiente. */
+  const save = async (another = false) => {
+    if (busy) return;
     if (!draft.name.trim()) {
       setNameError("El nombre es obligatorio");
+      nameInput.current?.focus();
       return;
     }
     setNameError(null);
     const photoKey = await ensurePhotoUploaded();
     if (photoKey === null) return;
     const ok = await api.create(payload(photoKey));
-    if (ok) navigate("/recetario");
+    if (!ok) return;
+    if (!another) {
+      navigate("/recetario");
+      return;
+    }
+    uploadSessionRef.current += 1;
+    pendingFileRef.current = null;
+    photoRemovedRef.current = false;
+    setUploadError(null);
+    setMaterial("");
+    setTag("");
+    setDraft(blank());
+    snackbar({ message: "Receta guardada" });
+    nameInput.current?.focus();
   };
 
   const serverNameError =
     api.fieldError?.field === "name" ? api.fieldError.message : null;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <header className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Nueva receta</h1>
-        <Button disabled={api.saving || uploading} onClick={save}>
-          {api.saving || uploading ? "Guardando…" : "Guardar"}
-        </Button>
+    <div
+      className="mx-auto flex w-full max-w-4xl flex-col gap-4"
+      style={{ viewTransitionName: "fab" }}
+    >
+      <header className="relative flex flex-col items-start gap-5 rounded-xl rounded-tr-xxl bg-accent-container p-6 text-on-accent-container sm:flex-row sm:items-end sm:justify-between">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl rounded-tr-xxl"
+        >
+          <Shape
+            name="cookie-9"
+            size={176}
+            className="absolute -top-14 -right-12 text-accent opacity-15"
+          />
+          <Shape
+            name="flower"
+            size={72}
+            className="absolute right-36 -bottom-8 rotate-12 text-accent opacity-10"
+          />
+        </div>
+        <div className="relative flex min-w-0 items-center gap-4">
+          <Shape name="cookie-4" size={56} className="text-accent">
+            <BookIcon className="text-on-accent" />
+          </Shape>
+          <div className="min-w-0">
+            <h1 className="text-headline-l text-e">Nueva receta</h1>
+            <p className="text-body-m">
+              Foto, ingredientes y pasos en una sola página.
+            </p>
+          </div>
+        </div>
+        <SplitButton
+          onClick={() => save()}
+          menuLabel="Más opciones de guardado"
+          disabled={busy}
+          items={[
+            {
+              label: "Guardar y añadir otra",
+              icon: <AddIcon className="text-on-surface-variant" />,
+              onSelect: () => save(true),
+            },
+          ]}
+        >
+          {busy ? "Guardando…" : "Guardar receta"}
+        </SplitButton>
       </header>
 
       {api.fieldError && api.fieldError.field !== "name" && (
-        <div
-          className="mb-4 rounded-lg bg-error/10 p-3 text-error"
-          role="alert"
-        >
-          {api.fieldError.message}{" "}
-          <button
-            type="button"
-            className="font-semibold underline"
-            onClick={save}
+        <Alert tone="error">
+          <p className="text-body-m">{api.fieldError.message}</p>
+          <Button
+            variant="text"
+            className="-mx-3 text-on-error-container"
+            onClick={() => save()}
           >
             Reintentar
-          </button>
-        </div>
+          </Button>
+        </Alert>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section>
-          <h3 className="mb-2 font-semibold">Foto principal</h3>
-          <Card>
+      <div className="stagger grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 rounded-xl" style={at(0)}>
+          <section className="flex flex-col gap-4">
+            <h2 className="text-title-m">Foto principal</h2>
             {draft.photo_path ? (
-              <>
-                <img
-                  src={photoSrc(draft.photo_path)}
-                  alt="Vista previa de la foto"
-                  className="h-40 w-full rounded-lg object-cover"
-                />
-                <Button
-                  variant="secondary"
-                  className="mt-2"
-                  onClick={removePhoto}
-                >
-                  Quitar foto
-                </Button>
-              </>
+              <img
+                src={photoSrc(draft.photo_path)}
+                alt="Vista previa de la foto"
+                className="h-48 w-full rounded-l object-cover"
+              />
             ) : (
-              <div className="flex h-40 items-center justify-center rounded-lg bg-surface-muted text-sm text-text-secondary">
+              <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-l bg-surface-container-high text-body-m text-on-surface-variant">
+                <Shape
+                  name="cookie-9"
+                  size={72}
+                  className="text-accent-container"
+                >
+                  <PhotoIcon
+                    className="text-on-accent-container"
+                    width={32}
+                    height={32}
+                  />
+                </Shape>
                 Sin foto
               </div>
             )}
-            {uploading && (
-              <p className="mt-2 text-sm text-text-secondary" role="status">
-                Subiendo…
-              </p>
-            )}
+            {uploading && <Loader label="Subiendo…" size={32} />}
             {uploadError && (
-              <div className="mt-2 flex items-center gap-3" role="alert">
-                <p className="text-sm text-error">{uploadError}</p>
-                <Button variant="secondary" onClick={discardPendingUpload}>
+              <Alert tone="error">
+                <p className="text-body-m">{uploadError}</p>
+                <Button
+                  variant="text"
+                  className="-mx-3 text-on-error-container"
+                  onClick={discardPendingUpload}
+                >
                   Descartar
                 </Button>
-              </div>
+              </Alert>
             )}
-            <label
-              className={buttonClass({
-                variant: "secondary",
-                className: `mt-2 inline-block cursor-pointer ${
-                  uploading ? "opacity-50 pointer-events-none" : ""
-                }`,
-              })}
-            >
-              Elegir foto
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="tonal"
                 disabled={uploading}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (f) onFile(f);
-                }}
+                onClick={() => fileInput.current?.click()}
+              >
+                <PhotoIcon />
+                {draft.photo_path ? "Cambiar foto" : "Elegir foto"}
+              </Button>
+              {draft.photo_path && (
+                <Button variant="outlined" onClick={removePhoto}>
+                  Quitar foto
+                </Button>
+              )}
+            </div>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) onFile(f);
+              }}
+            />
+          </section>
+        </Card>
+
+        <Card className="flex min-w-0 flex-col gap-6 rounded-xl" style={at(1)}>
+          <Field
+            label="Nombre"
+            support="Así aparecerá en el recetario"
+            error={nameError ?? serverNameError}
+          >
+            {(a) => (
+              <Input
+                {...a}
+                ref={nameInput}
+                className="text-title-m"
+                value={draft.name}
+                onChange={(e) => set("name", e.target.value)}
               />
-            </label>
-          </Card>
-        </section>
+            )}
+          </Field>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-title-m">Categorías</h2>
+            <ul className="flex flex-wrap gap-2">
+              {[
+                ...BASE_TAGS,
+                ...draft.tags.filter((t) => !BASE_TAGS.includes(t)),
+              ].map((t) => {
+                const on = draft.tags.includes(t);
+                return (
+                  <li key={t}>
+                    <Chip pressed={on} onClick={() => toggleTag(t)}>
+                      {on && <CheckIcon width={18} height={18} />}
+                      {t}
+                    </Chip>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="flex items-start gap-2">
+              <Field label="Nueva categoría" className="flex-1">
+                {(a) => (
+                  <Input
+                    {...a}
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value)}
+                  />
+                )}
+              </Field>
+              <Button
+                variant="tonal"
+                size="icon"
+                aria-label="Añadir categoría"
+                onClick={() => addChip("tags", tag, () => setTag(""))}
+              >
+                <AddIcon />
+              </Button>
+            </div>
+          </section>
+        </Card>
 
-        <section>
-          <h3 className="mb-2 font-semibold">Nombre</h3>
-          <Input
-            aria-label="Nombre"
-            className="w-full"
-            value={draft.name}
-            onChange={(e) => set("name", e.target.value)}
-          />
-          {(nameError ?? serverNameError) && (
-            <p className="mt-1 text-sm text-error">
-              {nameError ?? serverNameError}
-            </p>
-          )}
-        </section>
-
-        <section>
-          <h3 className="mb-2 font-semibold">Categorías</h3>
-          <ul className="flex flex-wrap gap-2">
-            {BASE_TAGS.map((t) => (
-              <li key={t}>
-                <button
-                  type="button"
-                  className={chip(draft.tags.includes(t))}
-                  onClick={() => toggleTag(t)}
-                >
-                  {t}
-                </button>
-              </li>
-            ))}
-            {draft.tags
-              .filter((t) => !BASE_TAGS.includes(t))
-              .map((t) => (
-                <li key={t}>
-                  <button
-                    type="button"
-                    className={chip(true)}
-                    onClick={() => toggleTag(t)}
+        <Card className="min-w-0 rounded-xl" style={at(2)}>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-title-m">Ingredientes</h2>
+            <ul className="flex flex-col gap-3">
+              {draft.ingredients.map((row, i) => (
+                <li key={i} className="flex flex-wrap items-center gap-2">
+                  <Input
+                    aria-label={`Ingrediente ${i + 1} alimento`}
+                    className="basis-full sm:basis-0 sm:flex-1"
+                    placeholder="Alimento"
+                    value={row.food}
+                    onChange={(e) =>
+                      set(
+                        "ingredients",
+                        setRow(draft.ingredients, i, { food: e.target.value }),
+                      )
+                    }
+                  />
+                  <Input
+                    aria-label={`Ingrediente ${i + 1} cantidad`}
+                    className="flex-1 tabular sm:w-24 sm:flex-none"
+                    type="number"
+                    placeholder="Cant."
+                    value={row.quantity}
+                    onChange={(e) =>
+                      set(
+                        "ingredients",
+                        setRow(draft.ingredients, i, {
+                          quantity: e.target.value,
+                        }),
+                      )
+                    }
+                  />
+                  <Select
+                    aria-label={`Ingrediente ${i + 1} unidad`}
+                    className="w-24"
+                    value={row.unit}
+                    onChange={(e) =>
+                      set(
+                        "ingredients",
+                        setRow(draft.ingredients, i, { unit: e.target.value }),
+                      )
+                    }
                   >
-                    {t}
-                  </button>
+                    <option value="">—</option>
+                    <option value="gr">gr</option>
+                    <option value="ml">ml</option>
+                    <option value="ud">ud</option>
+                  </Select>
+                  <Button
+                    variant="text"
+                    size="icon"
+                    aria-label={`Quitar ingrediente ${i + 1}`}
+                    onClick={() =>
+                      set(
+                        "ingredients",
+                        draft.ingredients.filter((_, j) => j !== i),
+                      )
+                    }
+                  >
+                    <CloseIcon />
+                  </Button>
                 </li>
               ))}
-          </ul>
-          <div className="mt-2 flex gap-2">
-            <Input
-              aria-label="Nueva categoría"
-              className="w-full"
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-            />
+            </ul>
             <Button
-              variant="secondary"
-              onClick={() => addChip("tags", tag, () => setTag(""))}
-            >
-              Añadir categoría
-            </Button>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="mb-2 font-semibold">Materiales</h3>
-          <ul className="mb-2 flex flex-wrap gap-2">
-            {draft.materials.map((m) => (
-              <li
-                key={m}
-                className="flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1"
-              >
-                {m}
-                <button
-                  type="button"
-                  aria-label={`Quitar material ${m}`}
-                  onClick={() =>
-                    set(
-                      "materials",
-                      draft.materials.filter((x) => x !== m),
-                    )
-                  }
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="flex gap-2">
-            <Input
-              aria-label="Nuevo material"
-              className="w-full"
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
-            />
-            <Button
-              variant="secondary"
+              variant="outlined"
+              className="self-start"
               onClick={() =>
-                addChip("materials", material, () => setMaterial(""))
+                set("ingredients", [
+                  ...draft.ingredients,
+                  { food: "", quantity: "", unit: "" },
+                ])
               }
             >
-              Añadir material
+              <AddIcon />
+              Añadir ingrediente
             </Button>
-          </div>
-        </section>
+          </section>
+        </Card>
 
-        <section>
-          <h3 className="mb-2 font-semibold">Ingredientes</h3>
-          <ul className="flex flex-col gap-2">
-            {draft.ingredients.map((row, i) => (
-              <li key={i} className="flex gap-2">
-                <Input
-                  aria-label={`Ingrediente ${i + 1} alimento`}
-                  className="flex-1"
-                  placeholder="alimento"
-                  value={row.food}
-                  onChange={(e) =>
-                    set(
-                      "ingredients",
-                      setRow(draft.ingredients, i, { food: e.target.value }),
-                    )
-                  }
-                />
-                <Input
-                  aria-label={`Ingrediente ${i + 1} cantidad`}
-                  className="w-20"
-                  type="number"
-                  placeholder="cant."
-                  value={row.quantity}
-                  onChange={(e) =>
-                    set(
-                      "ingredients",
-                      setRow(draft.ingredients, i, {
-                        quantity: e.target.value,
-                      }),
-                    )
-                  }
-                />
-                <Select
-                  aria-label={`Ingrediente ${i + 1} unidad`}
-                  value={row.unit}
-                  onChange={(e) =>
-                    set(
-                      "ingredients",
-                      setRow(draft.ingredients, i, { unit: e.target.value }),
-                    )
-                  }
-                >
-                  <option value="">—</option>
-                  <option value="gr">gr</option>
-                  <option value="ml">ml</option>
-                  <option value="ud">ud</option>
-                </Select>
-                <button
-                  type="button"
-                  aria-label={`Quitar ingrediente ${i + 1}`}
-                  className={small}
-                  onClick={() =>
-                    set(
-                      "ingredients",
-                      draft.ingredients.filter((_, j) => j !== i),
-                    )
-                  }
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-          <Button
-            variant="secondary"
-            className="mt-2"
-            onClick={() =>
-              set("ingredients", [
-                ...draft.ingredients,
-                { food: "", quantity: "", unit: "" },
-              ])
-            }
-          >
-            Añadir ingrediente
-          </Button>
-        </section>
+        <Card className="min-w-0 rounded-xl" style={at(3)}>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-title-m">Materiales</h2>
+            {draft.materials.length > 0 && (
+              <ul className="flex flex-wrap gap-2">
+                {draft.materials.map((m) => (
+                  <li key={m}>
+                    <Chip
+                      aria-label={`Quitar material ${m}`}
+                      onClick={() =>
+                        set(
+                          "materials",
+                          draft.materials.filter((x) => x !== m),
+                        )
+                      }
+                    >
+                      {m}
+                      <CloseIcon width={18} height={18} />
+                    </Chip>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex items-start gap-2">
+              <Field label="Nuevo material" className="flex-1">
+                {(a) => (
+                  <Input
+                    {...a}
+                    value={material}
+                    onChange={(e) => setMaterial(e.target.value)}
+                  />
+                )}
+              </Field>
+              <Button
+                variant="tonal"
+                size="icon"
+                aria-label="Añadir material"
+                onClick={() =>
+                  addChip("materials", material, () => setMaterial(""))
+                }
+              >
+                <AddIcon />
+              </Button>
+            </div>
+          </section>
+        </Card>
 
-        <section>
-          <h3 className="mb-2 font-semibold">Pasos</h3>
-          <ol className="flex flex-col gap-2">
-            {draft.steps.map((text, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="pt-2 font-semibold text-text-secondary">
-                  {i + 1}.
-                </span>
-                <Input
-                  aria-label={`Paso ${i + 1}`}
-                  className="flex-1"
-                  value={text}
-                  onChange={(e) =>
-                    set(
-                      "steps",
-                      draft.steps.map((s, j) => (j === i ? e.target.value : s)),
-                    )
-                  }
-                />
-                {i > 0 && (
-                  <button
-                    type="button"
-                    aria-label={`Subir paso ${i + 1}`}
-                    className={small}
-                    onClick={() => set("steps", move(draft.steps, i, i - 1))}
+        <Card className="min-w-0 rounded-xl lg:col-span-2" style={at(4)}>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-title-m">Pasos</h2>
+            <ol className="flex flex-col gap-3">
+              {draft.steps.map((text, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <Shape
+                    name="cookie-4"
+                    size={40}
+                    className="mt-1 text-accent-container"
                   >
-                    ↑
-                  </button>
-                )}
-                {i < draft.steps.length - 1 && (
-                  <button
-                    type="button"
-                    aria-label={`Bajar paso ${i + 1}`}
-                    className={small}
-                    onClick={() => set("steps", move(draft.steps, i, i + 1))}
-                  >
-                    ↓
-                  </button>
-                )}
-                <button
-                  type="button"
-                  aria-label={`Quitar paso ${i + 1}`}
-                  className={small}
-                  onClick={() =>
-                    set(
-                      "steps",
-                      draft.steps.filter((_, j) => j !== i),
-                    )
-                  }
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ol>
-          <Button
-            variant="secondary"
-            className="mt-2"
-            onClick={() => set("steps", [...draft.steps, ""])}
-          >
-            Añadir paso
-          </Button>
-        </section>
+                    <span className="text-label-l text-e text-on-accent-container tabular">
+                      {i + 1}
+                    </span>
+                  </Shape>
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                    <Input
+                      aria-label={`Paso ${i + 1}`}
+                      className="basis-full sm:basis-0 sm:flex-1"
+                      value={text}
+                      onChange={(e) =>
+                        set(
+                          "steps",
+                          draft.steps.map((s, j) =>
+                            j === i ? e.target.value : s,
+                          ),
+                        )
+                      }
+                    />
+                    <div className="ml-auto flex">
+                      {i > 0 && (
+                        <Button
+                          variant="text"
+                          size="icon"
+                          aria-label={`Subir paso ${i + 1}`}
+                          onClick={() =>
+                            set("steps", move(draft.steps, i, i - 1))
+                          }
+                        >
+                          <ChevronDownIcon className="rotate-180" />
+                        </Button>
+                      )}
+                      {i < draft.steps.length - 1 && (
+                        <Button
+                          variant="text"
+                          size="icon"
+                          aria-label={`Bajar paso ${i + 1}`}
+                          onClick={() =>
+                            set("steps", move(draft.steps, i, i + 1))
+                          }
+                        >
+                          <ChevronDownIcon />
+                        </Button>
+                      )}
+                      <Button
+                        variant="text"
+                        size="icon"
+                        aria-label={`Quitar paso ${i + 1}`}
+                        onClick={() =>
+                          set(
+                            "steps",
+                            draft.steps.filter((_, j) => j !== i),
+                          )
+                        }
+                      >
+                        <CloseIcon />
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <Button
+              variant="outlined"
+              className={cx("self-start", draft.steps.length > 0 && "ml-13")}
+              onClick={() => set("steps", [...draft.steps, ""])}
+            >
+              <AddIcon />
+              Añadir paso
+            </Button>
+          </section>
+        </Card>
       </div>
     </div>
   );

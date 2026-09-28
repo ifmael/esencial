@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
@@ -60,8 +61,10 @@ describe("nueva-receta: categorías", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
     expect(
-      screen.getByRole("button", { name: "Desayuno" }).className,
-    ).toContain("bg-primary-container");
+      screen
+        .getByRole("button", { name: "Desayuno" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
 
     fireEvent.change(screen.getByRole("textbox", { name: "Nueva categoría" }), {
       target: { value: "batch" },
@@ -157,7 +160,7 @@ describe("nueva-receta: guardado", () => {
     vi.stubGlobal("fetch", server.fetchMock);
     await openPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
     expect(await screen.findByText("El nombre es obligatorio")).toBeDefined();
     expect(server.calls.filter((c) => c.method !== "GET")).toEqual([]);
   });
@@ -197,7 +200,7 @@ describe("nueva-receta: guardado", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Añadir material" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
 
     await waitFor(() =>
       expect(
@@ -219,6 +222,47 @@ describe("nueva-receta: guardado", () => {
       materials: ["sartén"],
       ingredients: [{ food: "huevo", quantity: 3, unit: "ud" }],
       steps: ["Batir"],
+    });
+  });
+
+  it("guardar y añadir otra: mismo POST, se queda en la página con el formulario vacío", async () => {
+    const server = makeServer([]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    await openPage();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
+      target: { value: "Tortilla" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Más opciones de guardado" }),
+    );
+    fireEvent.click(
+      within(screen.getByRole("menu")).getByRole("menuitem", {
+        name: "Guardar y añadir otra",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("textbox", { name: "Nombre" }) as HTMLInputElement)
+          .value,
+      ).toBe(""),
+    );
+    expect(window.location.pathname).toBe("/recetario/nueva");
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Desayuno" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+    const posts = server.calls.filter(
+      (c) => c.method === "POST" && c.url === "/api/recipes",
+    );
+    expect(posts.length).toBe(1);
+    expect(posts[0].body).toMatchObject({
+      name: "Tortilla",
+      tags: ["Desayuno"],
     });
   });
 });
@@ -284,7 +328,7 @@ describe("nueva-receta: subida de foto", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
       target: { value: "Con reintento" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
     const up = stubbed.calls.filter((c) => c.url === "/api/uploads");
@@ -315,7 +359,7 @@ describe("nueva-receta: subida de foto", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
       target: { value: "Sin foto" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
     const up = stubbed.calls.filter((c) => c.url === "/api/uploads");
