@@ -31,7 +31,9 @@ test.describe("RECIPES — loop end to end", () => {
     await page.getByLabel("Ingrediente 1 alimento").fill(food);
     await page.getByLabel("Ingrediente 1 cantidad").fill("2");
     await page.getByLabel("Ingrediente 1 unidad").selectOption("ud");
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page
+      .getByRole("button", { name: "Guardar receta", exact: true })
+      .click();
 
     // Listed in the book
     await page.getByLabel("Buscar recetas").fill(name);
@@ -53,7 +55,9 @@ test.describe("RECIPES — loop end to end", () => {
       .click();
     await expect(page).toHaveURL(/\/recetario\/nueva$/);
 
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page
+      .getByRole("button", { name: "Guardar receta", exact: true })
+      .click();
     await expect(page.getByText("El nombre es obligatorio")).toBeVisible();
     await expect(page).toHaveURL(/\/recetario\/nueva$/);
   });

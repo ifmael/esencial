@@ -11,6 +11,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { pushEscape } from "../lib/escape-stack";
 import { sheetDrag, sheetRelease } from "../lib/sheet";
 import {
   createSnackbarStore,
@@ -86,14 +87,11 @@ function useSheetDrag(onClose: () => void) {
   };
 }
 
+/** Escape cierra esta capa si es la de encima (lib/escape-stack). */
 function useEscape(onClose: () => void) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const latest = useRef(onClose);
+  latest.current = onClose;
+  useEffect(() => pushEscape(() => latest.current()), []);
 }
 
 /** Diálogo M3: en escritorio centrado con esquinas XL. Por debajo de `md`,

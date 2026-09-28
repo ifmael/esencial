@@ -99,25 +99,22 @@ export function LoginPage() {
                 Entra para ver tu semana.
               </p>
             </div>
-            {/* Región viva: el error del campo se anuncia al aparecer. */}
-            <div aria-live="assertive">
-              <Field
-                label="Contraseña"
-                error={error?.field === "password" ? error.message : undefined}
-              >
-                {(a) => (
-                  <Input
-                    {...a}
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                    autoFocus
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                )}
-              </Field>
-            </div>
+            <Field
+              label="Contraseña"
+              error={error?.field === "password" ? error.message : undefined}
+            >
+              {(a) => (
+                <Input
+                  {...a}
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  autoFocus
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              )}
+            </Field>
             {error && error.field !== "password" && (
               <Alert tone="error">
                 <p className="text-body-m">{error.message}</p>

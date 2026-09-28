@@ -186,7 +186,7 @@ function DayPicker({
           type="text"
           autoFocus
           placeholder="Buscar plantilla o ejercicio…"
-          aria-label="Buscar"
+          aria-label="Buscar plantilla o ejercicio"
           className="rounded-full bg-surface-container-high pl-11"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -606,7 +606,7 @@ function SessionEditor({
             >
               <ul
                 aria-label="Ejercicios del día"
-                className="stagger flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
+                className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
               >
                 {rows.map((row, i) => (
                   <DayRowItem
@@ -962,7 +962,7 @@ function SessionCell({
           >
             <ol
               aria-label={`Ejercicios del ${date}`}
-              className="stagger flex flex-1 flex-col gap-1"
+              className="flex flex-1 flex-col gap-1"
             >
               {order.map((e, i) => (
                 <CellRow
@@ -1099,8 +1099,11 @@ export function PlanFuerzaPage() {
   /** Abre el modal desde la celda: la celda y el diálogo comparten nombre de
    *  transición, así que el navegador anima el contenedor día → modal. */
   const showDay = (next: { date: string; session: PlanSession | null }) => {
-    setMorphDate(next.date);
-    void runViewTransition(() => flushSync(() => setDay(next)));
+    // La celda lleva el nombre en la foto «antes» (flushSync: pintado ya).
+    flushSync(() => setMorphDate(next.date));
+    void runViewTransition(() => flushSync(() => setDay(next))).then(() =>
+      setMorphDate(null),
+    );
   };
 
   /** Abre (o crea) el editor del día; el detalle se carga por HTTP. */
@@ -1179,6 +1182,9 @@ export function PlanFuerzaPage() {
 
   /** Desprograma el día entero; «Deshacer» lo recrea con sus objetivos. */
   const unschedule = async (session: PlanSession) => {
+    // Solo las planificadas: recrear una registrada con POST perdería su
+    // registro de series (la celda de una registrada ya no ofrece la ✕).
+    if (session.status === "logged") return;
     if (!(await week.remove(session.id))) return;
     snackbar({
       message: `Sesión del ${session.date} desprogramada`,
@@ -1231,10 +1237,7 @@ export function PlanFuerzaPage() {
             session={byDate.get(date)}
             isToday={isToday}
             morphing={morphDate === date && day === null}
-            onOpen={() => {
-              setMorphDate(date);
-              void openDay(date);
-            }}
+            onOpen={() => void openDay(date)}
             onRemove={(session) => void unschedule(session)}
             onRemoveExercise={(session, e) =>
               void unscheduleExercise(session, e)

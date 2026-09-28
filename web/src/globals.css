@@ -828,7 +828,7 @@
   .scrim {
     background: color-mix(in srgb, var(--color-scrim) 40%, transparent);
     animation: fade-in var(--duration-effects-default)
-      var(--ease-effects-default) both;
+      var(--ease-effects-default) backwards;
   }
   /* Cada superficie declara su `--field-bg`: la etiqueta flotante de un campo
      outlined tapa el borde con el color de lo que tiene debajo. */
@@ -839,7 +839,7 @@
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-3);
     animation: dialog-in var(--duration-spatial-default)
-      var(--ease-spatial-default) both;
+      var(--ease-spatial-default) backwards;
   }
   /* Hoja inferior: esquinas grandes arriba, planas abajo (asimetría M3). */
   .sheet {
@@ -849,7 +849,7 @@
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow: var(--shadow-3);
     animation: sheet-in var(--duration-spatial-default)
-      var(--ease-spatial-default) both;
+      var(--ease-spatial-default) backwards;
     transition: transform var(--duration-spatial-fast) var(--ease-spatial-fast);
   }
   .sheet-handle {
@@ -866,7 +866,7 @@
     border-radius: var(--radius-l);
     box-shadow: var(--shadow-2);
     animation: menu-in var(--duration-spatial-fast) var(--ease-spatial-fast)
-      both;
+      backwards;
     transform-origin: top left;
   }
   .toolbar {
@@ -875,7 +875,7 @@
     border-radius: var(--radius-full);
     box-shadow: var(--shadow-3);
     animation: toolbar-in var(--duration-spatial-default)
-      var(--ease-spatial-default) both;
+      var(--ease-spatial-default) backwards;
   }
   .snackbar {
     background: var(--color-inverse-surface);
@@ -883,7 +883,7 @@
     border-radius: var(--radius-s);
     box-shadow: var(--shadow-3);
     animation: snackbar-in var(--duration-spatial-default)
-      var(--ease-spatial-default) both;
+      var(--ease-spatial-default) backwards;
   }
   .snackbar-action {
     color: var(--color-inverse-primary);
@@ -893,24 +893,29 @@
     color: var(--color-on-surface);
     box-shadow: var(--shadow-3);
     animation: dialog-in var(--duration-spatial-default)
-      var(--ease-spatial-default) both;
+      var(--ease-spatial-default) backwards;
   }
 }
 
 /* --- Entrada escalonada ------------------------------------------------ */
-/* Los hijos directos de `.stagger` entran con el muelle espacial por turno
+/* NUNCA en una lista ordenable (dnd-kit mide las filas al empezar a
+   arrastrar: una fila a media entrada está desplazada y el orden sale mal).
+   Los hijos directos de `.stagger` entran con el muelle espacial por turno
    (`--i` lo pone la pantalla; sin él entran juntos). */
+/* `backwards`, no `both`: al acabar, la animación suelta `transform`. Con
+   `both` retenía el último fotograma y pisaba el transform en línea de dnd-kit
+   (las listas ordenables no se movían al arrastrar). */
 .stagger > * {
   animation: rise var(--duration-spatial-default) var(--ease-spatial-default)
-    both;
+    backwards;
   animation-delay: calc(min(var(--i, 0), 8) * 40ms);
 }
 .animate-rise {
   animation: rise var(--duration-spatial-default) var(--ease-spatial-default)
-    both;
+    backwards;
 }
 .animate-pop {
-  animation: pop var(--duration-spatial-fast) var(--ease-spatial-fast) both;
+  animation: pop var(--duration-spatial-fast) var(--ease-spatial-fast) backwards;
 }
 
 /* Tipografía que se mueve: la etiqueta activa gana peso y anchura. */
@@ -947,7 +952,8 @@
 
 /* Sello de recompensa: entra con el muelle espacial lento (rebota). */
 .seal {
-  animation: seal-in var(--duration-spatial-slow) var(--ease-spatial-slow) both;
+  animation: seal-in var(--duration-spatial-slow) var(--ease-spatial-slow)
+    backwards;
 }
 .seal-shape {
   animation: spin 18s linear infinite;
@@ -981,6 +987,9 @@
   animation-name: axis-in-prev;
 }
 
+/* Las entradas animan `translate`/`scale`/`rotate` sueltos, no `transform`:
+   así no pisan el `transform` en línea de dnd-kit (listas ordenables) ni el del
+   arrastre de la hoja. */
 @keyframes ripple {
   to {
     transform: scale(1);
@@ -998,13 +1007,13 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    translate: 0 12px;
   }
 }
 @keyframes pop {
   from {
     opacity: 0;
-    transform: scale(0.9);
+    scale: 0.9;
   }
 }
 @keyframes fade-in {
@@ -1015,30 +1024,33 @@
 @keyframes dialog-in {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(0.96);
+    translate: 0 24px;
+    scale: 0.96;
   }
 }
 @keyframes sheet-in {
   from {
-    transform: translateY(100%);
+    translate: 0 100%;
   }
 }
 @keyframes menu-in {
   from {
     opacity: 0;
-    transform: scale(0.85);
+    scale: 0.85;
   }
 }
 @keyframes toolbar-in {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(0.9);
+    translate: 0 24px;
+    scale: 0.9;
   }
 }
 @keyframes snackbar-in {
   from {
     opacity: 0;
-    transform: translateY(16px) scaleY(0.6);
+    translate: 0 16px;
+    scale: 1 0.6;
   }
 }
 @keyframes spin {
@@ -1054,7 +1066,8 @@
 @keyframes seal-in {
   from {
     opacity: 0;
-    transform: scale(0.2) rotate(-40deg);
+    scale: 0.2;
+    rotate: -40deg;
   }
 }
 @keyframes axis-out {
@@ -1105,7 +1118,7 @@
   .stagger > *,
   .animate-rise,
   .animate-pop {
-    animation: fade-in 150ms linear both !important;
+    animation: fade-in 150ms linear backwards !important;
   }
   .shape-spin,
   .seal-shape,

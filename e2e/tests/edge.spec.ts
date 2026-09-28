@@ -91,7 +91,7 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     const text = uniqueName("Nota autosave");
     await page.goto("/");
 
-    const notes = page.getByPlaceholder("Escribe algo sobre hoy");
+    const notes = page.getByLabel("Escribe algo sobre hoy");
     await notes.fill(text);
     // Debounce is 800ms; the save can complete before we observe Guardando…,
     // so assert the final state (Guardado) — the debounce window itself is
@@ -123,7 +123,7 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
         req.method() === "PUT" && req.url().endsWith(`/api/notes/${iso}`),
     );
 
-    const notes = page.getByPlaceholder("Escribe algo sobre hoy");
+    const notes = page.getByLabel("Escribe algo sobre hoy");
     await notes.fill(text);
     await page.getByRole("button", { name: "Día siguiente" }).click();
     await page.getByRole("button", { name: "Día anterior" }).click();

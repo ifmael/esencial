@@ -53,6 +53,6 @@ test.describe("DÍA empty states (authenticated)", () => {
     await expect(
       page.getByRole("heading", { name: "NOTAS DEL DÍA" }),
     ).toBeVisible();
-    await expect(page.getByPlaceholder("Escribe algo sobre hoy")).toBeVisible();
+    await expect(page.getByLabel("Escribe algo sobre hoy")).toBeVisible();
   });
 });

@@ -143,14 +143,20 @@ test.describe("CALENDARIO — alto de ventana", () => {
         (el) => el.getBoundingClientRect().width,
       );
       expect(width, `${route}: ancho del raíl`).toBeLessThanOrEqual(80);
-      for (const name of ["Hoy", "Deporte", "Nutrición", "Sistema de diseño"]) {
+      for (const name of ["Hoy", "Deporte", "Nutrición"]) {
         await expect(
           rail.getByRole("link", { name }),
           `${route}: ${name}`,
         ).toBeVisible();
       }
-      // Sin desplegables: el submenú de la sección está en la fila de chips.
-      await expect(rail.locator("button[aria-expanded]")).toHaveCount(0);
+      // Raíl de 80 px: el catálogo y «Cerrar sesión» ceden su sitio (siguen en
+      // la búsqueda ⌘K y al desplegar el menú); búsqueda y tema se quedan.
+      await expect(rail.getByRole("button", { name: /Buscar/ })).toBeVisible();
+      // Sin desplegables de sección: el submenú está sobre el calendario. (El
+      // menú FAB de crear sí es un desplegable.)
+      await expect(rail.locator("button[aria-controls^='nav-']")).toHaveCount(
+        0,
+      );
     }
 
     const chips = page.getByRole("navigation", { name: "Deporte" });

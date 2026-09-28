@@ -470,11 +470,10 @@ function TemplateDialog({
 
   return (
     <Dialog
-      // Escape durante un arrastre de teclado lo cancela dnd-kit (marca el
-      // evento como gestionado): entonces la modal sigue abierta.
-      onClose={() => {
-        if (!window.event?.defaultPrevented) onCancel();
-      }}
+      // Escape durante un arrastre de teclado lo cancela dnd-kit y marca el
+      // evento como gestionado: la pila de Escape (lib/escape-stack) lo ignora
+      // y la modal sigue abierta.
+      onClose={onCancel}
       labelledBy="tpl-editor-title"
       // Alto fijo (no `max-h`) desde `md`: la modal guarda el mismo espacio
       // aunque el borrador o la lista del selector cambien de tamaño.

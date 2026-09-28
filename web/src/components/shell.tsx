@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { apiFetchRaw } from "../lib/api";
 import { toISODate } from "../lib/day";
+import { pushEscape } from "../lib/escape-stack";
 import {
   applyTheme,
   followSystem,
@@ -197,11 +198,7 @@ function FabMenu({
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return pushEscape(() => setOpen(false));
   }, [open]);
   const items = [
     {

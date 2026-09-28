@@ -1,4 +1,9 @@
-import { type APIRequestContext, expect, test } from "@playwright/test";
+import {
+  type APIRequestContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 import { apiRequest, seededExercise } from "./helpers";
 
 type ItemPayload = {
@@ -45,6 +50,21 @@ function isoWeekOf(date: string): string {
   const week =
     1 + Math.round((t.getTime() - jan4.getTime()) / (7 * 86_400_000));
   return `${t.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+/** Espera a que acaben las animaciones de la página (entrada del diálogo y
+ * transición de vista día → modal): mientras duran, la capa de la transición
+ * se queda con el puntero y las cajas aún se mueven. */
+async function settle(page: Page) {
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (a) =>
+          a.playState !== "running" ||
+          a.effect?.getTiming().iterations === Number.POSITIVE_INFINITY,
+      ),
+  );
 }
 
 test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
@@ -149,7 +169,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Quitar" })).toHaveCount(2);
 
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(
       page.getByRole("button", { name: `Editar sesión del ${date}` }),
     ).toBeVisible();
@@ -193,12 +213,12 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
 
     // Añadir sin botón intermedio ni segundo modal (la búsqueda despliega el grupo).
-    await dialog.getByLabel("Buscar").fill(remoName);
+    await dialog.getByLabel("Buscar plantilla o ejercicio").fill(remoName);
     await dialog.getByRole("button", { name: remoName, exact: true }).click();
     await expect(
       dialog.getByRole("button", { name: `Quitar ${remoName}` }),
     ).toBeVisible();
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     // Reabrir con el botón "+" de la celda poblada: el añadido persiste.
@@ -232,7 +252,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await page
       .getByLabel(new RegExp(`${escapeRe(pressName)} series`, "i"))
       .fill("6");
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     // Reabrir: el valor persistido es 6.
@@ -383,11 +403,11 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     await page.goto(`/plan-fuerza?week=${weekOf(35)}`);
     await page.getByRole("button", { name: "+ añadir" }).first().click();
-    await page.getByLabel("Buscar").fill(name);
+    await page.getByLabel("Buscar plantilla o ejercicio").fill(name);
     await page
       .getByRole("button", { name: new RegExp(escapeRe(name)) })
       .click();
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Ya hay una sesión ese día")).toBeVisible();
   });
 
@@ -495,6 +515,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     expect(await order()).toEqual([pressName, remoName]);
 
     // Arrastrar el remo por encima del press (ratón real, PointerSensor).
+    await settle(page);
     const from = await dialog
       .getByRole("button", { name: `Mover ${remoName}` })
       .boundingBox();
@@ -513,7 +534,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     // que el click del arrastre no active lo que haya debajo): deja que expire
     // antes de pulsar Guardar.
     await page.waitForTimeout(100);
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     // Persistió en la base: la API devuelve el nuevo orden…
@@ -566,6 +587,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     const handles = dialog.getByRole("button", { name: /^Mover / });
     await expect(handles).toHaveCount(2);
 
+    await settle(page);
     const from = await dialog
       .getByRole("button", { name: `Mover ${remoName}` })
       .boundingBox();
@@ -595,7 +617,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       `Mover ${remoName}`,
     );
     await page.waitForTimeout(100); // el filtro de click de dnd-kit expira
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     const detail = await apiRequest<{ exercises: { exerciseName: string }[] }>(
@@ -805,7 +827,9 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
 
     // La búsqueda despliega los grupos con coincidencias.
-    await dialog.getByLabel("Buscar").fill("Remo con barra");
+    await dialog
+      .getByLabel("Buscar plantilla o ejercicio")
+      .fill("Remo con barra");
     await expect(
       dialog.getByRole("button", { name: "Remo con barra", exact: true }),
     ).toBeVisible();

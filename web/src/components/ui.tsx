@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { pushEscape } from "../lib/escape-stack";
 
 /** Une clases saltándose las falsas. */
 export const cx = (...parts: (string | false | null | undefined)[]) =>
@@ -115,20 +116,20 @@ export function SplitButton({
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+    // En la pila de Escape: dentro de un diálogo, Escape cierra el menú y no
+    // el diálogo.
+    const pop = pushEscape(() => {
       setOpen(false);
       box.current
         ?.querySelector<HTMLElement>('[aria-haspopup="menu"]')
         ?.focus();
-    };
+    });
     const onDown = (e: globalThis.PointerEvent) => {
       if (!box.current?.contains(e.target as Node)) setOpen(false);
     };
-    window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onDown);
     return () => {
-      window.removeEventListener("keydown", onKey);
+      pop();
       window.removeEventListener("pointerdown", onDown);
     };
   }, [open]);
@@ -377,7 +378,8 @@ export function Field({
         {label}
       </label>
       {error ? (
-        <span id={`${id}-error`} className="field-error">
+        // role=alert: el error se anuncia al aparecer, sin región viva aparte.
+        <span id={`${id}-error`} role="alert" className="field-error">
           {error}
         </span>
       ) : support ? (

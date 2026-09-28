@@ -4,6 +4,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Dialog } from "../src/components/overlay";
 import {
   Badge,
   Button,
@@ -82,6 +83,7 @@ describe("Field", () => {
         ?.textContent,
     ).toBe("Obligatorio");
     expect(screen.queryByText("Ayuda")).toBeNull();
+    expect(screen.getByRole("alert").textContent).toBe("Obligatorio");
   });
 });
 
@@ -120,9 +122,38 @@ describe("SplitButton", () => {
     );
     const arrow = screen.getByRole("button", { name: "Más" });
     fireEvent.click(arrow);
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
     expect(screen.queryByRole("menu")).toBeNull();
     expect(document.activeElement).toBe(arrow);
+  });
+});
+
+describe("Escape con capas", () => {
+  it("dentro de un diálogo, el primer Escape cierra el menú y el segundo el diálogo", () => {
+    const close = vi.fn();
+    render(
+      <Dialog onClose={close} label="Editar">
+        <SplitButton
+          onClick={() => {}}
+          menuLabel="Más"
+          items={[{ label: "Otra", onSelect: () => {} }]}
+        >
+          Guardar
+        </SplitButton>
+      </Dialog>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Más" }));
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(close).not.toHaveBeenCalled();
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });
 

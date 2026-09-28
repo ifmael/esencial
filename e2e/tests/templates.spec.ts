@@ -63,7 +63,7 @@ test.describe("PLANTILLAS — crear y editar en una modal con URL", () => {
     expect(await rowOrder(list)).toEqual([remo.name, press.name]);
 
     await page.waitForTimeout(100); // el filtro de click de dnd-kit expira
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page).toHaveURL(/\/plantillas$/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
 

@@ -63,12 +63,14 @@ test.describe("MENÚ — secciones colapsables", () => {
     await expect.poll(width).toBeGreaterThan(200); // menú completo
 
     await aside.getByRole("button", { name: "Ocultar menú" }).click();
-    await expect.poll(width).toBeLessThanOrEqual(80); // raíl de iconos
+    // Raíl M3E colapsado: 96 px fuera del calendario (80 en él, ver
+    // calendar-layout.spec.ts).
+    await expect.poll(width).toBeLessThanOrEqual(96);
     await expect(aside.getByRole("link", { name: "Hoy" })).toBeVisible();
 
     // Recargar conserva la preferencia (localStorage), no solo el estado vivo.
     await page.reload();
-    await expect.poll(width).toBeLessThanOrEqual(80);
+    await expect.poll(width).toBeLessThanOrEqual(96);
     await expect(aside.getByRole("link", { name: "Hoy" })).toBeVisible();
 
     await aside.getByRole("button", { name: "Mostrar menú" }).click();

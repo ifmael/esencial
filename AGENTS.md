@@ -29,55 +29,90 @@ tarea lo requiere.
 
 ## Sistema de diseño (UI)
 
-**La fuente única es `web/src/globals.css`.** Tres capas, con un solo dueño cada
-una:
+**La fuente única es `web/src/globals.css`** (Material 3 Expressive; historia y
+decisiones en `REDESIGN.md`). Tres capas, con un solo dueño cada una:
 
-1. `:root` — valores crudos (colores, escala tipográfica, ritmo de espaciado,
-   radios, sombras, movimiento) y los pocos derivados (`--color-primary-soft`,
-   `--color-ring`).
-2. `@theme inline` — el puente a Tailwind: convierte esos tokens en utilidades
-   (`text-lead`, `p-card`, `gap-section`, `rounded-card`, `shadow-raised`…).
-3. `@layer components` — la piel de las piezas reutilizables (`.card`, `.btn-*`,
-   `.input`, `.badge-*`, `.section-label`, `.list-row`, `.skeleton`).
+1. `:root` — valores crudos. El color M3 (32 roles, claro y oscuro) y los muelles
+   viven en **`web/src/tokens.css`, generado** por `web/scripts/gen-tokens.ts` desde
+   la semilla `#15803d` (`node web/scripts/gen-tokens.ts`); no se edita a mano,
+   está fuera de biome y `tests/tokens.test.ts` falla si se desvía del generador.
+   En `globals.css`: forma, espaciado, elevación, capa de estado y la fuente.
+2. `@theme inline` — el puente a Tailwind (`text-title-m`, `bg-surface-container-high`,
+   `rounded-xl`, `shadow-2`…). Vacía los espacios de nombres de Tailwind
+   (`--color-*`, `--text-*`, `--radius-*`, `--shadow-*`: `initial`), así que
+   `text-sm` o `rounded-lg` **no generan CSS**.
+3. `@layer components` — la piel de las piezas (`.btn-*`, `.card-*`, `.input`,
+   `.field`, `.chip`, `.fab`, `.connected`, `.checkbox`, `.switch`, `.badge-*`,
+   `.alert-*`, `.dialog`, `.sheet`, `.menu`, `.toolbar`, `.snackbar`…).
 
-Las pantallas consumen **las primitivas** de `web/src/components/ui.tsx`
-(`Button`, `Card`, `Input`, `Textarea`, `Badge`); los iconos salen de
-`web/src/components/icons.tsx` (SVG en línea, sin dependencia).
+Las pantallas consumen **las primitivas**:
+- `web/src/components/ui.tsx`: `Button`, `SplitButton`, `ConnectedGroup` y
+  `ConnectedItem`, `Fab`, `Chip`, `Card` (elevated, filled, outlined, tonal),
+  `Field`, `Input`, `Textarea`, `Select`, `SearchBar`, `Checkbox`, `Switch`,
+  `Badge`, `Alert`, `Kbd`.
+- `expressive.tsx`: `Shape`, `Loader`, `WavyProgress`, `WavyRing`, `CountUp`,
+  `RewardSeal`, `EmptyState`, `Monogram`.
+- `overlay.tsx`: `Dialog`, `Sheet`, `OverlayHeader`, `useSnackbar`.
 
-Las clases del punto 3 son la **piel** de esas primitivas: una pantalla no las
-escribe a mano. Hay cuatro utilidades compartidas que sí se aplican tal cual,
-porque no son piel de ningún componente: `.section-label`, `.list-row`,
-`.card-interactive` (como modificador de `Card`) y `.skeleton`.
+Los iconos son Material Symbols Rounded en línea (`icons.tsx`, generado por
+`web/scripts/gen-icons.py`; `filled` para el destino activo).
 
-**Al añadir algo nuevo:** reutiliza una primitiva existente. Si no encaja, añade
-primero el token (`:root` + `@theme inline`) y después la primitiva. **Nunca un
-valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`) ni la
-piel de una primitiva escrita a mano (`className="card"`, `btn-primary`):
-`pnpm lint` rechaza las dos cosas (ver `web/scripts/check-design-tokens.ts`). Se
-aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
-inventan una escala.
+La piel del punto 3 solo la escriben esos tres ficheros; una pantalla nunca. Sí se
+aplican tal cual estas utilidades: `.section-label`, `.list-row`,
+`.card-interactive`, `.skeleton`, `.state` (capa de estado M3 de cualquier
+pulsable propio, junto con `onPointerDown={ripple}`), `.stagger` (entrada
+escalonada; cada hijo con `--i`), `.type-move`, `.tabular` (cifras), `.text-e`
+(variante *emphasized*) y `motion-*`.
+
+**Al añadir algo nuevo:** reutiliza una primitiva. Si no encaja, añade primero el
+token (`:root` + `@theme inline`) y después la primitiva. `pnpm lint` rechaza
+(`web/scripts/check-design-tokens.ts`):
+- un valor suelto (`rounded-[7px]`);
+- la piel escrita a mano (`className="card"`);
+- la escala cruda de Tailwind (`text-sm`, `rounded-lg`, `shadow-xl`,
+  `bg-black/40`, `text-white`, `bg-red-500`, `duration-150`);
+- la escala del sistema anterior (`text-caption`, `rounded-card`,
+  `text-text-secondary`).
+
+Se aceptan los derivados (`var()`, `calc()`, `env()`).
 
 Escala vigente — todo lo demás sale de aquí:
 
 | Familia | Tokens |
 | --- | --- |
-| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
-| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
-| Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
-| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
-| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+| Tipografía (roles M3) | `display-l` 57 · `display-m` 45 · `display-s` 36 · `headline-l` 32 · `headline-m` 28 · `headline-s` 24 · `title-l` 22 · `title-m` 16 · `title-s` 14 · `body-l` 16 · `body-m` 14 · `body-s` 12 · `label-l` 14 · `label-m` 12 · `label-s` 11; `+ text-e` = *emphasized* (peso 720, anchura 112 %, ROND 100) |
+| Fuente | Google Sans Flex auto-alojada (`web/src/fonts/`, OFL), subset latino, ejes `wght` 400–800 · `wdth` 100–125 · `opsz` 12–60 · `ROND` 0–100 |
+| Color | roles M3 (`primary`, `on-primary`, `primary-container`… `surface-container-lowest…highest`, `outline(-variant)`, `inverse-*`, `scrim`) + `accent*` = color de la sección |
+| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 32 |
+| Forma | `none` 0 · `xs` 4 · `s` 8 · `m` 12 · `l` 16 · `l-inc` 20 · `xl` 28 · `xl-inc` 32 · `xxl` 48 · `full`; `--radius-pill` 28 para lo que cambia de forma |
+| Elevación | `shadow-1/2/3`, **solo** en el FAB, los menús, las hojas, la barra flotante y el snackbar; el resto, jerarquía por tono |
+| Movimiento | muelles M3E: `motion-spatial-fast` (k 800, ζ 0,6) · `motion-spatial` (380, 0,8) · `motion-spatial-slow` (200, 0,8) rebotan (posición, tamaño, forma); `motion-effects-fast/-/-slow` (3800/1600/800, ζ 1) no rebotan (color, opacidad) |
 
+- **Color por sección**: `[data-section="deporte|nutricion|hoy"]` reescribe
+  `--accent*` (primary, tertiary, secondary); el Shell lo pone según la ruta.
+  Úsalo (`bg-accent`, `text-on-accent-container`…) en lo que pertenece a la
+  sección.
+- **Tema** sistema/claro/oscuro: `web/public/theme.js` pone `data-theme` antes del
+  primer pintado; `lib/theme.ts` lo cambia en vivo. Los dos comparten clave y
+  regla, y `tests/theme.test.ts` los ata.
+- **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
+  cada superficie declara `--field-bg` para el recorte).
+- **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
+  (44 px) y el quitar receta de una celda de comidas (40 px): la columna no da más.
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
   la vez, sin estado duplicado en una clase aparte.
-- Todo lo animado se neutraliza con `prefers-reduced-motion`.
+- Todo lo animado se neutraliza con `prefers-reduced-motion`: las transiciones
+  quedan a 1 ms, el morph salta directo, lo que entra lo hace con un fundido de
+  150 ms, y los giros, la onda y las View Transitions se apagan.
+- Fotos de receta: **todo** `<img>` de una foto lleva
+  `crossOrigin="use-credentials"`. El color dinámico lee la foto en un canvas, y
+  si otra copia de la foto se pidió sin CORS, la caché sirve esa y la lectura
+  falla.
 - Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
   sesión»): míralo antes de inventar una pieza.
-- `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
-  `globals.css`, manda `globals.css`.
-- El sistema explicado con muestras en vivo (colores, escala, movimiento) vive en
-  el sitio de arquitectura: `docs/architecture/diseno.html`, que se abre con
-  doble clic, sin build.
+- `wireframes/DESIGN.md` y `docs/architecture/diseno.html` siguen con el sistema
+  anterior; donde discrepen de `globals.css`, manda `globals.css`.
 
 ### Pantallas de calendario (fuerza y comidas)
 
