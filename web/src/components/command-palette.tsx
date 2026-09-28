@@ -79,9 +79,24 @@ const STATIC: Command[] = [
     href: "/plan-recetas",
     keywords: ["nutrición", "menú", "semana", "compra"],
   },
-  { id: "p-recetario", group: "Pantallas", label: "Recetario", href: "/recetario" },
-  { id: "p-ejercicios", group: "Pantallas", label: "Ejercicios", href: "/ejercicios" },
-  { id: "p-plantillas", group: "Pantallas", label: "Plantillas", href: "/plantillas" },
+  {
+    id: "p-recetario",
+    group: "Pantallas",
+    label: "Recetario",
+    href: "/recetario",
+  },
+  {
+    id: "p-ejercicios",
+    group: "Pantallas",
+    label: "Ejercicios",
+    href: "/ejercicios",
+  },
+  {
+    id: "p-plantillas",
+    group: "Pantallas",
+    label: "Plantillas",
+    href: "/plantillas",
+  },
   {
     id: "p-ui",
     group: "Pantallas",
@@ -106,18 +121,28 @@ function useSearchables(): Command[] {
   const [items, setItems] = useState<Command[]>([]);
   useEffect(() => {
     let alive = true;
-    const as = (group: CommandGroup, href: (id: number) => string) => (list: Named[]) =>
-      list.map<Command>((x) => ({
-        id: `${group}-${x.id}`,
-        group,
-        label: x.name,
-        href: href(x.id),
-        searchOnly: true,
-      }));
+    const as =
+      (group: CommandGroup, href: (id: number) => string) => (list: Named[]) =>
+        list.map<Command>((x) => ({
+          id: `${group}-${x.id}`,
+          group,
+          label: x.name,
+          href: href(x.id),
+          searchOnly: true,
+        }));
     Promise.all([
-      apiGet<Named[]>("/api/recipes").then(as("Recetas", (id) => `/recetario/${id}`), () => []),
-      apiGet<Named[]>("/api/exercises").then(as("Ejercicios", (id) => `/ejercicios/${id}`), () => []),
-      apiGet<Named[]>("/api/templates").then(as("Plantillas", (id) => `/plantillas/${id}/editar`), () => []),
+      apiGet<Named[]>("/api/recipes").then(
+        as("Recetas", (id) => `/recetario/${id}`),
+        () => [],
+      ),
+      apiGet<Named[]>("/api/exercises").then(
+        as("Ejercicios", (id) => `/ejercicios/${id}`),
+        () => [],
+      ),
+      apiGet<Named[]>("/api/templates").then(
+        as("Plantillas", (id) => `/plantillas/${id}/editar`),
+        () => [],
+      ),
     ]).then((lists) => alive && setItems(lists.flat()));
     return () => {
       alive = false;
@@ -135,7 +160,8 @@ export function useCommandPalette() {
   const openRef = useRef(false);
   const toggle = useCallback((next?: boolean) => {
     const now = next ?? !openRef.current;
-    if (now && !openRef.current) returnTo.current = document.activeElement as HTMLElement | null;
+    if (now && !openRef.current)
+      returnTo.current = document.activeElement as HTMLElement | null;
     openRef.current = now;
     setOpen(now);
   }, []);
@@ -192,7 +218,9 @@ export function CommandPalette({
 
   useEffect(() => inputRef.current?.focus(), []);
   useEffect(() => {
-    document.getElementById(current ? `${listId}-${current.id}` : "")?.scrollIntoView?.({ block: "nearest" });
+    document
+      .getElementById(current ? `${listId}-${current.id}` : "")
+      ?.scrollIntoView?.({ block: "nearest" });
   }, [current, listId]);
 
   const run = (c: Command) => {
@@ -270,12 +298,22 @@ export function CommandPalette({
           <Kbd className="hidden md:inline-grid">esc</Kbd>
         </div>
 
-        <div id={listId} role="listbox" aria-label="Resultados" className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div
+          id={listId}
+          role="listbox"
+          aria-label="Resultados"
+          className="min-h-0 flex-1 overflow-y-auto p-2"
+        >
           {sections.map((s) => {
             const headerId = `${listId}-g-${s.group}`;
             const Icon = GROUP_ICON[s.group];
             return (
-              <div key={s.group} role="group" aria-labelledby={headerId} className="pb-2">
+              <div
+                key={s.group}
+                role="group"
+                aria-labelledby={headerId}
+                className="pb-2"
+              >
                 <div id={headerId} className="section-label px-4 pt-3 pb-2">
                   {s.group}
                 </div>
@@ -292,7 +330,9 @@ export function CommandPalette({
                       onMouseMove={() => setActive(index)}
                       onClick={() => run(c)}
                       className={`flex min-h-12 cursor-pointer items-center gap-4 rounded-full px-4 text-body-l motion-effects-fast transition-colors ${
-                        selected ? "bg-secondary-container text-on-secondary-container" : "text-on-surface"
+                        selected
+                          ? "bg-secondary-container text-on-secondary-container"
+                          : "text-on-surface"
                       }`}
                     >
                       {c.action === "theme" ? (
@@ -304,7 +344,12 @@ export function CommandPalette({
                       )}
                       <span className="min-w-0 flex-1 truncate">
                         {c.label}
-                        {c.action === "theme" ? <span className="text-on-surface-variant"> · {themeLabel}</span> : null}
+                        {c.action === "theme" ? (
+                          <span className="text-on-surface-variant">
+                            {" "}
+                            · {themeLabel}
+                          </span>
+                        ) : null}
                       </span>
                       {selected ? <Kbd aria-hidden="true">↵</Kbd> : null}
                     </div>
@@ -317,8 +362,17 @@ export function CommandPalette({
         {/* Vivo desde que se monta: el lector anuncia el cambio a «Sin
             resultados» en cuanto ocurre (un nodo que nace ya con texto no se
             anuncia en todos los lectores). */}
-        <p role="status" className={empty ? "px-4 pb-8 pt-2 text-center text-body-l text-on-surface-variant" : "sr-only"}>
-          {empty ? `Sin resultados para «${query}»` : `${ordered.length} resultados`}
+        <p
+          role="status"
+          className={
+            empty
+              ? "px-4 pb-8 pt-2 text-center text-body-l text-on-surface-variant"
+              : "sr-only"
+          }
+        >
+          {empty
+            ? `Sin resultados para «${query}»`
+            : `${ordered.length} resultados`}
         </p>
 
         <footer className="hidden items-center gap-4 border-t border-outline-variant px-4 py-2 text-body-s text-on-surface-variant md:flex">

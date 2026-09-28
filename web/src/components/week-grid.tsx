@@ -13,7 +13,15 @@ import { Loader, Shape } from "./expressive";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { Alert, Button, ConnectedGroup, cardClass, cx } from "./ui";
 
-const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const DAYS = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+];
 
 /** YYYY-MM-DD of day `dayIndex` (0=Lunes) of ISO week, UTC-math, no clock. */
 function dayOf(isoWeek: string, dayIndex: number): string {
@@ -21,7 +29,9 @@ function dayOf(isoWeek: string, dayIndex: number): string {
   const year = Number(yearStr);
   const week = Number(weekStr);
   const jan4 = new Date(Date.UTC(year, 0, 4));
-  const monday = new Date(jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86_400_000);
+  const monday = new Date(
+    jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86_400_000,
+  );
   const date = new Date(monday.getTime() + (week - 1) * 7 * 86_400_000);
   date.setUTCDate(date.getUTCDate() + dayIndex);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -39,7 +49,20 @@ type WeekDay = {
 /** Techo de espera de la foto «después» al cambiar de semana. */
 const WEEK_TRANSITION_MAX_WAIT_MS = 400;
 
-const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"];
+const MONTHS = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sept",
+  "oct",
+  "nov",
+  "dic",
+];
 
 export function WeekGrid({
   isoWeek,
@@ -99,13 +122,28 @@ export function WeekGrid({
   const range = `${Number(first.slice(8))} ${MONTHS[Number(first.slice(5, 7)) - 1]} – ${Number(last.slice(8))} ${MONTHS[Number(last.slice(5, 7)) - 1]}`;
 
   return (
-    <section className={cardClass("tonal", "flex min-h-0 flex-1 flex-col gap-3 rounded-xl p-3 md:p-4")}>
+    <section
+      className={cardClass(
+        "tonal",
+        "flex min-h-0 flex-1 flex-col gap-3 rounded-xl p-3 md:p-4",
+      )}
+    >
       <header className="flex flex-wrap items-center gap-2">
         <ConnectedGroup label="Cambiar de semana">
-          <Button variant="tonal" size="icon" aria-label="Semana anterior" onClick={() => shift(-1)}>
+          <Button
+            variant="tonal"
+            size="icon"
+            aria-label="Semana anterior"
+            onClick={() => shift(-1)}
+          >
             <ChevronLeftIcon />
           </Button>
-          <Button variant="tonal" size="icon" aria-label="Semana siguiente" onClick={() => shift(1)}>
+          <Button
+            variant="tonal"
+            size="icon"
+            aria-label="Semana siguiente"
+            onClick={() => shift(1)}
+          >
             <ChevronRightIcon />
           </Button>
         </ConnectedGroup>
@@ -113,7 +151,9 @@ export function WeekGrid({
           <h2 className="text-title-l text-e tabular">{isoWeek}</h2>
           <span className="text-body-s text-on-surface-variant">{range}</span>
         </div>
-        {aside ? <div className="ml-auto flex items-center gap-3">{aside}</div> : null}
+        {aside ? (
+          <div className="ml-auto flex items-center gap-3">{aside}</div>
+        ) : null}
       </header>
 
       {error ? (
@@ -143,20 +183,36 @@ export function WeekGrid({
                 style={{ ["--i" as string]: index }}
                 className={cx(
                   "flex flex-col gap-2 rounded-l p-2 md:min-h-0",
-                  isToday ? "bg-surface-container-lowest" : "bg-surface-container-low",
+                  isToday
+                    ? "bg-surface-container-lowest"
+                    : "bg-surface-container-low",
                 )}
               >
                 <h3 className="flex items-center gap-2">
                   {isToday ? (
-                    <Shape name="cookie-9" size={36} className="text-accent" label={`Hoy, ${Number(date.slice(8))}`}>
-                      <span className="text-title-s text-e tabular text-on-accent">{Number(date.slice(8))}</span>
+                    <Shape
+                      name="cookie-9"
+                      size={36}
+                      className="text-accent"
+                      label={`Hoy, ${Number(date.slice(8))}`}
+                    >
+                      <span className="text-title-s text-e tabular text-on-accent">
+                        {Number(date.slice(8))}
+                      </span>
                     </Shape>
                   ) : (
                     <span className="grid size-9 shrink-0 place-items-center text-title-s tabular text-on-surface-variant">
                       {Number(date.slice(8))}
                     </span>
                   )}
-                  <span className={cx("truncate text-title-s", isToday && "text-e text-accent")}>{name}</span>
+                  <span
+                    className={cx(
+                      "truncate text-title-s",
+                      isToday && "text-e text-accent",
+                    )}
+                  >
+                    {name}
+                  </span>
                   {isToday ? <span className="sr-only">Hoy</span> : null}
                 </h3>
                 {children({ index, name, date, isToday })}

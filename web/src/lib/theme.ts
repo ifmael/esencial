@@ -9,8 +9,10 @@ const CYCLE: Theme[] = ["system", "light", "dark"];
 export const nextTheme = (t: Theme): Theme =>
   CYCLE[(CYCLE.indexOf(t) + 1) % CYCLE.length];
 
-export const resolveTheme = (t: Theme, systemDark: boolean): "light" | "dark" =>
-  t === "system" ? (systemDark ? "dark" : "light") : t;
+export const resolveTheme = (
+  t: Theme,
+  systemDark: boolean,
+): "light" | "dark" => (t === "system" ? (systemDark ? "dark" : "light") : t);
 
 export function readTheme(): Theme {
   try {

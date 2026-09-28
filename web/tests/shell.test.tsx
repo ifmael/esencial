@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
@@ -117,8 +118,10 @@ describe("Shell", () => {
     expect(aside.textContent).not.toContain("Deporte");
     expect(aside.textContent).not.toContain("Sistema de diseño");
     expect(aside.textContent).not.toContain("Cerrar sesión");
-    // Sin desplegables: en el raíl no caben y su submenú ya está sobre la rejilla.
-    expect(aside.querySelector("button[aria-expanded]")).toBeNull();
+    // Sin desplegables de sección: en el raíl no caben y su submenú ya está
+    // sobre la rejilla. (El menú FAB de crear sí es un desplegable.)
+    expect(aside.querySelector("button[aria-controls^='nav-']")).toBeNull();
+    expect(aside.querySelector('button[aria-label="Crear"]')).not.toBeNull();
   });
 
   it("en el resto de rutas la barra lateral mantiene etiquetas y submenús", async () => {
@@ -190,6 +193,64 @@ describe("Shell", () => {
     expect(
       await screen.findByRole("button", { name: "Semana siguiente" }),
     ).toBeDefined();
+  });
+});
+
+describe("Shell M3E", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    delete document.documentElement.dataset.theme;
+    mockApi({ exercises: [press] });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("el conmutador de tema recorre sistema → claro → oscuro y lo aplica", async () => {
+    renderAt("/ejercicios");
+    const toggle = (
+      await screen.findAllByRole("button", { name: "Tema del sistema" })
+    )[0];
+    fireEvent.click(toggle);
+    expect(document.documentElement.dataset.theme).toBe("light");
+    fireEvent.click(screen.getAllByRole("button", { name: "Tema claro" })[0]);
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(window.localStorage.getItem("esencial.theme")).toBe("dark");
+  });
+
+  it("el menú FAB abre las tres acciones de crear y navega", async () => {
+    renderAt("/");
+    await screen.findAllByText("Deporte");
+    const aside = document.querySelector("aside") as HTMLElement;
+    const fab = within(aside).getByRole("button", { name: "Crear" });
+    fireEvent.click(fab);
+    expect(fab.getAttribute("aria-expanded")).toBe("true");
+    const menu = within(aside).getByRole("menu", { name: "Crear" });
+    const items = within(menu)
+      .getAllByRole("menuitem")
+      .map((m) => m.textContent);
+    expect(items).toEqual(["Sesión de hoy", "Plantilla", "Receta"]);
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Receta" }));
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/recetario/nueva"),
+    );
+  });
+
+  it("cada sección tiñe la página con su color", async () => {
+    const { container } = renderAt("/recetario");
+    await screen.findAllByText("Nutrición");
+    expect(
+      container.querySelector("[data-section]")?.getAttribute("data-section"),
+    ).toBe("nutricion");
+    cleanup();
+    const again = renderAt("/sesion/2026-09-28");
+    await screen.findAllByText("Deporte");
+    expect(
+      again.container
+        .querySelector("[data-section]")
+        ?.getAttribute("data-section"),
+    ).toBe("deporte");
   });
 });
 

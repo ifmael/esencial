@@ -11,8 +11,7 @@ const cmd = (
   label: string,
   group: Command["group"] = "Pantallas",
   extra: Partial<Command> = {},
-): Command =>
-  ({ id: label, label, group, href: "/", ...extra }) as Command;
+): Command => ({ id: label, label, group, href: "/", ...extra }) as Command;
 
 describe("scoreMatch", () => {
   it("ignora mayúsculas y tildes", () => {
@@ -98,7 +97,12 @@ describe("rankCommands", () => {
 
 describe("acciones", () => {
   it("una acción no navega: lleva su propio `run` y no tiene href", () => {
-    const toggle = { id: "tema", label: "Cambiar tema", group: "Acciones", action: "theme" } as const;
+    const toggle = {
+      id: "tema",
+      label: "Cambiar tema",
+      group: "Acciones",
+      action: "theme",
+    } as const;
     const ranked = rankCommands([toggle, cmd("Recetas")], "tema");
     expect(ranked[0]).toEqual(toggle);
     expect("href" in ranked[0]).toBe(false);
@@ -107,11 +111,24 @@ describe("acciones", () => {
 
 describe("groupResults", () => {
   it("agrupa en el orden de aparición; el índice sigue el orden visual (↑/↓)", () => {
-    const list = [cmd("A", "Pantallas"), cmd("B", "Recetas", { searchOnly: true }), cmd("C", "Pantallas")];
+    const list = [
+      cmd("A", "Pantallas"),
+      cmd("B", "Recetas", { searchOnly: true }),
+      cmd("C", "Pantallas"),
+    ];
     expect(
-      groupResults(list).map((g) => [g.group, g.items.map((x) => [x.command.label, x.index])]),
+      groupResults(list).map((g) => [
+        g.group,
+        g.items.map((x) => [x.command.label, x.index]),
+      ]),
     ).toEqual([
-      ["Pantallas", [["A", 0], ["C", 1]]],
+      [
+        "Pantallas",
+        [
+          ["A", 0],
+          ["C", 1],
+        ],
+      ],
       ["Recetas", [["B", 2]]],
     ]);
   });
