@@ -84,6 +84,9 @@ const CALENDAR_ROUTES: Record<string, true> = {
   "/plan-recetas": true,
 };
 
+const FLOATING_TOOLBAR =
+  /^\/(sesion\/|plantillas\/(nueva|\d+\/editar)$|recetario\/nueva$)/;
+
 const sectionActive = (pathname: string, section: NavSection) =>
   isActive(pathname, section.href) ||
   (section.children ?? []).some((child) => isActive(pathname, child.href));
@@ -645,7 +648,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
           ) : null}
         </main>
 
-        <FabMenu extended={false} placement="float" />
+        {/* Las pantallas con barra de herramientas flotante (sesión, editor de
+            plantilla) o que ya son un formulario de crear no llevan FAB: se
+            pisaría con la barra y su acción ya está en pantalla. */}
+        {FLOATING_TOOLBAR.test(pathname) ? null : (
+          <FabMenu extended={false} placement="float" />
+        )}
 
         {/* Móvil: barra de navegación M3 (80 px + área segura). */}
         <nav
