@@ -115,6 +115,12 @@ Escala vigente — todo lo demás sale de aquí:
   tertiary: significan «hecho»/«pendiente» en cualquier pantalla), la tarjeta de
   fuerza registrada y el sello de recompensa (verde de Deporte también en Hoy),
   la paleta de comandos y el catálogo `/ui`.
+- **Un estado de la piel nunca se pelea con una utilidad**: la capa `utilities`
+  de Tailwind gana a `@layer components`, así que un `bg-*`/`text-*` en la
+  pieza tapa su regla de `aria-pressed`. Así estuvo roto el grupo conectado
+  (la elegida no se pintaba en `--accent`): su reposo vive ahora en
+  `:where(.connected) > *`, sin especificidad para que un `.btn` dentro
+  (SplitButton) conserve su piel. Lo cubre `nav.spec.ts`.
 - Todo lo animado se neutraliza con `prefers-reduced-motion`: las transiciones
   quedan a 1 ms, el morph salta directo, lo que entra lo hace con un fundido de
   150 ms, y los giros, la onda y las View Transitions se apagan.

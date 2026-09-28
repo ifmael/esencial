@@ -152,6 +152,58 @@ test.describe("MENÚ — secciones colapsables", () => {
     ).toHaveCSS("background-color", soft);
   });
 
+  test("la pieza elegida de un grupo conectado toma el acento", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    // Lo calculado contra `--accent` de la propia pieza: el bug era que las
+    // utilidades de reposo (capa `utilities`) ganaban a la regla de `pressed`.
+    // El reposo tampoco puede pisar la piel de un botón dentro del grupo.
+    const paint = (el: Element) => {
+      const probe = document.createElement("div");
+      probe.style.background = "var(--accent)";
+      probe.style.color = "var(--on-accent)";
+      el.parentElement?.append(probe);
+      const want = getComputedStyle(probe);
+      const got = getComputedStyle(el);
+      const out = {
+        bg: got.backgroundColor === want.backgroundColor,
+        fg: got.color === want.color,
+      };
+      probe.remove();
+      return out;
+    };
+    const accented = { bg: true, fg: true };
+    const connected = (group: string, name: string) =>
+      page
+        .getByRole("group", { name: group })
+        .getByRole("button", { name, exact: true });
+
+    // El color entra con transición (motion-effects): se espera al final.
+    await page.goto("/ejercicios");
+    await page.getByRole("button", { name: "Nuevo ejercicio" }).click();
+    const bici = connected("Tipo", "Bici");
+    await bici.click();
+    await expect(bici).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(() => bici.evaluate(paint)).toEqual(accented);
+    // «Fuerza» sale del acento con transición: se espera a que termine.
+    await expect
+      .poll(() => connected("Tipo", "Fuerza").evaluate(paint))
+      .toEqual({ bg: false, fg: false });
+
+    await page.goto("/plantillas/nueva");
+    const frontal = connected("Vista", "Frontal");
+    await expect(frontal).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(() => frontal.evaluate(paint)).toEqual(accented);
+
+    await page.goto("/recetario/nueva");
+    const guardar = page.getByRole("button", {
+      name: "Guardar receta",
+      exact: true,
+    });
+    expect(await guardar.evaluate(paint)).toEqual(accented);
+  });
+
   test("el foco de los campos toma el color de su sección", async ({
     page,
   }) => {

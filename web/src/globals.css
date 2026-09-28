@@ -539,6 +539,14 @@
     display: flex;
     gap: 2px;
   }
+  /* Reposo de la pieza, sin especificidad (`:where`): cede ante la elegida y
+     ante la piel de un `.btn` dentro del grupo (SplitButton). No va en
+     utilidades de Tailwind: la capa `utilities` gana a `components`, y un
+     `bg-*` en la pieza tapaba el acento de la elegida. */
+  :where(.connected) > * {
+    background: var(--color-surface-container-highest);
+    color: var(--color-on-surface-variant);
+  }
   .connected > * {
     flex: 1 1 auto;
     border-radius: var(--radius-s);

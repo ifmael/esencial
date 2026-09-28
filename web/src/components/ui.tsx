@@ -225,7 +225,7 @@ export const connectedClass = (className?: string) =>
 /** Clase de cada pieza de un grupo conectado cuando es un `<Link>`. */
 export const connectedItemClass = (className?: string) =>
   cx(
-    "state inline-flex h-10 items-center justify-center gap-2 bg-surface-container-highest px-4 text-label-l text-on-surface-variant type-move",
+    "state inline-flex h-10 items-center justify-center gap-2 px-4 text-label-l type-move",
     className,
   );
 
