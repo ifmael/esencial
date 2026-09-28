@@ -508,7 +508,7 @@ function EffortDots({
             className={cx(
               "flex min-h-12 flex-1 flex-col items-center gap-1 rounded-m py-1",
               onSelect &&
-                "state cursor-pointer has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary",
+                "state cursor-pointer has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent",
             )}
           >
             <span

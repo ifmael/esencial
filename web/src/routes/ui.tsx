@@ -102,6 +102,7 @@ const COLORS: [string, string][] = [
   ["bg-secondary-container text-on-secondary-container", "secondary-container"],
   ["bg-tertiary text-on-tertiary", "tertiary"],
   ["bg-tertiary-container text-on-tertiary-container", "tertiary-container"],
+  ["bg-tertiary-soft text-on-tertiary-soft", "tertiary-soft"],
   ["bg-error text-on-error", "error"],
   ["bg-error-container text-on-error-container", "error-container"],
   ["bg-surface-container-lowest text-on-surface", "container-lowest"],

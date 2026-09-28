@@ -14,6 +14,8 @@ export function schemeVars(s: Scheme): Record<string, string> {
     "--on-accent": s["on-primary"],
     "--accent-container": s["primary-container"],
     "--on-accent-container": s["on-primary-container"],
+    "--accent-soft": s["secondary-container"],
+    "--on-accent-soft": s["on-secondary-container"],
     "--color-primary": s.primary,
     "--color-on-primary": s["on-primary"],
     "--color-primary-container": s["primary-container"],

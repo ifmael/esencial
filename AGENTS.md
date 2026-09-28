@@ -91,7 +91,12 @@ Escala vigente — todo lo demás sale de aquí:
 - **Color por sección**: `[data-section="deporte|nutricion|hoy"]` reescribe
   `--accent*` (primary, tertiary, secondary); el Shell lo pone según la ruta.
   Úsalo (`bg-accent`, `text-on-accent-container`…) en lo que pertenece a la
-  sección.
+  sección. `accent-soft` es su contenedor claro: el subitem activo del cajón y
+  la piel tonal (`.btn-tonal`, `.btn-*[aria-pressed]`, `.chip` elegido,
+  `.alert-info`). Es `secondary-container` en Deporte y Hoy, y `tertiary-soft`
+  (tertiary tono 90/30, rol propio de `gen-tokens`, porque con fidelidad
+  `tertiary-container` sale oscuro) en Nutrición; el color de receta lo
+  reescribe también (`schemeVars`).
 - **Tema** sistema/claro/oscuro: `web/public/theme.js` pone `data-theme` antes del
   primer pintado; `lib/theme.ts` lo cambia en vivo. Los dos comparten clave y
   regla, y `tests/theme.test.ts` los ata.
@@ -101,7 +106,15 @@ Escala vigente — todo lo demás sale de aquí:
   (44 px) y el quitar receta de una celda de comidas (40 px): la columna no da más.
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
-  la vez, sin estado duplicado en una clase aparte.
+  la vez, sin estado duplicado en una clase aparte. El anillo, el borde y la
+  etiqueta del campo enfocado y la selección de texto usan `--accent` (color de
+  sección); `AA_PAIRS` exige primary, secondary y tertiary ≥ 4,5 sobre
+  `surface` y `surface-container-high`.
+- **Colores fijos a propósito** (no siguen la sección): la marca (logo del raíl,
+  login), las insignias de estado (`Badge` `done` = primary, `pending` =
+  tertiary: significan «hecho»/«pendiente» en cualquier pantalla), la tarjeta de
+  fuerza registrada y el sello de recompensa (verde de Deporte también en Hoy),
+  la paleta de comandos y el catálogo `/ui`.
 - Todo lo animado se neutraliza con `prefers-reduced-motion`: las transiciones
   quedan a 1 ms, el morph salta directo, lo que entra lo hace con un fundido de
   150 ms, y los giros, la onda y las View Transitions se apagan.

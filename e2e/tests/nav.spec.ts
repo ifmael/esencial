@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { apiRequest, uniqueName } from "./helpers";
 
 // Menú lateral: 3 secciones (Hoy, Deporte, Nutrición), submenús colapsables y
 // navegación. El proyecto `authed` ya inyecta la sesión; se repite por claridad.
@@ -67,6 +68,110 @@ test.describe("MENÚ — secciones colapsables", () => {
     expect(
       await link.locator("svg").evaluate((el) => getComputedStyle(el).color),
     ).toBe(onContainer);
+  });
+
+  test("el subitem activo toma el contenedor suave de su sección", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const aside = page.locator("aside");
+    // Lo calculado contra el token de marca: Nutrición no hereda el menta de
+    // secondary (el bug), Deporte lo conserva.
+    const bgOf = (name: string) =>
+      aside
+        .getByRole("link", { name, exact: true })
+        .evaluate((el) => getComputedStyle(el).backgroundColor);
+    const token = (name: string) =>
+      page.evaluate((n) => {
+        const probe = document.createElement("div");
+        probe.style.background = `var(${n})`;
+        document.body.append(probe);
+        const c = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return c;
+      }, name);
+
+    await page.goto("/recetario");
+    expect(await bgOf("Recetas")).toBe(await token("--color-tertiary-soft"));
+    await page.goto("/ejercicios");
+    expect(await bgOf("Ejercicios")).toBe(
+      await token("--color-secondary-container"),
+    );
+
+    // Lo tonal de la pantalla también: el calendario de comidas es naranja.
+    await page.goto("/plan-recetas");
+    const soft = await token("--color-tertiary-soft");
+    for (const name of ["Lista de la compra", "Semana anterior"])
+      expect(
+        await page
+          .getByRole("button", { name })
+          .evaluate((el) => getComputedStyle(el).backgroundColor),
+        name,
+      ).toBe(soft);
+
+    // Y en el editor de recetas: los tonales y el chip elegido.
+    await page.goto("/recetario/nueva");
+    const bg = (name: string) =>
+      page
+        .getByRole("button", { name, exact: true })
+        .evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await bg("Elegir foto")).toBe(soft);
+    const chip = page.getByRole("button", { name: "Desayuno", exact: true });
+    await chip.click();
+    await expect(chip).toHaveAttribute("aria-pressed", "true");
+    // El fondo entra con transición (motion-effects): se espera al final.
+    await expect
+      .poll(() => chip.evaluate((el) => getComputedStyle(el).backgroundColor))
+      .toBe(soft);
+
+    // Y en el editor de una receta existente: los chips de material.
+    const material = uniqueName("Sartén");
+    const { id } = await apiRequest<{ id: number }>(
+      page.request,
+      "POST",
+      "/api/recipes",
+      {
+        name: uniqueName("Color E2E"),
+        description: "e2e",
+        ingredients: [{ food: "Sal", quantity: 1, unit: null }],
+        steps: [],
+        materials: [material],
+        tags: [],
+      },
+    );
+    await page.goto(`/recetario/${id}`);
+    // En la ficha, la lista de materiales.
+    await expect(
+      page.locator("main li", { hasText: material }).first(),
+    ).toHaveCSS("background-color", soft);
+    await page.getByRole("button", { name: "Editar receta" }).click();
+    await expect(
+      page
+        .getByRole("button", { name: `Quitar material ${material}` })
+        .locator(".."),
+    ).toHaveCSS("background-color", soft);
+  });
+
+  test("el foco de los campos toma el color de su sección", async ({
+    page,
+  }) => {
+    const accentOf = () =>
+      page.evaluate(() => {
+        const probe = document.createElement("div");
+        probe.style.color = "var(--accent)";
+        document.querySelector("main")?.append(probe);
+        const c = getComputedStyle(probe).color;
+        probe.remove();
+        return c;
+      });
+    await page.goto("/recetario/nueva");
+    const nombre = page.getByLabel("Nombre");
+    await nombre.focus();
+    const tertiary = await accentOf();
+    await expect(nombre).toHaveCSS("border-top-color", tertiary);
+    await expect(
+      page.locator(".field", { has: nombre }).locator(".field-label"),
+    ).toHaveCSS("color", tertiary);
   });
 
   test("plegar/desplegar el menú lateral y recordar la elección", async ({

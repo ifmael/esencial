@@ -21,6 +21,8 @@ describe("schemeVars", () => {
       "--on-accent": scheme["on-primary"],
       "--accent-container": scheme["primary-container"],
       "--on-accent-container": scheme["on-primary-container"],
+      "--accent-soft": scheme["secondary-container"],
+      "--on-accent-soft": scheme["on-secondary-container"],
       "--color-primary": scheme.primary,
       "--color-on-primary": scheme["on-primary"],
       "--color-primary-container": scheme["primary-container"],

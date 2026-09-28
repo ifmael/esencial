@@ -33,6 +33,8 @@ export const ROLES = [
   "on-tertiary",
   "tertiary-container",
   "on-tertiary-container",
+  "tertiary-soft",
+  "on-tertiary-soft",
   "error",
   "on-error",
   "error-container",
@@ -63,11 +65,21 @@ const camel = (role: string) =>
     c.toUpperCase(),
   ) as keyof typeof M;
 
+/** Roles propios, fuera de `MaterialDynamicColors`: el contenedor tertiary de
+ * tono estándar M3 (90/30), para el indicador suave de Nutrición. Con
+ * fidelidad, `tertiary-container` sale del tono de la semilla (oscuro) y no
+ * sirve de fondo claro. */
+const CUSTOM: Partial<Record<Role, (s: DynamicScheme) => number>> = {
+  "tertiary-soft": (s) => s.tertiaryPalette.tone(s.isDark ? 30 : 90),
+  "on-tertiary-soft": (s) => s.tertiaryPalette.tone(s.isDark ? 90 : 30),
+};
+
 function toScheme(s: DynamicScheme): Scheme {
   const out = {} as Scheme;
   for (const role of ROLES) {
+    const custom = CUSTOM[role];
     const color = M[camel(role)] as (typeof M)["primary"];
-    out[role] = hexFromArgb(color.getArgb(s));
+    out[role] = hexFromArgb(custom ? custom(s) : color.getArgb(s));
   }
   return out;
 }
@@ -101,6 +113,7 @@ export const AA_PAIRS: readonly (readonly [Role, Role])[] = [
   ["on-secondary-container", "secondary-container"],
   ["on-tertiary", "tertiary"],
   ["on-tertiary-container", "tertiary-container"],
+  ["on-tertiary-soft", "tertiary-soft"],
   ["on-error", "error"],
   ["on-error-container", "error-container"],
   ["on-surface", "surface"],
@@ -110,7 +123,9 @@ export const AA_PAIRS: readonly (readonly [Role, Role])[] = [
   ["primary", "surface"],
   ["primary", "surface-container-high"],
   ["tertiary", "surface"],
+  ["tertiary", "surface-container-high"],
   ["secondary", "surface"],
+  ["secondary", "surface-container-high"],
   ["error", "surface"],
   ["inverse-on-surface", "inverse-surface"],
   ["inverse-primary", "inverse-surface"],

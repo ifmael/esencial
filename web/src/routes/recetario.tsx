@@ -350,7 +350,7 @@ export function RecetarioDetallePage() {
                 {recipe.materials.map((m) => (
                   <li
                     key={m}
-                    className="rounded-full bg-secondary-container px-4 py-1 text-label-l text-on-secondary-container"
+                    className="rounded-full bg-accent-soft px-4 py-1 text-label-l text-on-accent-soft"
                   >
                     {m}
                   </li>

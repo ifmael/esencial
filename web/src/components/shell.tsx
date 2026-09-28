@@ -436,7 +436,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         className={cx(
                           "state flex h-12 items-center rounded-full px-4 text-label-l type-move transition-colors motion-effects",
                           on
-                            ? "bg-secondary-container font-extrabold text-on-secondary-container"
+                            ? "bg-accent-soft font-extrabold text-on-accent-soft"
                             : "font-medium text-on-surface-variant",
                         )}
                         onPointerDown={ripple}

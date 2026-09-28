@@ -312,7 +312,7 @@ export function RecipeEditor({
                 className={buttonClass({
                   variant: "tonal",
                   className: cx(
-                    "cursor-pointer self-start has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary",
+                    "cursor-pointer self-start has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent",
                     uploading && "pointer-events-none opacity-50",
                   ),
                 })}
@@ -585,7 +585,7 @@ function ChipsSection({
           {items.map((item) => (
             <li
               key={item}
-              className="flex h-8 items-center gap-1 rounded-s bg-secondary-container pl-3 text-label-l text-on-secondary-container"
+              className="flex h-8 items-center gap-1 rounded-s bg-accent-soft pl-3 text-label-l text-on-accent-soft"
             >
               {item}
               <button

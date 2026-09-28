@@ -9,6 +9,7 @@
    on-secondary-container / secondary-container: 4.53
    on-tertiary / tertiary: 7.20
    on-tertiary-container / tertiary-container: 4.54
+   on-tertiary-soft / tertiary-soft: 7.29
    on-error / error: 6.46
    on-error-container / error-container: 7.24
    on-surface / surface: 16.32
@@ -18,7 +19,9 @@
    primary / surface: 6.91
    primary / surface-container-high: 5.93
    tertiary / surface: 6.87
+   tertiary / surface-container-high: 5.90
    secondary / surface: 6.19
+   secondary / surface-container-high: 5.31
    error / surface: 6.16
    inverse-on-surface / inverse-surface: 11.55
    inverse-primary / inverse-surface: 7.69
@@ -29,6 +32,7 @@
    on-secondary-container / secondary-container: 4.54
    on-tertiary / tertiary: 7.73
    on-tertiary-container / tertiary-container: 4.54
+   on-tertiary-soft / tertiary-soft: 7.29
    on-error / error: 7.72
    on-error-container / error-container: 7.24
    on-surface / surface: 14.31
@@ -38,7 +42,9 @@
    primary / surface: 10.85
    primary / surface-container-high: 8.47
    tertiary / surface: 10.87
+   tertiary / surface-container-high: 8.48
    secondary / surface: 10.86
+   secondary / surface-container-high: 8.48
    error / surface: 10.88
    inverse-on-surface / inverse-surface: 10.14
    inverse-primary / inverse-surface: 5.04
@@ -57,6 +63,8 @@
   --color-on-tertiary: #ffffff;
   --color-tertiary-container: #a95b13;
   --color-on-tertiary-container: #fff1ea;
+  --color-tertiary-soft: #ffdcc5;
+  --color-on-tertiary-soft: #703700;
   --color-error: #ba1a1a;
   --color-on-error: #ffffff;
   --color-error-container: #ffdad6;
@@ -111,6 +119,8 @@
   --color-on-tertiary: #4f2500;
   --color-tertiary-container: #a95b13;
   --color-on-tertiary-container: #fff1ea;
+  --color-tertiary-soft: #703700;
+  --color-on-tertiary-soft: #ffdcc5;
   --color-error: #ffb4ab;
   --color-on-error: #690005;
   --color-error-container: #93000a;

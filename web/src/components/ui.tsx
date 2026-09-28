@@ -456,7 +456,7 @@ export function SearchBar({
   return (
     <label
       className={cx(
-        "flex h-14 shrink-0 items-center gap-3 rounded-full px-4 text-on-surface-variant has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary",
+        "flex h-14 shrink-0 items-center gap-3 rounded-full px-4 text-on-surface-variant has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent",
         tone === "high"
           ? "bg-surface-container-highest"
           : "bg-surface-container-high",

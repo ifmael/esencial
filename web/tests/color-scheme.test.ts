@@ -49,6 +49,21 @@ describe("esquema de marca", () => {
     expect(r).toBeGreaterThan(g);
   });
 
+  it("nutrición tiene un contenedor suave (tertiary-soft) cálido, más claro que su container en claro y más oscuro en oscuro", () => {
+    const lum = (hex: string) => contrastRatio(hex, "#000000");
+    const light = brandScheme(false);
+    const dark = brandScheme(true);
+    const r = Number.parseInt(light["tertiary-soft"].slice(1, 3), 16);
+    const g = Number.parseInt(light["tertiary-soft"].slice(3, 5), 16);
+    expect(r).toBeGreaterThan(g);
+    expect(lum(light["tertiary-soft"])).toBeGreaterThan(
+      lum(light["tertiary-container"]),
+    );
+    expect(lum(dark["tertiary-soft"])).toBeLessThan(
+      lum(dark["tertiary-container"]),
+    );
+  });
+
   it("la semilla es el verde de marca", () => {
     expect(BRAND_SEED).toBe("#15803d");
   });
@@ -68,6 +83,7 @@ describe("failingPairs", () => {
       "on-primary-container",
       "on-secondary-container",
       "on-tertiary-container",
+      "on-tertiary-soft",
       "on-error",
       "on-surface",
       "on-surface-variant",
