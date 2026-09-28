@@ -474,18 +474,6 @@ function SessionEditor({
   const takenIds = new Set(rows.map((r) => r.exerciseId));
   const sensors = useDragSensors();
 
-  useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => {
-      // Escape cancela el arrastre de teclado (dnd-kit lo marca como
-      // gestionado): entonces no llega al Escape del diálogo, que se registra
-      // después en `window` y cerraría el modal.
-      if (ev.key === "Escape" && ev.defaultPrevented)
-        ev.stopImmediatePropagation();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   const nameOf = (id: UniqueIdentifier) =>
     rows.find((r) => r.key === id)?.exerciseName ?? "";
 

@@ -237,6 +237,27 @@ describe("Shell M3E", () => {
     );
   });
 
+  it("sin FAB flotante donde ya hay barra de herramientas o formulario de crear", async () => {
+    // El FAB flotante (móvil) va fuera del raíl; con barra propia se pisarían.
+    const floatingFab = () =>
+      [...document.querySelectorAll('button[aria-label="Crear"]')].filter(
+        (b) => !b.closest("aside"),
+      );
+    for (const path of [
+      "/sesion/2026-09-28",
+      "/plantillas/nueva",
+      "/recetario/nueva",
+    ]) {
+      const view = renderAt(path);
+      await screen.findAllByText("Deporte");
+      expect(floatingFab(), path).toHaveLength(0);
+      view.unmount();
+    }
+    renderAt("/recetario");
+    await screen.findAllByText("Deporte");
+    expect(floatingFab()).toHaveLength(1);
+  });
+
   it("cada sección tiñe la página con su color", async () => {
     const { container } = renderAt("/recetario");
     await screen.findAllByText("Nutrición");

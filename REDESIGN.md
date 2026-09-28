@@ -227,7 +227,8 @@ JS, unos 29 kB en crudo son los paths de los iconos y el resto las primitivas nu
     diálogo, catálogo.
   - Búsqueda: ranking y UI (tipo `action`, `role=group`, «Sin resultados» en una
     región viva).
-  - Shell: tema, FAB, color de sección.
+  - Shell: tema, FAB, color de sección, sin FAB flotante en `/sesion/…`,
+    `/plantillas/nueva` y `/recetario/nueva`.
   - Pantallas: racha y recreación de sesión, deshacer, `manualSet`, `dayProgress`,
     sello, «Guardar y añadir otra» y «Guardar y registrar».
 - `pnpm e2e` con `E2E_WEB_PORT=8863 E2E_API_PORT=8864`: **43/43**.
@@ -240,9 +241,11 @@ JS, unos 29 kB en crudo son los paths de los iconos y el resto las primitivas nu
   comprobados), 12 rutas × 2 tamaños × 2 temas, revisadas en hojas de contactos.
   En cada una se comprobó por programa: sin desborde horizontal, `data-theme`
   aplicado, y el calendario sin scroll de página a 1280.
-- Calendario a 1280×800: raíl de **80 px**, columna de día de **153,14 px**, sin
-  scroll de página ni horizontal, en `/plan-fuerza` y en `/plan-recetas`. Fuera del
-  calendario el menú arranca expandido (288 px) y colapsa a 96 px.
+- Calendario a 1280×800 (medido con el build final, con la columna de hoy teñida):
+  raíl de **80 px**, columna de día de **153,14 px** (la de hoy también), sin scroll
+  de página ni horizontal, en `/plan-fuerza` y en `/plan-recetas`. Fuera del
+  calendario (`/recetario`) el menú arranca expandido (288 px), colapsa a **96 px**
+  y se queda en 96 tras recargar.
 - Piezas estrella demostradas en Chromium con datos reales de dev:
   - FAB → menú: el FAB pasa a círculo y salen tres acciones.
   - ⌘K «cala» → Enter lleva a `/recetario/1`; los grupos se anuncian con nombre.
