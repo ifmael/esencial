@@ -298,12 +298,7 @@ describe("plan screen", () => {
     for (const row of rows) {
       expect(row.className).toContain("flex-1");
       expect(row.className).toContain("min-h-11");
-      expect(row.className).toContain("bg-surface-muted");
-      expect(row.className).toContain("rounded-panel");
     }
-    expect(within(rows[0]).getByText("Press banca").className).toContain(
-      "text-body",
-    );
   });
 
   it("la fila del día desprograma un ejercicio con confirmación en línea", async () => {
@@ -515,6 +510,134 @@ describe("plan screen", () => {
       }),
     );
     expect(window.location.pathname).toBe("/sesion/2026-09-01");
+  });
+
+  // App monta el Shell, que envuelve la pantalla en SnackbarHost: el aviso con
+  // «Deshacer» es el de verdad, no un doble.
+  const cellEx = (
+    id: number,
+    exerciseId: number,
+    name: string,
+    position: number,
+  ) => ({
+    id,
+    exerciseId,
+    exerciseName: name,
+    kind: "strength" as const,
+    position,
+    targetSets: 4,
+    targetRepsMin: 6,
+    targetRepsMax: 8,
+    targetDistanceKm: null,
+    targetDurationMin: null,
+  });
+
+  it("desprogramar un ejercicio avisa y «Deshacer» vuelve a guardar los items anteriores", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press, remo],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            cellEx(51, 7, "Press banca", 0),
+            cellEx(52, 8, "Remo", 1),
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Desprogramar Press banca" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmar quitar Press banca" }),
+    );
+    expect(await screen.findByText("Press banca desprogramado")).toBeDefined();
+    await waitFor(() =>
+      expect(mutations().filter((c) => c.method === "PUT")).toHaveLength(1),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+    await waitFor(() =>
+      expect(mutations().filter((c) => c.method === "PUT")).toHaveLength(2),
+    );
+    const undo = mutations().filter((c) => c.method === "PUT")[1];
+    expect(undo.url).toBe("/api/plan-sessions/1");
+    expect(undo.body).toEqual({
+      name: "Empuje A",
+      items: [7, 8].map((exerciseId) => ({
+        exerciseId,
+        targetSets: 4,
+        targetRepsMin: 6,
+        targetRepsMax: 8,
+        targetDistanceKm: null,
+        targetDurationMin: null,
+      })),
+    });
+    const list = screen.getByRole("list", {
+      name: "Ejercicios del 2026-08-31",
+    });
+    await waitFor(() =>
+      expect(within(list).getByText("Press banca")).toBeDefined(),
+    );
+  });
+
+  it("desprogramar la sesión avisa y «Deshacer» la recrea con POST y sus objetivos", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press, remo],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [
+            cellEx(51, 8, "Remo", 0),
+            cellEx(52, 7, "Press banca", 1),
+          ],
+        },
+      ],
+    });
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Desprogramar sesión del 2026-08-31",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmar desprogramar" }),
+    );
+    expect(
+      await screen.findByText("Sesión del 2026-08-31 desprogramada"),
+    ).toBeDefined();
+    await waitFor(() => expect(api.state.sessions).toHaveLength(0));
+
+    fireEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(1));
+    const post = mutations().find((c) => c.method === "POST");
+    expect(post?.url).toBe("/api/plan-sessions");
+    expect(post?.body).toEqual({
+      date: "2026-08-31",
+      name: "Empuje A",
+      items: [8, 7].map((exerciseId) => ({
+        exerciseId,
+        targetSets: 4,
+        targetRepsMin: 6,
+        targetRepsMax: 8,
+        targetDistanceKm: null,
+        targetDurationMin: null,
+      })),
+    });
+    // La recarga devuelve el día con su desglose.
+    const list = await screen.findByRole("list", {
+      name: "Ejercicios del 2026-08-31",
+    });
+    expect(within(list).getByText("Remo")).toBeDefined();
   });
 });
 
@@ -797,5 +920,21 @@ describe("editor del día (sesión) en modal", () => {
       within(dialog).getByRole("button", { name: /^Remo/ }),
     ).toHaveProperty("disabled", true);
     expect(within(dialog).getByText("ya añadido")).toBeDefined();
+  });
+
+  it("«Guardar y registrar» guarda el día y abre su registro en /sesion/:fecha", async () => {
+    const { dialog } = await openFirstDay();
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Más formas de guardar" }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("menuitem", { name: "Guardar y registrar" }),
+    );
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/sesion/2026-08-31"),
+    );
+    expect(api.state.sessions).toHaveLength(1);
+    expect(mutations().map((c) => c.method)).toEqual(["POST"]);
   });
 });

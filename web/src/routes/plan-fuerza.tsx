@@ -1,5 +1,7 @@
 // /plan-fuerza — rejilla semanal + editor del día (sesión) en un único modal:
-// lateral con lo ya añadido al día y selector de plantillas/ejercicios. Cada día
+// lateral con lo ya añadido al día y selector de plantillas/ejercicios. La
+// cabecera de la rejilla lleva el progreso ondulado de la semana y la racha;
+// desprogramar (ejercicio o sesión) avisa con un snackbar que deshace. Cada día
 // es una sesión con nombre, compuesta de ejercicios copiados desde plantillas
 // (que se expanden y desaparecen) y/o sueltos, sin duplicados. El CRUD de
 // plantillas vive en /plantillas.
@@ -16,16 +18,44 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router";
+import {
+  EmptyState,
+  Loader,
+  Monogram,
+  Shape,
+  WavyProgress,
+} from "../components/expressive";
 import { GroupedExercises } from "../components/grouped-exercises";
-import { GripIcon } from "../components/icons";
+import {
+  AddIcon,
+  CheckIcon,
+  CloseIcon,
+  DeleteIcon,
+  DumbbellIcon,
+  FireIcon,
+  GripIcon,
+  PlayIcon,
+  SearchIcon,
+} from "../components/icons";
+import { Dialog, useSnackbar } from "../components/overlay";
 import {
   DRAG_INSTRUCTIONS,
   sortableAnnouncements,
   useDragSensors,
 } from "../components/sortable";
-import { Badge, Button, Card, Input } from "../components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  cx,
+  Field,
+  Input,
+  ripple,
+  SplitButton,
+} from "../components/ui";
 import { WeekGrid } from "../components/week-grid";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
@@ -45,6 +75,8 @@ import {
 } from "../lib/plan-week";
 import { intAt, numAt } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
+import { runViewTransition } from "../lib/view-transition";
+import { weekProgress } from "../lib/workout";
 
 // --- Editor del día (sesión) ------------------------------------------------
 
@@ -139,63 +171,75 @@ function DayPicker({
   const shownExercises = needle
     ? exercises.filter((e) => e.name.toLowerCase().includes(needle))
     : exercises;
+  const pickClass =
+    "state flex min-h-12 w-full items-center gap-3 rounded-l px-3 py-2 text-left text-body-l transition-colors motion-effects disabled:text-on-surface-variant";
 
   return (
-    <section aria-label="Añadir al día" className="flex min-h-0 flex-col gap-2">
-      <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-        Añadir al día
-      </h3>
-      <Input
-        type="text"
-        autoFocus
-        placeholder="Buscar plantilla o ejercicio…"
-        aria-label="Buscar"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+    <section
+      aria-label="Añadir al día"
+      className="flex min-h-0 flex-col gap-3 rounded-l bg-surface-container-low p-3"
+    >
+      <h3 className="section-label">Añadir al día</h3>
+      <div className="relative">
+        <SearchIcon className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant" />
+        <Input
+          type="text"
+          autoFocus
+          placeholder="Buscar plantilla o ejercicio…"
+          aria-label="Buscar"
+          className="rounded-full bg-surface-container-high pl-11"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
       {note && (
-        <p role="status" className="text-sm text-text-secondary">
+        <p role="status" className="text-body-m text-on-surface-variant">
           {note}
         </p>
       )}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
         <section className="flex flex-col gap-1">
-          <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
-            Plantillas
-          </h4>
+          <h4 className="section-label">Plantillas</h4>
           {templatesError ? (
-            <p className="text-sm text-error">
-              {templatesError}{" "}
-              <button className="underline" onClick={onRetryTemplates}>
+            <Alert>
+              <p>{templatesError}</p>
+              <Button variant="outlined" size="sm" onClick={onRetryTemplates}>
                 Reintentar
-              </button>
-            </p>
+              </Button>
+            </Alert>
           ) : shownTemplates.length === 0 ? (
-            <p className="text-sm text-text-secondary">Sin plantillas</p>
+            <p className="px-3 text-body-m text-on-surface-variant">
+              Sin plantillas
+            </p>
           ) : (
-            <ul className="flex flex-col gap-1">
-              {shownTemplates.map((t) => {
+            <ul className="stagger flex flex-col gap-1">
+              {shownTemplates.map((t, i) => {
                 const done =
                   t.exercises.length > 0 &&
                   t.exercises.every((e) => takenIds.has(e.exerciseId));
                 return (
-                  <li key={t.id}>
+                  <li key={t.id} style={{ ["--i" as string]: i }}>
                     <button
-                      className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
+                      type="button"
+                      className={pickClass}
                       disabled={done}
+                      onPointerDown={ripple}
                       onClick={() => {
                         if (!done) onPickTemplate(t);
                       }}
                     >
-                      {t.name}
-                      <span className="ml-2 text-sm text-text-secondary">
-                        {done
-                          ? "ya añadida"
-                          : `${t.exercises.length} ${
-                              t.exercises.length === 1
-                                ? "ejercicio"
-                                : "ejercicios"
-                            }`}
+                      <Monogram name={t.name} size={36} />
+                      <span className="min-w-0 flex-1">
+                        {t.name}
+                        <span className="ml-2 text-body-m text-on-surface-variant">
+                          {done
+                            ? "ya añadida"
+                            : `${t.exercises.length} ${
+                                t.exercises.length === 1
+                                  ? "ejercicio"
+                                  : "ejercicios"
+                              }`}
+                        </span>
                       </span>
                     </button>
                   </li>
@@ -205,11 +249,11 @@ function DayPicker({
           )}
         </section>
         <section className="flex flex-col gap-1">
-          <h4 className="font-semibold uppercase tracking-wide text-text-secondary">
-            Ejercicios
-          </h4>
+          <h4 className="section-label">Ejercicios</h4>
           {shownExercises.length === 0 ? (
-            <p className="text-sm text-text-secondary">Sin ejercicios</p>
+            <p className="px-3 text-body-m text-on-surface-variant">
+              Sin ejercicios
+            </p>
           ) : (
             <GroupedExercises
               exercises={shownExercises}
@@ -220,19 +264,28 @@ function DayPicker({
                 return (
                   <li key={e.id}>
                     <button
-                      className="min-h-11 w-full rounded-lg px-3 py-2 text-left font-medium hover:bg-surface-muted disabled:text-text-secondary"
+                      type="button"
+                      className={pickClass}
                       disabled={taken}
+                      onPointerDown={ripple}
                       onClick={() => {
                         if (!taken) onPickExercise(e);
                       }}
                     >
-                      {e.name}
-                      {e.kind === "strength"
-                        ? null
-                        : ` · ${KIND_LABELS[e.kind]}`}
+                      <span className="min-w-0 flex-1">
+                        {e.name}
+                        {e.kind === "strength"
+                          ? null
+                          : ` · ${KIND_LABELS[e.kind]}`}
+                        {taken ? (
+                          <span className="ml-2 text-body-m">ya añadido</span>
+                        ) : null}
+                      </span>
                       {taken ? (
-                        <span className="ml-2 text-sm">ya añadido</span>
-                      ) : null}
+                        <CheckIcon className="text-accent" />
+                      ) : (
+                        <AddIcon className="text-on-surface-variant" />
+                      )}
                     </button>
                   </li>
                 );
@@ -245,13 +298,39 @@ function DayPicker({
   );
 }
 
+/** Paso numérico compacto de la fila del día (etiqueta encima, 48 px). */
+function Target({
+  label,
+  aria,
+  wide,
+  ...rest
+}: {
+  label: string;
+  aria: string;
+  wide?: boolean;
+} & Pick<ComponentProps<"input">, "value" | "onChange" | "min" | "step">) {
+  return (
+    <label className="flex flex-col gap-1 text-label-m text-on-surface-variant">
+      {label}
+      <Input
+        className={cx("tabular px-3 text-on-surface", wide ? "w-24" : "w-20")}
+        type="number"
+        aria-label={aria}
+        {...rest}
+      />
+    </label>
+  );
+}
+
 /** Fila arrastrable del día: el asa cambia el orden (ratón, táctil o teclado). */
 function DayRowItem({
   row,
+  index,
   onPatch,
   onRemove,
 }: {
   row: DayRow;
+  index: number;
   onPatch: (key: string, patch: Partial<DayRow>) => void;
   onRemove: (key: string) => void;
 }) {
@@ -267,108 +346,102 @@ function DayRowItem({
   return (
     <li
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex flex-wrap items-center gap-2 bg-surface p-3 ${
-        isDragging ? "relative z-10 opacity-70" : ""
-      }`}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ["--i" as string]: index,
+      }}
+      className={cx(
+        "flex flex-wrap items-end gap-2 rounded-l bg-surface-container-highest p-3",
+        isDragging && "relative z-10 opacity-70 shadow-2",
+      )}
     >
-      <button
-        type="button"
-        className="cursor-grab touch-none rounded-md p-1 text-text-secondary hover:bg-surface-muted active:cursor-grabbing"
-        aria-label={`Mover ${row.exerciseName}`}
-        {...attributes}
-        {...listeners}
-      >
-        <GripIcon />
-      </button>
-      <span className="min-w-32 font-medium">{row.exerciseName}</span>
+      <div className="flex w-full items-center gap-2">
+        <button
+          type="button"
+          className="state grid size-12 shrink-0 cursor-grab touch-none place-items-center rounded-full text-on-surface-variant active:cursor-grabbing"
+          aria-label={`Mover ${row.exerciseName}`}
+          {...attributes}
+          {...listeners}
+        >
+          <GripIcon />
+        </button>
+        <span className="min-w-0 flex-1 text-title-m">{row.exerciseName}</span>
+        {row.kind === "strength" ? null : (
+          <Badge tone="pending">{KIND_LABELS[row.kind]}</Badge>
+        )}
+        <Button
+          variant="text"
+          size="icon"
+          className="text-on-surface-variant"
+          aria-label={`Quitar ${row.exerciseName}`}
+          title="Quitar"
+          onClick={() => onRemove(row.key)}
+        >
+          <DeleteIcon />
+        </Button>
+      </div>
       {row.kind === "strength" ? (
         <>
-          <label className="text-sm">
-            Series
-            <Input
-              className="w-16"
-              type="number"
-              min={1}
-              aria-label={`${row.exerciseName} series`}
-              value={row.targetSets ?? ""}
-              onChange={(e) =>
-                onPatch(row.key, { targetSets: intAt(e.target.value) })
-              }
-            />
-          </label>
-          <label className="text-sm">
-            Reps mín
-            <Input
-              className="w-16"
-              type="number"
-              min={1}
-              aria-label={`${row.exerciseName} reps mín`}
-              value={row.targetRepsMin ?? ""}
-              onChange={(e) =>
-                onPatch(row.key, { targetRepsMin: intAt(e.target.value) })
-              }
-            />
-          </label>
-          <label className="text-sm">
-            Reps máx
-            <Input
-              className="w-16"
-              type="number"
-              min={1}
-              aria-label={`${row.exerciseName} reps máx`}
-              value={row.targetRepsMax ?? ""}
-              onChange={(e) =>
-                onPatch(row.key, { targetRepsMax: intAt(e.target.value) })
-              }
-            />
-          </label>
+          <Target
+            label="Series"
+            aria={`${row.exerciseName} series`}
+            min={1}
+            value={row.targetSets ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { targetSets: intAt(e.target.value) })
+            }
+          />
+          <Target
+            label="Reps mín"
+            aria={`${row.exerciseName} reps mín`}
+            min={1}
+            value={row.targetRepsMin ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { targetRepsMin: intAt(e.target.value) })
+            }
+          />
+          <Target
+            label="Reps máx"
+            aria={`${row.exerciseName} reps máx`}
+            min={1}
+            value={row.targetRepsMax ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { targetRepsMax: intAt(e.target.value) })
+            }
+          />
         </>
       ) : (
         <>
-          <Badge tone="pending">{KIND_LABELS[row.kind]}</Badge>
-          <label className="text-sm">
-            Distancia (km)
-            <Input
-              className="w-20"
-              type="number"
-              min={0}
-              step="0.1"
-              aria-label={`${row.exerciseName} distancia (km)`}
-              value={row.targetDistanceKm ?? ""}
-              onChange={(e) =>
-                onPatch(row.key, { targetDistanceKm: numAt(e.target.value) })
-              }
-            />
-          </label>
-          <label className="text-sm">
-            Tiempo (min)
-            <Input
-              className="w-20"
-              type="number"
-              min={0}
-              aria-label={`${row.exerciseName} tiempo (min)`}
-              value={row.targetDurationMin ?? ""}
-              onChange={(e) =>
-                onPatch(row.key, { targetDurationMin: intAt(e.target.value) })
-              }
-            />
-          </label>
+          <Target
+            label="Distancia (km)"
+            aria={`${row.exerciseName} distancia (km)`}
+            wide
+            min={0}
+            step="0.1"
+            value={row.targetDistanceKm ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { targetDistanceKm: numAt(e.target.value) })
+            }
+          />
+          <Target
+            label="Tiempo (min)"
+            aria={`${row.exerciseName} tiempo (min)`}
+            wide
+            min={0}
+            value={row.targetDurationMin ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { targetDurationMin: intAt(e.target.value) })
+            }
+          />
         </>
       )}
-      <Button
-        variant="secondary"
-        className="ml-auto"
-        aria-label={`Quitar ${row.exerciseName}`}
-        onClick={() => onRemove(row.key)}
-      >
-        Quitar
-      </Button>
     </li>
   );
 }
 
-/** Modal único del día: lateral con lo añadido + selector para sumar más. */
+/** Contenido del modal del día: lateral con lo añadido + selector para sumar
+ *  más. Guardar es un botón dividido: «Guardar» o «Guardar y registrar». */
 function SessionEditor({
   date,
   session,
@@ -390,7 +463,7 @@ function SessionEditor({
   serverError: string | null;
   templatesError: string | null;
   onRetryTemplates: () => void;
-  onSave: (payload: SessionPayload) => void;
+  onSave: (payload: SessionPayload, andLog: boolean) => void;
   onDelete: () => void;
   onCancel: () => void;
 }) {
@@ -403,13 +476,15 @@ function SessionEditor({
 
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
-      // Escape cancela el arrastre de teclado (dnd-kit marca el evento como
-      // gestionado); solo cerramos el modal si nadie lo consumió antes.
-      if (ev.key === "Escape" && !ev.defaultPrevented) onCancel();
+      // Escape cancela el arrastre de teclado (dnd-kit lo marca como
+      // gestionado): entonces no llega al Escape del diálogo, que se registra
+      // después en `window` y cerraría el modal.
+      if (ev.key === "Escape" && ev.defaultPrevented)
+        ev.stopImmediatePropagation();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+  }, []);
 
   const nameOf = (id: UniqueIdentifier) =>
     rows.find((r) => r.key === id)?.exerciseName ?? "";
@@ -458,49 +533,63 @@ function SessionEditor({
     ]);
   };
 
-  const save = () => {
+  const save = (andLog: boolean) => {
     if (saving || rows.length === 0) return;
-    onSave({
-      name: name.trim() === "" ? null : name.trim(),
-      items: rows.map((r) => ({
-        exerciseId: r.exerciseId,
-        targetSets: r.targetSets,
-        targetRepsMin: r.targetRepsMin,
-        targetRepsMax: r.targetRepsMax,
-        targetDistanceKm: r.targetDistanceKm,
-        targetDurationMin: r.targetDurationMin,
-      })),
-    });
+    onSave(
+      {
+        name: name.trim() === "" ? null : name.trim(),
+        items: rows.map((r) => ({
+          exerciseId: r.exerciseId,
+          targetSets: r.targetSets,
+          targetRepsMin: r.targetRepsMin,
+          targetRepsMax: r.targetRepsMax,
+          targetDistanceKm: r.targetDistanceKm,
+          targetDurationMin: r.targetDurationMin,
+        })),
+      },
+      andLog,
+    );
   };
 
   return (
-    <Card
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="day-editor-title"
-      className="flex max-h-[85vh] flex-col gap-3"
-    >
-      <header className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
-        <h2 id="day-editor-title" className="text-lg font-bold">
-          {session ? "Editar sesión" : "Nueva sesión"} · {date}
+    <>
+      <header className="flex flex-wrap items-center gap-4 px-4 pt-4 md:px-6 md:pt-5">
+        <Shape name="cookie-12" size={48} className="text-accent-container">
+          <DumbbellIcon className="text-on-accent-container" />
+        </Shape>
+        <h2
+          id="day-editor-title"
+          className="min-w-0 flex-1 text-headline-s text-e"
+        >
+          {session ? "Editar sesión" : "Nueva sesión"}{" "}
+          <span className="tabular text-on-surface-variant">· {date}</span>
         </h2>
-        <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
-          <label htmlFor="day-name">Nombre</label>
-          <Input
-            id="day-name"
-            placeholder={`Sesión del ${date}`}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
+        <Button
+          variant="text"
+          size="icon"
+          aria-label="Cerrar"
+          className="text-on-surface-variant"
+          onClick={onCancel}
+        >
+          <CloseIcon />
+        </Button>
+        <Field label="Nombre" className="w-full">
+          {(a) => (
+            <Input
+              {...a}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          )}
+        </Field>
       </header>
 
-      {serverError && <p className="text-sm text-error">{serverError}</p>}
+      {serverError && <Alert className="mx-4 md:mx-6">{serverError}</Alert>}
 
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:grid-rows-1">
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 overflow-hidden px-4 py-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:grid-rows-1 md:px-6">
         <section className="flex min-h-0 flex-col gap-2">
-          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-            Ejercicios del día
+          <h3 className="section-label">
+            Ejercicios del día <span className="tabular">({rows.length})</span>
           </h3>
           <DndContext
             sensors={sensors}
@@ -517,12 +606,13 @@ function SessionEditor({
             >
               <ul
                 aria-label="Ejercicios del día"
-                className="min-h-0 flex-1 divide-y divide-border overflow-y-auto rounded-lg border border-border bg-surface-muted/50"
+                className="stagger flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
               >
-                {rows.map((row) => (
+                {rows.map((row, i) => (
                   <DayRowItem
                     key={row.key}
                     row={row}
+                    index={i}
                     onPatch={patchRow}
                     onRemove={(key) =>
                       setRows((rs) => rs.filter((r) => r.key !== key))
@@ -530,9 +620,15 @@ function SessionEditor({
                   />
                 ))}
                 {rows.length === 0 && (
-                  <li className="bg-surface p-3 text-text-secondary">
-                    Sin ejercicios todavía. Añade una plantilla o ejercicios
-                    sueltos.
+                  <li className="rounded-l bg-surface-container-low">
+                    <EmptyState
+                      title="Sin ejercicios todavía"
+                      shapes={["sunny", "pill", "cookie-4"]}
+                    >
+                      <p className="text-body-m text-on-surface-variant">
+                        Añade una plantilla o ejercicios sueltos.
+                      </p>
+                    </EmptyState>
                   </li>
                 )}
               </ul>
@@ -552,31 +648,46 @@ function SessionEditor({
         />
       </div>
 
-      <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-        <Button disabled={saving || rows.length === 0} onClick={save}>
-          {saving ? "Guardando…" : "Guardar"}
-        </Button>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancelar
-        </Button>
+      <footer className="flex flex-wrap items-center gap-2 px-4 pt-2 pb-4 md:px-6 md:pb-5">
         {session &&
           (confirming ? (
-            <span className="flex items-center gap-2">
-              <span>¿Eliminar la sesión completa?</span>
-              <Button className="bg-error" onClick={onDelete}>
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-body-m">¿Eliminar la sesión completa?</span>
+              <Button variant="danger" onClick={onDelete}>
                 Confirmar
               </Button>
-              <Button variant="secondary" onClick={() => setConfirming(false)}>
+              <Button variant="outlined" onClick={() => setConfirming(false)}>
                 No
               </Button>
             </span>
           ) : (
-            <Button variant="secondary" onClick={() => setConfirming(true)}>
+            <Button variant="text" onClick={() => setConfirming(true)}>
+              <DeleteIcon />
               Eliminar sesión
             </Button>
           ))}
-      </div>
-    </Card>
+        <span className="ml-auto flex items-center gap-2">
+          <Button variant="outlined" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <SplitButton
+            onClick={() => save(false)}
+            menuLabel="Más formas de guardar"
+            menuPlacement="top"
+            disabled={saving || rows.length === 0}
+            items={[
+              {
+                label: "Guardar y registrar",
+                icon: <PlayIcon className="text-accent" />,
+                onSelect: () => save(true),
+              },
+            ]}
+          >
+            {saving ? "Guardando…" : "Guardar"}
+          </SplitButton>
+        </span>
+      </footer>
+    </>
   );
 }
 
@@ -584,14 +695,16 @@ function SessionEditor({
 
 /** Fila de la celda: asa (días planned) + nombre + info del objetivo. La ✕
  *  desprograma el ejercicio: la fila se convierte en su propio «¿Quitar?» con
- *  Confirmar/Cancelar, sin abrir el editor del día. */
+ *  Sí/No, sin abrir el editor del día. */
 function CellRow({
   exercise,
+  index,
   sortable,
   removable,
   onRemove,
 }: {
   exercise: SessionExercise;
+  index: number;
   sortable: boolean;
   removable: boolean;
   onRemove: () => void;
@@ -610,24 +723,33 @@ function CellRow({
   return (
     <li
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex min-h-11 flex-1 items-center gap-1.5 rounded-panel bg-surface-muted px-2 py-2 ${
-        isDragging ? "relative z-10 opacity-70" : ""
-      }`}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ["--i" as string]: index,
+      }}
+      className={cx(
+        "flex min-h-11 flex-1 items-center gap-1 rounded-m px-2 py-1.5 transition-colors motion-effects",
+        confirming
+          ? "bg-error-container text-on-error-container"
+          : "bg-surface-container-high",
+        isDragging && "relative z-10 opacity-70 shadow-2",
+      )}
     >
       {confirming ? (
         <>
           {/* Una sola línea: la columna mide ~152px y dos botones anchos se
               salían de la fila (tapaban el día siguiente). El nombre trunca. */}
           <span
-            className="min-w-0 flex-1 truncate text-caption text-text-secondary"
+            className="min-w-0 flex-1 truncate text-label-m"
             title={exercise.exerciseName}
           >
             {exercise.exerciseName}
           </span>
           <Button
-            size="sm"
-            className="min-h-11 shrink-0 bg-error"
+            variant="danger"
+            size="icon-sm"
+            className="h-11 shrink-0 text-label-l"
             aria-label={`Confirmar quitar ${exercise.exerciseName}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -638,9 +760,9 @@ function CellRow({
             Sí
           </Button>
           <Button
-            size="sm"
-            variant="secondary"
-            className="min-h-11 shrink-0"
+            variant="outlined"
+            size="icon-sm"
+            className="h-11 shrink-0 text-label-l"
             aria-label={`Cancelar quitar ${exercise.exerciseName}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -655,34 +777,36 @@ function CellRow({
           {sortable ? (
             <button
               type="button"
-              className="cursor-grab touch-none text-text-secondary hover:text-primary active:cursor-grabbing"
+              className="-ml-1 grid h-11 w-5 shrink-0 cursor-grab touch-none place-items-center rounded-s text-on-surface-variant transition-colors motion-effects hover:text-accent active:cursor-grabbing"
               aria-label={`Mover ${exercise.exerciseName}`}
               onClick={(e) => e.stopPropagation()}
               {...attributes}
               {...listeners}
             >
-              <GripIcon />
+              <GripIcon width={20} height={20} />
             </button>
           ) : null}
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="line-clamp-2 text-body text-text">
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="line-clamp-2 hyphens-auto text-body-m text-on-surface">
               {exercise.exerciseName}
             </span>
             {info ? (
-              <span className="text-caption text-text-secondary">{info}</span>
+              <span className="text-label-s tabular text-on-surface-variant">
+                {info}
+              </span>
             ) : null}
           </span>
           {removable ? (
             <button
               type="button"
-              className="min-h-11 px-1 text-caption text-text-secondary hover:text-error"
+              className="state -mr-1 grid h-11 w-6 shrink-0 place-items-center rounded-full text-on-surface-variant transition-colors motion-effects hover:text-error"
               aria-label={`Desprogramar ${exercise.exerciseName}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirming(true);
               }}
             >
-              ✕
+              <CloseIcon width={18} height={18} />
             </button>
           ) : null}
         </>
@@ -691,36 +815,49 @@ function CellRow({
   );
 }
 
+/** Nombre de la transición de contenedor día → modal (View Transitions). */
+const DAY_SHEET = "day-sheet";
+
 function SessionCell({
   date,
   session,
   isToday,
+  morphing,
   onOpen,
   onRemove,
+  onRemoveExercise,
   onSaveItems,
 }: {
   date: string;
   session: PlanSession | undefined;
   isToday: boolean;
+  /** Esta celda es el origen de la transición hacia el modal. */
+  morphing: boolean;
   onOpen: () => void;
-  onRemove: (id: number) => void;
+  onRemove: (session: PlanSession) => void;
+  onRemoveExercise: (session: PlanSession, exercise: SessionExercise) => void;
   onSaveItems: (session: PlanSession, exercises: SessionExercise[]) => void;
 }) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const sensors = useDragSensors();
-  const border = isToday ? "border-primary/60" : "";
+  const morph = morphing ? { viewTransitionName: DAY_SHEET } : undefined;
 
   if (!session) {
     return (
-      <button
+      <Button
+        variant="text"
+        aria-label="+ añadir"
+        style={morph}
         onClick={onOpen}
-        className={`flex min-h-11 flex-1 flex-col items-center justify-start rounded-panel border border-dashed pt-3 text-text-secondary hover:border-primary hover:text-primary ${
-          border || "border-border"
-        }`}
+        className={cx(
+          "min-h-12 flex-1 flex-col justify-start gap-1 rounded-m border border-dashed pt-3 text-on-surface-variant hover:text-accent",
+          isToday ? "border-accent" : "border-outline-variant",
+        )}
       >
-        <span className="text-sm">+ añadir</span>
-      </button>
+        <AddIcon />
+        añadir
+      </Button>
     );
   }
 
@@ -749,12 +886,20 @@ function SessionCell({
 
   return (
     <div
-      className={`flex min-h-11 flex-1 cursor-pointer flex-col gap-1 rounded-panel border border-border bg-surface p-2 ${border}`}
+      style={morph}
+      className={cx(
+        "flex min-h-11 flex-1 cursor-pointer flex-col gap-1 rounded-l p-1 transition-colors motion-effects",
+        logged
+          ? "bg-primary-container text-on-primary-container"
+          : "bg-surface-container",
+        isToday && !logged && "ring-2 ring-accent",
+      )}
       onClick={() => (logged ? navigate(`/sesion/${date}`) : onOpen())}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-0.5">
         <button
-          className="min-w-0 flex-1 truncate text-left text-sm font-semibold"
+          type="button"
+          className="state min-h-11 min-w-0 flex-1 truncate rounded-m px-1 text-left text-title-s text-e"
           aria-label={
             logged ? `Ver sesión del ${date}` : `Editar sesión del ${date}`
           }
@@ -766,27 +911,33 @@ function SessionCell({
         >
           {session.name ?? "Sesión"}
         </button>
-        {logged ? null : (
+        {logged ? (
+          <Shape name="sunny" size={28} className="text-primary">
+            <CheckIcon width={16} height={16} className="text-on-primary" />
+          </Shape>
+        ) : (
           <>
             <button
+              type="button"
               aria-label={`Añadir ejercicios al ${date}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onOpen();
               }}
-              className="min-h-11 px-2 text-text-secondary hover:text-primary"
+              className="state grid h-11 w-7 shrink-0 place-items-center rounded-full text-on-surface-variant hover:text-accent"
             >
-              +
+              <AddIcon width={20} height={20} />
             </button>
             <button
+              type="button"
               aria-label={`Desprogramar sesión del ${date}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirming(true);
               }}
-              className="min-h-11 px-2 text-text-secondary hover:text-error"
+              className="state grid h-11 w-7 shrink-0 place-items-center rounded-full text-on-surface-variant hover:text-error"
             >
-              ✕
+              <CloseIcon width={20} height={20} />
             </button>
           </>
         )}
@@ -811,24 +962,16 @@ function SessionCell({
           >
             <ol
               aria-label={`Ejercicios del ${date}`}
-              className="flex flex-1 flex-col gap-1"
+              className="stagger flex flex-1 flex-col gap-1"
             >
-              {order.map((e) => (
+              {order.map((e, i) => (
                 <CellRow
                   key={e.exerciseId}
                   exercise={e}
+                  index={i}
                   sortable={!logged}
                   removable={!logged}
-                  onRemove={() => {
-                    // Quitar el último deja el día sin items, y sin items no hay
-                    // sesión (la API exige ≥1): eso es desprogramar el día, que
-                    // es justo lo que hace la ✕ de la sesión.
-                    if (order.length === 1) return onRemove(session.id);
-                    onSaveItems(
-                      session,
-                      order.filter((x) => x.exerciseId !== e.exerciseId),
-                    );
-                  }}
+                  onRemove={() => onRemoveExercise(session, e)}
                 />
               ))}
             </ol>
@@ -836,30 +979,94 @@ function SessionCell({
         </DndContext>
       ) : null}
       {confirming ? (
-        <>
+        // Misma confirmación en línea que la fila: «Confirmar desprogramar» a
+        // lo ancho no cabe en los ~152 px de la columna.
+        <div className="flex min-h-11 items-center gap-1 rounded-m bg-error-container py-1 pl-2 pr-1 text-on-error-container">
+          <span className="min-w-0 flex-1 truncate text-label-m">
+            ¿Desprogramar?
+          </span>
           <Button
-            className="min-h-11 bg-error text-xs"
+            variant="danger"
+            size="icon-sm"
+            className="h-11 shrink-0 text-label-l"
+            aria-label="Confirmar desprogramar"
             onClick={(e) => {
               e.stopPropagation();
               setConfirming(false);
-              onRemove(session.id);
+              onRemove(session);
             }}
           >
-            Confirmar desprogramar
+            Sí
           </Button>
           <Button
-            variant="secondary"
-            className="min-h-11 text-xs"
+            variant="outlined"
+            size="icon-sm"
+            className="h-11 shrink-0 text-label-l"
+            aria-label="Cancelar"
             onClick={(e) => {
               e.stopPropagation();
               setConfirming(false);
             }}
           >
-            Cancelar
+            No
           </Button>
-        </>
+        </div>
       ) : null}
     </div>
+  );
+}
+
+/** Cabecera de la rejilla: progreso ondulado de la semana y racha. */
+function WeekAside({
+  logged,
+  total,
+  streak,
+}: {
+  logged: number;
+  total: number;
+  streak: number;
+}) {
+  return (
+    <>
+      <div className="flex min-w-40 flex-col gap-1">
+        <span className="flex items-baseline justify-between gap-2 text-label-m text-on-surface-variant">
+          Sesiones registradas esta semana
+          <span className="text-title-m text-e tabular text-accent">
+            {logged}/{total}
+          </span>
+        </span>
+        <WavyProgress
+          value={logged}
+          max={total}
+          label="Sesiones registradas esta semana"
+        />
+      </div>
+      <span
+        className="flex items-center gap-2 rounded-full bg-surface-container-high py-1 pr-3 pl-1"
+        title="Semanas seguidas con al menos una sesión registrada"
+      >
+        <Shape
+          name="sunny"
+          size={32}
+          className={
+            streak > 0 ? "text-tertiary" : "text-surface-container-highest"
+          }
+        >
+          <FireIcon
+            filled
+            width={18}
+            height={18}
+            className={
+              streak > 0 ? "text-on-tertiary" : "text-on-surface-variant"
+            }
+          />
+        </Shape>
+        <span className="text-label-l">
+          <span className="text-title-m text-e tabular">{streak}</span>{" "}
+          {streak === 1 ? "semana seguida" : "semanas seguidas"}
+        </span>
+      </span>
+    </>
   );
 }
 
@@ -875,21 +1082,33 @@ export function PlanFuerzaPage() {
     date: string;
     session: PlanSession | null;
   } | null>(null);
+  /** Día cuya celda se transforma en el modal (viewTransitionName). */
+  const [morphDate, setMorphDate] = useState<string | null>(null);
   const [daySaving, setDaySaving] = useState(false);
   const [dayLoading, setDayLoading] = useState(false);
   const [dayError, setDayError] = useState<string | null>(null);
   const { exercises } = useExercises();
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const snackbar = useSnackbar();
   const isoWeek = params.get("week") ?? currentIsoWeek();
   const gotoWeek = (week: string) => setParams({ week });
   const week = usePlanWeek(isoWeek);
+  const progress = weekProgress(week.sessions);
+
+  /** Abre el modal desde la celda: la celda y el diálogo comparten nombre de
+   *  transición, así que el navegador anima el contenedor día → modal. */
+  const showDay = (next: { date: string; session: PlanSession | null }) => {
+    setMorphDate(next.date);
+    void runViewTransition(() => flushSync(() => setDay(next)));
+  };
 
   /** Abre (o crea) el editor del día; el detalle se carga por HTTP. */
   const openDay = async (date: string) => {
     setDayError(null);
     const found = week.sessions.find((s) => s.date === date);
     if (!found || found.status === "logged") {
-      setDay({ date, session: null });
+      showDay({ date, session: null });
       return;
     }
     setDayLoading(true);
@@ -897,7 +1116,7 @@ export function PlanFuerzaPage() {
       const detail = await apiGet<PlanSession>(
         `/api/plan-sessions/${found.id}`,
       );
-      setDay({ date, session: detail });
+      showDay({ date, session: detail });
     } catch (e) {
       setDay(null);
       setDayError(
@@ -908,7 +1127,12 @@ export function PlanFuerzaPage() {
     }
   };
 
-  const saveDay = async (payload: SessionPayload) => {
+  const closeDay = () => {
+    setDay(null);
+    setMorphDate(null);
+  };
+
+  const saveDay = async (payload: SessionPayload, andLog: boolean) => {
     if (!day || daySaving) return;
     setDaySaving(true);
     setDayError(null);
@@ -921,8 +1145,12 @@ export function PlanFuerzaPage() {
           ...payload,
         });
       }
+      if (andLog) {
+        navigate(`/sesion/${day.date}`);
+        return;
+      }
       await week.reload();
-      setDay(null);
+      closeDay();
     } catch (e) {
       setDayError(
         e instanceof ApiError ? e.error : "No se pudo guardar la sesión",
@@ -939,7 +1167,7 @@ export function PlanFuerzaPage() {
     try {
       await apiSend(`/api/plan-sessions/${day.session.id}`, "DELETE", {});
       await week.reload();
-      setDay(null);
+      closeDay();
     } catch (e) {
       setDayError(
         e instanceof ApiError ? e.error : "No se pudo eliminar la sesión",
@@ -949,6 +1177,35 @@ export function PlanFuerzaPage() {
     }
   };
 
+  /** Desprograma el día entero; «Deshacer» lo recrea con sus objetivos. */
+  const unschedule = async (session: PlanSession) => {
+    if (!(await week.remove(session.id))) return;
+    snackbar({
+      message: `Sesión del ${session.date} desprogramada`,
+      onUndo: () => void week.recreate(session),
+    });
+  };
+
+  /** Quita un ejercicio de la celda; «Deshacer» vuelve a guardar los de antes.
+   *  Quitar el último deja el día sin items, y sin items no hay sesión (la API
+   *  exige ≥1): eso es desprogramar el día, igual que la ✕ de la sesión. */
+  const unscheduleExercise = async (
+    session: PlanSession,
+    exercise: SessionExercise,
+  ) => {
+    if (session.exercises.length === 1) return unschedule(session);
+    const before = session.exercises;
+    const ok = await week.saveItems(
+      session,
+      before.filter((x) => x.exerciseId !== exercise.exerciseId),
+    );
+    if (!ok) return;
+    snackbar({
+      message: `${exercise.exerciseName} desprogramado`,
+      onUndo: () => void week.saveItems(session, before),
+    });
+  };
+
   const byDate = new Map(week.sessions.map((s) => [s.date, s]));
 
   return (
@@ -956,16 +1213,32 @@ export function PlanFuerzaPage() {
       <WeekGrid
         isoWeek={isoWeek}
         loading={week.loading && week.sessions.length === 0}
+        busy={week.loading}
         error={week.error}
+        onRetry={() => void week.reload()}
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
+        aside={
+          <WeekAside
+            logged={progress.logged}
+            total={progress.total}
+            streak={week.streak}
+          />
+        }
       >
         {({ date, isToday }) => (
           <SessionCell
             date={date}
             session={byDate.get(date)}
             isToday={isToday}
-            onOpen={() => void openDay(date)}
-            onRemove={(id) => void week.remove(id)}
+            morphing={morphDate === date && day === null}
+            onOpen={() => {
+              setMorphDate(date);
+              void openDay(date);
+            }}
+            onRemove={(session) => void unschedule(session)}
+            onRemoveExercise={(session, e) =>
+              void unscheduleExercise(session, e)
+            }
             onSaveItems={(session, exercises) =>
               void week.saveItems(session, exercises)
             }
@@ -973,16 +1246,18 @@ export function PlanFuerzaPage() {
         )}
       </WeekGrid>
 
-      {dayLoading && <Card>Cargando sesión…</Card>}
+      {dayLoading && <Loader label="Cargando sesión…" />}
 
       {day && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDay(null);
-          }}
+        <Dialog
+          onClose={closeDay}
+          labelledBy="day-editor-title"
+          className="md:h-[88vh] md:max-w-4xl"
         >
-          <div className="w-full max-w-4xl">
+          <div
+            style={{ viewTransitionName: DAY_SHEET }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
             <SessionEditor
               key={`${day.date}-${day.session?.id ?? "nueva"}`}
               date={day.date}
@@ -993,15 +1268,15 @@ export function PlanFuerzaPage() {
               serverError={dayError}
               templatesError={templatesError}
               onRetryTemplates={reloadTemplates}
-              onSave={(payload) => void saveDay(payload)}
+              onSave={(payload, andLog) => void saveDay(payload, andLog)}
               onDelete={() => void deleteDay()}
-              onCancel={() => setDay(null)}
+              onCancel={closeDay}
             />
           </div>
-        </div>
+        </Dialog>
       )}
 
-      {dayError && !day && <Card className="text-error">{dayError}</Card>}
+      {dayError && !day && <Alert>{dayError}</Alert>}
     </div>
   );
 }
