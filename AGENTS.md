@@ -135,6 +135,11 @@ cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracter
 el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
 celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
 
+En todas las rutas el raíl es `lg:sticky lg:top-0 lg:h-dvh`: mide la ventana, no
+la página. Sin eso, en la fila `lg:flex-row` se estira al alto del `main` y en
+una página larga (`/ejercicios`) empuja la búsqueda y el tema hasta el final (lo
+cubre `nav.spec.ts`).
+
 Las dos pantallas comparten la **rejilla semanal** (`web/src/components/week-grid.tsx`):
 un único contenedor con la navegación de semana y las siete columnas, con la
 columna de «hoy» marcada. El componente no sabe nada del dominio: cada página

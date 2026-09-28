@@ -457,7 +457,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       >
         <aside
           className={cx(
-            "hidden shrink-0 flex-col bg-surface py-5 lg:flex lg:overflow-y-auto transition-[width] motion-spatial",
+            "hidden shrink-0 flex-col bg-surface py-5 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:overflow-y-auto transition-[width] motion-spatial",
             collapsed
               ? compact
                 ? "w-20 items-center gap-6 px-2"

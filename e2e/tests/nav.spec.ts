@@ -108,4 +108,32 @@ test.describe("MENÚ — secciones colapsables", () => {
     ).toBeVisible();
     await expect.poll(width).toBeGreaterThan(200);
   });
+
+  test("con una página larga, el menú lateral se queda a la vista", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/ejercicios");
+    const aside = page.locator("aside");
+    const search = aside.getByRole("button", { name: /Buscar/ });
+    await expect(search).toBeVisible();
+    // La lista del catálogo es más alta que la ventana: sin eso no hay bug.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollHeight - window.innerHeight,
+        ),
+      )
+      .toBeGreaterThan(200);
+
+    // El raíl mide la ventana, no la página: la búsqueda queda dentro de ella,
+    // arriba y después de bajar hasta el final.
+    expect(await aside.evaluate((el) => el.clientHeight)).toBe(800);
+    await expect(search).toBeInViewport({ ratio: 1 });
+    await page.evaluate(() =>
+      scrollTo(0, document.documentElement.scrollHeight),
+    );
+    await expect(search).toBeInViewport({ ratio: 1 });
+    await expect(aside.getByRole("link", { name: "Hoy" })).toBeInViewport();
+  });
 });
