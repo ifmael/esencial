@@ -133,14 +133,23 @@ export const recipes = new Hono<{ Bindings: Env }>()
       const input = c.get("validated");
       if (id === null) return fail("id must be a positive integer", "id");
       if (!input.name.trim()) return fail("Recipe name is required", "name");
-      if (!(await validPhoto(c.env, input.photo_path)))
+      const db = getDb(c.env);
+      const current = await row(
+        db,
+        "SELECT photo_path FROM recipes WHERE id = ?",
+        id,
+      );
+      if (!current) return fail("Not found", undefined, 404);
+      // La key ya guardada no se revalida: las recetas sembradas (0012) apuntan
+      // a fotos que solo existen tras subirlas a mano a R2.
+      if (
+        (input.photo_path ?? null) !== current.photo_path &&
+        !(await validPhoto(c.env, input.photo_path))
+      )
         return fail(
           "photo_path no corresponde a una foto subida",
           "photo_path",
         );
-      const db = getDb(c.env);
-      if (!(await row(db, "SELECT id FROM recipes WHERE id = ?", id)))
-        return fail("Not found", undefined, 404);
       const name = input.name.trim();
       await db.batch([
         db

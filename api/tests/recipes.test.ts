@@ -1,7 +1,7 @@
 // E1 parity: recipes CRUD with ordered ingredients/steps/materials, 400 without
 // name (nothing written), PUT child replacement, DELETE cascade + slot clearing.
 import { beforeAll, describe, expect, it } from "vitest";
-import { del, freshDb, get, post, put } from "./helpers";
+import { d1, del, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -182,6 +182,38 @@ describe("E2: recipe photo_path + tags", () => {
     expect(res.status).toBe(400);
     const r = await body(res);
     expect(r.field).toBe("photo_path");
+  });
+
+  it("PUT keeps the stored photo_path even if its object is absent in PHOTOS (seeded recipes)", async () => {
+    const key = "recipe-22222222-3333-4444-8555-666666666666.jpg";
+    const id = await d1.run(
+      "INSERT INTO recipes (name, photo_path) VALUES (?, ?)",
+      "Sembrada sin foto en R2",
+      key,
+    );
+    const res = await put(`/api/recipes/${id}`, {
+      name: "Sembrada sin foto en R2",
+      servings: 3,
+      photo_path: key,
+    });
+    expect(res.status).toBe(200);
+    const got = await body(await get(`/api/recipes/${id}`));
+    expect(got.servings).toBe(3);
+    expect(got.photo_path).toBe(key);
+  });
+
+  it("PUT still rejects a changed photo_path absent in PHOTOS (fail closed)", async () => {
+    const id = await d1.run(
+      "INSERT INTO recipes (name, photo_path) VALUES (?, ?)",
+      "Sembrada cambia foto",
+      "recipe-22222222-3333-4444-8555-777777777777.jpg",
+    );
+    const res = await put(`/api/recipes/${id}`, {
+      name: "Sembrada cambia foto",
+      photo_path: "recipe-11111111-2222-4333-8444-555555555555.png",
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("photo_path");
   });
 
   it("E1 payloads without photo_path/tags keep working: null + []", async () => {
