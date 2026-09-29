@@ -3,7 +3,7 @@
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type DayData, useDay } from "../src/lib/day";
+import { type DayData, dayProgress, useDay } from "../src/lib/day";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -17,6 +17,51 @@ function dayPayload(date: string): DayData {
     note: { text: "" },
   };
 }
+
+describe("dayProgress", () => {
+  const meal = (meal: string, recipeName: string | null) => ({
+    meal,
+    recipeId: recipeName ? 1 : null,
+    recipeName,
+    recipePhoto: null,
+  });
+  const session = (status: "planned" | "logged") => ({
+    id: 1,
+    name: "Empuje",
+    status,
+  });
+
+  it("sin sesión: los pasos son las tres comidas; cuentan las que tienen receta", () => {
+    const d = {
+      ...dayPayload("2026-09-02"),
+      meals: [meal("desayuno", null), meal("cena", "Ensalada")],
+    };
+    expect(dayProgress(d)).toEqual({ done: 1, total: 3 });
+  });
+
+  it("con sesión suma un paso, hecho solo si está registrada", () => {
+    const base = {
+      ...dayPayload("2026-09-02"),
+      meals: [meal("desayuno", "Tortilla"), meal("almuerzo", "Sopa")],
+    };
+    expect(dayProgress({ ...base, session: session("planned") })).toEqual({
+      done: 2,
+      total: 4,
+    });
+    expect(dayProgress({ ...base, session: session("logged") })).toEqual({
+      done: 3,
+      total: 4,
+    });
+  });
+
+  it("meals ausente no rompe (0 de 3)", () => {
+    const d = {
+      ...dayPayload("2026-09-02"),
+      meals: undefined,
+    } as unknown as DayData;
+    expect(dayProgress(d)).toEqual({ done: 0, total: 3 });
+  });
+});
 
 describe("useDay", () => {
   it("hace una sola petición por fecha y expone data", async () => {

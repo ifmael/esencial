@@ -1,5 +1,10 @@
-import { type APIRequestContext, expect, test } from "@playwright/test";
-import { apiRequest, seededExercise } from "./helpers";
+import {
+  type APIRequestContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
+import { apiRequest, apiUrl, seededExercise } from "./helpers";
 
 type ItemPayload = {
   exerciseId: number;
@@ -47,6 +52,21 @@ function isoWeekOf(date: string): string {
   return `${t.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+/** Espera a que acaben las animaciones de la página (entrada del diálogo y
+ * transición de vista día → modal): mientras duran, la capa de la transición
+ * se queda con el puntero y las cajas aún se mueven. */
+async function settle(page: Page) {
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (a) =>
+          a.playState !== "running" ||
+          a.effect?.getTiming().iterations === Number.POSITIVE_INFINITY,
+      ),
+  );
+}
+
 test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
   test.use({ storageState: ".auth/state.json" });
 
@@ -73,7 +93,9 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     for (const s of sessions.filter(
       (s) => s.date === date && s.status === "planned",
     )) {
-      await request.delete(`/api/plan-sessions/${s.id}`);
+      // apiUrl: la API es OTRO origen; una ruta relativa acabaría en el frontal
+      // (que no tiene /api/*) y el borrado se perdería en silencio.
+      await request.delete(apiUrl(`/api/plan-sessions/${s.id}`));
     }
   }
 
@@ -149,7 +171,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Quitar" })).toHaveCount(2);
 
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(
       page.getByRole("button", { name: `Editar sesión del ${date}` }),
     ).toBeVisible();
@@ -193,12 +215,12 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
 
     // Añadir sin botón intermedio ni segundo modal (la búsqueda despliega el grupo).
-    await dialog.getByLabel("Buscar").fill(remoName);
+    await dialog.getByLabel("Buscar plantilla o ejercicio").fill(remoName);
     await dialog.getByRole("button", { name: remoName, exact: true }).click();
     await expect(
       dialog.getByRole("button", { name: `Quitar ${remoName}` }),
     ).toBeVisible();
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     // Reabrir con el botón "+" de la celda poblada: el añadido persiste.
@@ -232,7 +254,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await page
       .getByLabel(new RegExp(`${escapeRe(pressName)} series`, "i"))
       .fill("6");
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     // Reabrir: el valor persistido es 6.
@@ -271,15 +293,24 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await page.goto(`/sesion/${date}`);
     await expect(page.getByText(session).first()).toBeVisible();
 
-    // Fuerza: marcar la primera serie.
+    // Fuerza: la primera serie se marca al completar kilos y reps.
     await page
       .getByRole("button", { name: /Series de / })
       .first()
       .click();
+    // La base es compartida: «Sin peso» sale de lo último registrado.
     await page
-      .getByRole("checkbox", { name: / serie 1$/ })
-      .first()
-      .check();
+      .getByRole("switch", { name: "Sin peso · Press banca" })
+      .uncheck();
+    await page
+      .getByLabel("Peso (kg) · Press banca serie 1", { exact: true })
+      .fill("60");
+    await page
+      .getByLabel("Reps · Press banca serie 1", { exact: true })
+      .fill("8");
+    await expect(
+      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toBeChecked();
 
     // Cardio: marcar Hecho sin marcas.
     await page
@@ -383,11 +414,11 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     await page.goto(`/plan-fuerza?week=${weekOf(35)}`);
     await page.getByRole("button", { name: "+ añadir" }).first().click();
-    await page.getByLabel("Buscar").fill(name);
+    await page.getByLabel("Buscar plantilla o ejercicio").fill(name);
     await page
       .getByRole("button", { name: new RegExp(escapeRe(name)) })
       .click();
-    await page.getByRole("button", { name: "Guardar" }).click();
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Ya hay una sesión ese día")).toBeVisible();
   });
 
@@ -410,9 +441,17 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       .first()
       .click();
     await page
-      .getByRole("checkbox", { name: / serie 1$/ })
-      .first()
-      .check();
+      .getByRole("switch", { name: "Sin peso · Press banca" })
+      .uncheck();
+    await page
+      .getByLabel("Peso (kg) · Press banca serie 1", { exact: true })
+      .fill("60");
+    await page
+      .getByLabel("Reps · Press banca serie 1", { exact: true })
+      .fill("8");
+    await expect(
+      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toBeChecked();
     await page.getByText("Moderado", { exact: true }).click();
     await page
       .getByRole("main")
@@ -495,6 +534,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     expect(await order()).toEqual([pressName, remoName]);
 
     // Arrastrar el remo por encima del press (ratón real, PointerSensor).
+    await settle(page);
     const from = await dialog
       .getByRole("button", { name: `Mover ${remoName}` })
       .boundingBox();
@@ -513,7 +553,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     // que el click del arrastre no active lo que haya debajo): deja que expire
     // antes de pulsar Guardar.
     await page.waitForTimeout(100);
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     // Persistió en la base: la API devuelve el nuevo orden…
@@ -566,6 +606,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     const handles = dialog.getByRole("button", { name: /^Mover / });
     await expect(handles).toHaveCount(2);
 
+    await settle(page);
     const from = await dialog
       .getByRole("button", { name: `Mover ${remoName}` })
       .boundingBox();
@@ -595,7 +636,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       `Mover ${remoName}`,
     );
     await page.waitForTimeout(100); // el filtro de click de dnd-kit expira
-    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(page.getByText("Pendiente").first()).toBeVisible();
 
     const detail = await apiRequest<{ exercises: { exerciseName: string }[] }>(
@@ -805,12 +846,212 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
 
     // La búsqueda despliega los grupos con coincidencias.
-    await dialog.getByLabel("Buscar").fill("Remo con barra");
+    await dialog
+      .getByLabel("Buscar plantilla o ejercicio")
+      .fill("Remo con barra");
     await expect(
       dialog.getByRole("button", { name: "Remo con barra", exact: true }),
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Cancelar" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("abrir el editor del día no pinta la rejilla encima del modal", async ({
+    page,
+  }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const week = weekOf(91);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3, targetRepsMin: 8 }],
+      "Sesión que se abre",
+    );
+
+    await page.goto(`/plan-fuerza?week=${week}`);
+    // La transición se alarga para poder mirarla A MITAD (en la app dura 435 ms).
+    await page.addStyleTag({
+      content: ":root{--duration-spatial-default:3000ms}",
+    });
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+
+    const mid = await page.waitForFunction(() => {
+      const pseudoOf = (a: Animation) =>
+        (a.effect as KeyframeEffect | null)?.pseudoElement ?? "";
+      const running = () => document.getAnimations();
+      const box = running().find(
+        (a) => pseudoOf(a) === "::view-transition-group(day-sheet)",
+      );
+      if (!box || (box.effect?.getComputedTiming().progress ?? 0) < 0.5)
+        return null;
+      const html = document.documentElement;
+      const source = getComputedStyle(html, "::view-transition-old(day-sheet)");
+      return {
+        // Si la rejilla fuera una capa de esta transición, el navegador la
+        // pintaría por encima del velo y del modal: el calendario se colaría
+        // encima mientras la modal crece.
+        gridLayers: running()
+          .filter((a) => pseudoOf(a).includes("week-grid"))
+          .map((a) => pseudoOf(a)),
+        // La columna de origen se despide pronto y nunca se dibuja fuera del
+        // contenedor que crece.
+        sourceOpacity: Number(source.opacity),
+        sourceHeight: Number.parseFloat(source.height),
+        boxHeight: Number.parseFloat(
+          getComputedStyle(html, "::view-transition-group(day-sheet)").height,
+        ),
+      };
+    });
+
+    const frame = (await mid.jsonValue()) as {
+      gridLayers: string[];
+      sourceOpacity: number;
+      sourceHeight: number;
+      boxHeight: number;
+    };
+    expect(frame.gridLayers).toEqual([]);
+    expect(frame.sourceOpacity).toBe(0);
+    expect(frame.sourceHeight).toBeLessThanOrEqual(frame.boxHeight + 1);
+  });
+
+  test("cargar la sesión al editar no encoge la rejilla", async ({ page }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const week = weekOf(98);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const { id } = await createSession(page.request, date, [
+      { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+    ]);
+
+    // El detalle tarda: mientras llega, la página muestra que está cargando.
+    let release = () => {};
+    const held = new Promise<void>((r) => {
+      release = r;
+    });
+    await page.route(`**/api/plan-sessions/${id}`, async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/plan-fuerza?week=${week}`);
+    const grid = page.locator("section").filter({ hasText: week });
+    const open = page.getByRole("button", {
+      name: `Editar sesión del ${date}`,
+    });
+    // Medir con la semana ya cargada: su propio loader también cambia el alto.
+    await expect(open).toBeVisible();
+    const before = await grid.boundingBox();
+    await open.click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Cargando sesión…" }),
+    ).toBeAttached();
+    // La rejilla es la que se ve en la foto «antes» de la transición día →
+    // modal: si encoge aquí, vuelve a crecer mientras la modal se expande.
+    expect(await grid.boundingBox()).toEqual(before);
+    release();
+    await expect(
+      page.getByRole("dialog", { name: new RegExp(`Editar sesión · ${date}`) }),
+    ).toBeVisible();
+  });
+
+  test("sesión anterior del mismo nombre, serie auto-marcada, sin peso y corregir el registro", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const name = "Empuje e2e repetida";
+    // Las dos sesiones acaban `logged` y la API no borra un registro: cada
+    // reintento usa su propio par de semanas en vez de chocar (409) con el anterior.
+    const offset = 105 + testInfo.retry * 14;
+    const before = mondayOf(weekOf(offset));
+    const date = mondayOf(weekOf(offset + 7));
+    const prev = await apiRequest<{ exercises: { id: number }[] }>(
+      page.request,
+      "POST",
+      "/api/plan-sessions",
+      {
+        date: before,
+        name,
+        items: [{ exerciseId: press.id, targetSets: 2 }],
+      },
+    );
+    const seId = prev.exercises[0].id;
+    const set = (setIndex: number, reps: number) => ({
+      planSessionExerciseId: seId,
+      setIndex,
+      weightKg: 60,
+      reps,
+      done: true,
+    });
+    await apiRequest(page.request, "POST", `/api/workout-logs/${before}`, {
+      effort: 3,
+      sets: [set(0, 10), set(1, 8)],
+    });
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 8 }],
+      name,
+    );
+
+    await page.goto(`/sesion/${date}`);
+    await expect(page.getByText(/: 60×10 · 60×8$/)).toBeVisible();
+
+    await page
+      .getByRole("button", { name: "Series de Press banca", exact: true })
+      .click();
+    const box1 = page.getByRole("checkbox", { name: "Press banca serie 1" });
+    const reps1 = page.getByLabel("Reps · Press banca serie 1", {
+      exact: true,
+    });
+    const weight1 = page.getByLabel("Peso (kg) · Press banca serie 1", {
+      exact: true,
+    });
+    await expect(box1).not.toBeChecked(); // la precarga no marca
+    await reps1.fill("9");
+    await expect(box1).toBeChecked(); // kilos (precargados) + reps editadas
+    await weight1.fill("");
+    await expect(box1).not.toBeChecked(); // vaciar desmarca
+
+    // Con reps y sin kilos, pasar a «sin peso» completa la serie.
+    await page.getByRole("switch", { name: "Sin peso · Press banca" }).check();
+    await expect(weight1).toHaveCount(0);
+    await expect(box1).toBeChecked();
+    await reps1.fill("12");
+    await expect(box1).toBeChecked();
+
+    await page.getByText("Moderado", { exact: true }).click();
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Cerrar sesión" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+    await expect(page.getByText("12 reps")).toBeVisible();
+
+    // Corregir el registro: el borrador sale de lo registrado y guarda con PUT.
+    await page.getByRole("button", { name: "Editar" }).click();
+    const expand = page.getByRole("button", {
+      name: "Series de Press banca",
+      exact: true,
+    });
+    await expect(expand).toHaveAttribute("aria-expanded", "false");
+    await expand.click();
+    await expect(
+      page.getByRole("switch", { name: "Sin peso · Press banca" }),
+    ).toBeChecked();
+    await reps1.fill("15");
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Guardar" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+    await expect(page.getByText("15 reps")).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("15 reps")).toBeVisible();
   });
 
   /** Lunes de la semana ISO (espejo de week-grid.tsx). */

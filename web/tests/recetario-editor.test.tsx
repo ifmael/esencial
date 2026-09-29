@@ -1,4 +1,8 @@
-// E2 task 4: editor create/edit flows, validation, dynamic rows, pending guard.
+// E2 task 4 (revisado): el editor de receta es página propia —crear en
+// /recetario/nueva y editar en /recetario/:id/editar—, como el de plantillas.
+// La ficha se desmonta al entrar y no queda detrás (ya no hay modal); Cancelar
+// y Escape vuelven sin llamadas a la API y Guardar manda un único POST (crear)
+// o PUT (editar) con el borrador completo.
 
 import {
   cleanup,
@@ -9,7 +13,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
-import { makeRecipe, makeServer } from "./fixtures";
+import { makeRecipe, makeServer, type ServerCall } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -21,67 +25,199 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
-describe("editor: edit mode", () => {
-  it("PUT replaces on save; cancel discards with zero writes", async () => {
-    const recipe = makeRecipe({ id: 7 });
+const recipe = makeRecipe({ id: 7, photo_path: "recipe-7.png" });
+
+const writes = (server: { calls: ServerCall[] }) =>
+  server.calls.filter((c) => c.method !== "GET");
+
+const value = (el: HTMLElement) => (el as HTMLInputElement).value;
+
+describe("editor de receta: editar", () => {
+  it("carga el borrador hidratado de la receta", async () => {
+    vi.stubGlobal("fetch", makeServer([recipe]).fetchMock);
+    renderAt("/recetario/7/editar");
+
+    expect(
+      await screen.findByRole("heading", { name: "Editar receta" }),
+    ).toBeDefined();
+    expect(value(screen.getByRole("textbox", { name: "Nombre" }))).toBe(
+      "Arroz con pollo",
+    );
+    expect(value(screen.getByRole("textbox", { name: "Descripción" }))).toBe(
+      "Clásico de la abuela",
+    );
+    expect(value(screen.getByRole("spinbutton", { name: "Comensales" }))).toBe(
+      "4",
+    );
+    expect(
+      value(screen.getByRole("textbox", { name: "Ingrediente 2 alimento" })),
+    ).toBe("pollo");
+    // La unidad es texto libre en la API: la que no está en el enum de la
+    // página («g», «pechuga») se muestra tal cual, no como «—».
+    expect(
+      value(screen.getByRole("combobox", { name: "Ingrediente 1 unidad" })),
+    ).toBe("g");
+    expect(
+      value(screen.getByRole("combobox", { name: "Ingrediente 2 unidad" })),
+    ).toBe("pechuga");
+    expect(value(screen.getByRole("textbox", { name: "Paso 1" }))).toBe(
+      "Sofreír",
+    );
+    expect(
+      screen.getByRole("button", { name: "Quitar material olla" }),
+    ).toBeDefined();
+    // La etiqueta de la receta llega elegida.
+    expect(
+      screen
+        .getByRole("button", { name: "almuerzo" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    // Con su foto.
+    expect(
+      screen.getByAltText("Vista previa de la foto").getAttribute("src"),
+    ).toBe("/api/uploads/recipe-7.png");
+  });
+
+  it("Cancelar y Escape vuelven a la ficha sin escribir nada", async () => {
     const server = makeServer([recipe]);
     vi.stubGlobal("fetch", server.fetchMock);
-    renderAt("/recetario/7");
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Editar receta" }),
-    );
-    await screen.findByRole("dialog", { name: "Editar receta" });
+    renderAt("/recetario/7/editar");
+    await screen.findByRole("heading", { name: "Editar receta" });
 
-    // cancel: nothing sent, original intact
     fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
       target: { value: "Tocado" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(server.calls.some((c) => c.method === "PUT")).toBe(false);
-    expect(screen.getByText("1. Sofreír")).toBeDefined();
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
+    expect(writes(server)).toEqual([]);
+    // La ficha sigue con los pasos originales.
+    expect(
+      (await screen.findByRole("listitem", { name: "paso 1" })).textContent,
+    ).toBe("1. Sofreír");
 
-    // save: PUT with edited name
-    fireEvent.click(screen.getByRole("button", { name: "Editar receta" }));
-    await screen.findByRole("dialog", { name: "Editar receta" });
-    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
-      target: { value: "Arroz recaliente" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    const call = server.calls.find((c) => c.method === "PUT");
-    expect(call?.url).toBe("/api/recipes/7");
+    // Escape hace lo mismo que Cancelar.
+    fireEvent.click(screen.getByRole("link", { name: "Editar receta" }));
+    await screen.findByRole("heading", { name: "Editar receta" });
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
+    expect(writes(server)).toEqual([]);
   });
-});
 
-describe("editor: photo upload", () => {
-  it("sube foto desde el modal (R2 key) y la muestra; quitarla deja photo_path null", async () => {
-    const recipe = makeRecipe({ id: 7, photo_path: null });
+  it("salir del editor no apila su URL: «atrás» desde la ficha no reabre el formulario", async () => {
     const server = makeServer([recipe]);
     vi.stubGlobal("fetch", server.fetchMock);
     renderAt("/recetario/7");
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Editar receta" }),
-    );
-    await screen.findByRole("dialog", { name: "Editar receta" });
+    fireEvent.click(await screen.findByRole("link", { name: "Editar receta" }));
+    await screen.findByRole("heading", { name: "Editar receta" });
 
-    const input = document.getElementById("recipe-photo") as HTMLInputElement;
-    expect(input).toBeDefined();
-    const png = new File([new Uint8Array([137, 80, 78, 71])], "f.png", {
-      type: "image/png",
+    // Cancelar reemplaza la entrada del editor por la de la ficha: no hay push
+    // (mirar `history.length` no sirve: jsdom lo topa en 50 entradas).
+    const push = vi.spyOn(window.history, "pushState");
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
+    expect(push).not.toHaveBeenCalled();
+    push.mockRestore();
+
+    // Guardar, igual: la entrada del editor no se queda detrás. El espía ve el
+    // push real de la navegación al editor (si no, el test no probaría nada).
+    const nav = vi.spyOn(window.history, "pushState");
+    fireEvent.click(await screen.findByRole("link", { name: "Editar receta" }));
+    await screen.findByRole("heading", { name: "Editar receta" });
+    expect(nav).toHaveBeenCalled();
+    nav.mockRestore();
+
+    const pushSave = vi.spyOn(window.history, "pushState");
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
+    expect(pushSave).not.toHaveBeenCalled();
+    pushSave.mockRestore();
+  });
+
+  it("Guardar manda un único PUT con el borrador completo y vuelve a la ficha", async () => {
+    const server = makeServer([recipe]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    renderAt("/recetario/7/editar");
+    await screen.findByRole("heading", { name: "Editar receta" });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
+      target: { value: "Arroz recaliente" },
     });
-    fireEvent.change(input, { target: { files: [png] } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Comensales" }), {
+      target: { value: "6" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
+      target: { value: "Sofreír con calma" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
-    await waitFor(() =>
-      expect(screen.getByAltText("Foto actual")).toBeDefined(),
-    );
-    const up = server.calls.find((c) => c.url === "/api/uploads");
-    expect(up?.method).toBe("POST");
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
+    const puts = server.calls.filter((c) => c.method === "PUT");
+    expect(puts).toHaveLength(1);
+    expect(puts[0].url).toBe("/api/recipes/7");
+    expect(puts[0].body).toEqual({
+      name: "Arroz recaliente",
+      description: "Clásico de la abuela",
+      servings: 6,
+      photo_path: "recipe-7.png",
+      ingredients: [
+        { food: "arroz", quantity: 300, unit: "g" },
+        { food: "pollo", quantity: 2, unit: "pechuga" },
+        { food: "ajo", quantity: 1, unit: "diente" },
+      ],
+      steps: ["Sofreír con calma", "Añadir arroz", "Cocer", "Servir"],
+      materials: ["olla", "sartén"],
+      tags: ["almuerzo"],
+    });
+    // La ficha vuelve con el nombre nuevo.
+    expect(
+      await screen.findByRole("heading", { name: "Arroz recaliente" }),
+    ).toBeDefined();
+  });
+
+  it("nombre vacío: error local junto al campo y cero escrituras", async () => {
+    const server = makeServer([recipe]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    renderAt("/recetario/7/editar");
+    await screen.findByRole("heading", { name: "Editar receta" });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByText("El nombre es obligatorio")).toBeDefined();
+    expect(writes(server)).toEqual([]);
+    expect(window.location.pathname).toBe("/recetario/7/editar");
+  });
+
+  it("id desconocido: vuelve al recetario", async () => {
+    vi.stubGlobal("fetch", makeServer([recipe]).fetchMock);
+    renderAt("/recetario/999/editar");
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
+  });
+
+  it("foto nueva en edición: Guardar la sube y el PUT lleva la key", async () => {
+    const server = makeServer([makeRecipe({ id: 7, photo_path: null })]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    renderAt("/recetario/7/editar");
+    await screen.findByRole("heading", { name: "Editar receta" });
+
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    expect(input).not.toBeNull();
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["foto"], "nueva.png", { type: "image/png" })],
+      },
+    });
+    await screen.findByAltText("Vista previa de la foto");
 
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    const call = server.calls.find((c) => c.method === "PUT") as {
-      body: Record<string, unknown>;
-    };
-    expect(call.body.photo_path).toMatch(/^recipe-\d+\.png$/);
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
+    const put = server.calls.find((c) => c.method === "PUT");
+    expect(
+      (put?.body as Record<string, unknown> | undefined)?.photo_path,
+    ).toMatch(/^recipe-\d+\.png$/);
   });
 });

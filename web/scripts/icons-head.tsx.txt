@@ -1,0 +1,31 @@
+// Iconos Material Symbols *Rounded* (Apache-2.0, Google) en línea: sin fuente de
+// iconos ni dependencia. Generado desde los SVG oficiales de 24 px (peso 400,
+// grado 0, tamaño óptico 24) con `scripts/gen-icons.py`; no se edita a mano.
+//
+// `filled` pinta la variante con relleno (FILL 1): la usa el destino activo de
+// la navegación. Los iconos que no tienen relleno propio devuelven el mismo
+// trazo en los dos estados.
+import type { ComponentProps } from "react";
+
+type IconProps = ComponentProps<"svg"> & { filled?: boolean };
+
+/** Decorativos por definición: el texto que los acompaña ya nombra la acción. */
+function icon(outline: string, fill = outline) {
+  return function Icon({ filled = false, width = 24, height = 24, ...props }: IconProps) {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 -960 960 960"
+        width={width}
+        height={height}
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+        {...props}
+      >
+        <path d={filled ? fill : outline} />
+      </svg>
+    );
+  };
+}
+

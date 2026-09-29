@@ -10,10 +10,16 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import { makeRecipe, makeServer } from "./fixtures";
+import {
+  morphing,
+  stubViewTransitions,
+  unstubViewTransitions,
+} from "./view-transition-stub";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  unstubViewTransitions();
 });
 
 function renderAt(path: string) {
@@ -65,6 +71,18 @@ describe("/recetario book", () => {
     expect(
       await screen.findByText("Aún no hay recetas. ¡Crea la primera!"),
     ).toBeDefined();
+  });
+
+  it("«Nueva receta» se transforma en el formulario", async () => {
+    vi.stubGlobal("fetch", makeServer(three).fetchMock);
+    const before = stubViewTransitions();
+    renderAt("/recetario");
+    const button = await screen.findByRole("button", { name: "Nueva receta" });
+    fireEvent.click(button);
+    await waitFor(() => expect(before).toHaveLength(1));
+    expect(before[0]).toEqual([button]);
+    await screen.findByRole("heading", { name: "Nueva receta" });
+    expect(morphing()).toHaveLength(1);
   });
 
   it("API error shows an error card with working retry", async () => {
@@ -123,6 +141,7 @@ describe("/recetario book", () => {
     renderAt("/recetario");
     fireEvent.click(await screen.findByText("Arroz con pollo"));
     await waitFor(() => expect(window.location.pathname).toBe("/recetario/1"));
-    expect(await screen.findByText("1. Sofreír")).toBeDefined();
+    const step = await screen.findByRole("listitem", { name: "paso 1" });
+    expect(step.textContent).toBe("1. Sofreír");
   });
 });

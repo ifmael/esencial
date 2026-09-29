@@ -3,7 +3,7 @@ import type { APIRequestContext } from "@playwright/test";
 /** B' (dos despliegues): la API es su propio Worker y en e2e escucha aquí
  *  (ver playwright.config.ts). Las peticiones directas de los tests van a esta
  *  URL; el navegador llega por su cuenta, vía VITE_API_URL. */
-export const API_BASE = process.env.E2E_API_URL ?? "http://127.0.0.1:8790";
+export const API_BASE = `http://127.0.0.1:${process.env.E2E_API_PORT ?? "8790"}`;
 
 /** URL absoluta de la API para las peticiones que no pasan por los helpers. */
 export const apiUrl = (path: string) => `${API_BASE}${path}`;

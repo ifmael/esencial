@@ -29,55 +29,109 @@ tarea lo requiere.
 
 ## Sistema de diseño (UI)
 
-**La fuente única es `web/src/globals.css`.** Tres capas, con un solo dueño cada
-una:
+**La fuente única es `web/src/globals.css`** (Material 3 Expressive; historia y
+decisiones en `REDESIGN.md`). Tres capas, con un solo dueño cada una:
 
-1. `:root` — valores crudos (colores, escala tipográfica, ritmo de espaciado,
-   radios, sombras, movimiento) y los pocos derivados (`--color-primary-soft`,
-   `--color-ring`).
-2. `@theme inline` — el puente a Tailwind: convierte esos tokens en utilidades
-   (`text-lead`, `p-card`, `gap-section`, `rounded-card`, `shadow-raised`…).
-3. `@layer components` — la piel de las piezas reutilizables (`.card`, `.btn-*`,
-   `.input`, `.badge-*`, `.section-label`, `.list-row`, `.skeleton`).
+1. `:root` — valores crudos. El color M3 (32 roles, claro y oscuro) y los muelles
+   viven en **`web/src/tokens.css`, generado** por `web/scripts/gen-tokens.ts` desde
+   la semilla `#15803d` (`node web/scripts/gen-tokens.ts`); no se edita a mano,
+   está fuera de biome y `tests/tokens.test.ts` falla si se desvía del generador.
+   En `globals.css`: forma, espaciado, elevación, capa de estado y la fuente.
+2. `@theme inline` — el puente a Tailwind (`text-title-m`, `bg-surface-container-high`,
+   `rounded-xl`, `shadow-2`…). Vacía los espacios de nombres de Tailwind
+   (`--color-*`, `--text-*`, `--radius-*`, `--shadow-*`: `initial`), así que
+   `text-sm` o `rounded-lg` **no generan CSS**.
+3. `@layer components` — la piel de las piezas (`.btn-*`, `.card-*`, `.input`,
+   `.field`, `.chip`, `.fab`, `.connected`, `.checkbox`, `.switch`, `.badge-*`,
+   `.alert-*`, `.dialog`, `.sheet`, `.menu`, `.toolbar`, `.snackbar`…).
 
-Las pantallas consumen **las primitivas** de `web/src/components/ui.tsx`
-(`Button`, `Card`, `Input`, `Textarea`, `Badge`); los iconos salen de
-`web/src/components/icons.tsx` (SVG en línea, sin dependencia).
+Las pantallas consumen **las primitivas**:
+- `web/src/components/ui.tsx`: `Button`, `SplitButton`, `ConnectedGroup` y
+  `ConnectedItem`, `Fab`, `Chip`, `Card` (elevated, filled, outlined, tonal),
+  `Field`, `Input`, `Textarea`, `Select`, `SearchBar`, `Checkbox`, `Switch`,
+  `Badge`, `Alert`, `Kbd`.
+- `expressive.tsx`: `Shape`, `Loader`, `WavyProgress`, `WavyRing`, `CountUp`,
+  `RewardSeal`, `EmptyState`, `Monogram`.
+- `overlay.tsx`: `Dialog`, `Sheet`, `OverlayHeader`, `useSnackbar`, `useTooltip`.
 
-Las clases del punto 3 son la **piel** de esas primitivas: una pantalla no las
-escribe a mano. Hay cuatro utilidades compartidas que sí se aplican tal cual,
-porque no son piel de ningún componente: `.section-label`, `.list-row`,
-`.card-interactive` (como modificador de `Card`) y `.skeleton`.
+Los iconos son Material Symbols Rounded en línea (`icons.tsx`, generado por
+`web/scripts/gen-icons.py`; `filled` para el destino activo).
 
-**Al añadir algo nuevo:** reutiliza una primitiva existente. Si no encaja, añade
-primero el token (`:root` + `@theme inline`) y después la primitiva. **Nunca un
-valor suelto** en una clase arbitraria (`rounded-[7px]`, `text-[10px]`) ni la
-piel de una primitiva escrita a mano (`className="card"`, `btn-primary`):
-`pnpm lint` rechaza las dos cosas (ver `web/scripts/check-design-tokens.ts`). Se
-aceptan los valores derivados (`var(...)`, `calc(...)`, `env(...)`), porque no
-inventan una escala.
+La piel del punto 3 solo la escriben esos tres ficheros; una pantalla nunca. Sí se
+aplican tal cual estas utilidades: `.section-label`, `.list-row`,
+`.card-interactive`, `.skeleton`, `.state` (capa de estado M3 de cualquier
+pulsable propio, junto con `onPointerDown={ripple}`), `.stagger` (entrada
+escalonada; cada hijo con `--i`), `.type-move`, `.tabular` (cifras), `.text-e`
+(variante *emphasized*) y `motion-*`.
+
+**Al añadir algo nuevo:** reutiliza una primitiva. Si no encaja, añade primero el
+token (`:root` + `@theme inline`) y después la primitiva. `pnpm lint` rechaza
+(`web/scripts/check-design-tokens.ts`):
+- un valor suelto (`rounded-[7px]`);
+- la piel escrita a mano (`className="card"`);
+- la escala cruda de Tailwind (`text-sm`, `rounded-lg`, `shadow-xl`,
+  `bg-black/40`, `text-white`, `bg-red-500`, `duration-150`);
+- la escala del sistema anterior (`text-caption`, `rounded-card`,
+  `text-text-secondary`).
+
+Se aceptan los derivados (`var()`, `calc()`, `env()`).
 
 Escala vigente — todo lo demás sale de aquí:
 
 | Familia | Tokens |
 | --- | --- |
-| Tipografía | `micro` 11 · `caption` 13 · `body` 15 · `lead` 17 · `title` 20 · `display` 24 |
-| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 28 |
-| Radios | `control` 10 · `panel` 12 · `card` 16 · `chip` 999 |
-| Elevación | `shadow-card`, `shadow-raised`, `shadow-inset` (compuestas, nunca una sola difusa fuerte) |
-| Movimiento | `fast` 120ms · `base` 180ms · `slow` 280ms, con **un solo** easing (`ease-out-quart`) |
+| Tipografía (roles M3) | `display-l` 57 · `display-m` 45 · `display-s` 36 · `headline-l` 32 · `headline-m` 28 · `headline-s` 24 · `title-l` 22 · `title-m` 16 · `title-s` 14 · `body-l` 16 · `body-m` 14 · `body-s` 12 · `label-l` 14 · `label-m` 12 · `label-s` 11; `+ text-e` = *emphasized* (peso 720, anchura 112 %, ROND 100) |
+| Fuente | Google Sans Flex auto-alojada (`web/src/fonts/`, OFL), subset latino, ejes `wght` 400–800 · `wdth` 100–125 · `opsz` 12–60 · `ROND` 0–100 |
+| Color | roles M3 (`primary`, `on-primary`, `primary-container`… `surface-container-lowest…highest`, `outline(-variant)`, `inverse-*`, `scrim`) + `accent*` = color de la sección |
+| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 32 |
+| Forma | `none` 0 · `xs` 4 · `s` 8 · `m` 12 · `l` 16 · `l-inc` 20 · `xl` 28 · `xl-inc` 32 · `xxl` 48 · `full`; `--radius-pill` 28 para lo que cambia de forma |
+| Elevación | `shadow-1/2/3`, **solo** en el FAB, los menús, los tooltips, las hojas, la barra flotante y el snackbar; el resto, jerarquía por tono |
+| Movimiento | muelles M3E: `motion-spatial-fast` (k 800, ζ 0,6) · `motion-spatial` (380, 0,8) · `motion-spatial-slow` (200, 0,8) rebotan (posición, tamaño, forma); `motion-effects-fast/-/-slow` (3800/1600/800, ζ 1) no rebotan (color, opacidad) |
 
+- **Color por sección**: `[data-section="deporte|nutricion|hoy"]` reescribe
+  `--accent*` (primary, tertiary, secondary); el Shell lo pone según la ruta.
+  Úsalo (`bg-accent`, `text-on-accent-container`…) en lo que pertenece a la
+  sección. `accent-soft` es su contenedor claro: el subitem activo del cajón y
+  la piel tonal (`.btn-tonal`, `.btn-*[aria-pressed]`, `.chip` elegido,
+  `.alert-info`). Es `secondary-container` en Deporte y Hoy, y `tertiary-soft`
+  (tertiary tono 90/30, rol propio de `gen-tokens`, porque con fidelidad
+  `tertiary-container` sale oscuro) en Nutrición; el color de receta lo
+  reescribe también (`schemeVars`).
+- **Tema** sistema/claro/oscuro: `web/public/theme.js` pone `data-theme` antes del
+  primer pintado; `lib/theme.ts` lo cambia en vivo. Los dos comparten clave y
+  regla, y `tests/theme.test.ts` los ata.
+- **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
+  cada superficie declara `--field-bg` para el recorte).
+- **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
+  (44 px) y el quitar receta de una celda de comidas (40 px): la columna no da más.
 - Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
   campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
-  la vez, sin estado duplicado en una clase aparte.
-- Todo lo animado se neutraliza con `prefers-reduced-motion`.
+  la vez, sin estado duplicado en una clase aparte. El anillo, el borde y la
+  etiqueta del campo enfocado y la selección de texto usan `--accent` (color de
+  sección); `AA_PAIRS` exige primary, secondary y tertiary ≥ 4,5 sobre
+  `surface` y `surface-container-high`.
+- **Colores fijos a propósito** (no siguen la sección): la marca (logo del raíl,
+  login), las insignias de estado (`Badge` `done` = primary, `pending` =
+  tertiary: significan «hecho»/«pendiente» en cualquier pantalla), la tarjeta de
+  fuerza registrada y el sello de recompensa (verde de Deporte también en Hoy),
+  la paleta de comandos y el catálogo `/ui`.
+- **Un estado de la piel nunca se pelea con una utilidad**: la capa `utilities`
+  de Tailwind gana a `@layer components`, así que un `bg-*`/`text-*` en la
+  pieza tapa su regla de `aria-pressed`. Así estuvo roto el grupo conectado
+  (la elegida no se pintaba en `--accent`): su reposo vive ahora en
+  `:where(.connected) > *`, sin especificidad para que un `.btn` dentro
+  (SplitButton) conserve su piel. Lo cubre `nav.spec.ts`.
+- Todo lo animado se neutraliza con `prefers-reduced-motion`: las transiciones
+  quedan a 1 ms, el morph salta directo, lo que entra lo hace con un fundido de
+  150 ms, y los giros, la onda y las View Transitions se apagan.
+- Fotos de receta: **todo** `<img>` de una foto lleva
+  `crossOrigin="use-credentials"`. El color dinámico lee la foto en un canvas, y
+  si otra copia de la foto se pidió sin CORS, la caché sirve esa y la lectura
+  falla.
 - Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
   sesión»): míralo antes de inventar una pieza.
-- `wireframes/DESIGN.md` sirve para generar maquetas; donde discrepe de
-  `globals.css`, manda `globals.css`.
-- El sistema explicado con muestras en vivo (colores, escala, movimiento) vive en
-  el sitio de arquitectura: `docs/architecture/diseno.html`, que se abre con
-  doble clic, sin build.
+- `wireframes/DESIGN.md` y `docs/architecture/diseno.html` siguen con el sistema
+  anterior; donde discrepen de `globals.css`, manda `globals.css`.
 
 ### Pantallas de calendario (fuerza y comidas)
 
@@ -87,18 +141,35 @@ página), con un hueco vacío reservado abajo para acciones futuras. Las dos rut
 están en `CALENDAR_ROUTES` (`web/src/components/shell.tsx`): añadir una ahí le da
 el mismo trato (sin título, alto completo, hueco inferior).
 
-En esas rutas **la barra lateral se colapsa a un raíl de iconos** (`w-18` = 72px,
-iconos con el nombre en `aria-label`/`title`, sin desplegables) y su ancho es
-para la rejilla; el submenú de la sección queda como **fila de chips sobre el
-calendario**, en escritorio y en móvil (donde no hay raíl). El `main` de estas
-rutas es `max-w-calendar` —el token `--container-calendar`, 110rem = 1760 px—
-con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
-1280×800: columna de día **152,84 px** (antes 124,28 con la barra de 256px) y
-espacio de texto por nombre ~2,2× (título de sesión 36→75 px, ejercicio 15→54 px,
-receta 29→68 px), sin scroll de página ni horizontal. Techo del ancho: a 1280 no
-cabe más de ~153 px por columna con el raíl; con títulos largos (>20 caracteres)
+**El menú lateral solo lo pliega el usuario** (botón «Ocultar menú», recordado en
+`localStorage` `esencial.sidebar`): navegar nunca lo cambia. Antes las rutas de
+calendario lo plegaban solas y al pulsar Deporte o Nutrición en el cajón este se
+cerraba bajo el cursor (bug; lo cubren `shell.test.tsx` y `nav.spec.ts`).
+
+En esas rutas, **plegado, el raíl M3E es su versión compacta de 80 px**
+(`w-20`): iconos con el nombre en `aria-label`/`title`, menú FAB, búsqueda y tema,
+sin desplegables de sección. El catálogo y «Cerrar sesión» ceden su sitio, y siguen
+disponibles en la búsqueda y al desplegar el menú. Fuera del calendario el raíl
+colapsado mide 96 px (con etiquetas) y el expandido 288 px. El submenú de la sección
+va como **grupo de botones conectados sobre el calendario**, en escritorio y en móvil.
+El `main` de estas rutas es `max-w-calendar` —el token `--container-calendar`,
+110rem = 1760 px— con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
+1280×800 con el raíl plegado: columna de día **153,14 px**, sin scroll de página ni
+horizontal (los e2e de `calendar-layout.spec.ts` miden con la preferencia plegada).
+Techo del ancho: a 1280 no cabe más de ~153 px por columna con el raíl; con el cajón
+de 288 px abierto la columna encoge. Con títulos largos (>20 caracteres)
 el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
 celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
+
+En todas las rutas el raíl es `lg:sticky lg:top-0 lg:h-dvh`: mide la ventana, no
+la página. Sin eso, en la fila `lg:flex-row` se estira al alto del `main` y en
+una página larga (`/ejercicios`) empuja la búsqueda y el tema hasta el final (lo
+cubre `nav.spec.ts`).
+
+Ese `lg:overflow-y-auto` del raíl implica también `overflow-x`, así que cualquier
+desplegable `absolute` dentro de él se recorta a sus 80–96 px. El menú del FAB va
+por eso `fixed`, anclado al FAB al abrirse, y el raíl lleva `lg:z-10`: `sticky`
+abre su propio contexto de apilamiento y, sin z-index, el `main` pinta encima.
 
 Las dos pantallas comparten la **rejilla semanal** (`web/src/components/week-grid.tsx`):
 un único contenedor con la navegación de semana y las siete columnas, con la
@@ -106,47 +177,162 @@ columna de «hoy» marcada. El componente no sabe nada del dominio: cada página
 inyecta el contenido de sus días por el render prop (`children`), que es lo
 único que difiere (sesiones en fuerza, tomas en comidas).
 
+La rejilla lleva su `view-transition-name` **solo mientras cambia la semana** (lo
+pone y lo quita `WeekGrid.shift`, al acabar la transición). Puesto siempre,
+cualquier otra transición de la página —abrir el editor del día— la convierte en
+una capa propia, y el navegador la pinta **por encima** del velo y del modal: el
+calendario se colaba sobre el modal mientras este crecía (y la rejilla deslizaba
+sin cambiar de semana). Lo cubren `tests/view-transition.test.tsx` y el e2e de
+`strength.spec.ts`.
+
 En la columna de un día de fuerza (`SessionCell`, `web/src/routes/plan-fuerza.tsx`)
 los ejercicios **se reparten la altura de la columna** en vez de quedarse
 apiñados arriba: la lista (`<ol>`) se queda con el espacio libre y cada fila
-(`flex-1`, `min-h-11`) es un bloque `bg-surface-muted` con el nombre en
-`text-body` —hasta dos líneas (`line-clamp-2`), así que cabe el nombre entero de
-casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo en
-`text-caption`. Con muchas filas el mínimo manda y el desborde sigue quedando
+(`flex-1`, `min-h-11`) es un bloque `bg-surface-container-high rounded-m` con el
+nombre en `text-body-m` —hasta dos líneas (`line-clamp-2`), así que cabe el nombre
+entero de casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo
+en `text-body-s`. **No lleva `.stagger`**: dnd-kit mide las filas al empezar a
+arrastrar, y una fila a mitad de su animación de entrada está desplazada. Con muchas filas el mínimo manda y el desborde sigue quedando
 dentro del calendario (lo cubre `calendar-layout.spec.ts`).
 
 Cada fila lleva su propia **✕ para desprogramar ese ejercicio** sin abrir el
 modal: la fila se convierte en su confirmación en línea (nombre truncado +
 **Sí/No**, con el nombre completo en el `aria-label`) y, al confirmar, el día se
 guarda con el mismo PUT de los items que usa el arrastre (`usePlanWeek.saveItems`,
-optimista y con recarga). Los dos botones van en **una sola línea** a propósito:
-la columna mide ~152 px y dos botones de texto largo (`size="sm"` = `px-3` +
-`text-caption`, ~86 y ~77 px) se salían de la fila y quedaban tapados por el día
-siguiente — de ahí las etiquetas cortas. Quitar el **último** ejercicio deja el
+optimista y con recarga). Después aparece un snackbar con **Deshacer**, que vuelve
+a guardar los items de antes. Los dos botones van en **una sola línea** a propósito:
+la columna mide ~153 px y dos botones de texto largo se salían de la fila y
+quedaban tapados por el día siguiente — de ahí las etiquetas cortas y los 44 px
+(excepción táctil documentada). Quitar el **último** ejercicio deja el
 día sin items, que no es representable (la API exige ≥1): desprograma la sesión
-(DELETE) y el día vuelve a su «+ añadir», igual que con la ✕ de la sesión.
+(DELETE) y el día vuelve a su «+ añadir», igual que con la ✕ de la sesión. Su
+Deshacer la **recrea** con POST (misma fecha, nombre e items). Solo sirve para las
+planificadas: una registrada no tiene ✕, porque recrearla perdería su registro.
 
-### Modal de plantillas (crear y editar)
+En la celda de una comida (`SlotCell`, `web/src/routes/plan-recetas.tsx`) el
+nombre va recortado a dos líneas; al dejar el cursor **500 ms** encima (o al
+enfocarla con el teclado) sale un **tooltip** con la foto (o el `Monogram`) y el
+nombre completo. Se cierra al salir, al perder el foco, con Escape (pila de
+capas) o al desplazar. Es `useTooltip` (`overlay.tsx`): devuelve los manejadores
+del disparador y el tooltip, que se pinta `fixed` —el `overflow-y-auto` de la
+rejilla lo recortaría— y **como hermano** del enlace, no dentro: dentro, su texto
+entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
+`e2e/tests/meal-tooltip.spec.ts`.
 
-`app.tsx` registra **`/plantillas/*`** y `PlantillasPage` decide con `useMatch`
-si además pinta la modal, así que la lista nunca se desmonta: `/plantillas/nueva`
-y `/plantillas/:id/editar` funcionan al recargar, y «atrás» o Escape vuelven a
-`/plantillas`. Dentro hay un **único** `role=dialog`: a la izquierda el borrador
-con los ejercicios ordenables por asa (`web/src/components/sortable.tsx`, ratón,
-táctil y teclado) y a la derecha el selector **embebido** (búsqueda, mapa
-muscular y grupos plegables) — nunca una segunda modal encima. Guardar manda un
-solo POST (crear) o PUT (editar) con las posiciones 0..n-1; Cancelar, Escape o el
-fondo descartan el borrador sin llamadas a la API.
+### Registro de una sesión (`/sesion/:date`)
 
-La modal mide **siempre lo mismo** (`h-[88vh]`, `max-w-6xl`; nada de `max-h`), así
-que no se redimensiona al cambiar el borrador ni la lista del selector. Desde
-`md`, dentro de la columna derecha el **mapa muscular se lleva el alto libre**
-(`md:h-full`, `w-auto`: crece y encoge con la ventana) y la lista de ejercicios
-tiene su propio scroll. En móvil las dos piezas se apilan y el conjunto se
-desplaza, como antes. Medido a 1280×800: la modal pasa de 896×680 a 1152×704 y el
-mapa de 120×320 a 176×468 (área ×2,1), sin scroll de página ni recorte; el músculo
-más estrecho de la vista frontal mide 33×55 px, así que todos los del dibujo se
-pulsan con holgura.
+`web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.
+
+- **Una serie se marca sola al editar sus marcas**: al teclear o al usar el
+  stepper, la serie queda hecha si está completa (kilos y repeticiones, o solo
+  repeticiones si va sin peso), y se desmarca al vaciar un campo. Cambiar «Sin
+  peso» recalcula igual las series ya editadas (`touched`). La precarga (`/last`
+  o el registro al corregir) **no** marca nada.
+- **Solo una serie completa puede estar hecha** (`isSetFilled`): la casilla va
+  deshabilitada mientras falten reps (o kilos, sin «Sin peso»), «Marcar todas»
+  salta las incompletas, vaciar un campo o quitar «Sin peso» a una serie sin
+  kilos la desmarca, y un registro antiguo hecho sin marcas se precarga sin
+  marcar. La API lo refuerza: `done: true` sin `reps` → 400
+  `{field:'sets.N.reps'}` (los kilos no, porque «sin peso» viaja con
+  `weightKg: null`).
+- **«Sin peso» es de la sesión, por ejercicio** (un `Switch`): oculta los kilos,
+  basta con las repeticiones y el ejercicio viaja con `weightKg: null`. No hay
+  columna nueva: `set_logs.weight_kg` ya admite `null`. Arranca activado si lo
+  último registrado de ese ejercicio no llevaba kilos pero sí repeticiones (o,
+  al corregir, si todas sus series registradas van así: `isNoWeight`).
+- **Marcas de la sesión anterior**: la última sesión `logged` con **el mismo
+  `name` no nulo** y fecha **anterior a la del día** (`previousSession`; una
+  sesión sin nombre nunca empareja). Sus series se muestran bajo el ejercicio
+  («sáb, 26/09: 60×10 · 60×8»), emparejadas por `exerciseId` (lo devuelve
+  `serialize` en `/api/workout-logs`), y sustituyen a «última: X×Y». Son solo
+  informativas: la precarga sigue saliendo de `/last`.
+- `GET /api/exercises/:id/last?before=YYYY-MM-DD` limita el histórico a lo
+  anterior a esa fecha. El borrador siempre lo pide con la fecha del día, así que
+  registrar o corregir un día pasado no precarga marcas de días posteriores.
+- **Corregir un registro**: en la vista registrada, «Editar» reabre el mismo
+  borrador, precargado con lo registrado (series, esfuerzo, nota y cardio; no con
+  `/last`). «Guardar» manda `PUT /api/workout-logs/:date`, que en un solo batch
+  reemplaza esfuerzo, nota, `set_logs` y `cardio_logs` (misma validación de
+  pertenencia y de tipo que el POST, 404 si no hay registro). «Cancelar» vuelve a
+  lo registrado sin llamar a la API. Los ejercicios de una sesión registrada
+  siguen sin poder cambiarse (`PUT`/`DELETE` de `/plan-sessions` → 409).
+
+### Editor de recetas (crear y editar)
+
+`app.tsx` registra **`/recetario/nueva`** y **`/recetario/:id/editar`** con la
+misma página (`RecetaEditorPage`, `web/src/routes/receta-editor.tsx`): al entrar,
+la lista o la ficha se desmontan y no quedan detrás. Antes editar abría la modal
+`recipe-editor` sobre la ficha; ahora el lápiz de `/recetario/:id` es un `Link`
+sin transición (editar no anima, solo crear). Las dos rutas funcionan al recargar
+(deep-link); Cancelar, Escape (pila de capas) o «atrás» no llaman a la API, y
+Guardar manda un único POST (crear) o PUT (editar) para volver a `/recetario` o a
+la ficha, que al ser otro montaje del hook relee la receta. Salir del editor
+(Cancelar, Escape o Guardar) navega con **`replace: true`**, así que su URL no se
+apila: «atrás» desde la ficha no reabre el borrador que se acaba de cerrar (el
+editor de plantillas sí lo apila).
+
+La piel es la suya (nació aquí): cabecera de sección (`bg-accent-container`) con
+Cancelar y Guardar, y cinco tarjetas en columnas desde `lg` —foto, nombre con
+categorías, ingredientes, materiales y pasos (`components/steps-editor.tsx`)—.
+**Descripción y comensales solo aparecen al editar**: al crear salen `null` (E8) y
+el PUT reemplaza el registro entero, así que el borrador de edición
+(`fromRecipe`) arrastra la receta hidratada completa. La subida de foto es la
+misma que al crear: `POST /api/uploads` y, si falló y quedó pendiente, reintento
+al guardar. La **unidad** del ingrediente es texto libre en la API (`z.string()`),
+así que el desplegable (`UNITS`) añade una `<option>` propia para una unidad que
+no sea `gr/ml/ud` («g», «pechuga»): si no, una receta existente se vería como «—».
+Lo cubren `web/tests/recetario-editor.test.tsx` y el e2e de `recipes.spec.ts`.
+
+### Editor de plantillas (crear y editar)
+
+`app.tsx` registra **`/plantillas`**, **`/plantillas/nueva`** y
+**`/plantillas/:id/editar`** como rutas propias: al abrir el editor la lista se
+desmonta y no queda detrás (ya no hay modal). Las dos rutas del editor funcionan
+al recargar (deep-link); «atrás», Escape o Cancelar vuelven a `/plantillas` sin
+llamadas a la API. Escape va por la pila de capas (`lib/escape-stack.ts`), que
+ignora el Escape con el que dnd-kit cancela un arrastre de teclado, así que la
+página no se abandona a media operación.
+
+La piel es la de «Nueva receta»: cabecera de sección (`bg-accent-container`) con
+Cancelar y Guardar, y dos tarjetas en columnas desde `lg` — el nombre y el
+borrador (ejercicios ordenables por asa, `web/src/components/sortable.tsx`,
+ratón, táctil y teclado) en una, y el selector **embebido** (búsqueda, mapa
+muscular y grupos plegables) en la otra. Guardar manda un solo POST (crear) o
+PUT (editar) con las posiciones 0..n-1 y vuelve a la lista con el id en el
+`state` de la navegación, así que la tarjeta guardada llega desplegada.
+
+El mapa del selector va en un recuadro dentro de su tarjeta, a alto fijo
+(`h-96`, `w-auto`: su alto manda en el tamaño de los músculos), y debajo siguen
+la búsqueda, el conmutador de vista, las fichas de grupo y la lista, que crece
+sin scroll propio: la página se desplaza como cualquier otra. Medido a
+1280×800: el dibujo frontal mide 145×384 px y la caja más pequeña de un músculo
+es la del hombro anterior (62×11); en la modal el dibujo medía 176×468.
+
+**Crear sigue un único patrón** (recetas, plantillas, ejercicios y el menú FAB):
+lo pulsado **crece hasta lo que abre** (transformación de contenedor con View
+Transitions). El FAB es el único elevado; el botón de cabecera es un `Button`
+*filled* de tamaño por defecto, sin sombra. El mecanismo vive en
+`lib/view-transition.ts`: el `onClick` llama a `morphFrom(e.currentTarget)` antes
+de navegar (o de abrir, con `runViewTransition` + `flushSync`, como «Nuevo
+ejercicio», que no tiene ruta), y el destino pone `style={useCreateMorph()}`.
+Así el nombre `create` está solo en lo pulsado en la foto «antes» y solo en el
+destino en la foto «después» (dos iguales anulan la transición). Carga directa
+y editar no animan. El destino apaga su animación de entrada propia (la hace la
+transición). Los tests usan `tests/view-transition-stub.ts`.
+
+El **día → modal** del calendario de fuerza (`day-sheet`) recibe el mismo trato
+en `globals.css`: el contenido llena el contenedor que crece y la columna de
+origen se despide en `--duration-effects-fast`. Sin eso la columna (alta y
+estrecha) se quedaba **estirada encima del modal** todo lo que dura la expansión.
+Mientras se carga el detalle de la sesión (`GET /api/plan-sessions/:id`, antes
+de abrir), el `Loader` va **superpuesto** a la rejilla (`absolute inset-0`), no
+debajo en la columna: en el flujo le quitaba ~112 px de alto y la rejilla volvía
+a crecer justo mientras la modal se expandía (lo cubre `strength.spec.ts`).
+
+El **menú FAB** sigue el M3E: velo (`Scrim`) que tapa la página y la cierra al
+pulsarlo, y acciones planas sin sombra, cada una con el `accent-container` de la
+sección a la que lleva (`data-section={sectionOf(to)}`: Sesión y Plantilla en
+verde de Deporte, Receta en el de Nutrición).
 
 El **mapa muscular** del selector vive en `web/src/components/body-map/`: 89
 regiones anatómicas entre las dos vistas (frontal y trasera), cada una con su
@@ -201,6 +387,12 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
   de los grupos ya elegidos como tag (el invariante de arriba): elegir un músculo
   añade su grupo si falta, quitar un grupo se lleva sus músculos, y guardar exige
   al menos uno.
+- El editor de ejercicios (crear y editar) tiene **la piel de «Nueva receta»**:
+  página propia que sustituye a la lista o al detalle, cabecera de sección con
+  Cancelar/Guardar y tarjetas en dos columnas desde `lg` (dibujo de los músculos
+  elegidos, nombre + tipo en botones conectados + los diez grupos como fichas,
+  músculos por grupo, preparación y técnica, pasos). Los pasos numerados son
+  `web/src/components/steps-editor.tsx`, compartido con la receta.
 
 ## Despliegue: dos Workers (B')
 
@@ -373,6 +565,15 @@ termina el `pnpm dev` entero con el código de salida del hijo.
 Los `--var` son imprescindibles: sin ellos los Workers usarían los orígenes de
 **producción** (los del `wrangler.toml`) y el navegador cruzaría a la API
 equivocada (CORS/CSP fallan).
+
+Los dos puertos se cambian por entorno para correr la suite junto a otros
+worktrees: `E2E_WEB_PORT=8863 E2E_API_PORT=8864 pnpm e2e` (por defecto 8788 y
+8790). La config deriva de ahí las URLs, los `--var` y `VITE_API_URL`, y
+`e2e/tests/helpers.ts` (`API_BASE`) lee el mismo `E2E_API_PORT`.
+
+Si un test arrastra o pulsa justo después de abrir un diálogo, espera antes a que
+acaben las animaciones (`settle` en `strength.spec.ts`): mientras dura la
+transición de vista día → modal, su capa se queda con el puntero.
 
 Lo que hay que respetar al escribir tests:
 

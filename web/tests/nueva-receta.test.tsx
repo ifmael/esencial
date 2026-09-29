@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
-import { makeRecipe, makeServer } from "./fixtures";
+import { makeServer } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -60,8 +60,10 @@ describe("nueva-receta: categorías", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
     expect(
-      screen.getByRole("button", { name: "Desayuno" }).className,
-    ).toContain("bg-primary-container");
+      screen
+        .getByRole("button", { name: "Desayuno" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
 
     fireEvent.change(screen.getByRole("textbox", { name: "Nueva categoría" }), {
       target: { value: "batch" },
@@ -157,7 +159,7 @@ describe("nueva-receta: guardado", () => {
     vi.stubGlobal("fetch", server.fetchMock);
     await openPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
     expect(await screen.findByText("El nombre es obligatorio")).toBeDefined();
     expect(server.calls.filter((c) => c.method !== "GET")).toEqual([]);
   });
@@ -197,7 +199,7 @@ describe("nueva-receta: guardado", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Añadir material" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
 
     await waitFor(() =>
       expect(
@@ -220,6 +222,21 @@ describe("nueva-receta: guardado", () => {
       ingredients: [{ food: "huevo", quantity: 3, unit: "ud" }],
       steps: ["Batir"],
     });
+  });
+
+  it("cancelar vuelve al recetario sin POSTear", async () => {
+    const server = makeServer([]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    await openPage();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
+      target: { value: "Tortilla" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    await screen.findByRole("heading", { name: "Recetario" });
+    expect(window.location.pathname).toBe("/recetario");
+    expect(server.calls.some((c) => c.method === "POST")).toBe(false);
   });
 });
 
@@ -284,7 +301,7 @@ describe("nueva-receta: subida de foto", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
       target: { value: "Con reintento" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
     const up = stubbed.calls.filter((c) => c.url === "/api/uploads");
@@ -315,7 +332,7 @@ describe("nueva-receta: subida de foto", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
       target: { value: "Sin foto" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar receta" }));
 
     await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
     const up = stubbed.calls.filter((c) => c.url === "/api/uploads");

@@ -4,7 +4,9 @@
 // error se fija después, para que el mensaje sobreviva a la re-sincronización.
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiGet, apiSend } from "./api";
+import { toISODate } from "./day";
 import type { ExerciseKind } from "./exercises";
+import { weekStreak } from "./reward";
 
 export type PlanSession = {
   id: number;
@@ -44,6 +46,29 @@ export type SessionPayload = {
   items: SessionItem[];
 };
 
+/** Items del wire (PUT/POST) a partir de los ejercicios del día, en su orden. */
+function itemsOf(exercises: SessionExercise[]): SessionItem[] {
+  return exercises.map((e) => ({
+    exerciseId: e.exerciseId,
+    targetSets: e.targetSets,
+    targetRepsMin: e.targetRepsMin,
+    targetRepsMax: e.targetRepsMax,
+    targetDistanceKm: e.targetDistanceKm,
+    targetDurationMin: e.targetDurationMin,
+  }));
+}
+
+/** POST que vuelve a crear una sesión desprogramada («Deshacer»). */
+export function recreatePayload(
+  session: PlanSession,
+): SessionPayload & { date: string } {
+  return {
+    date: session.date,
+    name: session.name,
+    items: itemsOf(session.exercises),
+  };
+}
+
 function msg(e: unknown): string {
   return e instanceof ApiError && e.error
     ? e.error
@@ -54,6 +79,8 @@ export function usePlanWeek(isoWeek: string) {
   const [sessions, setSessions] = useState<PlanSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Racha semanal: sale del GET completo (todas las semanas), no de la filtrada.
+  const [streak, setStreak] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,6 +88,7 @@ export function usePlanWeek(isoWeek: string) {
       const all = await apiGet<PlanSession[]>("/api/plan-sessions");
       // Week filter via Monday-anchored ISO week of "YYYY-MM-DD" (no clock).
       setSessions(all.filter((s) => isoWeekOf(s.date) === isoWeek));
+      setStreak(weekStreak(all, toISODate(new Date())));
       setError(null);
     } catch {
       setSessions([]);
@@ -76,14 +104,17 @@ export function usePlanWeek(isoWeek: string) {
 
   const reload = useCallback(() => load(), [load]);
 
+  /** true si el DELETE salió bien (la página ofrece entonces «Deshacer»). */
   const remove = useCallback(
     async (id: number) => {
       try {
         await apiSend(`/api/plan-sessions/${id}`, "DELETE", {});
         await load();
+        return true;
       } catch (e) {
         await load();
         setError(msg(e));
+        return false;
       }
     },
     [load],
@@ -91,7 +122,7 @@ export function usePlanWeek(isoWeek: string) {
 
   /** Guarda los items del día (reordenar, o quitar uno): el PUT borra y
    *  reinserta con position = índice. Optimista: la celda reacciona al soltar;
-   *  el PUT confirma o revierte (load). */
+   *  el PUT confirma o revierte (load). true si el PUT salió bien. */
   const saveItems = useCallback(
     async (session: PlanSession, exercises: SessionExercise[]) => {
       setSessions((all) =>
@@ -104,19 +135,27 @@ export function usePlanWeek(isoWeek: string) {
             : s,
         ),
       );
-      const items: SessionItem[] = exercises.map((e) => ({
-        exerciseId: e.exerciseId,
-        targetSets: e.targetSets,
-        targetRepsMin: e.targetRepsMin,
-        targetRepsMax: e.targetRepsMax,
-        targetDistanceKm: e.targetDistanceKm,
-        targetDurationMin: e.targetDurationMin,
-      }));
       try {
         await apiSend(`/api/plan-sessions/${session.id}`, "PUT", {
           name: session.name,
-          items,
+          items: itemsOf(exercises),
         });
+        await load();
+        return true;
+      } catch (e) {
+        await load();
+        setError(msg(e));
+        return false;
+      }
+    },
+    [load],
+  );
+
+  /** Vuelve a crear una sesión desprogramada (el «Deshacer» del DELETE). */
+  const recreate = useCallback(
+    async (session: PlanSession) => {
+      try {
+        await apiSend("/api/plan-sessions", "POST", recreatePayload(session));
         await load();
       } catch (e) {
         await load();
@@ -126,7 +165,16 @@ export function usePlanWeek(isoWeek: string) {
     [load],
   );
 
-  return { sessions, loading, error, reload, remove, saveItems };
+  return {
+    sessions,
+    loading,
+    error,
+    streak,
+    reload,
+    remove,
+    saveItems,
+    recreate,
+  };
 }
 
 /** ISO week ("YYYY-Www") of a "YYYY-MM-DD" date (UTC, no clock). */

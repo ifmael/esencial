@@ -1,152 +1,319 @@
 @import "tailwindcss";
+/* Color M3 (claro/oscuro) y muelles M3E: valores calculados y congelados por
+   scripts/gen-tokens.ts. Todo lo demás del sistema vive aquí. */
+@import "./tokens.css";
 
 /* ==========================================================================
-   Esencial — capa de sistema (variante A "acabado sistémico")
-   Base: wireframes/DESIGN.md. Aquí viven SOLO decisiones transversales:
-   escala tipográfica, ritmo de espaciado, radios, superficies/elevación y
-   movimiento. Las pantallas no inventan valores: consumen estos tokens.
+   Esencial — Material 3 Expressive
+   Tres capas, un dueño cada una (AGENTS.md § Sistema de diseño):
+   1. :root / tokens.css  — valores crudos.
+   2. @theme inline       — el puente a utilidades de Tailwind.
+   3. @layer components   — la piel de las primitivas de components/ui.tsx.
    ========================================================================== */
 
+/* Google Sans Flex (OFL, ver fonts/OFL-google-sans-flex.txt): subset latino y
+   ejes recortados a lo que usa la app (wght 400–800, wdth 100–125, opsz 12–60,
+   ROND 0–100). Mismo origen: la CSP no cambia. */
+@font-face {
+  font-family: "Google Sans Flex";
+  src: url("./fonts/google-sans-flex-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-stretch: 100% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  /* Marca y superficies — wireframes/DESIGN.md */
-  --color-primary: #15803d;
-  --color-primary-dark: #166534;
-  --color-primary-container: #15803d;
-  --color-on-primary: #ffffff;
-  --color-secondary: #4d7c0f;
-  --color-background: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f5f5f4;
-  --color-pending: #d97706;
-  --color-pending-bg: #fef3c7;
-  --color-pending-text: #92400e;
-  --color-done-bg: #dcfce7;
-  --color-done-text: #166534;
-  --color-error: #b91c1c;
-  --color-text: #1c1917;
-  --color-text-secondary: #78716c;
-  --color-border: #e7e5e4;
-  /* Derivados: estados suaves (activo de menú, hover de controles) */
-  --color-primary-soft: #e9f3ed;
-  --color-primary-soft-strong: #d8ebdf;
-  --color-border-strong: #d6d3d1;
-  --color-ring: rgb(21 128 61 / 0.32);
-  /* Mapa corporal (/plantillas): músculo en reposo y su realce al pasar el
-     ratón. Un tono medio para que la silueta no se lave sobre la tarjeta; el
-     grupo elegido va en `--color-primary`. */
-  --color-muscle: #8fb59d;
-  --color-muscle-strong: #6e9c81;
+  /* --- Color: derivados de los roles M3 --------------------------------- */
+  /* Capa de estado M3: el color «on» de la superficie a 8/10/10 %. */
+  --state-hover: 0.08;
+  --state-focus: 0.1;
+  --state-press: 0.1;
+  --state-drag: 0.16;
+  /* Texto e iconos sobre foto: blanco fijo sobre un velo del scrim. */
+  --color-on-photo: #ffffff;
+  --color-photo-veil: color-mix(in srgb, var(--color-scrim) 62%, transparent);
+  /* Mapa corporal: músculo en reposo y su realce (el elegido: primary). */
+  --color-muscle: color-mix(
+    in srgb,
+    var(--color-primary) 38%,
+    var(--color-surface-container-high)
+  );
+  --color-muscle-strong: color-mix(
+    in srgb,
+    var(--color-primary) 58%,
+    var(--color-surface-container-high)
+  );
+  --color-body: var(--color-outline-variant);
 
-  /* Movimiento: dos duraciones cortas + una de entrada, un solo easing
-     para todo lo que reacciona al usuario. */
-  --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --duration-slow: 280ms;
-  --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Color de la sección activa: lo reescriben [data-section] y el color
+     dinámico de receta. Deporte = primary, Nutrición = tertiary, Hoy = secondary.
+     `accent-soft` es el contenedor claro del subitem activo del cajón. */
+  --accent: var(--color-primary);
+  --on-accent: var(--color-on-primary);
+  --accent-container: var(--color-primary-container);
+  --on-accent-container: var(--color-on-primary-container);
+  --accent-soft: var(--color-secondary-container);
+  --on-accent-soft: var(--color-on-secondary-container);
 
-  /* Espaciado semántico (ritmo) */
-  --spacing-card: 1.25rem; /* 20px — padding interno de tarjeta */
-  --spacing-section: 1.75rem; /* 28px — separación entre secciones */
-  --spacing-stack: 0.75rem; /* 12px — entre elementos de un mismo bloque */
-  --spacing-gutter: 1rem; /* 16px — separación entre columnas / rejilla */
+  /* --- Forma: escala de esquinas M3E ------------------------------------ */
+  --radius-none: 0;
+  --radius-xs: 4px;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --radius-l-inc: 20px;
+  --radius-xl: 28px;
+  --radius-xl-inc: 32px;
+  --radius-xxl: 48px;
+  --radius-full: 9999px;
+  /* «Completo» de las piezas que cambian de forma: la mitad del alto de un
+     control de 56 px. Con 9999px la interpolación del morph (9999 → 12) pasa
+     casi toda por valores imposibles y el muelle cruza el cero: se ve como un
+     salto. Con un radio real el muelle se ve redondeando → cuadrando. */
+  --radius-pill: 28px;
 
-  /* Ancho de página: el calendario semanal es el caso ancho. Tope amplio, para
-     que en pantallas ultrapanorámicas no se estire sin fin. */
-  --container-calendar: 110rem; /* 1760px */
+  /* --- Espaciado semántico (ritmo) --------------------------------------- */
+  --spacing-card: 1.25rem; /* 20 */
+  --spacing-section: 2rem; /* 32 */
+  --spacing-stack: 0.75rem; /* 12 */
+  --spacing-gutter: 1rem; /* 16 */
+  --container-calendar: 110rem; /* 1760 */
 
-  /* Radios: control < panel < tarjeta */
-  --radius-control: 0.625rem; /* 10px — botones, campos, iconos-botón */
-  --radius-panel: 0.75rem; /* 12px — bloques dentro de una tarjeta */
-  --radius-card: 1rem; /* 16px — tarjetas y superficies grandes */
-  --radius-chip: 999px;
+  /* --- Elevación: solo FAB, menús, hojas y barra flotante --------------- */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+  --shadow-2: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+  --shadow-3: 0 4px 8px 3px rgb(0 0 0 / 0.15), 0 1px 3px rgb(0 0 0 / 0.3);
 
-  /* Elevación: dos sombras compuestas, nunca una sola difusa fuerte */
-  --shadow-card:
-    0 1px 2px rgb(28 25 23 / 0.04), 0 10px 24px -18px rgb(28 25 23 / 0.35);
-  --shadow-raised:
-    0 2px 4px rgb(28 25 23 / 0.05), 0 18px 36px -20px rgb(28 25 23 / 0.4);
-  --shadow-inset: inset 0 1px 2px rgb(28 25 23 / 0.06);
-  /* La barra inferior de móvil proyecta hacia arriba; el resto, hacia abajo. */
-  --shadow-up: 0 -6px 20px -14px rgb(28 25 23 / 0.5);
+  /* --- Movimiento -------------------------------------------------------- */
+  /* Muelles (tokens.css): --ease-spatial-{fast,default,slow} rebotan (posición,
+     tamaño, forma); --ease-effects-* no (color, opacidad). Cada uno con su
+     --duration-* (lo que tarda en asentarse). Para lo que no es un muelle —un
+     fundido de salida— el easing estándar de M3: */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
 }
 
 @theme inline {
+  --color-*: initial;
   --color-primary: var(--color-primary);
-  --color-primary-dark: var(--color-primary-dark);
-  --color-primary-container: var(--color-primary-container);
   --color-on-primary: var(--color-on-primary);
-  --color-primary-soft: var(--color-primary-soft);
-  --color-primary-soft-strong: var(--color-primary-soft-strong);
+  --color-primary-container: var(--color-primary-container);
+  --color-on-primary-container: var(--color-on-primary-container);
   --color-secondary: var(--color-secondary);
-  --color-background: var(--color-background);
-  --color-surface: var(--color-surface);
-  --color-surface-muted: var(--color-surface-muted);
-  --color-pending: var(--color-pending);
-  --color-pending-bg: var(--color-pending-bg);
-  --color-pending-text: var(--color-pending-text);
-  --color-done-bg: var(--color-done-bg);
-  --color-done-text: var(--color-done-text);
+  --color-on-secondary: var(--color-on-secondary);
+  --color-secondary-container: var(--color-secondary-container);
+  --color-on-secondary-container: var(--color-on-secondary-container);
+  --color-tertiary: var(--color-tertiary);
+  --color-on-tertiary: var(--color-on-tertiary);
+  --color-tertiary-container: var(--color-tertiary-container);
+  --color-on-tertiary-container: var(--color-on-tertiary-container);
+  --color-tertiary-soft: var(--color-tertiary-soft);
+  --color-on-tertiary-soft: var(--color-on-tertiary-soft);
   --color-error: var(--color-error);
-  --color-text: var(--color-text);
-  --color-text-secondary: var(--color-text-secondary);
-  --color-border: var(--color-border);
-  --color-border-strong: var(--color-border-strong);
-  --color-ring: var(--color-ring);
+  --color-on-error: var(--color-on-error);
+  --color-error-container: var(--color-error-container);
+  --color-on-error-container: var(--color-on-error-container);
+  --color-surface: var(--color-surface);
+  --color-surface-dim: var(--color-surface-dim);
+  --color-surface-bright: var(--color-surface-bright);
+  --color-surface-container-lowest: var(--color-surface-container-lowest);
+  --color-surface-container-low: var(--color-surface-container-low);
+  --color-surface-container: var(--color-surface-container);
+  --color-surface-container-high: var(--color-surface-container-high);
+  --color-surface-container-highest: var(--color-surface-container-highest);
+  --color-on-surface: var(--color-on-surface);
+  --color-on-surface-variant: var(--color-on-surface-variant);
+  --color-outline: var(--color-outline);
+  --color-outline-variant: var(--color-outline-variant);
+  --color-inverse-surface: var(--color-inverse-surface);
+  --color-inverse-on-surface: var(--color-inverse-on-surface);
+  --color-inverse-primary: var(--color-inverse-primary);
+  --color-scrim: var(--color-scrim);
+  --color-on-photo: var(--color-on-photo);
+  --color-photo-veil: var(--color-photo-veil);
   --color-muscle: var(--color-muscle);
   --color-muscle-strong: var(--color-muscle-strong);
+  --color-body: var(--color-body);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-container: var(--accent-container);
+  --color-on-accent-container: var(--on-accent-container);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent-soft: var(--on-accent-soft);
+  --color-transparent: transparent;
+  --color-current: currentColor;
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Google Sans Flex", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  /* Escala tipográfica: 6 pasos con line-height pareja. Nada de saltos de
-     14→16→18 sin criterio: micro/caption para metadatos, body para lectura,
-     lead para el dato de una fila, title/display para jerarquía de pantalla. */
-  --text-micro: 0.6875rem; /* 11px — etiquetas en mayúsculas */
-  --text-micro--line-height: 1rem;
-  --text-micro--letter-spacing: 0.08em;
-  --text-caption: 0.8125rem; /* 13px — metadatos y ayudas */
-  --text-caption--line-height: 1.125rem;
-  --text-body: 0.9375rem; /* 15px — texto de interfaz */
-  --text-body--line-height: 1.45;
-  --text-lead: 1.0625rem; /* 17px — dato principal de una fila */
-  --text-lead--line-height: 1.35;
-  --text-title: 1.25rem; /* 20px — título de bloque */
-  --text-title--line-height: 1.3;
-  --text-display: 1.5rem; /* 24px — título de pantalla */
-  --text-display--line-height: 1.2;
-  --text-display--letter-spacing: -0.02em;
+  /* Escala tipográfica M3 (tamaño / interlineado / peso / tracking). Las
+     variantes *-e (emphasized) suben peso y anchura: momentos clave. */
+  --text-*: initial;
+  --text-display-l: 3.5625rem;
+  --text-display-l--line-height: 4rem;
+  --text-display-l--letter-spacing: -0.016em;
+  --text-display-l--font-weight: 460;
+  --text-display-m: 2.8125rem;
+  --text-display-m--line-height: 3.25rem;
+  --text-display-m--font-weight: 460;
+  --text-display-s: 2.25rem;
+  --text-display-s--line-height: 2.75rem;
+  --text-display-s--font-weight: 460;
+  --text-headline-l: 2rem;
+  --text-headline-l--line-height: 2.5rem;
+  --text-headline-l--font-weight: 500;
+  --text-headline-m: 1.75rem;
+  --text-headline-m--line-height: 2.25rem;
+  --text-headline-m--font-weight: 500;
+  --text-headline-s: 1.5rem;
+  --text-headline-s--line-height: 2rem;
+  --text-headline-s--font-weight: 500;
+  --text-title-l: 1.375rem;
+  --text-title-l--line-height: 1.75rem;
+  --text-title-l--font-weight: 500;
+  --text-title-m: 1rem;
+  --text-title-m--line-height: 1.5rem;
+  --text-title-m--letter-spacing: 0.009em;
+  --text-title-m--font-weight: 600;
+  --text-title-s: 0.875rem;
+  --text-title-s--line-height: 1.25rem;
+  --text-title-s--letter-spacing: 0.007em;
+  --text-title-s--font-weight: 600;
+  --text-body-l: 1rem;
+  --text-body-l--line-height: 1.5rem;
+  --text-body-l--letter-spacing: 0.009em;
+  --text-body-l--font-weight: 400;
+  --text-body-m: 0.875rem;
+  --text-body-m--line-height: 1.25rem;
+  --text-body-m--letter-spacing: 0.016em;
+  --text-body-m--font-weight: 400;
+  --text-body-s: 0.75rem;
+  --text-body-s--line-height: 1rem;
+  --text-body-s--letter-spacing: 0.033em;
+  --text-body-s--font-weight: 400;
+  --text-label-l: 0.875rem;
+  --text-label-l--line-height: 1.25rem;
+  --text-label-l--letter-spacing: 0.007em;
+  --text-label-l--font-weight: 600;
+  --text-label-m: 0.75rem;
+  --text-label-m--line-height: 1rem;
+  --text-label-m--letter-spacing: 0.04em;
+  --text-label-m--font-weight: 600;
+  --text-label-s: 0.6875rem;
+  --text-label-s--line-height: 1rem;
+  --text-label-s--letter-spacing: 0.045em;
+  --text-label-s--font-weight: 600;
 
-  /* Ritmo de espaciado: `p-card`, `gap-section`, `gap-stack`, `gap-gutter` */
   --spacing-card: var(--spacing-card);
   --spacing-section: var(--spacing-section);
   --spacing-stack: var(--spacing-stack);
   --spacing-gutter: var(--spacing-gutter);
-
-  /* Ancho del calendario: `max-w-calendar` */
   --container-calendar: var(--container-calendar);
 
-  --radius-control: var(--radius-control);
-  --radius-panel: var(--radius-panel);
-  --radius-card: var(--radius-card);
-  --radius-chip: var(--radius-chip);
+  --radius-*: initial;
+  --radius-none: var(--radius-none);
+  --radius-xs: var(--radius-xs);
+  --radius-s: var(--radius-s);
+  --radius-m: var(--radius-m);
+  --radius-l: var(--radius-l);
+  --radius-l-inc: var(--radius-l-inc);
+  --radius-xl: var(--radius-xl);
+  --radius-xl-inc: var(--radius-xl-inc);
+  --radius-xxl: var(--radius-xxl);
+  --radius-full: var(--radius-full);
 
-  --shadow-card: var(--shadow-card);
-  --shadow-raised: var(--shadow-raised);
-  --shadow-inset: var(--shadow-inset);
-  --shadow-up: var(--shadow-up);
+  --shadow-*: initial;
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --shadow-3: var(--shadow-3);
 
-  --ease-out-quart: var(--ease-out-quart);
+  --animate-*: initial;
 }
 
+/* Variantes *emphasized*: el mismo rol con más peso y un punto de anchura. */
+@utility text-e {
+  font-weight: 720;
+  font-stretch: 112%;
+  font-variation-settings: "ROND" 100;
+}
+
+/* Movimiento en utilidades: cada una empareja el muelle con su duración de
+   asentamiento. `motion-spatial*` para posición/tamaño/forma (rebota),
+   `motion-effects*` para color/opacidad (sin rebote). Se combinan con una
+   `transition-*` de Tailwind que diga QUÉ se anima. */
+@utility motion-spatial-fast {
+  transition-duration: var(--duration-spatial-fast);
+  transition-timing-function: var(--ease-spatial-fast);
+}
+@utility motion-spatial {
+  transition-duration: var(--duration-spatial-default);
+  transition-timing-function: var(--ease-spatial-default);
+}
+@utility motion-spatial-slow {
+  transition-duration: var(--duration-spatial-slow);
+  transition-timing-function: var(--ease-spatial-slow);
+}
+@utility motion-effects-fast {
+  transition-duration: var(--duration-effects-fast);
+  transition-timing-function: var(--ease-effects-fast);
+}
+@utility motion-effects {
+  transition-duration: var(--duration-effects-default);
+  transition-timing-function: var(--ease-effects-default);
+}
+@utility motion-effects-slow {
+  transition-duration: var(--duration-effects-slow);
+  transition-timing-function: var(--ease-effects-slow);
+}
+
+/* Cifras de contadores, series y cantidades. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Color de sección: cualquier contenedor lo fija y sus hijos lo heredan. */
 @layer base {
+  [data-section="deporte"] {
+    --accent: var(--color-primary);
+    --on-accent: var(--color-on-primary);
+    --accent-container: var(--color-primary-container);
+    --on-accent-container: var(--color-on-primary-container);
+    --accent-soft: var(--color-secondary-container);
+    --on-accent-soft: var(--color-on-secondary-container);
+  }
+  [data-section="nutricion"] {
+    --accent: var(--color-tertiary);
+    --on-accent: var(--color-on-tertiary);
+    --accent-container: var(--color-tertiary-container);
+    --on-accent-container: var(--color-on-tertiary-container);
+    --accent-soft: var(--color-tertiary-soft);
+    --on-accent-soft: var(--color-on-tertiary-soft);
+  }
+  [data-section="hoy"] {
+    --accent: var(--color-secondary);
+    --on-accent: var(--color-on-secondary);
+    --accent-container: var(--color-secondary-container);
+    --on-accent-container: var(--color-on-secondary-container);
+    --accent-soft: var(--color-secondary-container);
+    --on-accent-soft: var(--color-on-secondary-container);
+  }
+
+  html {
+    background: var(--color-surface);
+    color-scheme: light;
+  }
   body {
-    background: var(--color-background);
-    color: var(--color-text);
+    background: var(--color-surface);
+    color: var(--color-on-surface);
     font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    /* Terminaciones redondeadas a medias: amable sin volverse infantil. */
+    font-variation-settings: "ROND" 50;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Un solo anillo de foco para toda la app, visible sobre cualquier superficie. */
+  /* Un solo anillo de foco para toda la app. */
   :where(
     a,
     button,
@@ -156,237 +323,871 @@
     summary,
     [tabindex]
   ):focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 3px solid var(--accent);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: var(--color-primary-soft-strong);
+    background: var(--accent-container);
+    color: var(--on-accent-container);
   }
 }
 
 @layer components {
-  /* --- Superficies ------------------------------------------------------ */
+  /* --- Capa de estado M3 ------------------------------------------------- */
+  /* Todo lo pulsable lleva `.state`: un velo de `currentColor` que sube a 8 %
+     al pasar, 10 % con foco o al pulsar. La onda (`.ripple`) la pone
+     components/ripple.ts solo con puntero. */
+  .state {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .state::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: currentColor;
+    opacity: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    transition: opacity var(--duration-effects-fast) var(--ease-effects-fast);
+  }
+  .state:hover:not(:disabled, [aria-disabled="true"])::before {
+    opacity: var(--state-hover);
+  }
+  .state:focus-visible::before {
+    opacity: var(--state-focus);
+  }
+  .state:active:not(:disabled, [aria-disabled="true"])::before {
+    opacity: var(--state-press);
+  }
+  .ripple {
+    position: absolute;
+    z-index: -1;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.12;
+    transform: scale(0);
+    pointer-events: none;
+    animation: ripple var(--duration-effects-slow) var(--ease-emphasized)
+      forwards;
+  }
 
+  /* --- Tarjetas: elevated / filled / outlined ---------------------------- */
+  /* La jerarquía la marcan los tonos; la elevada es un tono más claro y una
+     sombra mínima, no una difusa. */
   .card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
+    border-radius: var(--radius-l);
     padding: var(--spacing-card);
+    color: var(--color-on-surface);
+  }
+  .card-filled {
+    --field-bg: var(--color-surface-container-highest);
+    background: var(--color-surface-container-highest);
+  }
+  .card-elevated {
+    --field-bg: var(--color-surface-container-low);
+    background: var(--color-surface-container-low);
+    box-shadow: var(--shadow-1);
+  }
+  .card-outlined {
+    background: var(--color-surface);
+    border: 1px solid var(--color-outline-variant);
+  }
+  .card-tonal {
+    --field-bg: var(--color-surface-container);
+    background: var(--color-surface-container);
   }
 
-  /* Tarjeta que además se pulsa: se levanta al pasar por encima. */
+  /* Tarjeta que se pulsa: capa de estado + un levísimo muelle de escala. */
   .card-interactive {
+    cursor: pointer;
     transition:
-      transform var(--duration-base) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart),
-      border-color var(--duration-base) var(--ease-out-quart);
-  }
-  .card-interactive:hover {
-    transform: translateY(-1px);
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-raised);
+      transform var(--duration-spatial-fast) var(--ease-spatial-fast),
+      border-radius var(--duration-spatial-fast) var(--ease-spatial-fast);
   }
   .card-interactive:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-card);
+    transform: scale(0.98);
+    border-radius: var(--radius-xl);
   }
 
   /* Etiqueta de sección (RECETA / FUERZA / NOTAS DEL DÍA) */
   .section-label {
-    font-size: var(--text-micro);
-    line-height: var(--text-micro--line-height);
-    letter-spacing: var(--text-micro--letter-spacing);
+    font-size: var(--text-label-m);
+    line-height: var(--text-label-m--line-height);
+    letter-spacing: 0.1em;
     font-weight: 700;
+    font-stretch: 112%;
     text-transform: uppercase;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
   }
 
-  /* Loader: barrido suave en lugar del pulso de opacidad clásico. */
+  /* Loader: tono surface-container que respira (sin barrido blanco, que en
+     oscuro deslumbra). */
   .skeleton {
-    position: relative;
-    overflow: hidden;
-    background: var(--color-surface-muted);
-    border-radius: var(--radius-panel);
-  }
-  .skeleton::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgb(255 255 255 / 0.75),
-      transparent
-    );
-    animation: shimmer 1.6s var(--ease-out-quart) infinite;
+    background: var(--color-surface-container-high);
+    border-radius: var(--radius-m);
+    animation: breathe 1.4s var(--ease-emphasized) infinite alternate;
   }
 
-  /* --- Botones ---------------------------------------------------------- */
-
+  /* --- Botones M3E ------------------------------------------------------- */
+  /* Redondos en reposo; al pulsar se cuadran (shape morph) con el muelle
+     espacial rápido. El peso de la etiqueta también se mueve. */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-pill);
     font-weight: 600;
-    letter-spacing: -0.01em;
+    font-stretch: 104%;
     line-height: 1;
     white-space: nowrap;
+    user-select: none;
     transition:
-      background-color var(--duration-fast) var(--ease-out-quart),
-      background-image var(--duration-fast) var(--ease-out-quart),
-      border-color var(--duration-fast) var(--ease-out-quart),
-      color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart),
-      transform var(--duration-fast) var(--ease-out-quart);
+      border-radius var(--duration-spatial-fast) var(--ease-spatial-fast),
+      transform var(--duration-spatial-fast) var(--ease-spatial-fast),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
+      color var(--duration-effects-default) var(--ease-effects-default),
+      font-weight var(--duration-effects-default) var(--ease-effects-default),
+      box-shadow var(--duration-effects-default) var(--ease-effects-default);
   }
-  .btn:active:not(:disabled) {
-    transform: translateY(1px);
+  .btn:active:not(:disabled, [aria-disabled="true"]) {
+    border-radius: var(--radius-m);
+    font-weight: 700;
+  }
+  .btn[aria-pressed="true"] {
+    border-radius: var(--radius-m);
   }
   .btn:disabled,
   .btn[aria-disabled="true"] {
-    opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  /* El hover oscurece con una capa encima: así sigue funcionando cuando el
-     consumidor pinta el botón de otro color (p. ej. `bg-error`). */
-  .btn-primary {
-    background: var(--color-primary);
-    color: var(--color-on-primary);
-    box-shadow: 0 1px 2px rgb(22 101 52 / 0.25);
-  }
-  .btn-primary:hover:not(:disabled) {
-    background-image: linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08));
-  }
-
-  .btn-secondary {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    color: var(--color-text);
-  }
-  .btn-secondary:hover:not(:disabled) {
-    border-color: var(--color-border-strong);
-    background-image: linear-gradient(
-      rgb(28 25 23 / 0.04),
-      rgb(28 25 23 / 0.04)
+    color: color-mix(in srgb, var(--color-on-surface) 38%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--color-on-surface) 10%,
+      transparent
     );
+    box-shadow: none;
+    border-color: transparent;
   }
-
-  .btn-ghost {
+  .btn-filled {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .btn-tonal {
+    background: var(--accent-soft);
+    color: var(--on-accent-soft);
+  }
+  .btn-outlined {
     background: transparent;
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
+    border: 1px solid var(--color-outline-variant);
   }
-  .btn-ghost:hover:not(:disabled) {
-    background: var(--color-surface-muted);
-    color: var(--color-text);
+  .btn-text {
+    background: transparent;
+    color: var(--accent);
+  }
+  .btn-danger {
+    background: var(--color-error);
+    color: var(--color-on-error);
+  }
+  .btn-outlined[aria-pressed="true"],
+  .btn-text[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--on-accent-soft);
+    border-color: transparent;
   }
 
-  /* --- Campos ----------------------------------------------------------- */
-
-  .input {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-control);
-    padding: 0.625rem 0.875rem;
-    min-height: 2.75rem;
-    color: var(--color-text);
+  /* FAB: el contenedor de la sección, con sombra (uno de los pocos elevados). */
+  .fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background: var(--accent-container);
+    color: var(--on-accent-container);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-3);
+    font-weight: 600;
     transition:
-      border-color var(--duration-fast) var(--ease-out-quart),
-      box-shadow var(--duration-base) var(--ease-out-quart);
+      border-radius var(--duration-spatial-default) var(--ease-spatial-default),
+      transform var(--duration-spatial-fast) var(--ease-spatial-fast),
+      box-shadow var(--duration-effects-default) var(--ease-effects-default);
+  }
+  .fab:hover {
+    box-shadow: var(--shadow-3), var(--shadow-1);
+  }
+  .fab:active {
+    transform: scale(0.94);
+  }
+  /* Abierto: se vuelve un círculo del color fuerte (se transforma). */
+  .fab[aria-expanded="true"] {
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  /* --- Grupo de botones conectados (M3E) --------------------------------- */
+  /* Piezas juntas con esquinas interiores pequeñas; la elegida se vuelve una
+     píldora (cambia de forma) y la pulsada crece mientras sus vecinas ceden. */
+  .connected {
+    display: flex;
+    gap: 2px;
+  }
+  /* Reposo de la pieza, sin especificidad (`:where`): cede ante la elegida y
+     ante la piel de un `.btn` dentro del grupo (SplitButton). No va en
+     utilidades de Tailwind: la capa `utilities` gana a `components`, y un
+     `bg-*` en la pieza tapaba el acento de la elegida. */
+  :where(.connected) > * {
+    background: var(--color-surface-container-highest);
+    color: var(--color-on-surface-variant);
+  }
+  .connected > * {
+    flex: 1 1 auto;
+    border-radius: var(--radius-s);
+    transition:
+      flex-grow var(--duration-spatial-fast) var(--ease-spatial-fast),
+      border-radius var(--duration-spatial-fast) var(--ease-spatial-fast),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
+      color var(--duration-effects-default) var(--ease-effects-default),
+      font-weight var(--duration-effects-default) var(--ease-effects-default);
+  }
+  .connected > :first-child {
+    border-start-start-radius: var(--radius-pill);
+    border-end-start-radius: var(--radius-pill);
+  }
+  .connected > :last-child {
+    border-start-end-radius: var(--radius-pill);
+    border-end-end-radius: var(--radius-pill);
+  }
+  .connected > :active {
+    flex-grow: 1.35;
+  }
+  .connected > [aria-pressed="true"],
+  .connected > [aria-current="page"],
+  .connected > [aria-selected="true"] {
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+  }
+
+  /* --- Chips ------------------------------------------------------------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0 1rem;
+    border-radius: var(--radius-s);
+    border: 1px solid var(--color-outline-variant);
+    color: var(--color-on-surface-variant);
+    font-size: var(--text-label-l);
+    font-weight: 600;
+    transition:
+      border-radius var(--duration-spatial-fast) var(--ease-spatial-fast),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
+      color var(--duration-effects-default) var(--ease-effects-default);
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-current="page"] {
+    border-color: transparent;
+    border-radius: var(--radius-l);
+    background: var(--accent-soft);
+    color: var(--on-accent-soft);
+  }
+  /* Área táctil de 48 px aunque el chip mida 32 (M3). */
+  .chip::after {
+    content: "";
+    position: absolute;
+    inset: -8px 0;
+  }
+
+  /* --- Campos: outlined con etiqueta flotante --------------------------- */
+  /* Elegido outlined (no filled) para toda la app: sobre superficies tonales
+     un campo relleno se funde con la tarjeta. La etiqueta flota cuando hay
+     foco o valor (`:placeholder-shown` con un placeholder de un espacio). */
+  .input {
+    min-width: 0;
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--color-outline);
+    border-radius: var(--radius-xs);
+    padding: 0.75rem 1rem;
+    min-height: 3rem;
+    color: var(--color-on-surface);
+    font-size: var(--text-body-l);
+    transition:
+      border-color var(--duration-effects-fast) var(--ease-effects-fast),
+      box-shadow var(--duration-effects-fast) var(--ease-effects-fast);
   }
   .input::placeholder {
-    color: var(--color-text-secondary);
+    color: var(--color-on-surface-variant);
   }
-  .input:hover:not(:disabled) {
-    border-color: var(--color-border-strong);
+  .input:hover:not(:disabled, :focus) {
+    border-color: var(--color-on-surface);
   }
   .input:focus {
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-ring);
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
   }
-  .input-error,
   .input[aria-invalid="true"] {
     border-color: var(--color-error);
   }
-  .input-error:focus,
   .input[aria-invalid="true"]:focus {
-    border-color: var(--color-error);
-    box-shadow: 0 0 0 3px rgb(185 28 28 / 0.2);
+    box-shadow: inset 0 0 0 1px var(--color-error);
+  }
+  .input:disabled {
+    opacity: 0.38;
   }
 
-  /* --- Insignias -------------------------------------------------------- */
+  .field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  .field-label {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.75rem;
+    padding: 0 0.25rem;
+    max-width: calc(100% - 1.5rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-on-surface-variant);
+    font-size: var(--text-body-l);
+    line-height: 1.5rem;
+    pointer-events: none;
+    background: var(--field-bg, var(--color-surface));
+    transform-origin: left center;
+    transition:
+      transform var(--duration-spatial-fast) var(--ease-spatial-fast),
+      color var(--duration-effects-fast) var(--ease-effects-fast);
+  }
+  .field:focus-within .field-label,
+  .field .input:not(:placeholder-shown) ~ .field-label,
+  .field select.input ~ .field-label,
+  .field .input[type="date"] ~ .field-label,
+  .field .input[type="file"] ~ .field-label {
+    transform: translateY(-1.45rem) scale(0.75);
+  }
+  .field:focus-within .field-label {
+    color: var(--accent);
+  }
+  .field:has([aria-invalid="true"]) .field-label,
+  .field-error {
+    color: var(--color-error);
+  }
+  .field-support,
+  .field-error {
+    padding: 0 1rem;
+    font-size: var(--text-body-s);
+    line-height: var(--text-body-s--line-height);
+  }
+  .field-support {
+    color: var(--color-on-surface-variant);
+  }
 
-  :where(.badge-pending, .badge-done, .badge-neutral) {
+  /* --- Casilla y switch -------------------------------------------------- */
+  .checkbox {
+    appearance: none;
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 2px solid var(--color-on-surface-variant);
+    border-radius: 2px;
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-effects-fast) var(--ease-effects-fast),
+      border-color var(--duration-effects-fast) var(--ease-effects-fast);
+  }
+  .checkbox::after {
+    content: "";
+    width: 0.625rem;
+    height: 0.3125rem;
+    border-left: 2px solid var(--on-accent);
+    border-bottom: 2px solid var(--on-accent);
+    transform: translateY(-1px) rotate(-45deg) scale(0);
+    transition: transform var(--duration-spatial-fast) var(--ease-spatial-fast);
+  }
+  .checkbox:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .checkbox:checked::after {
+    transform: translateY(-1px) rotate(-45deg) scale(1);
+  }
+  .checkbox[aria-invalid="true"] {
+    border-color: var(--color-error);
+  }
+  .checkbox:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+  /* 48 px de área táctil alrededor de una casilla de 18. */
+  .checkbox-target {
+    display: inline-grid;
+    place-items: center;
+    min-width: 3rem;
+    min-height: 3rem;
+    border-radius: var(--radius-full);
+    color: var(--accent);
+  }
+
+  .switch {
+    appearance: none;
+    flex-shrink: 0;
+    width: 3.25rem;
+    height: 2rem;
+    border-radius: var(--radius-full);
+    background: var(--color-surface-container-highest);
+    border: 2px solid var(--color-outline);
+    position: relative;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default),
+      border-color var(--duration-effects-default) var(--ease-effects-default);
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0.375rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: var(--radius-full);
+    background: var(--color-outline);
+    transform: translateY(-50%);
+    transition:
+      left var(--duration-spatial-fast) var(--ease-spatial-fast),
+      width var(--duration-spatial-fast) var(--ease-spatial-fast),
+      height var(--duration-spatial-fast) var(--ease-spatial-fast),
+      background-color var(--duration-effects-default)
+      var(--ease-effects-default);
+  }
+  .switch:active::after {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  .switch:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .switch:checked::after {
+    left: calc(100% - 1.625rem);
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--on-accent);
+  }
+
+  /* --- Insignias --------------------------------------------------------- */
+  :where(.badge-pending, .badge-done, .badge-neutral, .badge-accent) {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    border-radius: var(--radius-chip);
-    font-size: var(--text-micro);
-    line-height: var(--text-micro--line-height);
-    letter-spacing: 0.06em;
+    gap: 0.25rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-label-m);
+    line-height: var(--text-label-m--line-height);
     font-weight: 700;
-    text-transform: uppercase;
-    padding: 0.3125rem 0.625rem;
+    font-stretch: 110%;
+    padding: 0.25rem 0.625rem;
   }
   .badge-pending {
-    background: var(--color-pending-bg);
-    color: var(--color-pending-text);
+    background: var(--color-tertiary-container);
+    color: var(--color-on-tertiary-container);
   }
   .badge-done {
-    background: var(--color-done-bg);
-    color: var(--color-done-text);
+    background: var(--color-primary-container);
+    color: var(--color-on-primary-container);
   }
   .badge-neutral {
-    background: var(--color-surface-muted);
-    color: var(--color-text-secondary);
+    background: var(--color-surface-container-highest);
+    color: var(--color-on-surface-variant);
+  }
+  .badge-accent {
+    background: var(--accent-container);
+    color: var(--on-accent-container);
   }
 
-  /* --- Fila de lista ---------------------------------------------------- */
+  /* --- Avisos ------------------------------------------------------------ */
+  .alert {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    border-radius: var(--radius-l);
+    padding: 1rem;
+  }
+  .alert-error {
+    background: var(--color-error-container);
+    color: var(--color-on-error-container);
+  }
+  .alert-info {
+    background: var(--accent-soft);
+    color: var(--on-accent-soft);
+  }
 
+  /* --- Fila de lista ----------------------------------------------------- */
   .list-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-stack);
-    border-radius: var(--radius-panel);
-    transition: background-color var(--duration-fast) var(--ease-out-quart);
+    border-radius: var(--radius-m);
+  }
+
+  /* --- Superficies superpuestas ------------------------------------------ */
+  .scrim {
+    background: color-mix(in srgb, var(--color-scrim) 40%, transparent);
+    animation: fade-in var(--duration-effects-default)
+      var(--ease-effects-default) backwards;
+  }
+  /* Cada superficie declara su `--field-bg`: la etiqueta flotante de un campo
+     outlined tapa el borde con el color de lo que tiene debajo. */
+  .dialog {
+    --field-bg: var(--color-surface-container-high);
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-3);
+    animation: dialog-in var(--duration-spatial-default)
+      var(--ease-spatial-default) backwards;
+  }
+  /* Hoja inferior: esquinas grandes arriba, planas abajo (asimetría M3). */
+  .sheet {
+    --field-bg: var(--color-surface-container-low);
+    background: var(--color-surface-container-low);
+    color: var(--color-on-surface);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: var(--shadow-3);
+    animation: sheet-in var(--duration-spatial-default)
+      var(--ease-spatial-default) backwards;
+    transition: transform var(--duration-spatial-fast) var(--ease-spatial-fast);
+  }
+  .sheet-handle {
+    width: 2rem;
+    height: 0.25rem;
+    border-radius: var(--radius-full);
+    background: var(--color-on-surface-variant);
+    opacity: 0.4;
+  }
+  .menu {
+    --field-bg: var(--color-surface-container);
+    background: var(--color-surface-container);
+    color: var(--color-on-surface);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-2);
+    animation: menu-in var(--duration-spatial-fast) var(--ease-spatial-fast)
+      backwards;
+    transform-origin: top left;
+  }
+  /* Tooltip enriquecido M3: contenedor de superficie, forma M, elevación 2 (es
+     una superficie flotante como el menú). Solo lo pinta `useTooltip`. */
+  .tooltip {
+    background: var(--color-surface-container);
+    color: var(--color-on-surface);
+    border-radius: var(--radius-m);
+    box-shadow: var(--shadow-2);
+    animation: fade-in var(--duration-effects-fast) var(--ease-effects-fast)
+      backwards;
+  }
+  .toolbar {
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-3);
+    animation: toolbar-in var(--duration-spatial-default)
+      var(--ease-spatial-default) backwards;
+  }
+  .snackbar {
+    background: var(--color-inverse-surface);
+    color: var(--color-inverse-on-surface);
+    border-radius: var(--radius-s);
+    box-shadow: var(--shadow-3);
+    animation: snackbar-in var(--duration-spatial-default)
+      var(--ease-spatial-default) backwards;
+  }
+  .snackbar-action {
+    color: var(--color-inverse-primary);
+  }
+  .search-view {
+    background: var(--color-surface-container-high);
+    color: var(--color-on-surface);
+    box-shadow: var(--shadow-3);
+    animation: dialog-in var(--duration-spatial-default)
+      var(--ease-spatial-default) backwards;
   }
 }
 
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+/* --- Entrada escalonada ------------------------------------------------ */
+/* NUNCA en una lista ordenable (dnd-kit mide las filas al empezar a
+   arrastrar: una fila a media entrada está desplazada y el orden sale mal).
+   Los hijos directos de `.stagger` entran con el muelle espacial por turno
+   (`--i` lo pone la pantalla; sin él entran juntos). */
+/* `backwards`, no `both`: al acabar, la animación suelta `transform`. Con
+   `both` retenía el último fotograma y pisaba el transform en línea de dnd-kit
+   (las listas ordenables no se movían al arrastrar). */
+.stagger > * {
+  animation: rise var(--duration-spatial-default) var(--ease-spatial-default)
+    backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+}
+.animate-rise {
+  animation: rise var(--duration-spatial-default) var(--ease-spatial-default)
+    backwards;
+}
+.animate-pop {
+  animation: pop var(--duration-spatial-fast) var(--ease-spatial-fast) backwards;
 }
 
+/* Tipografía que se mueve: la etiqueta activa gana peso y anchura. */
+.type-move {
+  transition:
+    font-weight var(--duration-spatial-fast) var(--ease-spatial-fast),
+    font-stretch var(--duration-spatial-fast) var(--ease-spatial-fast);
+}
+
+/* --- Formas M3E animadas ------------------------------------------------ */
+/* El morph interpola el `d` del <path> (mismo número de puntos en todas las
+   formas; ver lib/shapes.ts). */
+.shape path {
+  transition: d var(--duration-spatial-default) var(--ease-spatial-default);
+}
+.shape-spin {
+  animation: spin 2.4s linear infinite;
+}
+
+/* Indicador de carga M3E: una forma que gira y cambia (la secuencia la
+   pone el componente; aquí solo el giro). */
+.loader path {
+  transition: d 420ms var(--ease-spatial-fast);
+}
+
+/* Progreso ondulado: la onda se desplaza sola. */
+.wavy-track {
+  animation: wave-drift 1.2s linear infinite;
+}
+.wavy-fill {
+  transition: stroke-dashoffset var(--duration-spatial-slow)
+    var(--ease-spatial-slow);
+}
+
+/* Sello de recompensa: entra con el muelle espacial lento (rebota). */
+.seal {
+  animation: seal-in var(--duration-spatial-slow) var(--ease-spatial-slow)
+    backwards;
+}
+.seal-shape {
+  animation: spin 18s linear infinite;
+  transform-origin: center;
+}
+
+/* --- Transiciones de vista (router de datos) ---------------------------- */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-effects-default);
+  animation-timing-function: var(--ease-effects-default);
+}
+/* Transformación de contenedor: la tarjeta de receta crece hasta la cabecera
+   (mismo `view-transition-name` en las dos). */
+::view-transition-group(*) {
+  animation-duration: var(--duration-spatial-default);
+  animation-timing-function: var(--ease-spatial-default);
+}
+/* Crear: lo pulsado (FAB, «Nueva …») crece hasta lo que abre con el muelle
+   espacial; el contenido cambia por fundido cruzado sin estirarse. */
+::view-transition-old(create),
+::view-transition-new(create) {
+  height: 100%;
+  object-fit: cover;
+  overflow: clip;
+}
+/* Lo pulsado se desvanece pronto: no se ve estirado mientras crece. */
+::view-transition-old(create) {
+  animation-duration: var(--duration-effects-fast);
+}
+/* Día → modal: mismo trato que «crear» — el contenido llena el contenedor y la
+   columna de origen (alta y estrecha) se despide pronto; si no, se queda
+   estirada encima del modal todo lo que dura la expansión. */
+::view-transition-old(day-sheet),
+::view-transition-new(day-sheet) {
+  height: 100%;
+  object-fit: cover;
+  overflow: clip;
+}
+::view-transition-old(day-sheet) {
+  animation-duration: var(--duration-effects-fast);
+}
+/* Eje compartido X al cambiar de semana: sale hacia un lado, entra del otro. */
+::view-transition-old(week-grid) {
+  animation: axis-out var(--duration-spatial-fast) var(--ease-emphasized) both;
+}
+::view-transition-new(week-grid) {
+  animation: axis-in var(--duration-spatial-default) var(--ease-spatial-default)
+    both;
+}
+:root[data-week-dir="prev"]::view-transition-old(week-grid) {
+  animation-name: axis-out-prev;
+}
+:root[data-week-dir="prev"]::view-transition-new(week-grid) {
+  animation-name: axis-in-prev;
+}
+
+/* Las entradas animan `translate`/`scale`/`rotate` sueltos, no `transform`:
+   así no pisan el `transform` en línea de dnd-kit (listas ordenables) ni el del
+   arrastre de la hoja. */
+@keyframes ripple {
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+@keyframes breathe {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    translate: 0 12px;
   }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+    scale: 0.96;
+  }
+}
+@keyframes sheet-in {
+  from {
+    translate: 0 100%;
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+@keyframes toolbar-in {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+    scale: 0.9;
+  }
+}
+@keyframes snackbar-in {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+    scale: 1 0.6;
+  }
+}
+@keyframes spin {
   to {
-    opacity: 1;
-    transform: none;
+    transform: rotate(360deg);
+  }
+}
+@keyframes wave-drift {
+  to {
+    transform: translateX(var(--wave-length, -24px));
+  }
+}
+@keyframes seal-in {
+  from {
+    opacity: 0;
+    scale: 0.2;
+    rotate: -40deg;
+  }
+}
+@keyframes axis-out {
+  to {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+}
+@keyframes axis-in {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+}
+@keyframes axis-out-prev {
+  to {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+}
+@keyframes axis-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
   }
 }
 
-/* Entrada de contenido: una sola vez, corta y desplazada. */
-.animate-rise {
-  animation: rise var(--duration-slow) var(--ease-out-quart) both;
-}
-
+/* Movimiento reducido: nada rebota ni cambia de forma animado; lo que entra
+   o cambia de estado lo hace con un fundido corto. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+  }
+  .scrim,
+  .dialog,
+  .sheet,
+  .menu,
+  .tooltip,
+  .toolbar,
+  .snackbar,
+  .search-view,
+  .seal,
+  .stagger > *,
+  .animate-rise,
+  .animate-pop {
+    animation: fade-in 150ms linear backwards !important;
+  }
+  .shape-spin,
+  .seal-shape,
+  .wavy-track {
+    animation: none !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

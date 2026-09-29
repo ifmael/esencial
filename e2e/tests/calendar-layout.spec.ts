@@ -44,6 +44,14 @@ async function resetPlanned(request: APIRequestContext, date: string) {
 }
 
 test.describe("CALENDARIO — alto de ventana", () => {
+  // Las medidas son con el raíl plegado (80 px): el menú lo pliega el usuario,
+  // navegar no lo cambia, y desplegado el cajón de 288 px come ancho de día.
+  test.beforeEach(({ page }) =>
+    page.addInitScript(() =>
+      localStorage.setItem("esencial.sidebar", "collapsed"),
+    ),
+  );
+
   test("escritorio: llena la ventana sin scroll de página", async ({
     page,
   }) => {
@@ -63,8 +71,7 @@ test.describe("CALENDARIO — alto de ventana", () => {
         1,
       );
 
-      // El submenú de la sección vive sobre el calendario, también en escritorio
-      // (la barra lateral va en raíl y no lo despliega).
+      // El submenú de la sección vive sobre el calendario, también en escritorio.
       await expect(
         page.getByRole("navigation", { name: /Deporte|Nutrición/ }),
       ).toBeVisible();
@@ -130,7 +137,7 @@ test.describe("CALENDARIO — alto de ventana", () => {
     }
   });
 
-  test("escritorio: el raíl conserva las secciones y el submenú vive sobre el calendario", async ({
+  test("escritorio: plegado, el raíl conserva las secciones y el submenú vive sobre el calendario", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
@@ -143,14 +150,20 @@ test.describe("CALENDARIO — alto de ventana", () => {
         (el) => el.getBoundingClientRect().width,
       );
       expect(width, `${route}: ancho del raíl`).toBeLessThanOrEqual(80);
-      for (const name of ["Hoy", "Deporte", "Nutrición", "Sistema de diseño"]) {
+      for (const name of ["Hoy", "Deporte", "Nutrición"]) {
         await expect(
           rail.getByRole("link", { name }),
           `${route}: ${name}`,
         ).toBeVisible();
       }
-      // Sin desplegables: el submenú de la sección está en la fila de chips.
-      await expect(rail.locator("button[aria-expanded]")).toHaveCount(0);
+      // Raíl de 80 px: el catálogo y «Cerrar sesión» ceden su sitio (siguen en
+      // la búsqueda ⌘K y al desplegar el menú); búsqueda y tema se quedan.
+      await expect(rail.getByRole("button", { name: /Buscar/ })).toBeVisible();
+      // Sin desplegables de sección: el submenú está sobre el calendario. (El
+      // menú FAB de crear sí es un desplegable.)
+      await expect(rail.locator("button[aria-controls^='nav-']")).toHaveCount(
+        0,
+      );
     }
 
     const chips = page.getByRole("navigation", { name: "Deporte" });

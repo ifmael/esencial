@@ -49,6 +49,20 @@ export function toISODate(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/** Comidas del día que admite el plan (desayuno, almuerzo, cena). */
+const MEALS_PER_DAY = 3;
+
+/** Pasos del día: las tres comidas (hecha = planificada con receta) y, si hay
+ * sesión asignada, un paso más (hecho = registrada). */
+export function dayProgress(day: DayData): { done: number; total: number } {
+  const meals = (day.meals ?? []).filter((m) => m.recipeName !== null).length;
+  const hasSession = day.session !== null;
+  return {
+    done: meals + (day.session?.status === "logged" ? 1 : 0),
+    total: MEALS_PER_DAY + (hasSession ? 1 : 0),
+  };
+}
+
 export function useDay(date: string): DayState {
   const [data, setData] = useState<DayData | null>(null);
   const [loading, setLoading] = useState(true);

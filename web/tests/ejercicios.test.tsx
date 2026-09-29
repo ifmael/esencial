@@ -6,12 +6,18 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import type { Exercise } from "../src/lib/exercises";
 import type { Template } from "../src/lib/templates";
 import { type MockApi, mockApi } from "./api-mock";
+import {
+  morphing,
+  stubViewTransitions,
+  unstubViewTransitions,
+} from "./view-transition-stub";
 
 const press: Exercise = {
   id: 7,
@@ -94,6 +100,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  unstubViewTransitions();
 });
 
 describe("catalog", () => {
@@ -129,21 +136,53 @@ describe("catalog", () => {
     expect(api.calls.length).toBe(calls);
   });
 
+  it("filtro por grupo: el chip elegido se marca y deja solo sus ejercicios", async () => {
+    renderAt("/ejercicios");
+    await screen.findByText("Press banca");
+    const filters = screen.getByRole("group", { name: "Filtrar por grupo" });
+    const espalda = within(filters).getByRole("button", { name: "Espalda" });
+    fireEvent.click(espalda);
+    expect(espalda.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Remo")).toBeDefined();
+    expect(screen.queryByText("Press banca")).toBeNull();
+    expect(screen.queryByText("Peso muerto")).toBeNull();
+    fireEvent.click(within(filters).getByRole("button", { name: "Todos" }));
+    expect(screen.getByText("Press banca")).toBeDefined();
+  });
+
   it("empty catalog invites creating the first exercise", async () => {
     vi.unstubAllGlobals();
     api = mockApi({ templates: [], exercises: [] });
     renderAt("/ejercicios");
     await screen.findByText(/primer ejercicio/i);
     expect(
-      screen.getByRole("button", { name: "+ Nuevo ejercicio" }),
+      screen.getByRole("button", { name: "Nuevo ejercicio" }),
     ).toBeDefined();
   });
 
-  it("create flow: name required, ≥1 tag, valid save → POST 201 + detail shows data", async () => {
+  it("«Nuevo ejercicio» se transforma en el formulario", async () => {
+    const before = stubViewTransitions();
+    renderAt("/ejercicios");
+    const button = await screen.findByRole("button", {
+      name: "Nuevo ejercicio",
+    });
+    fireEvent.click(button);
+    await waitFor(() => expect(before).toHaveLength(1));
+    expect(before[0]).toEqual([button]);
+    const form = await screen.findByRole("heading", {
+      name: "Nuevo ejercicio",
+    });
+    expect(morphing()).toHaveLength(1);
+    expect(morphing()[0].contains(form)).toBe(true);
+  });
+
+  it("create flow: name required, ≥1 group, ≥1 muscle, valid save → POST 201 + detail shows data", async () => {
     renderAt("/ejercicios");
     fireEvent.click(
-      await screen.findByRole("button", { name: "+ Nuevo ejercicio" }),
+      await screen.findByRole("button", { name: "Nuevo ejercicio" }),
     );
+    // Página de creación propia: la lista y su cabecera ceden el sitio.
+    expect(screen.queryByRole("heading", { name: "Ejercicios" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/nombre es obligatorio/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
@@ -152,27 +191,36 @@ describe("catalog", () => {
       target: { value: "Hip thrust" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
-    expect(screen.getByText(/tag es obligatorio/i)).toBeDefined();
+    expect(screen.getByText(/elige al menos un grupo/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
 
-    fireEvent.change(screen.getByPlaceholderText(/añadir tag/i), {
-      target: { value: "glúteo" },
-    });
-    fireEvent.keyDown(screen.getByPlaceholderText(/añadir tag/i), {
-      key: "Enter",
-    });
+    // Los diez grupos están a la vista como fichas: se eligen con un toque.
+    const groups = screen.getByRole("group", { name: "Grupos musculares" });
+    fireEvent.click(within(groups).getByRole("button", { name: "Glúteo" }));
     // El grupo abre sus músculos, y sin elegir uno no se guarda.
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/elige al menos un músculo/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Glúteo mayor" }));
 
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "Tipo" })).getByRole("button", {
+        name: "Bici",
+      }),
+    );
     fireEvent.change(screen.getByLabelText(/técnica/i), {
       target: { value: "https://youtu.be/ht" },
     });
-    fireEvent.change(screen.getByLabelText(/pasos de ejecución/i), {
-      target: { value: "Paso uno\nPaso dos" },
+    // Pasos numerados como en una receta: uno por campo, el vacío no viaja.
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 1" }), {
+      target: { value: "Paso uno" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Añadir paso" }));
+    fireEvent.click(screen.getByRole("button", { name: "Añadir paso" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Paso 3" }), {
+      target: { value: "Paso dos" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Subir paso 3" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.exercises).toHaveLength(4));
     await screen.findByRole("heading", { name: "Hip thrust" });
@@ -182,9 +230,28 @@ describe("catalog", () => {
       (c) => c.method === "POST" && c.url === "/api/exercises",
     )!;
     // `post.body` es el JSON que mandó el cliente al mock: es lo que se comprueba.
-    const body = post.body as { steps: string[] | null; regions: string[] };
+    const body = post.body as {
+      steps: string[] | null;
+      regions: string[];
+      kind: string;
+    };
     expect(body.steps).toEqual(["Paso uno", "Paso dos"]);
     expect(body.regions).toEqual(["gluteus-maximus"]);
+    expect(body.kind).toBe("bike");
+  });
+
+  it("quitar un grupo se lleva sus músculos", async () => {
+    renderAt("/ejercicios");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Nuevo ejercicio" }),
+    );
+    const groups = screen.getByRole("group", { name: "Grupos musculares" });
+    const gluteo = within(groups).getByRole("button", { name: "Glúteo" });
+    fireEvent.click(gluteo);
+    fireEvent.click(screen.getByRole("button", { name: "Glúteo mayor" }));
+    fireEvent.click(gluteo);
+    expect(gluteo.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("button", { name: "Glúteo mayor" })).toBeNull();
   });
 });
 
@@ -296,6 +363,15 @@ describe("detail", () => {
     ).toBe(false);
   });
 
+  it("no delete action; edit is icon-only, named by its aria-label", async () => {
+    renderAt("/ejercicios/8");
+    await screen.findByRole("heading", { name: "Remo" });
+    expect(screen.queryByRole("button", { name: /eliminar/i })).toBeNull();
+    // Sin texto: un botón de texto se llamaría "Editar", no por aria-label.
+    const edit = screen.getByRole("button", { name: "Editar ejercicio" });
+    expect(edit.textContent).toBe("");
+  });
+
   it("edit flow: pre-filled PUT; server 400 on techniqueUrl shown inline, draft kept", async () => {
     renderAt("/ejercicios/8");
     await screen.findByRole("heading", { name: "Remo" });
@@ -312,27 +388,5 @@ describe("detail", () => {
     );
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/exercises/8");
-  });
-
-  it("delete: confirm → 204 back to catalog, card gone", async () => {
-    renderAt("/ejercicios/9");
-    await screen.findByRole("heading", { name: "Peso muerto" });
-    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(screen.getByRole("heading", { name: "Peso muerto" })).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
-    await waitFor(() => expect(api.state.exercises).toHaveLength(2));
-    await screen.findByRole("heading", { name: "Ejercicios" });
-    expect(screen.queryByText("Peso muerto")).toBeNull();
-  });
-
-  it("delete in-use: server message shown, item stays", async () => {
-    renderAt("/ejercicios/7");
-    await screen.findByRole("heading", { name: "Press banca" });
-    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
-    await screen.findByText(/in-use record/i);
-    expect(screen.getByRole("heading", { name: "Press banca" })).toBeDefined();
   });
 });

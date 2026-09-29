@@ -8,6 +8,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
@@ -95,6 +96,7 @@ function loggedPayload(
     session: { id: 1, name: "Empuje A" },
     sets: sets.map((s) => ({
       ...s,
+      exerciseId: s.planSessionExerciseId === SE_BENCH ? 21 : 22,
       exerciseName:
         s.planSessionExerciseId === SE_BENCH ? "Press banca" : "Remo con barra",
     })),
@@ -104,7 +106,9 @@ function loggedPayload(
 
 type Mock = {
   posts: unknown[];
+  puts: unknown[];
   fetchCount: () => number;
+  urls: string[];
 };
 
 function mockApi(opts: {
@@ -116,14 +120,17 @@ function mockApi(opts: {
   }[];
   last?: Record<
     number,
-    { weightKg: number; reps: number; date: string } | null
+    { weightKg: number | null; reps: number; date: string } | null
   >;
   log?: unknown; // GET /api/workout-logs response when logged
+  logs?: Record<string, unknown>; // otros días registrados (sesión anterior)
   lastFails?: boolean;
   postReply?: { status: number; body: unknown };
 }): Mock {
   let count = 0;
   const posts: unknown[] = [];
+  const puts: unknown[] = [];
+  const urls: string[] = [];
   const reply = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), {
       status,
@@ -136,6 +143,12 @@ function mockApi(opts: {
       if (String(url).includes("/api/auth/status"))
         return reply(200, { authenticated: true });
       count += 1;
+      urls.push(String(url));
+      if (init?.method === "PUT") {
+        const b = JSON.parse(init.body ?? "{}");
+        puts.push(b);
+        return reply(200, loggedPayload(b.sets, b.effort, b.note, b.cardio));
+      }
       if (init?.method === "POST") {
         posts.push(JSON.parse(init.body ?? "null"));
         const r = opts.postReply ?? {
@@ -158,31 +171,30 @@ function mockApi(opts: {
         );
       if (/^\/api\/plan-sessions\/\d+$/.test(url))
         return reply(200, SESSION_DETAIL);
-      const last = /^\/api\/exercises\/(\d+)\/last$/.exec(url);
+      const last = /^\/api\/exercises\/(\d+)\/last(\?.*)?$/.exec(url);
       if (last) {
         if (opts.lastFails) return reply(500, { error: "boom" });
         const id = Number(last[1]);
         return reply(200, { exerciseId: id, last: opts.last?.[id] ?? null });
       }
       if (url === "/api/workout-logs/2026-09-02") return reply(200, opts.log);
+      const other = /^\/api\/workout-logs\/(.+)$/.exec(url);
+      if (other && opts.logs?.[other[1]])
+        return reply(200, opts.logs[other[1]]);
       return reply(404, { error: "Not found" });
     }),
   );
-  return { posts, fetchCount: () => count };
+  return { posts, puts, urls, fetchCount: () => count };
 }
 
+/** El botón «Cerrar sesión» de la barra flotante (no el de salir del shell). */
 function primaryClose(): Promise<HTMLButtonElement> {
-  return waitFor(() => {
-    const candidate = [...document.querySelectorAll("button")].find((x) => {
-      const el = x as HTMLButtonElement;
-      return (
-        el.className?.includes("btn-primary") &&
-        /cerrar sesión/i.test(el.textContent ?? "")
-      );
-    });
-    if (!candidate) throw new Error("primary close button not found");
-    return candidate as HTMLButtonElement;
-  });
+  return waitFor(
+    () =>
+      within(
+        screen.getByRole("toolbar", { name: /acciones de la sesión/i }),
+      ).getByRole("button", { name: /cerrar sesión/i }) as HTMLButtonElement,
+  );
 }
 function renderAt(path: string) {
   window.history.pushState({}, "", path);
@@ -416,6 +428,7 @@ describe("state A: editable", () => {
 
   it("400 with field → banner names the field, draft stays editable", async () => {
     mockApi({
+      last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
       postReply: {
         status: 400,
         body: { error: "Required", field: "sets.0.setIndex" },
@@ -438,6 +451,29 @@ describe("state A: editable", () => {
         }) as HTMLInputElement
       ).checked,
     ).toBe(true);
+  });
+
+  it("marcar todas las series y el cardio muestra el sello; desmarcar una lo retira", async () => {
+    mockApi({
+      last: {
+        21: { weightKg: 60, reps: 8, date: "2026-08-30" },
+        22: { weightKg: 40, reps: 10, date: "2026-08-30" },
+      },
+    });
+    renderAt("/sesion/2026-09-02");
+    const seal = () =>
+      screen
+        .queryAllByRole("status")
+        .find((el) => /sesión completa/i.test(el.textContent ?? ""));
+    const boxes = await screen.findAllByRole("checkbox");
+    for (const box of boxes.slice(0, -1)) fireEvent.click(box);
+    expect(seal()).toBeUndefined(); // falta el cardio
+    fireEvent.click(boxes[boxes.length - 1]);
+    await waitFor(() => expect(seal()).toBeDefined());
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /press banca serie 2/i }),
+    );
+    await waitFor(() => expect(seal()).toBeUndefined());
   });
 
   it("409 → reload into read-only state B with persisted data", async () => {
@@ -514,18 +550,383 @@ describe("state B: read-only", () => {
     expect(container.querySelectorAll("input, textarea, select").length).toBe(
       0,
     );
-    // No primary (workout) close button in read-only state; the shell logout
-    // (desktop, text-secondary) is unrelated.
-    const closeBtns = [...document.querySelectorAll("button")].filter(
-      (x) =>
-        (x as HTMLButtonElement).className?.includes("btn-primary") &&
-        /cerrar sesión/i.test(x.textContent ?? ""),
-    );
-    expect(closeBtns).toHaveLength(0);
+    // Sin barra de acciones ni botón de cerrar la sesión de entreno (el de
+    // salir del shell no está en main).
+    expect(screen.queryByRole("toolbar")).toBeNull();
+    expect(
+      within(screen.getByRole("main")).queryByRole("button", {
+        name: /cerrar sesión/i,
+      }),
+    ).toBeNull();
     // effort 2 of 5 filled
     const dots = screen.getAllByTestId("effort-dot");
     expect(
       dots.filter((d) => d.getAttribute("data-filled") === "true").length,
     ).toBe(2);
+  });
+});
+
+const weightOf = (ex: string, n: number) =>
+  screen.getByLabelText(
+    new RegExp(`^peso \\(kg\\) · ${ex} serie ${n}$`, "i"),
+  ) as HTMLInputElement;
+const repsOf = (ex: string, n: number) =>
+  screen.getByLabelText(
+    new RegExp(`^reps · ${ex} serie ${n}$`, "i"),
+  ) as HTMLInputElement;
+const boxOf = (ex: string, n: number) =>
+  screen.getByRole("checkbox", {
+    name: new RegExp(`^${ex} serie ${n}$`, "i"),
+  }) as HTMLInputElement;
+
+describe("auto-marcar la serie al escribir sus marcas", () => {
+  it("la precarga no marca; completar kilos y reps marca; vaciar desmarca", async () => {
+    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^peso \(kg\) · press banca serie 1$/i);
+    expect(boxOf("press banca", 1).checked).toBe(false); // precarga ≠ hecho
+
+    fireEvent.change(repsOf("press banca", 1), { target: { value: "10" } });
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
+
+    fireEvent.change(weightOf("press banca", 1), { target: { value: "" } });
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(false));
+
+    // stepper también cuenta como edición
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /aumentar peso \(kg\) · press banca serie 1/i,
+      }),
+    );
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
+  });
+
+  it("sin histórico: con solo reps no se marca hasta poner kilos", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de remo con barra/i }),
+    );
+    await screen.findByLabelText(/^reps · remo con barra serie 1$/i);
+    fireEvent.change(repsOf("remo con barra", 1), { target: { value: "8" } });
+    expect(boxOf("remo con barra", 1).checked).toBe(false);
+    fireEvent.change(weightOf("remo con barra", 1), {
+      target: { value: "40" },
+    });
+    await waitFor(() => expect(boxOf("remo con barra", 1).checked).toBe(true));
+  });
+
+  it("una serie sin kilos no se marca a mano; con «sin peso» sí", async () => {
+    mockApi({}); // reps del objetivo (6), kilos vacíos
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^reps · press banca serie 1$/i);
+    expect(boxOf("press banca", 1).disabled).toBe(true);
+    fireEvent.click(boxOf("press banca", 1));
+    expect(boxOf("press banca", 1).checked).toBe(false);
+
+    fireEvent.click(
+      screen.getByRole("switch", { name: /sin peso · press banca/i }),
+    );
+    await waitFor(() => expect(boxOf("press banca", 1).disabled).toBe(false));
+    fireEvent.click(boxOf("press banca", 1));
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
+  });
+
+  it("marcar todas solo marca las series completas", async () => {
+    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^peso \(kg\) · press banca serie 2$/i);
+    fireEvent.change(weightOf("press banca", 2), { target: { value: "" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /marcar todas las series de press banca/i,
+      }),
+    );
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
+    expect(boxOf("press banca", 2).checked).toBe(false);
+    expect(boxOf("press banca", 3).checked).toBe(true);
+  });
+});
+
+describe("ejercicio sin peso", () => {
+  it("el conmutador oculta los kilos, basta con reps y se envía weightKg null", async () => {
+    const api = mockApi({
+      last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
+    });
+    renderAt("/sesion/2026-09-02");
+    const sw = (await screen.findByRole("switch", {
+      name: /sin peso · press banca/i,
+    })) as HTMLInputElement;
+    expect(sw.checked).toBe(false);
+    fireEvent.click(sw);
+    fireEvent.click(
+      screen.getByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^reps · press banca serie 1$/i);
+    expect(
+      screen.queryByLabelText(/^peso \(kg\) · press banca serie 1$/i),
+    ).toBeNull();
+    fireEvent.change(repsOf("press banca", 1), { target: { value: "12" } });
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
+
+    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    const close = await primaryClose();
+    await waitFor(() => expect(close.disabled).toBe(false));
+    fireEvent.click(close);
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    const sets = (api.posts[0] as { sets: SetItem[] }).sets.filter(
+      (s) => s.planSessionExerciseId === SE_BENCH,
+    );
+    expect(sets.every((s) => s.weightKg === null)).toBe(true);
+    expect(sets[0]).toMatchObject({ reps: 12, done: true });
+  });
+
+  it("empieza activado si lo último registrado no llevaba peso", async () => {
+    mockApi({ last: { 21: { weightKg: null, reps: 10, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    const sw = (await screen.findByRole("switch", {
+      name: /sin peso · press banca/i,
+    })) as HTMLInputElement;
+    expect(sw.checked).toBe(true);
+    expect(screen.getByText("última: 10 reps")).toBeDefined();
+  });
+
+  it("cambiar el conmutador recalcula las series editadas, no las precargadas", async () => {
+    mockApi({}); // sin histórico: reps precargadas del objetivo (6), kilos vacíos
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^reps · press banca serie 1$/i);
+    fireEvent.change(repsOf("press banca", 1), { target: { value: "10" } });
+    expect(boxOf("press banca", 1).checked).toBe(false); // faltan los kilos
+
+    const sw = screen.getByRole("switch", { name: /sin peso · press banca/i });
+    fireEvent.click(sw);
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
+    expect(boxOf("press banca", 2).checked).toBe(false); // precargada: intacta
+
+    fireEvent.click(sw);
+    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(false));
+  });
+});
+
+describe("registrar y después corregir en la misma visita", () => {
+  it("Editar abre el borrador plegado aunque antes se desplegara un ejercicio", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^reps · press banca serie 1$/i);
+    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    const close = await primaryClose();
+    await waitFor(() => expect(close.disabled).toBe(false));
+    fireEvent.click(close);
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+    const toggle = await screen.findByRole("button", {
+      name: /series de press banca/i,
+    });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(toggle);
+    expect(
+      await screen.findByLabelText(/^reps · press banca serie 1$/i),
+    ).toBeDefined();
+  });
+});
+
+describe("marcas de la sesión anterior con el mismo nombre", () => {
+  const prevLog = (date: string, weight: number) => ({
+    ...loggedPayload([
+      {
+        planSessionExerciseId: SE_BENCH,
+        setIndex: 0,
+        weightKg: weight,
+        reps: 10,
+        done: true,
+      },
+      {
+        planSessionExerciseId: SE_BENCH,
+        setIndex: 1,
+        weightKg: weight,
+        reps: 8,
+        done: true,
+      },
+    ]),
+    date,
+  });
+
+  it("coge la registrada más reciente anterior y sustituye a «última»", async () => {
+    const api = mockApi({
+      sessions: [
+        { id: 7, date: "2026-08-21", name: "Empuje A", status: "logged" },
+        { id: 8, date: "2026-08-28", name: "Empuje A", status: "logged" },
+        { id: 9, date: "2026-08-29", name: "Tirón", status: "logged" },
+        { id: 1, date: "2026-09-02", name: "Empuje A", status: "planned" },
+      ],
+      last: { 21: { weightKg: 50, reps: 5, date: "2026-08-29" } },
+      logs: {
+        "2026-08-21": prevLog("2026-08-21", 50),
+        "2026-08-28": prevLog("2026-08-28", 60),
+      },
+    });
+    renderAt("/sesion/2026-09-02");
+    await screen.findByText("vie, 28/08: 60×10 · 60×8");
+    expect(screen.queryByText(/última: 50×5/)).toBeNull();
+    expect(api.urls).not.toContain("/api/workout-logs/2026-08-21");
+    // el ejercicio que no estaba en la anterior conserva su pista normal
+    expect(screen.queryAllByText(/vie, 28\/08/).length).toBe(1);
+  });
+
+  it("una sesión sin nombre no busca anterior", async () => {
+    const api = mockApi({
+      sessions: [
+        { id: 8, date: "2026-08-28", name: null, status: "logged" },
+        { id: 1, date: "2026-09-02", name: null, status: "planned" },
+      ],
+      logs: { "2026-08-28": prevLog("2026-08-28", 60) },
+    });
+    renderAt("/sesion/2026-09-02");
+    await screen.findByRole("button", { name: /series de press banca/i });
+    expect(api.urls).not.toContain("/api/workout-logs/2026-08-28");
+    expect(screen.queryByText(/28\/08/)).toBeNull();
+  });
+});
+
+describe("corregir una sesión registrada", () => {
+  const logged = loggedPayload(
+    [
+      {
+        planSessionExerciseId: SE_BENCH,
+        setIndex: 0,
+        weightKg: 60,
+        reps: 8,
+        done: true,
+      },
+      {
+        planSessionExerciseId: SE_BENCH,
+        setIndex: 1,
+        weightKg: 60,
+        reps: 6,
+        done: true,
+      },
+      {
+        planSessionExerciseId: SE_ROW,
+        setIndex: 0,
+        weightKg: null,
+        reps: 12,
+        done: true,
+      },
+    ],
+    3,
+    "bien",
+    [
+      {
+        planSessionExerciseId: SE_RUN,
+        distanceKm: 5,
+        durationMin: 30,
+        done: true,
+      },
+    ],
+  );
+
+  it("Editar precarga el registro (series, sin peso, esfuerzo, nota) y Guardar hace PUT", async () => {
+    const api = mockApi({
+      sessions: LOGGED,
+      log: logged,
+      // /last más reciente con peso: la edición NO debe usarlo
+      last: { 22: { weightKg: 80, reps: 5, date: "2026-09-20" } },
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    expect(weightOf("press banca", 2).value).toBe("60");
+    expect(repsOf("press banca", 2).value).toBe("6");
+    expect(
+      (
+        screen.getByRole("switch", {
+          name: /sin peso · remo con barra/i,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(
+      (screen.getByLabelText(/nota de la sesión/i) as HTMLTextAreaElement)
+        .value,
+    ).toBe("bien");
+    expect(
+      (
+        screen.getByLabelText(
+          /^distancia \(km\) · running$/i,
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("5");
+
+    fireEvent.change(repsOf("press banca", 2), { target: { value: "7" } });
+    fireEvent.click(screen.getByRole("radio", { name: /4/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^guardar$/i }));
+    await waitFor(() => expect(api.puts.length).toBe(1));
+    expect(api.posts.length).toBe(0);
+    const body = api.puts[0] as {
+      effort: number;
+      note: string;
+      sets: SetItem[];
+      cardio: unknown[];
+    };
+    expect(body.effort).toBe(4);
+    expect(body.note).toBe("bien");
+    expect(body.sets.length).toBe(3); // mismo número de series que el registro
+    expect(body.sets[1]).toMatchObject({ weightKg: 60, reps: 7, done: true });
+    expect(body.sets[2]).toMatchObject({ weightKg: null, reps: 12 });
+    expect(body.cardio.length).toBe(1);
+    await screen.findByText("Registrado");
+    expect(screen.getByText("60×7")).toBeDefined();
+  });
+
+  it("una serie registrada como hecha sin marcas se precarga sin marcar", async () => {
+    const api = mockApi({
+      sessions: LOGGED,
+      log: loggedPayload([
+        ...logged.sets.slice(0, 2),
+        {
+          planSessionExerciseId: SE_BENCH,
+          setIndex: 2,
+          weightKg: null,
+          reps: null,
+          done: true,
+        },
+      ]),
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    expect(boxOf("press banca", 3).checked).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: /^guardar$/i }));
+    await waitFor(() => expect(api.puts.length).toBe(1));
+    expect((api.puts[0] as { sets: SetItem[] }).sets[2].done).toBe(false);
+  });
+
+  it("Cancelar vuelve al registro sin llamar a la API", async () => {
+    const api = mockApi({ sessions: LOGGED, log: logged });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+    const cancel = await screen.findByRole("button", { name: /^cancelar$/i });
+    const before = api.fetchCount();
+    fireEvent.click(cancel);
+    await screen.findByText("Registrado");
+    expect(api.fetchCount()).toBe(before);
+    expect(api.puts.length).toBe(0);
   });
 });

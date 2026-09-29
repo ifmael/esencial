@@ -4,7 +4,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { usePlanWeek } from "../src/lib/plan-week";
+import { recreatePayload, usePlanWeek } from "../src/lib/plan-week";
 
 type FetchMock = Mock<
   (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -139,5 +139,73 @@ describe("usePlanWeek", () => {
       expect(result.current.sessions).toEqual([planned(1, "2026-09-02")]),
     );
     expect(result.current.error).toBeNull();
+  });
+
+  it("streak cuenta las semanas seguidas con sesión registrada sobre TODO el GET, no solo la semana vista", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 8, 3, 12)); // jueves de 2026-W36
+    try {
+      mockFetch();
+      rows = [
+        planned(1, "2026-09-02"), // W36: aún sin registrar, no corta la racha
+        logged(2, "2026-08-26"), // W35
+        logged(3, "2026-08-19"), // W34
+        logged(4, "2026-08-05"), // W32: tras el hueco de W33, no cuenta
+      ];
+      // Se mira otra semana: su filtro sale vacío y la racha no cambia.
+      const { result } = renderHook(() => usePlanWeek("2026-W40"));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.sessions).toEqual([]);
+      expect(result.current.streak).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("recreatePayload", () => {
+  it("rehace el POST de una sesión desprogramada: fecha, nombre y los items en orden con sus objetivos", () => {
+    const ex = (exerciseId: number, position: number) => ({
+      id: 100 + exerciseId,
+      exerciseId,
+      exerciseName: `E${exerciseId}`,
+      kind: "strength" as const,
+      position,
+      targetSets: exerciseId === 10 ? null : 3,
+      targetRepsMin: null,
+      targetRepsMax: 12,
+      targetDistanceKm: exerciseId === 10 ? 5 : null,
+      targetDurationMin: exerciseId === 10 ? 30 : null,
+    });
+    expect(
+      recreatePayload({
+        id: 4,
+        date: "2026-09-01",
+        name: null,
+        status: "planned",
+        exercises: [ex(10, 0), ex(7, 1)],
+      }),
+    ).toEqual({
+      date: "2026-09-01",
+      name: null,
+      items: [
+        {
+          exerciseId: 10,
+          targetSets: null,
+          targetRepsMin: null,
+          targetRepsMax: 12,
+          targetDistanceKm: 5,
+          targetDurationMin: 30,
+        },
+        {
+          exerciseId: 7,
+          targetSets: 3,
+          targetRepsMin: null,
+          targetRepsMax: 12,
+          targetDistanceKm: null,
+          targetDurationMin: null,
+        },
+      ],
+    });
   });
 });

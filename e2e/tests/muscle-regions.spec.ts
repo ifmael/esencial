@@ -45,12 +45,12 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
     page,
   }) => {
     await page.goto("/plantillas/nueva");
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toHaveCount(1);
-    const grupos = dialog.getByRole("group", { name: "Grupo:" });
+    const picker = page.getByRole("region", { name: "Añadir ejercicio" });
+    await expect(picker).toBeVisible();
+    const grupos = picker.getByRole("group", { name: "Grupo:" });
 
     // Frontal: pecho superior es una sub-región del pecho, no el grupo entero.
-    const front = dialog.locator('svg[aria-label="Vista frontal"]');
+    const front = picker.locator('svg[aria-label="Vista frontal"]');
     await clickMuscle(
       page,
       front.getByRole("button", {
@@ -59,7 +59,7 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
       }),
     );
     await expect(
-      dialog.getByText("Músculo: Pecho superior (clavicular)"),
+      picker.getByText("Músculo: Pecho superior (clavicular)"),
     ).toBeVisible();
     // El ratón no deja foco en el músculo: si lo dejara, el navegador pintaría
     // su anillo de foco (un recuadro redondeado) y taparía la señal de color.
@@ -67,13 +67,13 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
       .poll(() => page.evaluate(() => document.activeElement?.tagName))
       .not.toBe("g");
     await expect(
-      dialog.getByRole("button", {
+      picker.getByRole("button", {
         name: "Press banca inclinado",
         exact: true,
       }),
     ).toBeVisible();
     await expect(
-      dialog.getByRole("button", {
+      picker.getByRole("button", {
         name: "Press banca declinado",
         exact: true,
       }),
@@ -81,26 +81,26 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
 
     // La ficha del grupo padre devuelve las dos sub-regiones del pecho.
     await grupos.getByRole("button", { name: "Pecho", exact: true }).click();
-    await expect(dialog.getByText("Grupo: Pecho")).toBeVisible();
+    await expect(picker.getByText("Grupo: Pecho")).toBeVisible();
     await expect(
-      dialog.getByRole("button", {
+      picker.getByRole("button", {
         name: "Press banca inclinado",
         exact: true,
       }),
     ).toBeVisible();
     await expect(
-      dialog.getByRole("button", {
+      picker.getByRole("button", {
         name: "Press banca declinado",
         exact: true,
       }),
     ).toBeVisible();
     await expect(
-      dialog.getByRole("button", { name: "Curl con barra", exact: true }),
+      picker.getByRole("button", { name: "Curl con barra", exact: true }),
     ).toHaveCount(0);
 
     // Trasera: los flexores del antebrazo son otra sub-región del antebrazo.
-    await dialog.getByRole("button", { name: "Trasera", exact: true }).click();
-    const back = dialog.locator('svg[aria-label="Vista trasera"]');
+    await picker.getByRole("button", { name: "Trasera", exact: true }).click();
+    const back = picker.locator('svg[aria-label="Vista trasera"]');
     await clickMuscle(
       page,
       back.getByRole("button", {
@@ -109,10 +109,10 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
       }),
     );
     await expect(
-      dialog.getByRole("button", { name: "Curl con barra", exact: true }),
+      picker.getByRole("button", { name: "Curl con barra", exact: true }),
     ).toBeVisible();
     await expect(
-      dialog.getByRole("button", {
+      picker.getByRole("button", {
         name: "Curl de muñeca inverso",
         exact: true,
       }),
@@ -120,8 +120,8 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
 
     // Todos limpia los dos niveles.
     await grupos.getByRole("button", { name: "Todos", exact: true }).click();
-    await expect(dialog.getByText("Grupo: Todos")).toBeVisible();
-    await expect(dialog.getByText("Músculo: ", { exact: false })).toHaveCount(
+    await expect(picker.getByText("Grupo: Todos")).toBeVisible();
+    await expect(picker.getByText("Músculo: ", { exact: false })).toHaveCount(
       0,
     );
   });

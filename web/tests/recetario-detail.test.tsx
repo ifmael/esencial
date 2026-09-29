@@ -74,7 +74,11 @@ describe("/recetario/:id", () => {
     renderAt("/recetario/999");
     expect(await screen.findByText("Receta no encontrada")).toBeDefined();
     fireEvent.click(screen.getByRole("link", { name: "Volver al recetario" }));
-    await waitFor(() => expect(window.location.pathname).toBe("/recetario"));
+    // Con la suite entera en paralelo el router de datos puede tardar más del
+    // segundo por defecto; lo que se prueba es que navega, no cuánto tarda.
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario"), {
+      timeout: 3000,
+    });
   });
 
   it("delete: cancel changes nothing; confirm calls DELETE, shows success on the book", async () => {
@@ -102,11 +106,12 @@ describe("/recetario/:id", () => {
     );
   });
 
-  it("pencil opens the editor pre-filled in edit mode", async () => {
+  it("pencil opens the editor page pre-filled in edit mode", async () => {
     vi.stubGlobal("fetch", makeServer([recipe]).fetchMock);
     renderAt("/recetario/7");
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Editar receta" }),
+    fireEvent.click(await screen.findByRole("link", { name: "Editar receta" }));
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/recetario/7/editar"),
     );
     const name = await screen.findByRole("textbox", { name: "Nombre" });
     expect((name as HTMLInputElement).value).toBe("Arroz con pollo");

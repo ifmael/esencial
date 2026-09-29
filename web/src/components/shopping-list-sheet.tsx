@@ -1,20 +1,22 @@
 // E3: hoja "Lista de la compra". El servidor compone GET /api/shopping-list/:week
 // (líneas de receta derivadas del plan + manuales persistidos). Las recetas no se
-// marcan; los manuales se checkboxean con PATCH y se editan con PUT completo.
+// marcan; los manuales se checkboxean con PATCH y se añaden/quitan con PUT del
+// set completo (quitar ofrece «Deshacer», que vuelve a mandar el set anterior).
+//
+// Hoja M3 modal (velo + asa en móvil); desde `md` el velo no existe y queda
+// como panel lateral junto a la rejilla, así que no hace falta `modal={false}`.
 import { useCallback, useEffect, useState } from "react";
 import { apiFetchRaw } from "../lib/api";
-import { Button, Card } from "./ui";
-
-export type ListItem = {
-  id: number | null;
-  source: "recipe" | "manual";
-  food: string;
-  quantity: number | null;
-  unit: string | null;
-  checked?: boolean;
-  section?: string;
-};
-export type ListSection = { section: string; items: ListItem[] };
+import {
+  type ListItem,
+  type ListSection,
+  type ManualItem,
+  manualSet,
+} from "../lib/shopping-list";
+import { EmptyState, Loader } from "./expressive";
+import { DeleteIcon, UtensilsIcon } from "./icons";
+import { OverlayHeader, Sheet, useSnackbar } from "./overlay";
+import { Alert, Button, Checkbox, cx, Input } from "./ui";
 
 function qtyLabel(item: ListItem): string {
   if (item.quantity == null) return item.food;
@@ -36,6 +38,7 @@ export function ShoppingListSheet({
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const snackbar = useSnackbar();
 
   const reload = useCallback(() => {
     setError(null);
@@ -55,6 +58,24 @@ export function ShoppingListSheet({
   useEffect(() => {
     if (open) reload();
   }, [open, attempt, reload]);
+
+  // Reemplaza el set manual completo y recarga; false si el servidor lo rechaza.
+  const putManuals = async (
+    items: ManualItem[],
+    failure: string,
+  ): Promise<boolean> => {
+    const res = await apiFetchRaw(`/api/shopping-list/${isoWeek}/items`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ items }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      setError(failure);
+      return false;
+    }
+    reload();
+    return true;
+  };
 
   if (!open) return null;
 
@@ -78,105 +99,141 @@ export function ShoppingListSheet({
     );
   };
 
-  // Añadir = reemplazar el set manual completo (existentes + nuevo), luego recargar.
   const addItem = async (section: string) => {
     const food = (drafts[section] ?? "").trim();
     if (!food) return;
-    const manuals = (sections ?? []).flatMap((s) =>
-      s.items
-        .filter((i) => i.source === "manual")
-        .map((i) => ({
-          food: i.food,
-          quantity: i.quantity,
-          unit: i.unit,
-          checked: i.checked ?? false,
-          section: s.section,
-        })),
-    );
-    const res = await apiFetchRaw(`/api/shopping-list/${isoWeek}/items`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        items: [
-          ...manuals,
-          { food, quantity: null, unit: null, checked: false, section },
-        ],
-      }),
-    }).catch(() => null);
-    if (!res?.ok) return setError("No se pudo guardar el artículo.");
-    setDrafts((d) => ({ ...d, [section]: "" }));
-    reload();
+    if (
+      await putManuals(
+        manualSet(sections ?? [], { add: { food, section } }),
+        "No se pudo guardar el artículo.",
+      )
+    ) {
+      setDrafts((d) => ({ ...d, [section]: "" }));
+    }
+  };
+
+  const removeItem = async (item: ListItem) => {
+    if (item.id === null) return;
+    const before = manualSet(sections ?? []);
+    if (
+      !(await putManuals(
+        manualSet(sections ?? [], { drop: item.id }),
+        "No se pudo quitar el artículo.",
+      ))
+    )
+      return;
+    snackbar({
+      message: `${item.food} quitado`,
+      onUndo: () =>
+        void putManuals(before, "No se pudo recuperar el artículo."),
+    });
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex max-h-[75vh] flex-col gap-3 overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 shadow-xl md:inset-y-0 md:left-auto md:w-96 md:rounded-none">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Lista de la compra</h2>
-        <button
-          aria-label="Cerrar lista"
-          className="min-h-11 px-3 text-text-secondary"
-          onClick={onClose}
-        >
-          ✕
-        </button>
-      </div>
+    <Sheet label="Lista de la compra" onClose={onClose}>
+      <OverlayHeader
+        title="Lista de la compra"
+        onClose={onClose}
+        closeLabel="Cerrar lista"
+      />
+      <div className="stagger flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pt-2 pb-8 md:px-6">
+        {error ? (
+          <Alert>
+            <p>{error}</p>
+            <Button variant="outlined" onClick={() => setAttempt((a) => a + 1)}>
+              Reintentar
+            </Button>
+          </Alert>
+        ) : null}
 
-      {error ? (
-        <Card role="alert" className="border-error/40 text-error">
-          <p>{error}</p>
-          <Button
-            variant="secondary"
-            className="mt-2"
-            onClick={() => setAttempt((a) => a + 1)}
+        {sections === null && !error ? (
+          <Loader label="Cargando lista…" />
+        ) : null}
+
+        {sections?.length === 0 ? (
+          <EmptyState
+            title="Lista vacía"
+            shapes={["flower", "pill", "cookie-4"]}
           >
-            Reintentar
-          </Button>
-        </Card>
-      ) : null}
+            <p className="text-body-m text-on-surface-variant">
+              Planifica recetas en la semana y sus ingredientes aparecerán aquí.
+            </p>
+          </EmptyState>
+        ) : null}
 
-      {sections === null && !error ? (
-        <p className="text-text-secondary">Cargando…</p>
-      ) : null}
-
-      {sections?.map((s) => (
-        <section key={s.section} className="flex flex-col gap-1">
-          <h3 className="font-semibold uppercase tracking-wide text-text-secondary">
-            {s.section}
-          </h3>
-          {s.items.map((item, idx) => (
-            <div
-              key={`${item.source}-${item.id ?? idx}`}
-              className="flex min-h-11 items-center gap-2"
-            >
-              {item.source === "manual" ? (
-                <input
-                  type="checkbox"
-                  aria-label={item.food}
-                  checked={Boolean(item.checked)}
-                  onChange={() => void toggle(item)}
-                  className="size-5"
-                />
-              ) : null}
-              <span className={item.checked ? "text-done line-through" : ""}>
-                {qtyLabel(item)}
-              </span>
-            </div>
-          ))}
-          <input
-            type="text"
-            aria-label={`Añadir artículo en ${s.section}`}
-            placeholder="+ añadir artículo"
-            value={drafts[s.section] ?? ""}
-            onChange={(e) =>
-              setDrafts((d) => ({ ...d, [s.section]: e.target.value }))
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void addItem(s.section);
-            }}
-            className="min-h-11 rounded-lg border border-dashed border-border px-2 text-sm"
-          />
-        </section>
-      ))}
-    </div>
+        {sections?.map((s, si) => (
+          <section
+            key={s.section}
+            className="flex flex-col gap-1"
+            style={{ ["--i" as string]: si }}
+          >
+            <h3 className="section-label px-2 pb-1">{s.section}</h3>
+            <ul className="flex flex-col overflow-hidden rounded-l bg-surface-container">
+              {s.items.map((item, idx) => (
+                <li
+                  key={`${item.source}-${item.id ?? idx}`}
+                  className="list-row min-h-12 gap-0 pr-1"
+                >
+                  {item.source === "manual" ? (
+                    <>
+                      <Checkbox
+                        aria-label={item.food}
+                        checked={Boolean(item.checked)}
+                        onChange={() => void toggle(item)}
+                      />
+                      <span
+                        className={cx(
+                          "min-w-0 flex-1 py-3 text-body-l transition-colors motion-effects",
+                          item.checked
+                            ? "text-on-surface-variant line-through"
+                            : "text-on-surface",
+                        )}
+                      >
+                        {qtyLabel(item)}
+                      </span>
+                      <Button
+                        variant="text"
+                        size="icon"
+                        aria-label={`Quitar ${item.food}`}
+                        className="text-on-surface-variant"
+                        onClick={() => void removeItem(item)}
+                      >
+                        <DeleteIcon />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Misma columna que la casilla: las líneas de receta se leen alineadas. */}
+                      <span
+                        className="grid size-12 shrink-0 place-items-center text-accent"
+                        title="De una receta del plan"
+                      >
+                        <UtensilsIcon width={20} height={20} />
+                      </span>
+                      <span className="min-w-0 flex-1 py-3 pr-3 text-body-l text-on-surface">
+                        {qtyLabel(item)}
+                      </span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <Input
+              type="text"
+              aria-label={`Añadir artículo en ${s.section}`}
+              placeholder="+ añadir artículo"
+              value={drafts[s.section] ?? ""}
+              onChange={(e) =>
+                setDrafts((d) => ({ ...d, [s.section]: e.target.value }))
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void addItem(s.section);
+              }}
+              className="mt-1 rounded-m"
+            />
+          </section>
+        ))}
+      </div>
+    </Sheet>
   );
 }

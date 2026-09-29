@@ -2,6 +2,7 @@
 // GET /api/meal-plan/:week, con navegación de semana, picker y quita de slots.
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -98,13 +99,16 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
 describe("rejilla 7×3", () => {
   it("semana vacía: 21 celdas '+ añadir' y etiquetas de días en español", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    expect((await screen.findAllByText("+ añadir")).length).toBe(21);
+    expect(
+      (await screen.findAllByRole("button", { name: "+ añadir" })).length,
+    ).toBe(21);
     for (const day of [
       "Lunes",
       "Martes",
@@ -133,7 +137,9 @@ describe("rejilla 7×3", () => {
     ];
     renderAt("/plan-recetas?week=2026-W36");
     expect(await screen.findByText("Pollo al horno")).toBeDefined();
-    expect((await screen.findAllByText("+ añadir")).length).toBe(20);
+    expect(
+      (await screen.findAllByRole("button", { name: "+ añadir" })).length,
+    ).toBe(20);
   });
 
   it("fallo de API → tarjeta de error con reintento; reintentar carga la rejilla", async () => {
@@ -142,7 +148,9 @@ describe("rejilla 7×3", () => {
     const retry = await screen.findByRole("button", { name: "Reintentar" });
     apiDown = false;
     fireEvent.click(retry);
-    expect((await screen.findAllByText("+ añadir")).length).toBe(21);
+    expect(
+      (await screen.findAllByRole("button", { name: "+ añadir" })).length,
+    ).toBe(21);
   });
 });
 
@@ -152,7 +160,7 @@ describe("una sola rejilla semanal", () => {
   // columna sigue siendo el de comidas.
   it("los 7 días comparten contenedor con la cabecera de la semana dentro", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    await screen.findAllByText("+ añadir");
+    await screen.findAllByRole("button", { name: "+ añadir" });
     const main = within(screen.getByRole("main"));
     const cards = [
       "Lunes",
@@ -175,7 +183,7 @@ describe("una sola rejilla semanal", () => {
 describe("navegación de semana", () => {
   it("‹ y › cambian la semana pedida y el query ?week=", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    await screen.findAllByText("+ añadir");
+    await screen.findAllByRole("button", { name: "+ añadir" });
     fireEvent.click(screen.getByRole("button", { name: "Semana anterior" }));
     await waitFor(() => expect(window.location.search).toBe("?week=2026-W35"));
     await waitFor(() => expect(mealPlanCalls).toContain("GET 2026-W35"));
@@ -196,13 +204,16 @@ describe("navegación de semana", () => {
 describe("picker de recetas", () => {
   it("abre overlay con recetas; buscar filtra sin más fetch; elegir guarda el slot", async () => {
     renderAt("/plan-recetas?week=2026-W36");
-    await screen.findAllByText("+ añadir");
-    fireEvent.click(screen.getAllByText("+ añadir")[0]);
+    await screen.findAllByRole("button", { name: "+ añadir" });
+    fireEvent.click(screen.getAllByRole("button", { name: "+ añadir" })[0]);
     const dialog = await screen.findByRole("dialog");
     await within(dialog).findByText("Pollo al horno");
-    fireEvent.change(within(dialog).getByRole("textbox"), {
-      target: { value: "pol" },
-    });
+    fireEvent.change(
+      within(dialog).getByRole("searchbox", { name: "Buscar receta" }),
+      {
+        target: { value: "pol" },
+      },
+    );
     expect(within(dialog).getByText("Pollo al horno")).toBeDefined();
     expect(within(dialog).getByText("Tarta de polen")).toBeDefined();
     expect(within(dialog).queryByText("Lentejas")).toBeNull();
@@ -229,7 +240,7 @@ describe("picker de recetas", () => {
     failNextPut = true;
     renderAt("/plan-recetas?week=2026-W36");
     await screen.findByText("Lentejas");
-    fireEvent.click(screen.getAllByText("+ añadir")[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "+ añadir" })[0]);
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(await within(dialog).findByText("Pollo al horno"));
     expect(await screen.findByRole("alert")).toBeDefined();
@@ -297,9 +308,84 @@ describe("celda rellena", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Confirmar quitar" }),
     );
-    await screen.findAllByText("+ añadir");
+    await screen.findAllByRole("button", { name: "+ añadir" });
     await waitFor(() => expect(slots.length).toBe(0));
     expect(mealPlanCalls).toContain("PUT 2026-W36");
+  });
+});
+
+describe("tooltip de la comida", () => {
+  const LONG = "Lentejas estofadas con chorizo y verduras de temporada";
+
+  async function hoverable(photo: string | null) {
+    slots = [
+      {
+        day: 2,
+        meal: "almuerzo",
+        recipeId: 3,
+        recipeName: LONG,
+        recipePhoto: photo,
+      },
+    ];
+    renderAt("/plan-recetas?week=2026-W36");
+    const link = (await screen.findByText(LONG)).closest("a")!;
+    vi.useFakeTimers();
+    return link;
+  }
+  const wait = (ms: number) =>
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+
+  it("aparece a los 500 ms, no antes, con la foto y el nombre completo", async () => {
+    const link = await hoverable("recipe-3.png");
+    fireEvent.mouseEnter(link);
+    await wait(499);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    await wait(1);
+    const tip = screen.getByRole("tooltip");
+    expect(within(tip).getByText(LONG)).toBeTruthy();
+    const img = tip.querySelector("img")!;
+    expect(img.getAttribute("src")).toBe("/api/uploads/recipe-3.png");
+    expect(img.getAttribute("crossorigin")).toBe("use-credentials");
+  });
+
+  it("sin foto muestra el monograma y el nombre", async () => {
+    const link = await hoverable(null);
+    fireEvent.mouseEnter(link);
+    await wait(500);
+    const tip = screen.getByRole("tooltip");
+    expect(tip.querySelector("img")).toBeNull();
+    expect(within(tip).getByText("L")).toBeTruthy();
+    expect(within(tip).getByText(LONG)).toBeTruthy();
+  });
+
+  it("salir antes de tiempo lo cancela; salir con él abierto lo cierra", async () => {
+    const link = await hoverable(null);
+    fireEvent.mouseEnter(link);
+    await wait(300);
+    fireEvent.mouseLeave(link);
+    await wait(500);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    fireEvent.mouseEnter(link);
+    await wait(500);
+    expect(screen.getByRole("tooltip")).toBeTruthy();
+    fireEvent.mouseLeave(link);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("el foco de teclado lo abre; perderlo o Escape lo cierran", async () => {
+    const link = await hoverable(null);
+    act(() => link.focus());
+    await wait(500);
+    expect(screen.getByRole("tooltip")).toBeTruthy();
+    act(() => link.blur());
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    act(() => link.focus());
+    await wait(500);
+    expect(screen.getByRole("tooltip")).toBeTruthy();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 });
 

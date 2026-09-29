@@ -5,14 +5,62 @@ export function defaultSetCount(targetSets?: number | null): number {
   return targetSets ?? 3;
 }
 
-/** "última: 57.5×8"; null when there is nothing displayable (never logged,
- * or the last row carries null weight/reps — the API echoes nullable columns). */
+/** "última: 57.5×8" (o "última: 10 reps" sin peso); null when there is nothing
+ * displayable (never logged, or no reps — the API echoes nullable columns). */
 export function formatLast(
   last: { weightKg: number | null; reps: number | null } | null,
 ): string | null {
-  return last && last.weightKg !== null && last.reps !== null
-    ? `última: ${last.weightKg}×${last.reps}`
-    : null;
+  if (!last || last.reps === null) return null;
+  return last.weightKg === null
+    ? `última: ${last.reps} reps`
+    : `última: ${last.weightKg}×${last.reps}`;
+}
+
+type Marks = { weightKg: number | null; reps: number | null };
+
+/** Serie con sus marcas completas: kilos y reps, o solo reps si va sin peso. */
+export function isSetFilled(set: Marks, noWeight: boolean): boolean {
+  return set.reps !== null && (noWeight || set.weightKg !== null);
+}
+
+/** Un ejercicio registrado «sin peso»: ninguna serie con kilos y alguna con reps. */
+export function isNoWeight(sets: readonly Marks[]): boolean {
+  return (
+    sets.some((s) => s.reps !== null) && sets.every((s) => s.weightKg === null)
+  );
+}
+
+/** Última sesión registrada con el mismo nombre y fecha anterior; sin nombre no empareja. */
+export function previousSession<
+  T extends { date: string; name: string | null; status: string },
+>(sessions: readonly T[], date: string, name: string | null): T | null {
+  if (name === null) return null;
+  let best: T | null = null;
+  for (const s of sessions)
+    if (
+      s.status === "logged" &&
+      s.name === name &&
+      s.date < date &&
+      (!best || s.date > best.date)
+    )
+      best = s;
+  return best;
+}
+
+const SHORT_DATE = new Intl.DateTimeFormat("es", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+});
+
+/** "sáb, 26/09: 60×10 · 55×8" — las series sin marcas no aparecen. */
+export function formatPrevious(
+  date: string,
+  sets: readonly Marks[],
+): string | null {
+  const marks = sets.filter((s) => s.reps !== null || s.weightKg !== null);
+  if (marks.length === 0) return null;
+  return `${SHORT_DATE.format(parseDateEs(date))}: ${marks.map(formatSetText).join(" · ")}`;
 }
 
 export function noteOrNull(note: string): string | null {
@@ -46,11 +94,29 @@ export function numOrNull(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Text values in state B: "60×8" or "—" when either side is null. */
-export function formatSetText(set: {
-  weightKg: number | null;
-  reps: number | null;
-}): string {
+/** Text values: "60×8", "12 reps" sin peso, or "—" when there is nothing. */
+export function formatSetText(set: Marks): string {
   if (set.weightKg === null && set.reps === null) return "—";
-  return `${set.weightKg ?? "—"}×${set.reps ?? "—"}`;
+  if (set.weightKg === null) return `${set.reps} reps`;
+  return `${set.weightKg}×${set.reps ?? "—"}`;
+}
+
+/** Series hechas sobre el total de la sesión; cada cardio cuenta como una. */
+export function setsProgress(
+  sets: readonly { done: boolean }[],
+  cardio: readonly { done: boolean }[],
+): { done: number; total: number } {
+  const all = [...sets, ...cardio];
+  return { done: all.filter((s) => s.done).length, total: all.length };
+}
+
+/** Sesiones registradas sobre las planificadas de la semana. */
+export function weekProgress(sessions: readonly { status: string }[]): {
+  logged: number;
+  total: number;
+} {
+  return {
+    logged: sessions.filter((s) => s.status === "logged").length,
+    total: sessions.length,
+  };
 }

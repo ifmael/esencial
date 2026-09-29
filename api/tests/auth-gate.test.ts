@@ -59,6 +59,7 @@ const ROUTES: Array<[string, string, unknown?]> = [
   ["DELETE", "/api/plan-sessions/1"],
   ["GET", "/api/workout-logs/2026-09-02"],
   ["POST", "/api/workout-logs/2026-09-02", { effort: 3, sets: [] }],
+  ["PUT", "/api/workout-logs/2026-09-02", { effort: 3, sets: [] }],
   ["GET", "/api/notes/2026-09-02"],
   ["PUT", "/api/notes/2026-09-02", { text: "hola" }],
   ["GET", "/api/health"],
