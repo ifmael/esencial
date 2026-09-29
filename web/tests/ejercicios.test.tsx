@@ -363,6 +363,15 @@ describe("detail", () => {
     ).toBe(false);
   });
 
+  it("no delete action; edit is icon-only, named by its aria-label", async () => {
+    renderAt("/ejercicios/8");
+    await screen.findByRole("heading", { name: "Remo" });
+    expect(screen.queryByRole("button", { name: /eliminar/i })).toBeNull();
+    // Sin texto: un botón de texto se llamaría "Editar", no por aria-label.
+    const edit = screen.getByRole("button", { name: "Editar ejercicio" });
+    expect(edit.textContent).toBe("");
+  });
+
   it("edit flow: pre-filled PUT; server 400 on techniqueUrl shown inline, draft kept", async () => {
     renderAt("/ejercicios/8");
     await screen.findByRole("heading", { name: "Remo" });
@@ -379,27 +388,5 @@ describe("detail", () => {
     );
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/exercises/8");
-  });
-
-  it("delete: confirm → 204 back to catalog, card gone", async () => {
-    renderAt("/ejercicios/9");
-    await screen.findByRole("heading", { name: "Peso muerto" });
-    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(screen.getByRole("heading", { name: "Peso muerto" })).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
-    await waitFor(() => expect(api.state.exercises).toHaveLength(2));
-    await screen.findByRole("heading", { name: "Ejercicios" });
-    expect(screen.queryByText("Peso muerto")).toBeNull();
-  });
-
-  it("delete in-use: server message shown, item stays", async () => {
-    renderAt("/ejercicios/7");
-    await screen.findByRole("heading", { name: "Press banca" });
-    fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
-    await screen.findByText(/in-use record/i);
-    expect(screen.getByRole("heading", { name: "Press banca" })).toBeDefined();
   });
 });

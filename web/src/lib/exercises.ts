@@ -66,7 +66,6 @@ export type ExercisesState = {
   reload: () => void;
   createExercise: (input: ExerciseInput) => Promise<Exercise>;
   updateExercise: (id: number, input: ExerciseInput) => Promise<Exercise>;
-  deleteExercise: (id: number) => Promise<void>;
 };
 
 export function useExercises(): ExercisesState {
@@ -122,14 +121,6 @@ export function useExercises(): ExercisesState {
     [reload],
   );
 
-  const deleteExercise = useCallback(
-    async (id: number) => {
-      await apiFetch<void>(`/api/exercises/${id}`, { method: "DELETE" });
-      reload();
-    },
-    [reload],
-  );
-
   return {
     exercises,
     pending,
@@ -137,6 +128,5 @@ export function useExercises(): ExercisesState {
     reload,
     createExercise,
     updateExercise,
-    deleteExercise,
   };
 }

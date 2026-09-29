@@ -18,7 +18,6 @@ import {
   CheckIcon,
   ChevronRightIcon,
   CloseIcon,
-  DeleteIcon,
   DumbbellIcon,
   EditIcon,
   ListIcon,
@@ -26,7 +25,6 @@ import {
   RunIcon,
   SaveIcon,
 } from "../components/icons";
-import { Dialog } from "../components/overlay";
 import { StepsEditor } from "../components/steps-editor";
 import {
   Alert,
@@ -793,14 +791,10 @@ function AddToTemplate({
 
 export function EjercicioDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { exercises, pending, error, reload, updateExercise, deleteExercise } =
-    useExercises();
+  const { exercises, pending, error, reload, updateExercise } = useExercises();
   const templates = useTemplates();
 
   const [editing, setEditing] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const exercise = exercises.find((e) => String(e.id) === id);
 
@@ -878,26 +872,16 @@ export function EjercicioDetailPage() {
           </div>
         </div>
         <div className="relative flex flex-wrap gap-2">
-          <Button variant="tonal" onClick={() => setEditing(true)}>
-            <EditIcon width={20} height={20} />
-            Editar
-          </Button>
           <Button
-            variant="outlined"
-            className="text-on-accent-container"
-            onClick={() => setConfirming(true)}
+            variant="tonal"
+            size="icon"
+            aria-label="Editar ejercicio"
+            onClick={() => setEditing(true)}
           >
-            <DeleteIcon width={20} height={20} />
-            Eliminar
+            <EditIcon />
           </Button>
         </div>
       </header>
-
-      {deleteError && (
-        <Alert>
-          <p className="text-body-m">{deleteError}</p>
-        </Alert>
-      )}
 
       {/* Dos columnas en escritorio: el detalle a la izquierda y el dibujo a
           la derecha, grande para que se lean los grupos musculares. En móvil
@@ -1008,49 +992,6 @@ export function EjercicioDetailPage() {
           )}
         </Card>
       </div>
-
-      {confirming && (
-        <Dialog
-          onClose={() => setConfirming(false)}
-          labelledBy="ex-delete-title"
-          mobile="center"
-          className="max-w-sm gap-4 p-6"
-        >
-          <Shape
-            name="soft-diamond"
-            size={56}
-            className="self-center text-error-container"
-          >
-            <DeleteIcon className="text-on-error-container" />
-          </Shape>
-          <h2 id="ex-delete-title" className="text-center text-headline-s">
-            ¿Eliminar {exercise.name}?
-          </h2>
-          <p className="text-center text-body-m text-on-surface-variant">
-            Sale del catálogo y no se puede deshacer.
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button variant="text" onClick={() => setConfirming(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="danger"
-              onClick={async () => {
-                setDeleteError(null);
-                try {
-                  await deleteExercise(exercise.id);
-                  navigate("/ejercicios");
-                } catch (e) {
-                  setDeleteError(errorMessage(e));
-                  setConfirming(false);
-                }
-              }}
-            >
-              Confirmar
-            </Button>
-          </div>
-        </Dialog>
-      )}
     </div>
   );
 }

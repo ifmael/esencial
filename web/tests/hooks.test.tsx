@@ -85,23 +85,14 @@ describe("useExercises", () => {
     });
   });
 
-  it("updates via PUT and deletes via DELETE with a refetch after", async () => {
-    const fetchMock = mockFetch((_url, init) =>
-      init?.method === "DELETE"
-        ? new Response(null, { status: 204 })
-        : jsonResponse({ id: 1 }),
-    );
+  it("updates via PUT with a refetch after", async () => {
+    const fetchMock = mockFetch(() => jsonResponse({ id: 1 }));
     const { result } = renderHook(() => useExercises());
     await waitFor(() => expect(result.current.pending).toBe(false));
     await result.current.updateExercise(1, { name: "y", tags: ["t"] });
-    await result.current.deleteExercise(1);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/exercises/1",
       expect.objectContaining({ method: "PUT" }),
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/exercises/1",
-      expect.objectContaining({ method: "DELETE" }),
     );
   });
 
