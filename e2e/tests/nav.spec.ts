@@ -203,11 +203,12 @@ test.describe("MENÚ — secciones colapsables", () => {
     await expect(frontal).toHaveAttribute("aria-pressed", "true");
     await expect.poll(() => frontal.evaluate(paint)).toEqual(accented);
 
-    await page.goto("/recetario/nueva");
-    const guardar = page.getByRole("button", {
-      name: "Guardar receta",
-      exact: true,
-    });
+    // Y el reposo tampoco pisa la piel de un botón propio dentro del grupo: el
+    // SplitButton del catálogo (Guardar + su menú) conserva `--accent`.
+    await page.goto("/ui");
+    const guardar = page
+      .locator(".connected")
+      .getByRole("button", { name: "Guardar", exact: true });
     expect(await guardar.evaluate(paint)).toEqual(accented);
   });
 
