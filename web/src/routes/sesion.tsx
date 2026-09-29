@@ -542,7 +542,6 @@ function Header({
             value={progress.done}
             max={progress.total}
             label="Series hechas"
-            size={112}
           >
             <CountUp
               value={progress.done}

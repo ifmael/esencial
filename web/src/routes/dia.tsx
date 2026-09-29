@@ -72,17 +72,20 @@ export function DayHeader({
 }) {
   const isToday = toISODate(date) === toISODate(new Date());
   return (
-    <header className="relative mb-section flex flex-col gap-6 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-card md:p-8">
-      {/* Forma decorativa de fondo: el tono sube un escalón, sin contraste que leer. */}
-      <span className="pointer-events-none absolute -top-20 -right-16">
+    <header className="relative mb-section flex flex-col gap-3 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-card md:p-8 lg:gap-6">
+      {/* Forma decorativa de fondo: el tono sube un escalón, sin contraste que leer.
+       * Móvil: con una sola fila quedaría detrás de los botones. */}
+      <span className="pointer-events-none absolute -top-20 -right-16 hidden lg:block">
         <Shape
           name="flower"
           size={240}
           className="text-surface-container-high"
         />
       </span>
-      <div className="relative flex items-start justify-between gap-4">
-        <h1 className="min-w-0 text-balance text-display-s text-e md:text-display-m">
+      {/* Móvil: sin título visible (la fecha ya está en la fila); `contents`
+       * para que la fila vacía no sume el hueco de la cabecera. */}
+      <div className="contents lg:relative lg:flex lg:items-start lg:justify-between lg:gap-4">
+        <h1 className="sr-only min-w-0 text-balance text-display-s text-e md:text-display-m lg:not-sr-only">
           {isToday && (
             <span className="block text-title-l text-e text-accent">
               Hoy<span className="sr-only"> — </span>
@@ -93,11 +96,11 @@ export function DayHeader({
           </span>
         </h1>
         {progress && (
-          <div className="flex shrink-0 flex-col items-center gap-1">
+          <div className="hidden shrink-0 flex-col items-center gap-1 lg:flex">
             <WavyRing
               value={progress.done}
               max={progress.total}
-              size={96}
+              className="size-24"
               label={`Progreso del día: ${progress.done} de ${progress.total} pasos`}
             >
               <span className="text-headline-m text-e tabular leading-none text-on-surface">
@@ -115,7 +118,7 @@ export function DayHeader({
       </div>
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
-        <ConnectedGroup label="Cambiar de día" className="w-full sm:w-auto">
+        <ConnectedGroup label="Cambiar de día" className="w-full lg:w-auto">
           <Button
             variant="tonal"
             size="icon"
@@ -124,19 +127,31 @@ export function DayHeader({
           >
             <ChevronLeftIcon />
           </Button>
+          {/* Sin título en móvil, «pulsado» es lo que dice que el día es hoy. */}
           <Button
             variant="tonal"
             aria-label="Ir a hoy"
+            aria-pressed={isToday}
             onClick={() => onChange(new Date())}
           >
             Hoy
           </Button>
-          {/* ponytail: input nativo; un picker con librería si saltar fechas fine. */}
+          {/* ponytail: input nativo; un picker con librería si saltar fechas fine.
+           * `.connected > *` hace crecer a todas las piezas por igual: `grow-10`
+           * le da a la fecha casi todo el hueco libre de la fila en móvil. */}
           <Input
             type="date"
             aria-label="Ir a una fecha"
-            className="w-auto rounded-s border-0 bg-secondary-container px-4 text-label-l text-on-secondary-container"
+            className="w-auto min-w-0 grow-10 rounded-s border-0 bg-secondary-container px-4 text-title-m text-on-secondary-container lg:text-label-l"
             value={toISODate(date)}
+            // Chromium de escritorio solo abre el calendario desde el icono:
+            // así se abre al pulsar en cualquier punto. Si el navegador lo
+            // rechaza (sin gesto, iframe), queda el comportamiento nativo.
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker?.();
+              } catch {}
+            }}
             onChange={(e) => {
               if (e.target.value)
                 onChange(new Date(`${e.target.value}T00:00:00`));
@@ -152,7 +167,11 @@ export function DayHeader({
           </Button>
         </ConnectedGroup>
 
-        <nav aria-label="Planes" className="flex flex-wrap items-center gap-2">
+        {/* En móvil ya están en la barra inferior de secciones. */}
+        <nav
+          aria-label="Planes"
+          className="hidden flex-wrap items-center gap-2 lg:flex"
+        >
           <QuickLink to="/plan-recetas" section="nutricion" icon={UtensilsIcon}>
             Plan recetas
           </QuickLink>
