@@ -293,15 +293,24 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await page.goto(`/sesion/${date}`);
     await expect(page.getByText(session).first()).toBeVisible();
 
-    // Fuerza: marcar la primera serie.
+    // Fuerza: la primera serie se marca al completar kilos y reps.
     await page
       .getByRole("button", { name: /Series de / })
       .first()
       .click();
+    // La base es compartida: «Sin peso» sale de lo último registrado.
     await page
-      .getByRole("checkbox", { name: / serie 1$/ })
-      .first()
-      .check();
+      .getByRole("switch", { name: "Sin peso · Press banca" })
+      .uncheck();
+    await page
+      .getByLabel("Peso (kg) · Press banca serie 1", { exact: true })
+      .fill("60");
+    await page
+      .getByLabel("Reps · Press banca serie 1", { exact: true })
+      .fill("8");
+    await expect(
+      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toBeChecked();
 
     // Cardio: marcar Hecho sin marcas.
     await page
@@ -432,9 +441,17 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       .first()
       .click();
     await page
-      .getByRole("checkbox", { name: / serie 1$/ })
-      .first()
-      .check();
+      .getByRole("switch", { name: "Sin peso · Press banca" })
+      .uncheck();
+    await page
+      .getByLabel("Peso (kg) · Press banca serie 1", { exact: true })
+      .fill("60");
+    await page
+      .getByLabel("Reps · Press banca serie 1", { exact: true })
+      .fill("8");
+    await expect(
+      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toBeChecked();
     await page.getByText("Moderado", { exact: true }).click();
     await page
       .getByRole("main")
@@ -940,6 +957,101 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await expect(
       page.getByRole("dialog", { name: new RegExp(`Editar sesión · ${date}`) }),
     ).toBeVisible();
+  });
+
+  test("sesión anterior del mismo nombre, serie auto-marcada, sin peso y corregir el registro", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const name = "Empuje e2e repetida";
+    // Las dos sesiones acaban `logged` y la API no borra un registro: cada
+    // reintento usa su propio par de semanas en vez de chocar (409) con el anterior.
+    const offset = 105 + testInfo.retry * 14;
+    const before = mondayOf(weekOf(offset));
+    const date = mondayOf(weekOf(offset + 7));
+    const prev = await apiRequest<{ exercises: { id: number }[] }>(
+      page.request,
+      "POST",
+      "/api/plan-sessions",
+      {
+        date: before,
+        name,
+        items: [{ exerciseId: press.id, targetSets: 2 }],
+      },
+    );
+    const seId = prev.exercises[0].id;
+    const set = (setIndex: number, reps: number) => ({
+      planSessionExerciseId: seId,
+      setIndex,
+      weightKg: 60,
+      reps,
+      done: true,
+    });
+    await apiRequest(page.request, "POST", `/api/workout-logs/${before}`, {
+      effort: 3,
+      sets: [set(0, 10), set(1, 8)],
+    });
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 8 }],
+      name,
+    );
+
+    await page.goto(`/sesion/${date}`);
+    await expect(page.getByText(/: 60×10 · 60×8$/)).toBeVisible();
+
+    await page
+      .getByRole("button", { name: "Series de Press banca", exact: true })
+      .click();
+    const box1 = page.getByRole("checkbox", { name: "Press banca serie 1" });
+    const reps1 = page.getByLabel("Reps · Press banca serie 1", {
+      exact: true,
+    });
+    const weight1 = page.getByLabel("Peso (kg) · Press banca serie 1", {
+      exact: true,
+    });
+    await expect(box1).not.toBeChecked(); // la precarga no marca
+    await reps1.fill("9");
+    await expect(box1).toBeChecked(); // kilos (precargados) + reps editadas
+    await weight1.fill("");
+    await expect(box1).not.toBeChecked(); // vaciar desmarca
+
+    // Con reps y sin kilos, pasar a «sin peso» completa la serie.
+    await page.getByRole("switch", { name: "Sin peso · Press banca" }).check();
+    await expect(weight1).toHaveCount(0);
+    await expect(box1).toBeChecked();
+    await reps1.fill("12");
+    await expect(box1).toBeChecked();
+
+    await page.getByText("Moderado", { exact: true }).click();
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Cerrar sesión" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+    await expect(page.getByText("12 reps")).toBeVisible();
+
+    // Corregir el registro: el borrador sale de lo registrado y guarda con PUT.
+    await page.getByRole("button", { name: "Editar" }).click();
+    const expand = page.getByRole("button", {
+      name: "Series de Press banca",
+      exact: true,
+    });
+    await expect(expand).toHaveAttribute("aria-expanded", "false");
+    await expand.click();
+    await expect(
+      page.getByRole("switch", { name: "Sin peso · Press banca" }),
+    ).toBeChecked();
+    await reps1.fill("15");
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Guardar" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+    await expect(page.getByText("15 reps")).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("15 reps")).toBeVisible();
   });
 
   /** Lunes de la semana ISO (espejo de week-grid.tsx). */

@@ -127,13 +127,19 @@ export const planSessionUpdateSchema = z.object({
     .min(1, "At least one exercise is required"),
 });
 
-export const setLogSchema = z.object({
-  planSessionExerciseId: z.number().int().positive(),
-  setIndex: z.number().int().min(0),
-  weightKg: z.number().min(0).optional().nullable(),
-  reps: z.number().int().min(0).optional().nullable(),
-  done: z.boolean().optional().default(false),
-});
+// Una serie hecha lleva sus repeticiones; los kilos pueden faltar (sin peso).
+export const setLogSchema = z
+  .object({
+    planSessionExerciseId: z.number().int().positive(),
+    setIndex: z.number().int().min(0),
+    weightKg: z.number().min(0).optional().nullable(),
+    reps: z.number().int().min(0).optional().nullable(),
+    done: z.boolean().optional().default(false),
+  })
+  .refine((s) => !s.done || (s.reps ?? null) !== null, {
+    message: "A done set requires reps",
+    path: ["reps"],
+  });
 
 // Cardio: distancia y tiempo opcionales; `done` sin marcas = hecho sin números.
 export const cardioLogSchema = z.object({

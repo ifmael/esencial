@@ -1,7 +1,14 @@
 // /sesion/:date — registro del día (wireframe pantalla-3). El estado planned es
 // un borrador en memoria sobre los ejercicios de la sesión (fuerza y cardio);
-// el estado logged es solo lectura desde GET /api/workout-logs/:date.
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+// el estado logged se lee de GET /api/workout-logs/:date y «Editar» lo vuelve a
+// abrir como borrador para corregirlo (PUT).
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Link, useParams } from "react-router";
 import {
   CountUp,
@@ -16,6 +23,7 @@ import {
   BikeIcon,
   CheckIcon,
   ChevronDownIcon,
+  EditIcon,
   RunIcon,
 } from "../components/icons";
 import {
@@ -28,6 +36,7 @@ import {
   cx,
   Field,
   Input,
+  Switch,
   Textarea,
 } from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
@@ -38,18 +47,22 @@ import { useCreateMorph } from "../lib/view-transition";
 import {
   defaultSetCount,
   formatLast,
+  formatPrevious,
   formatSetText,
+  isNoWeight,
+  isSetFilled,
   isValidDateStr,
   noteOrNull,
   numOrNull,
   parseDateEs,
+  previousSession,
   setsProgress,
 } from "../lib/workout";
 import { formatDateEs } from "./dia";
 
 // --- Wire types (camelCase after the E6 setLogSchema normalization) ---------
 
-type LastValue = { weightKg: number; reps: number; date: string };
+type LastValue = { weightKg: number | null; reps: number; date: string };
 
 type SetLogItem = {
   planSessionExerciseId: number;
@@ -57,6 +70,7 @@ type SetLogItem = {
   weightKg: number | null;
   reps: number | null;
   done: boolean;
+  exerciseId: number;
   exerciseName: string;
 };
 
@@ -81,10 +95,20 @@ type LoggedDay = {
 
 // --- Draft model -------------------------------------------------------------
 
-type DraftSet = { weightKg: number | null; reps: number | null; done: boolean };
+/** `touched`: el usuario editó sus marcas; solo entonces las marcas deciden `done`. */
+type DraftSet = {
+  weightKg: number | null;
+  reps: number | null;
+  done: boolean;
+  touched: boolean;
+};
 type DraftExercise = {
   se: SessionExercise;
   last: LastValue | null;
+  /** Marcas de la sesión anterior con el mismo nombre («vie, 26/09: 60×10 · …»). */
+  previous: string | null;
+  /** Sin peso: se oculta el campo de kilos, bastan las reps y viaja weightKg null. */
+  noWeight: boolean;
   sets: DraftSet[];
 };
 type CardioDraft = {
@@ -109,6 +133,8 @@ type View =
       note: string;
       pending: boolean;
       submitError: string | null;
+      /** El registro que se está corrigiendo (PUT); null = sesión planificada (POST). */
+      editing: LoggedDay | null;
     }
   | { kind: "logged"; session: PlanSession | null; log: LoggedDay };
 
@@ -122,11 +148,108 @@ const EFFORT_SHAPES: ShapeName[] = [
   "sunny",
 ];
 
-// --- Hook: orchestrates reads + the close POST -------------------------------
+type Draft = Extract<View, { kind: "draft" }>;
+
+/** Borrador sobre los ejercicios de la sesión: vacío si está planificada, o con
+ * lo registrado (`log`) para corregirlo. «última» y la sesión anterior se miden
+ * contra `date`, no contra hoy: registrar o corregir un día pasado no mira el futuro. */
+async function buildDraft(
+  date: string,
+  session: PlanSession,
+  sessions: readonly PlanSession[],
+  log: LoggedDay | null,
+): Promise<Draft> {
+  const detail = await apiGet<PlanSession>(`/api/plan-sessions/${session.id}`);
+  const items = [...detail.exercises].sort((a, b) => a.position - b.position);
+  const prev = previousSession(sessions, date, session.name);
+  const prevLog = prev
+    ? await apiGet<LoggedDay>(`/api/workout-logs/${prev.date}`).catch(
+        () => null,
+      )
+    : null;
+  let historyFailed = false;
+  const exercises: DraftExercise[] = await Promise.all(
+    items
+      .filter((e) => e.kind === "strength")
+      .map(async (se) => {
+        let last: LastValue | null = null;
+        try {
+          last = (
+            await apiGet<{ last: LastValue | null }>(
+              `/api/exercises/${se.exerciseId}/last?before=${date}`,
+            )
+          ).last;
+        } catch {
+          historyFailed = true;
+        }
+        const logged =
+          log?.sets.filter((s) => s.planSessionExerciseId === se.id) ?? [];
+        const prevSets =
+          prevLog?.sets.filter((s) => s.exerciseId === se.exerciseId) ?? [];
+        return {
+          se,
+          last,
+          previous: prev && formatPrevious(prev.date, prevSets),
+          noWeight:
+            logged.length > 0
+              ? isNoWeight(logged)
+              : last !== null && isNoWeight([last]),
+          sets:
+            logged.length > 0
+              ? logged.map(({ weightKg, reps, done }) => ({
+                  weightKg,
+                  reps,
+                  // Hecha solo con sus marcas: un registro antiguo sin ellas no cuenta.
+                  done:
+                    done && isSetFilled({ weightKg, reps }, isNoWeight(logged)),
+                  touched: false,
+                }))
+              : Array.from({ length: defaultSetCount(se.targetSets) }, () => ({
+                  weightKg: last?.weightKg ?? null,
+                  reps: last?.reps ?? se.targetRepsMin ?? null,
+                  done: false,
+                  touched: false,
+                })),
+        };
+      }),
+  );
+  const cardio: CardioDraft[] = items
+    .filter((e) => e.kind !== "strength")
+    .map((se) => {
+      const c = log?.cardio.find((x) => x.planSessionExerciseId === se.id);
+      return {
+        se,
+        distanceKm: c?.distanceKm ?? null,
+        durationMin: c?.durationMin ?? null,
+        done: c?.done ?? false,
+      };
+    });
+  return {
+    kind: "draft",
+    session,
+    exercises,
+    cardio,
+    historyFailed,
+    effort: log?.effort ?? null,
+    note: log?.note ?? "",
+    pending: false,
+    submitError: null,
+    editing: log,
+  };
+}
+
+const loadError = (err: unknown): View => ({
+  kind: "error",
+  message: err instanceof ApiError ? err.error : "No se pudo cargar el día",
+});
+
+// --- Hook: orchestrates reads + the close POST / edit PUT --------------------
 
 export function useWorkoutDay(date: string) {
   const [view, setView] = useState<View>({ kind: "loading" });
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  // La lista de la última carga: de ahí sale la sesión anterior al corregir.
+  const sessionsRef = useRef<PlanSession[]>([]);
 
   const load = useCallback(async () => {
     if (!isValidDateStr(date)) {
@@ -136,86 +259,49 @@ export function useWorkoutDay(date: string) {
     setView({ kind: "loading" });
     try {
       const sessions = await apiGet<PlanSession[]>("/api/plan-sessions");
+      sessionsRef.current = sessions;
       const session = sessions.find((s) => s.date === date);
       if (!session) return setView({ kind: "empty" });
       if (session.status === "logged") {
         const log = await apiGet<LoggedDay>(`/api/workout-logs/${date}`);
         return setView({ kind: "logged", session, log });
       }
-      const detail = await apiGet<PlanSession>(
-        `/api/plan-sessions/${session.id}`,
-      );
-      const items = [...detail.exercises].sort(
-        (a, b) => a.position - b.position,
-      );
-      let historyFailed = false;
-      const strength = items.filter((e) => e.kind === "strength");
-      const exercises: DraftExercise[] = await Promise.all(
-        strength.map(async (se) => {
-          let last: LastValue | null = null;
-          try {
-            last = (
-              await apiGet<{ last: LastValue | null }>(
-                `/api/exercises/${se.exerciseId}/last`,
-              )
-            ).last;
-          } catch {
-            historyFailed = true;
-          }
-          return {
-            se,
-            last,
-            sets: Array.from(
-              { length: defaultSetCount(se.targetSets) },
-              () => ({
-                weightKg: last?.weightKg ?? null,
-                reps: last?.reps ?? se.targetRepsMin ?? null,
-                done: false,
-              }),
-            ),
-          };
-        }),
-      );
-      const cardio: CardioDraft[] = items
-        .filter((e) => e.kind !== "strength")
-        .map((se) => ({
-          se,
-          distanceKm: null,
-          durationMin: null,
-          done: false,
-        }));
-      setView({
-        kind: "draft",
-        session,
-        exercises,
-        cardio,
-        historyFailed,
-        effort: null,
-        note: "",
-        pending: false,
-        submitError: null,
-      });
+      setView(await buildDraft(date, session, sessions, null));
     } catch (err) {
-      const message =
-        err instanceof ApiError ? err.error : "No se pudo cargar el día";
-      setView({ kind: "error", message });
+      setView(loadError(err));
     }
   }, [date]);
+
+  /** «Editar» un registro: el mismo borrador, precargado con lo registrado. Parte
+   * plegado: lo desplegado al registrar ya no corresponde a este borrador. */
+  const startEdit = () => {
+    if (view.kind !== "logged" || !view.session) return;
+    const { session, log } = view;
+    setExpanded({});
+    setView({ kind: "loading" });
+    buildDraft(date, session, sessionsRef.current, log).then(setView, (err) =>
+      setView(loadError(err)),
+    );
+  };
+
+  const cancelEdit = () =>
+    setView((v) =>
+      v.kind === "draft" && v.editing
+        ? { kind: "logged", session: v.session, log: v.editing }
+        : v,
+    );
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const patchDraft = (
-    patch: (
-      v: Extract<View, { kind: "draft" }>,
-    ) => Partial<Extract<View, { kind: "draft" }>>,
-  ) => setView((v) => (v.kind === "draft" ? { ...v, ...patch(v) } : v));
+  const patchDraft = (patch: (v: Draft) => Partial<Draft>) =>
+    setView((v) => (v.kind === "draft" ? { ...v, ...patch(v) } : v));
 
   const mutateSet = (
     seId: number,
     setIdx: number,
-    patch: (s: DraftSet) => DraftSet,
+    patch: (s: DraftSet, ex: DraftExercise) => DraftSet,
   ) =>
     patchDraft((v) => ({
       exercises: v.exercises.map((ex) =>
@@ -223,17 +309,28 @@ export function useWorkoutDay(date: string) {
           ? ex
           : {
               ...ex,
-              sets: ex.sets.map((s, i) => (i === setIdx ? patch(s) : s)),
+              sets: ex.sets.map((s, i) => (i === setIdx ? patch(s, ex) : s)),
             },
       ),
     }));
+
+  /** Tocar una marca decide «hecha»: completa (kilos y reps, o solo reps sin
+   * peso) la marca; vaciarla la desmarca. La precarga no pasa por aquí. */
+  const withMarks = (s: DraftSet, noWeight: boolean): DraftSet => ({
+    ...s,
+    touched: true,
+    done: isSetFilled(s, noWeight),
+  });
 
   const setDraftValue = (
     seId: number,
     setIdx: number,
     field: "weightKg" | "reps",
     value: string,
-  ) => mutateSet(seId, setIdx, (s) => ({ ...s, [field]: numOrNull(value) }));
+  ) =>
+    mutateSet(seId, setIdx, (s, ex) =>
+      withMarks({ ...s, [field]: numOrNull(value) }, ex.noWeight),
+    );
 
   const stepValue = (
     seId: number,
@@ -241,20 +338,50 @@ export function useWorkoutDay(date: string) {
     field: "weightKg" | "reps",
     delta: number,
   ) =>
-    mutateSet(seId, setIdx, (s) => ({
+    mutateSet(seId, setIdx, (s, ex) =>
+      withMarks(
+        { ...s, [field]: Math.max(0, (s[field] ?? 0) + delta) },
+        ex.noWeight,
+      ),
+    );
+
+  /** El check manual solo marca una serie completa; desmarcar, siempre. */
+  const toggleDone = (seId: number, setIdx: number) =>
+    mutateSet(seId, setIdx, (s, ex) => ({
       ...s,
-      [field]: Math.max(0, (s[field] ?? 0) + delta),
+      done: !s.done && isSetFilled(s, ex.noWeight),
     }));
 
-  const toggleDone = (seId: number, setIdx: number) =>
-    mutateSet(seId, setIdx, (s) => ({ ...s, done: !s.done }));
+  /** Cambiar «sin peso» cambia qué es una serie completa: recalcula las editadas. */
+  const toggleNoWeight = (seId: number) =>
+    patchDraft((v) => ({
+      exercises: v.exercises.map((ex) => {
+        if (ex.se.id !== seId) return ex;
+        const noWeight = !ex.noWeight;
+        return {
+          ...ex,
+          noWeight,
+          sets: ex.sets.map((s) =>
+            s.touched
+              ? withMarks(s, noWeight)
+              : { ...s, done: s.done && isSetFilled(s, noWeight) },
+          ),
+        };
+      }),
+    }));
 
   const completeExercise = (seId: number) =>
     patchDraft((v) => ({
       exercises: v.exercises.map((ex) =>
         ex.se.id !== seId
           ? ex
-          : { ...ex, sets: ex.sets.map((s) => ({ ...s, done: true })) },
+          : {
+              ...ex,
+              sets: ex.sets.map((s) => ({
+                ...s,
+                done: s.done || isSetFilled(s, ex.noWeight),
+              })),
+            },
       ),
     }));
 
@@ -285,7 +412,8 @@ export function useWorkoutDay(date: string) {
   const toggleExpand = (seId: number) =>
     setExpanded((m) => ({ ...m, [seId]: !m[seId] }));
 
-  /** Cerrar sesión: single in-flight POST; 201→B, 409→refetch into B, 400→banner + draft. */
+  /** Cerrar sesión (POST) o guardar la corrección (PUT): single in-flight;
+   * 2xx→B, 409 del POST→refetch into B, 400→banner + draft. */
   const close = () => {
     setView((v) => {
       if (v.kind !== "draft" || v.effort === null || v.pending) return v;
@@ -297,7 +425,7 @@ export function useWorkoutDay(date: string) {
             ex.sets.map((s, i) => ({
               planSessionExerciseId: ex.se.id,
               setIndex: i,
-              weightKg: s.weightKg,
+              weightKg: ex.noWeight ? null : s.weightKg,
               reps: s.reps,
               done: s.done,
             })),
@@ -316,12 +444,12 @@ export function useWorkoutDay(date: string) {
         try {
           const log = await apiSend<LoggedDay>(
             `/api/workout-logs/${date}`,
-            "POST",
+            v.editing ? "PUT" : "POST",
             payload,
           );
           setView({ kind: "logged", session: v.session, log });
         } catch (err) {
-          if (err instanceof ApiError && err.status === 409) {
+          if (err instanceof ApiError && err.status === 409 && !v.editing) {
             try {
               const log = await apiGet<LoggedDay>(`/api/workout-logs/${date}`);
               setView({ kind: "logged", session: v.session, log });
@@ -352,11 +480,14 @@ export function useWorkoutDay(date: string) {
     setDraftValue,
     stepValue,
     toggleDone,
+    toggleNoWeight,
     completeExercise,
     setCardioValue,
     toggleCardioDone,
     toggleExpand,
     close,
+    startEdit,
+    cancelEdit,
     reload: load,
   };
 }
@@ -683,6 +814,11 @@ function SesionView() {
           name={log.session?.name ?? view.session?.name ?? "Sesión"}
           logged
         />
+        {view.session && (
+          <Button variant="tonal" className="mb-4" onClick={day.startEdit}>
+            <EditIcon width={20} height={20} /> Editar
+          </Button>
+        )}
         <section
           aria-label="Resumen"
           className="relative mb-4 overflow-hidden rounded-xl rounded-tr-xxl bg-accent-container p-6 text-on-accent-container"
@@ -782,7 +918,9 @@ function SesionView() {
   );
   const complete = isSessionComplete(v.exercises, v.cardio);
   const openPending = v.exercises.find(
-    (ex) => day.expanded[ex.se.id] && ex.sets.some((s) => !s.done),
+    (ex) =>
+      day.expanded[ex.se.id] &&
+      ex.sets.some((s) => !s.done && isSetFilled(s, ex.noWeight)),
   );
   return (
     <div className="pb-24">
@@ -802,7 +940,7 @@ function SesionView() {
       <div className="stagger flex flex-col gap-3">
         {v.exercises.map((ex, idx) => {
           const open = !!day.expanded[ex.se.id];
-          const helper = formatLast(ex.last);
+          const helper = ex.previous ?? formatLast(ex.last);
           const allDone = ex.sets.every((s) => s.done);
           return (
             <Card
@@ -828,12 +966,21 @@ function SesionView() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-1">
+                  <span className="flex items-center gap-2 pr-2 text-label-l">
+                    <Switch
+                      aria-label={`Sin peso · ${ex.se.exerciseName}`}
+                      checked={ex.noWeight}
+                      onChange={() => day.toggleNoWeight(ex.se.id)}
+                    />
+                    Sin peso
+                  </span>
                   {!open &&
                     ex.sets.map((s, i) => (
                       <Checkbox
                         key={i}
                         aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
                         checked={s.done}
+                        disabled={!s.done && !isSetFilled(s, ex.noWeight)}
                         onChange={() => day.toggleDone(ex.se.id, i)}
                       />
                     ))}
@@ -875,25 +1022,33 @@ function SesionView() {
                           <Checkbox
                             aria-label={ctx}
                             checked={s.done}
+                            disabled={!s.done && !isSetFilled(s, ex.noWeight)}
                             onChange={() => day.toggleDone(ex.se.id, i)}
                           />
                           <span className="w-14 text-label-l text-on-surface-variant">
                             Serie {i + 1}
                           </span>
                         </div>
-                        <div className="grid flex-1 grid-cols-2 gap-3">
-                          <Stepper
-                            caption="Peso (kg)"
-                            context={ctx}
-                            value={s.weightKg}
-                            step={2.5}
-                            onValue={(val) =>
-                              day.setDraftValue(ex.se.id, i, "weightKg", val)
-                            }
-                            onStep={(d) =>
-                              day.stepValue(ex.se.id, i, "weightKg", d)
-                            }
-                          />
+                        <div
+                          className={cx(
+                            "grid flex-1 gap-3",
+                            ex.noWeight ? "grid-cols-1" : "grid-cols-2",
+                          )}
+                        >
+                          {!ex.noWeight && (
+                            <Stepper
+                              caption="Peso (kg)"
+                              context={ctx}
+                              value={s.weightKg}
+                              step={2.5}
+                              onValue={(val) =>
+                                day.setDraftValue(ex.se.id, i, "weightKg", val)
+                              }
+                              onStep={(d) =>
+                                day.stepValue(ex.se.id, i, "weightKg", d)
+                              }
+                            />
+                          )}
                           <Stepper
                             caption="Reps"
                             context={ctx}
@@ -1042,8 +1197,19 @@ function SesionView() {
             {progress.done} de {progress.total} series hechas
           </span>
         </span>
+        {v.editing && (
+          <Button variant="text" disabled={v.pending} onClick={day.cancelEdit}>
+            Cancelar
+          </Button>
+        )}
         <Button disabled={v.effort === null || v.pending} onClick={day.close}>
-          {v.pending ? "Cerrando…" : "Cerrar sesión"}
+          {v.editing
+            ? v.pending
+              ? "Guardando…"
+              : "Guardar"
+            : v.pending
+              ? "Cerrando…"
+              : "Cerrar sesión"}
         </Button>
       </div>
     </div>

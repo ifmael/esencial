@@ -1,7 +1,7 @@
 // Cerrar el día: series de fuerza + marcas de cardio contra los ejercicios de la
 // sesión; doble POST 409; logged solo lectura; last-values por ejercicio.
 import { beforeAll, describe, expect, it } from "vitest";
-import { d1, freshDb, get, post } from "./helpers";
+import { d1, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -207,6 +207,23 @@ describe("/api/workout-logs/:date", () => {
     expect((await body(res)).field).toBe("effort");
   });
 
+  it("400 cuando una serie hecha no lleva repeticiones", async () => {
+    const s = await seed("2026-09-09");
+    const res = await post("/api/workout-logs/2026-09-09", {
+      effort: 3,
+      sets: [
+        {
+          planSessionExerciseId: s.seBench,
+          setIndex: 0,
+          weightKg: 60,
+          done: true,
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("sets.0.reps");
+  });
+
   it("400 cuando el set apunta a un ejercicio de otra sesión", async () => {
     const s = await seed("2026-09-15");
     const other = await post("/api/plan-sessions", {
@@ -311,6 +328,111 @@ describe("/api/workout-logs/:date", () => {
   it("GET unknown date → 404", async () => {
     expect((await get("/api/workout-logs/2020-01-01")).status).toBe(404);
   });
+
+  it("cada serie lleva el exerciseId del catálogo", async () => {
+    const s = await seed("2026-09-15");
+    await post("/api/workout-logs/2026-09-15", {
+      effort: 3,
+      sets: [
+        {
+          planSessionExerciseId: s.seBench,
+          setIndex: 0,
+          weightKg: 60,
+          reps: 8,
+          done: true,
+        },
+      ],
+    });
+    const got = await body(await get("/api/workout-logs/2026-09-15"));
+    const sets = got.sets as { exerciseId: number }[];
+    expect(sets[0].exerciseId).toBe(s.benchId);
+  });
+});
+
+describe("PUT /api/workout-logs/:date (corregir un registro)", () => {
+  const first = (s: Seed) => ({
+    effort: 2,
+    note: "floja",
+    sets: [
+      {
+        planSessionExerciseId: s.seBench,
+        setIndex: 0,
+        weightKg: 50,
+        reps: 8,
+        done: true,
+      },
+      {
+        planSessionExerciseId: s.seBench,
+        setIndex: 1,
+        weightKg: 50,
+        reps: 6,
+        done: true,
+      },
+    ],
+    cardio: [{ planSessionExerciseId: s.seRun, distanceKm: 5, done: true }],
+  });
+
+  it("reemplaza series, cardio, esfuerzo y nota sin duplicar", async () => {
+    const s = await seed("2026-09-16");
+    await post("/api/workout-logs/2026-09-16", first(s));
+    const res = await put("/api/workout-logs/2026-09-16", {
+      effort: 4,
+      note: null,
+      sets: [
+        {
+          planSessionExerciseId: s.seBench,
+          setIndex: 0,
+          weightKg: 55,
+          reps: 8,
+          done: true,
+        },
+      ],
+      cardio: [],
+    });
+    expect(res.status).toBe(200);
+    const got = await body(await get("/api/workout-logs/2026-09-16"));
+    expect(got.effort).toBe(4);
+    expect(got.note).toBeNull();
+    const sets = got.sets as { weightKg: number }[];
+    expect(sets.map((x) => x.weightKg)).toEqual([55]);
+    expect(got.cardio).toEqual([]);
+    const n = await d1.get<{ n: number }>(
+      "SELECT COUNT(*) AS n FROM workout_logs",
+    );
+    expect(n?.n).toBe(1);
+  });
+
+  it("404 si el día no está registrado", async () => {
+    const s = await seed("2026-09-17");
+    const res = await put("/api/workout-logs/2026-09-17", first(s));
+    expect(res.status).toBe(404);
+    // el 404 propio (no el de ruta inexistente de Hono)
+    expect(await body(res)).toEqual({
+      error: "No workout logged for this date",
+      field: "date",
+    });
+  });
+
+  it("400 con un ejercicio ajeno a la sesión; el registro no cambia", async () => {
+    const s = await seed("2026-09-18");
+    await post("/api/workout-logs/2026-09-18", first(s));
+    const res = await put("/api/workout-logs/2026-09-18", {
+      effort: 5,
+      sets: [
+        {
+          planSessionExerciseId: s.seRun, // cardio como serie de fuerza
+          setIndex: 0,
+          weightKg: 1,
+          reps: 1,
+          done: true,
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+    const got = await body(await get("/api/workout-logs/2026-09-18"));
+    expect(got.effort).toBe(2);
+    expect((got.sets as unknown[]).length).toBe(2);
+  });
 });
 
 describe("last values per exercise", () => {
@@ -384,6 +506,37 @@ describe("last values per exercise", () => {
     const last = r.last as { weightKg: number; reps: number };
     expect(last.weightKg).toBe(60);
     expect(last.reps).toBe(8);
+  });
+
+  it("?before=fecha ignora lo registrado ese día y después", async () => {
+    const s = await seed("2026-09-19");
+    const set = (seId: number, weightKg: number) => ({
+      effort: 2,
+      sets: [
+        {
+          planSessionExerciseId: seId,
+          setIndex: 0,
+          weightKg,
+          reps: 8,
+          done: true,
+        },
+      ],
+    });
+    await post("/api/workout-logs/2026-09-19", set(s.seBench, 50));
+    const later = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-09-26",
+        items: [{ exerciseId: s.benchId }],
+      }),
+    )) as { exercises: { id: number }[] };
+    await post("/api/workout-logs/2026-09-26", set(later.exercises[0].id, 70));
+    const last = async (q: string) =>
+      (
+        (await body(await get(`/api/exercises/${s.benchId}/last${q}`)))
+          .last as { weightKg: number }
+      ).weightKg;
+    expect(await last("?before=2026-09-26")).toBe(50);
+    expect(await last("")).toBe(70);
   });
 
   it("404 for unknown exercise", async () => {

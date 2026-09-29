@@ -146,16 +146,22 @@ export const exercises = new Hono<{ Bindings: Env }>()
       const db = getDb(c.env);
       if (!(await row(db, "SELECT id FROM exercises WHERE id = ?", id)))
         return fail("Not found", undefined, 404);
+      // ?before=YYYY-MM-DD: solo lo registrado antes de esa fecha (registrar un día pasado).
+      const before = c.req.query("before") ?? "9999-12-31";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(before))
+        return fail("before must be YYYY-MM-DD", "before");
       const last = await row(
         db,
         `SELECT sl.weight_kg AS weightKg, sl.reps, wl.date
          FROM set_logs sl
          JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
          JOIN workout_logs wl ON wl.id = sl.workout_log_id
-         WHERE pse.exercise_id = ? AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL)
+         WHERE pse.exercise_id = ? AND wl.date < ?
+           AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL)
          ORDER BY wl.date DESC, sl.id DESC
          LIMIT 1`,
         id,
+        before,
       );
       return json({ exerciseId: id, last: last ?? null });
     }),

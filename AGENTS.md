@@ -219,6 +219,44 @@ rejilla lo recortaría— y **como hermano** del enlace, no dentro: dentro, su t
 entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
 `e2e/tests/meal-tooltip.spec.ts`.
 
+### Registro de una sesión (`/sesion/:date`)
+
+`web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.
+
+- **Una serie se marca sola al editar sus marcas**: al teclear o al usar el
+  stepper, la serie queda hecha si está completa (kilos y repeticiones, o solo
+  repeticiones si va sin peso), y se desmarca al vaciar un campo. Cambiar «Sin
+  peso» recalcula igual las series ya editadas (`touched`). La precarga (`/last`
+  o el registro al corregir) **no** marca nada.
+- **Solo una serie completa puede estar hecha** (`isSetFilled`): la casilla va
+  deshabilitada mientras falten reps (o kilos, sin «Sin peso»), «Marcar todas»
+  salta las incompletas, vaciar un campo o quitar «Sin peso» a una serie sin
+  kilos la desmarca, y un registro antiguo hecho sin marcas se precarga sin
+  marcar. La API lo refuerza: `done: true` sin `reps` → 400
+  `{field:'sets.N.reps'}` (los kilos no, porque «sin peso» viaja con
+  `weightKg: null`).
+- **«Sin peso» es de la sesión, por ejercicio** (un `Switch`): oculta los kilos,
+  basta con las repeticiones y el ejercicio viaja con `weightKg: null`. No hay
+  columna nueva: `set_logs.weight_kg` ya admite `null`. Arranca activado si lo
+  último registrado de ese ejercicio no llevaba kilos pero sí repeticiones (o,
+  al corregir, si todas sus series registradas van así: `isNoWeight`).
+- **Marcas de la sesión anterior**: la última sesión `logged` con **el mismo
+  `name` no nulo** y fecha **anterior a la del día** (`previousSession`; una
+  sesión sin nombre nunca empareja). Sus series se muestran bajo el ejercicio
+  («sáb, 26/09: 60×10 · 60×8»), emparejadas por `exerciseId` (lo devuelve
+  `serialize` en `/api/workout-logs`), y sustituyen a «última: X×Y». Son solo
+  informativas: la precarga sigue saliendo de `/last`.
+- `GET /api/exercises/:id/last?before=YYYY-MM-DD` limita el histórico a lo
+  anterior a esa fecha. El borrador siempre lo pide con la fecha del día, así que
+  registrar o corregir un día pasado no precarga marcas de días posteriores.
+- **Corregir un registro**: en la vista registrada, «Editar» reabre el mismo
+  borrador, precargado con lo registrado (series, esfuerzo, nota y cardio; no con
+  `/last`). «Guardar» manda `PUT /api/workout-logs/:date`, que en un solo batch
+  reemplaza esfuerzo, nota, `set_logs` y `cardio_logs` (misma validación de
+  pertenencia y de tipo que el POST, 404 si no hay registro). «Cancelar» vuelve a
+  lo registrado sin llamar a la API. Los ejercicios de una sesión registrada
+  siguen sin poder cambiarse (`PUT`/`DELETE` de `/plan-sessions` → 409).
+
 ### Editor de recetas (crear y editar)
 
 `app.tsx` registra **`/recetario/nueva`** y **`/recetario/:id/editar`** con la

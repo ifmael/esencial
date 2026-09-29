@@ -733,6 +733,10 @@
   .checkbox[aria-invalid="true"] {
     border-color: var(--color-error);
   }
+  .checkbox:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
   /* 48 px de área táctil alrededor de una casilla de 18. */
   .checkbox-target {
     display: inline-grid;
