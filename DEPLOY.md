@@ -29,6 +29,15 @@ de la API falla (el bucket no se crea automáticamente).
 
 ## 4. Aplicar migraciones (cada vez que cambie el esquema)
 
+**Antes** de aplicar `0012_recetas_nutrirutina` (recetario de Nutrirutina),
+sube sus fotos al R2 de producción (83 objetos, ~2 min; necesita la carpeta de
+Nutrirutina en local). Al revés, esas 83 recetas se verían sin foto hasta
+subirlas:
+
+```bash
+node api/scripts/import-nutrirutina.ts photos ~/projects/nutrirutina --remote
+```
+
 ```bash
 # = wrangler d1 migrations apply esencial --remote -c api/wrangler.toml
 # Registra cada archivo de api/migrations/ en _cf_D1_MIGRATIONS y lo ejecuta
