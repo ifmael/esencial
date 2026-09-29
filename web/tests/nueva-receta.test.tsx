@@ -7,11 +7,10 @@ import {
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
-import { makeRecipe, makeServer } from "./fixtures";
+import { makeServer } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -225,7 +224,7 @@ describe("nueva-receta: guardado", () => {
     });
   });
 
-  it("guardar y añadir otra: mismo POST, se queda en la página con el formulario vacío", async () => {
+  it("cancelar vuelve al recetario sin POSTear", async () => {
     const server = makeServer([]);
     vi.stubGlobal("fetch", server.fetchMock);
     await openPage();
@@ -233,37 +232,11 @@ describe("nueva-receta: guardado", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
       target: { value: "Tortilla" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Más opciones de guardado" }),
-    );
-    fireEvent.click(
-      within(screen.getByRole("menu")).getByRole("menuitem", {
-        name: "Guardar y añadir otra",
-      }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
 
-    await waitFor(() =>
-      expect(
-        (screen.getByRole("textbox", { name: "Nombre" }) as HTMLInputElement)
-          .value,
-      ).toBe(""),
-    );
-    expect(window.location.pathname).toBe("/recetario/nueva");
-    expect(screen.queryByRole("menu")).toBeNull();
-    expect(
-      screen
-        .getByRole("button", { name: "Desayuno" })
-        .getAttribute("aria-pressed"),
-    ).toBe("false");
-    const posts = server.calls.filter(
-      (c) => c.method === "POST" && c.url === "/api/recipes",
-    );
-    expect(posts.length).toBe(1);
-    expect(posts[0].body).toMatchObject({
-      name: "Tortilla",
-      tags: ["Desayuno"],
-    });
+    await screen.findByRole("heading", { name: "Recetario" });
+    expect(window.location.pathname).toBe("/recetario");
+    expect(server.calls.some((c) => c.method === "POST")).toBe(false);
   });
 });
 

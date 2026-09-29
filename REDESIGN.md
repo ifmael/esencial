@@ -159,8 +159,8 @@ Tipografía que se mueve: la etiqueta activa del raíl y de la barra pasa de 500
   quitar + Deshacer (`manualSet`), selector de receta en diálogo.
 - **Ejercicios**: filtro por grupo con chips, cabecera *hero* del detalle, pasos
   numerados sobre formas, editor con `Field`.
-- **Nueva receta**: una columna en móvil, botón dividido «Guardar receta / Guardar y
-  añadir otra».
+- **Nueva receta**: una columna en móvil, cabecera con Cancelar y Guardar
+  (mismo patrón que el editor de ejercicios).
 - **Login**: formas grandes de fondo, marca `display-s` *emphasized* y tarjeta
   `rounded-xl`.
 

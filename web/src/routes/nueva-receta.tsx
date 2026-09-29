@@ -2,9 +2,9 @@
 // modal recipe-editor (D2), pero como página: una columna en móvil y dos en lg,
 // dropzone con subida a /api/uploads (contrato fail-closed: 200 {photo_path},
 // 400 {error, field:"file"}) y preview por photo_path. description/servings
-// salen null. Guardar es un botón dividido: «Guardar receta» vuelve al
-// recetario; «Guardar y añadir otra» (mismo POST) deja el formulario vacío.
-import { useEffect, useRef, useState } from "react";
+// salen null. Cabecera con Cancelar y Guardar (como en el editor de ejercicios):
+// un solo POST y vuelta al recetario.
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Loader, Shape } from "../components/expressive";
 import {
@@ -13,8 +13,8 @@ import {
   CheckIcon,
   CloseIcon,
   PhotoIcon,
+  SaveIcon,
 } from "../components/icons";
-import { useSnackbar } from "../components/overlay";
 import {
   type RecipeInput,
   useRecipes,
@@ -27,9 +27,7 @@ import {
   Chip,
   Field,
   Input,
-  ripple,
   Select,
-  SplitButton,
 } from "../components/ui";
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
 import { useCreateMorph } from "../lib/view-transition";
@@ -75,7 +73,6 @@ export function NuevaRecetaPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
-  const snackbar = useSnackbar();
   const uploadingRef = useRef(false);
   const pendingFileRef = useRef<File | null>(null);
   // Id de la selección activa: cualquier invalidación lo incrementa y las
@@ -217,9 +214,8 @@ export function NuevaRecetaPage() {
 
   const busy = api.saving || uploading;
 
-  /** Un solo POST. Sin `another` vuelve al recetario; con él deja el
-   * formulario vacío (y la subida pendiente descartada) para la siguiente. */
-  const save = async (another = false) => {
+  /** Un solo POST; al terminar vuelve al recetario. */
+  const save = async () => {
     if (busy) return;
     if (!draft.name.trim()) {
       setNameError("El nombre es obligatorio");
@@ -231,19 +227,7 @@ export function NuevaRecetaPage() {
     if (photoKey === null) return;
     const ok = await api.create(payload(photoKey));
     if (!ok) return;
-    if (!another) {
-      navigate("/recetario");
-      return;
-    }
-    uploadSessionRef.current += 1;
-    pendingFileRef.current = null;
-    photoRemovedRef.current = false;
-    setUploadError(null);
-    setMaterial("");
-    setTag("");
-    setDraft(blank());
-    snackbar({ message: "Receta guardada" });
-    nameInput.current?.focus();
+    navigate("/recetario");
   };
 
   const morph = useCreateMorph();
@@ -279,20 +263,19 @@ export function NuevaRecetaPage() {
             </p>
           </div>
         </div>
-        <SplitButton
-          onClick={() => save()}
-          menuLabel="Más opciones de guardado"
-          disabled={busy}
-          items={[
-            {
-              label: "Guardar y añadir otra",
-              icon: <AddIcon className="text-on-surface-variant" />,
-              onSelect: () => save(true),
-            },
-          ]}
-        >
-          {busy ? "Guardando…" : "Guardar receta"}
-        </SplitButton>
+        <div className="relative flex flex-wrap gap-2">
+          <Button
+            variant="text"
+            className="text-on-accent-container"
+            onClick={() => navigate("/recetario")}
+          >
+            Cancelar
+          </Button>
+          <Button disabled={busy} onClick={() => save()}>
+            <SaveIcon width={20} height={20} />
+            {busy ? "Guardando…" : "Guardar receta"}
+          </Button>
+        </div>
       </header>
 
       {api.fieldError && api.fieldError.field !== "name" && (
