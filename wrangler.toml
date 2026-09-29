@@ -4,6 +4,11 @@
 name = "esencial"
 main = "web/worker/index.ts"
 compatibility_date = "2026-08-31"
+# El guard (web/worker/index.ts) pregunta la sesión a la API con fetch() a su
+# URL de workers.dev. Sin este flag, Cloudflare bloquea el fetch entre Workers
+# de la misma cuenta (error 1042), el guard lo toma como «sin sesión» y cada
+# recarga acaba en /login. En local no pasa (127.0.0.1, otro puerto).
+compatibility_flags = ["global_fetch_strictly_public"]
 
 [assets]
 directory = "./web/dist"

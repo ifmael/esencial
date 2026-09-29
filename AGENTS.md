@@ -546,6 +546,16 @@ Nota relacionada: `api/scripts/dev.ts` arranca y para los dos servidores juntos,
 así que matar a mano cualquiera de los dos (por ejemplo el que ocupa 8787)
 termina el `pnpm dev` entero con el código de salida del hijo.
 
+### 7. El guard del frontal no puede hacer fetch a la API sin `global_fetch_strictly_public`
+
+El guard del HTML pregunta la sesión con `fetch(API_ORIGIN + "/api/auth/status")`.
+Los dos Workers viven en el mismo `<cuenta>.workers.dev`, y Cloudflare bloquea
+ese fetch (error **1042**) salvo con el flag `global_fetch_strictly_public`
+(`wrangler.toml` de la raíz). Sin él, el guard lo toma como «sin sesión» y
+**cada recarga manda a `/login`**, aunque navegar dentro del SPA funcione (ahí el
+navegador llama a la API directo). En local y en e2e no se reproduce
+(`127.0.0.1`, otro puerto): no hay test que lo pille, no quites el flag.
+
 ## Tests e2e — base de datos propia
 
 `pnpm e2e` **NUNCA** toca la base de desarrollo (`.wrangler/state`). El
