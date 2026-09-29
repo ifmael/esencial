@@ -135,4 +135,25 @@ describe("WeekGrid: transición al cambiar de semana", () => {
     fireEvent.click(screen.getByRole("button", { name: "Semana siguiente" }));
     expect(onShift).toHaveBeenCalledWith(1);
   });
+
+  it("el nombre vive solo mientras cambia la semana", async () => {
+    stubViewTransitions();
+    const onShift = vi.fn();
+    const { container, rerender } = render(grid("2026-W10", false, onShift));
+    const el = container.querySelector<HTMLElement>(".stagger");
+    if (!el) throw new Error("la rejilla no se pintó");
+
+    // En reposo no lo lleva: cualquier otra transición de la página (abrir el
+    // editor del día) la pintaría como capa propia por encima del velo y del
+    // modal, y la rejilla deslizaría sin cambiar de semana.
+    expect(el.style.viewTransitionName).toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Semana siguiente" }));
+    // La foto «antes» del cambio de semana sí lo lleva: de ahí sale el eje.
+    expect(el.style.viewTransitionName).toBe("week-grid");
+
+    await act(async () => rerender(grid("2026-W11", false, onShift)));
+    await act(async () => {});
+    expect(el.style.viewTransitionName).toBe("");
+  });
 });

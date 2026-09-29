@@ -4,7 +4,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { apiRequest, seededExercise } from "./helpers";
+import { apiRequest, apiUrl, seededExercise } from "./helpers";
 
 type ItemPayload = {
   exerciseId: number;
@@ -93,7 +93,9 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     for (const s of sessions.filter(
       (s) => s.date === date && s.status === "planned",
     )) {
-      await request.delete(`/api/plan-sessions/${s.id}`);
+      // apiUrl: la API es OTRO origen; una ruta relativa acabaría en el frontal
+      // (que no tiene /api/*) y el borrado se perdería en silencio.
+      await request.delete(apiUrl(`/api/plan-sessions/${s.id}`));
     }
   }
 
@@ -835,6 +837,109 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Cancelar" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("abrir el editor del día no pinta la rejilla encima del modal", async ({
+    page,
+  }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const week = weekOf(91);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3, targetRepsMin: 8 }],
+      "Sesión que se abre",
+    );
+
+    await page.goto(`/plan-fuerza?week=${week}`);
+    // La transición se alarga para poder mirarla A MITAD (en la app dura 435 ms).
+    await page.addStyleTag({
+      content: ":root{--duration-spatial-default:3000ms}",
+    });
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+
+    const mid = await page.waitForFunction(() => {
+      const pseudoOf = (a: Animation) =>
+        (a.effect as KeyframeEffect | null)?.pseudoElement ?? "";
+      const running = () => document.getAnimations();
+      const box = running().find(
+        (a) => pseudoOf(a) === "::view-transition-group(day-sheet)",
+      );
+      if (!box || (box.effect?.getComputedTiming().progress ?? 0) < 0.5)
+        return null;
+      const html = document.documentElement;
+      const source = getComputedStyle(html, "::view-transition-old(day-sheet)");
+      return {
+        // Si la rejilla fuera una capa de esta transición, el navegador la
+        // pintaría por encima del velo y del modal: el calendario se colaría
+        // encima mientras la modal crece.
+        gridLayers: running()
+          .filter((a) => pseudoOf(a).includes("week-grid"))
+          .map((a) => pseudoOf(a)),
+        // La columna de origen se despide pronto y nunca se dibuja fuera del
+        // contenedor que crece.
+        sourceOpacity: Number(source.opacity),
+        sourceHeight: Number.parseFloat(source.height),
+        boxHeight: Number.parseFloat(
+          getComputedStyle(html, "::view-transition-group(day-sheet)").height,
+        ),
+      };
+    });
+
+    const frame = (await mid.jsonValue()) as {
+      gridLayers: string[];
+      sourceOpacity: number;
+      sourceHeight: number;
+      boxHeight: number;
+    };
+    expect(frame.gridLayers).toEqual([]);
+    expect(frame.sourceOpacity).toBe(0);
+    expect(frame.sourceHeight).toBeLessThanOrEqual(frame.boxHeight + 1);
+  });
+
+  test("cargar la sesión al editar no encoge la rejilla", async ({ page }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const week = weekOf(98);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const { id } = await createSession(page.request, date, [
+      { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+    ]);
+
+    // El detalle tarda: mientras llega, la página muestra que está cargando.
+    let release = () => {};
+    const held = new Promise<void>((r) => {
+      release = r;
+    });
+    await page.route(`**/api/plan-sessions/${id}`, async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/plan-fuerza?week=${week}`);
+    const grid = page.locator("section").filter({ hasText: week });
+    const open = page.getByRole("button", {
+      name: `Editar sesión del ${date}`,
+    });
+    // Medir con la semana ya cargada: su propio loader también cambia el alto.
+    await expect(open).toBeVisible();
+    const before = await grid.boundingBox();
+    await open.click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Cargando sesión…" }),
+    ).toBeAttached();
+    // La rejilla es la que se ve en la foto «antes» de la transición día →
+    // modal: si encoge aquí, vuelve a crecer mientras la modal se expande.
+    expect(await grid.boundingBox()).toEqual(before);
+    release();
+    await expect(
+      page.getByRole("dialog", { name: new RegExp(`Editar sesión · ${date}`) }),
+    ).toBeVisible();
   });
 
   /** Lunes de la semana ISO (espejo de week-grid.tsx). */

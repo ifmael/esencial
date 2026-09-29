@@ -177,6 +177,14 @@ columna de «hoy» marcada. El componente no sabe nada del dominio: cada página
 inyecta el contenido de sus días por el render prop (`children`), que es lo
 único que difiere (sesiones en fuerza, tomas en comidas).
 
+La rejilla lleva su `view-transition-name` **solo mientras cambia la semana** (lo
+pone y lo quita `WeekGrid.shift`, al acabar la transición). Puesto siempre,
+cualquier otra transición de la página —abrir el editor del día— la convierte en
+una capa propia, y el navegador la pinta **por encima** del velo y del modal: el
+calendario se colaba sobre el modal mientras este crecía (y la rejilla deslizaba
+sin cambiar de semana). Lo cubren `tests/view-transition.test.tsx` y el e2e de
+`strength.spec.ts`.
+
 En la columna de un día de fuerza (`SessionCell`, `web/src/routes/plan-fuerza.tsx`)
 los ejercicios **se reparten la altura de la columna** en vez de quedarse
 apiñados arriba: la lista (`<ol>`) se queda con el espacio libre y cada fila
@@ -273,6 +281,15 @@ Así el nombre `create` está solo en lo pulsado en la foto «antes» y solo en 
 destino en la foto «después» (dos iguales anulan la transición). Carga directa
 y editar no animan. El destino apaga su animación de entrada propia (la hace la
 transición). Los tests usan `tests/view-transition-stub.ts`.
+
+El **día → modal** del calendario de fuerza (`day-sheet`) recibe el mismo trato
+en `globals.css`: el contenido llena el contenedor que crece y la columna de
+origen se despide en `--duration-effects-fast`. Sin eso la columna (alta y
+estrecha) se quedaba **estirada encima del modal** todo lo que dura la expansión.
+Mientras se carga el detalle de la sesión (`GET /api/plan-sessions/:id`, antes
+de abrir), el `Loader` va **superpuesto** a la rejilla (`absolute inset-0`), no
+debajo en la columna: en el flujo le quitaba ~112 px de alto y la rejilla volvía
+a crecer justo mientras la modal se expandía (lo cubre `strength.spec.ts`).
 
 El **menú FAB** sigue el M3E: velo (`Scrim`) que tapa la página y la cierra al
 pulsarlo, y acciones planas sin sombra, cada una con el `accent-container` de la

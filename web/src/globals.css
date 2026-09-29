@@ -1015,6 +1015,18 @@
 ::view-transition-old(create) {
   animation-duration: var(--duration-effects-fast);
 }
+/* Día → modal: mismo trato que «crear» — el contenido llena el contenedor y la
+   columna de origen (alta y estrecha) se despide pronto; si no, se queda
+   estirada encima del modal todo lo que dura la expansión. */
+::view-transition-old(day-sheet),
+::view-transition-new(day-sheet) {
+  height: 100%;
+  object-fit: cover;
+  overflow: clip;
+}
+::view-transition-old(day-sheet) {
+  animation-duration: var(--duration-effects-fast);
+}
 /* Eje compartido X al cambiar de semana: sale hacia un lado, entra del otro. */
 ::view-transition-old(week-grid) {
   animation: axis-out var(--duration-spatial-fast) var(--ease-emphasized) both;

@@ -90,6 +90,7 @@ export function WeekGrid({
 }) {
   const today = toISODate(new Date());
   const pending = useRef<{ from: string; release: () => void } | null>(null);
+  const grid = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const p = pending.current;
@@ -104,6 +105,14 @@ export function WeekGrid({
       onShiftWeek(delta);
       return;
     }
+    // El nombre de la transición se pone solo aquí y se quita al acabar: si la
+    // rejilla lo llevara siempre, cualquier otra transición de la página —abrir
+    // el editor del día— la convertiría en una capa propia, que el navegador
+    // pinta por encima del velo y del modal: el calendario se colaría sobre el
+    // modal (que aún está creciendo) y la rejilla deslizaría sin cambiar de
+    // semana.
+    const el = grid.current;
+    el?.style.setProperty("view-transition-name", "week-grid");
     document.documentElement.dataset.weekDir = delta < 0 ? "prev" : "next";
     const from = isoWeek;
     void runViewTransition(
@@ -114,7 +123,7 @@ export function WeekGrid({
           setTimeout(release, WEEK_TRANSITION_MAX_WAIT_MS);
           onShiftWeek(delta);
         }),
-    );
+    ).finally(() => el?.style.removeProperty("view-transition-name"));
   };
 
   const first = dayOf(isoWeek, 0);
@@ -171,7 +180,7 @@ export function WeekGrid({
         <Loader label="Cargando semana…" />
       ) : (
         <div
-          style={{ viewTransitionName: "week-grid" }}
+          ref={grid}
           className="stagger flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2 md:overflow-y-auto"
         >
           {DAYS.map((name, index) => {

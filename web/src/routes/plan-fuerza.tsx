@@ -1203,7 +1203,7 @@ export function PlanFuerzaPage() {
   const byDate = new Map(week.sessions.map((s) => [s.date, s]));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div className="relative flex min-h-0 flex-1 flex-col gap-4">
       <WeekGrid
         isoWeek={isoWeek}
         loading={week.loading && week.sessions.length === 0}
@@ -1237,7 +1237,14 @@ export function PlanFuerzaPage() {
         )}
       </WeekGrid>
 
-      {dayLoading && <Loader label="Cargando sesión…" />}
+      {/* Encima de la rejilla, fuera del flujo: en la columna le robaba alto
+          y la rejilla volvía a crecer mientras la modal se expandía. */}
+      {dayLoading && (
+        <Loader
+          label="Cargando sesión…"
+          className="pointer-events-none absolute inset-0"
+        />
+      )}
 
       {day && (
         <Dialog
