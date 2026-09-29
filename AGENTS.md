@@ -219,6 +219,27 @@ rejilla lo recortaría— y **como hermano** del enlace, no dentro: dentro, su t
 entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
 `e2e/tests/meal-tooltip.spec.ts`.
 
+### Cabecera del día (`/`)
+
+`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila**
+(~88 px): el `h1` pasa a `sr-only` (sigue siendo el único título y los tests lo
+buscan), sin flor, sin progreso (ni anillo ni barra: decisión del usuario) y sin
+los enlaces a los planes (ya están en la barra inferior). «Hoy» lleva
+`aria-pressed={isToday}`: sin título, es lo que dice que el día elegido es hoy
+(también en escritorio, donde se pinta como píldora en `--accent`). La fecha lleva
+`grow-10` porque `.connected > *` hace crecer a todas las piezas por igual, y su
+`onClick` llama a `showPicker()` para abrir el calendario al pulsar en cualquier
+punto, no solo en el icono. Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
+
+### Cabecera del detalle de ejercicio (`/ejercicios/:id`)
+
+`EjercicioDetailPage` (`web/src/routes/ejercicios.tsx`): barra superior M3 en
+**una fila** en todos los anchos: volver (icono, `aria-label` «Volver al
+catálogo»), tipo + grupos en `label-m` con el icono del tipo en línea, título
+`headline-s` y editar. Con un nombre corto mide < 100 px a 390 px; si el nombre
+es largo, crece en altura (no se recorta, porque es el `h1`). Lo cubre
+`e2e/tests/exercise-detail.spec.ts`.
+
 ### Registro de una sesión (`/sesion/:date`)
 
 `web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.
