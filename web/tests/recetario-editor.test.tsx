@@ -110,19 +110,27 @@ describe("editor de receta: editar", () => {
     fireEvent.click(await screen.findByRole("link", { name: "Editar receta" }));
     await screen.findByRole("heading", { name: "Editar receta" });
 
-    // Cancelar reemplaza la entrada del editor por la de la ficha.
-    const atEditor = window.history.length;
+    // Cancelar reemplaza la entrada del editor por la de la ficha: no hay push
+    // (mirar `history.length` no sirve: jsdom lo topa en 50 entradas).
+    const push = vi.spyOn(window.history, "pushState");
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
-    expect(window.history.length).toBe(atEditor);
+    expect(push).not.toHaveBeenCalled();
+    push.mockRestore();
 
-    // Guardar, igual: la entrada del editor no se queda detrás.
+    // Guardar, igual: la entrada del editor no se queda detrás. El espía ve el
+    // push real de la navegación al editor (si no, el test no probaría nada).
+    const nav = vi.spyOn(window.history, "pushState");
     fireEvent.click(await screen.findByRole("link", { name: "Editar receta" }));
     await screen.findByRole("heading", { name: "Editar receta" });
-    const beforeSave = window.history.length;
+    expect(nav).toHaveBeenCalled();
+    nav.mockRestore();
+
+    const pushSave = vi.spyOn(window.history, "pushState");
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
-    expect(window.history.length).toBe(beforeSave);
+    expect(pushSave).not.toHaveBeenCalled();
+    pushSave.mockRestore();
   });
 
   it("Guardar manda un único PUT con el borrador completo y vuelve a la ficha", async () => {

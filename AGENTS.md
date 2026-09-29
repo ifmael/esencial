@@ -210,7 +210,10 @@ la lista o la ficha se desmontan y no quedan detrás. Antes editar abría la mod
 sin transición (editar no anima, solo crear). Las dos rutas funcionan al recargar
 (deep-link); Cancelar, Escape (pila de capas) o «atrás» no llaman a la API, y
 Guardar manda un único POST (crear) o PUT (editar) para volver a `/recetario` o a
-la ficha, que al ser otro montaje del hook relee la receta.
+la ficha, que al ser otro montaje del hook relee la receta. Salir del editor
+(Cancelar, Escape o Guardar) navega con **`replace: true`**, así que su URL no se
+apila: «atrás» desde la ficha no reabre el borrador que se acaba de cerrar (el
+editor de plantillas sí lo apila).
 
 La piel es la suya (nació aquí): cabecera de sección (`bg-accent-container`) con
 Cancelar y Guardar, y cinco tarjetas en columnas desde `lg` —foto, nombre con
@@ -219,8 +222,10 @@ categorías, ingredientes, materiales y pasos (`components/steps-editor.tsx`)—
 el PUT reemplaza el registro entero, así que el borrador de edición
 (`fromRecipe`) arrastra la receta hidratada completa. La subida de foto es la
 misma que al crear: `POST /api/uploads` y, si falló y quedó pendiente, reintento
-al guardar. Lo cubren `web/tests/recetario-editor.test.tsx` y el e2e de
-`recipes.spec.ts`.
+al guardar. La **unidad** del ingrediente es texto libre en la API (`z.string()`),
+así que el desplegable (`UNITS`) añade una `<option>` propia para una unidad que
+no sea `gr/ml/ud` («g», «pechuga»): si no, una receta existente se vería como «—».
+Lo cubren `web/tests/recetario-editor.test.tsx` y el e2e de `recipes.spec.ts`.
 
 ### Editor de plantillas (crear y editar)
 
