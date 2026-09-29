@@ -201,6 +201,27 @@ día sin items, que no es representable (la API exige ≥1): desprograma la sesi
 Deshacer la **recrea** con POST (misma fecha, nombre e items). Solo sirve para las
 planificadas: una registrada no tiene ✕, porque recrearla perdería su registro.
 
+### Editor de recetas (crear y editar)
+
+`app.tsx` registra **`/recetario/nueva`** y **`/recetario/:id/editar`** con la
+misma página (`RecetaEditorPage`, `web/src/routes/receta-editor.tsx`): al entrar,
+la lista o la ficha se desmontan y no quedan detrás. Antes editar abría la modal
+`recipe-editor` sobre la ficha; ahora el lápiz de `/recetario/:id` es un `Link`
+sin transición (editar no anima, solo crear). Las dos rutas funcionan al recargar
+(deep-link); Cancelar, Escape (pila de capas) o «atrás» no llaman a la API, y
+Guardar manda un único POST (crear) o PUT (editar) para volver a `/recetario` o a
+la ficha, que al ser otro montaje del hook relee la receta.
+
+La piel es la suya (nació aquí): cabecera de sección (`bg-accent-container`) con
+Cancelar y Guardar, y cinco tarjetas en columnas desde `lg` —foto, nombre con
+categorías, ingredientes, materiales y pasos (`components/steps-editor.tsx`)—.
+**Descripción y comensales solo aparecen al editar**: al crear salen `null` (E8) y
+el PUT reemplaza el registro entero, así que el borrador de edición
+(`fromRecipe`) arrastra la receta hidratada completa. La subida de foto es la
+misma que al crear: `POST /api/uploads` y, si falló y quedó pendiente, reintento
+al guardar. Lo cubren `web/tests/recetario-editor.test.tsx` y el e2e de
+`recipes.spec.ts`.
+
 ### Editor de plantillas (crear y editar)
 
 `app.tsx` registra **`/plantillas`**, **`/plantillas/nueva`** y

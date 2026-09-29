@@ -63,8 +63,8 @@ function GuardedShell() {
 }
 
 import { EjercicioDetailPage, EjerciciosPage } from "./routes/ejercicios";
-import { NuevaRecetaPage } from "./routes/nueva-receta";
 import { PlantillaEditorPage, PlantillasPage } from "./routes/plantillas";
+import { RecetaEditorPage } from "./routes/receta-editor";
 import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
 
 import { SesionPage } from "./routes/sesion";
@@ -79,8 +79,10 @@ const routes = createRoutesFromElements(
       <Route path="/plan-fuerza" element={<PlanFuerzaPage />} />
 
       <Route path="/recetario" element={<RecetarioPage />} />
-      <Route path="/recetario/nueva" element={<NuevaRecetaPage />} />
+      <Route path="/recetario/nueva" element={<RecetaEditorPage />} />
       <Route path="/recetario/:id" element={<RecetarioDetallePage />} />
+      {/* Editar es página propia, como crear: la ficha se desmonta al entrar. */}
+      <Route path="/recetario/:id/editar" element={<RecetaEditorPage />} />
       <Route path="/ejercicios" element={<EjerciciosPage />} />
       <Route path="/ejercicios/:id" element={<EjercicioDetailPage />} />
       {/* Crear y editar son páginas propias: la lista se desmonta al entrar. */}

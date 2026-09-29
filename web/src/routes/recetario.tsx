@@ -9,7 +9,6 @@ import { EmptyState, Loader, Monogram, Shape } from "../components/expressive";
 import { AddIcon, BackIcon, DeleteIcon, EditIcon } from "../components/icons";
 import { Dialog, useSnackbar } from "../components/overlay";
 import { filterRecipes } from "../components/recipes/filter";
-import { RecipeEditor } from "../components/recipes/recipe-editor";
 import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
 import {
   Alert,
@@ -220,7 +219,6 @@ export function RecetarioDetallePage() {
   const api = useRecipes();
   const navigate = useNavigate();
   const snackbar = useSnackbar();
-  const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const recipe = api.list.find((r) => String(r.id) === id);
   const color = useRecipeColor(
@@ -290,14 +288,13 @@ export function RecetarioDetallePage() {
           >
             <BackIcon />
           </Link>
-          <Button
-            variant="tonal"
-            size="icon"
+          <Link
+            to={`/recetario/${recipe.id}/editar`}
             aria-label="Editar receta"
-            onClick={() => setEditing(true)}
+            className={buttonClass({ variant: "tonal", size: "icon" })}
           >
             <EditIcon />
-          </Button>
+          </Link>
         </div>
         <div
           className={cx(
@@ -425,14 +422,6 @@ export function RecetarioDetallePage() {
             </Button>
           </div>
         </Dialog>
-      )}
-
-      {editing && (
-        <RecipeEditor
-          api={api}
-          recipe={recipe}
-          onClose={() => setEditing(false)}
-        />
       )}
     </div>
   );

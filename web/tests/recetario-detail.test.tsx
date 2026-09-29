@@ -106,11 +106,12 @@ describe("/recetario/:id", () => {
     );
   });
 
-  it("pencil opens the editor pre-filled in edit mode", async () => {
+  it("pencil opens the editor page pre-filled in edit mode", async () => {
     vi.stubGlobal("fetch", makeServer([recipe]).fetchMock);
     renderAt("/recetario/7");
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Editar receta" }),
+    fireEvent.click(await screen.findByRole("link", { name: "Editar receta" }));
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/recetario/7/editar"),
     );
     const name = await screen.findByRole("textbox", { name: "Nombre" });
     expect((name as HTMLInputElement).value).toBe("Arroz con pollo");

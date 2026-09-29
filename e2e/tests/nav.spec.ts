@@ -124,8 +124,9 @@ test.describe("MENÚ — secciones colapsables", () => {
       .poll(() => chip.evaluate((el) => getComputedStyle(el).backgroundColor))
       .toBe(soft);
 
-    // Y en el editor de una receta existente: los chips de material.
+    // Y en el editor de una receta existente: el chip elegido toma el acento.
     const material = uniqueName("Sartén");
+    const tag = uniqueName("batch");
     const { id } = await apiRequest<{ id: number }>(
       page.request,
       "POST",
@@ -136,7 +137,7 @@ test.describe("MENÚ — secciones colapsables", () => {
         ingredients: [{ food: "Sal", quantity: 1, unit: null }],
         steps: [],
         materials: [material],
-        tags: [],
+        tags: [tag],
       },
     );
     await page.goto(`/recetario/${id}`);
@@ -144,12 +145,18 @@ test.describe("MENÚ — secciones colapsables", () => {
     await expect(
       page.locator("main li", { hasText: material }).first(),
     ).toHaveCSS("background-color", soft);
-    await page.getByRole("button", { name: "Editar receta" }).click();
+    // El lápiz lleva a la página de edición (ya no hay modal).
+    await page.getByRole("link", { name: "Editar receta" }).click();
+    await expect(page).toHaveURL(new RegExp(`/recetario/${id}/editar$`));
     await expect(
-      page
-        .getByRole("button", { name: `Quitar material ${material}` })
-        .locator(".."),
-    ).toHaveCSS("background-color", soft);
+      page.getByRole("button", { name: `Quitar material ${material}` }),
+    ).toBeVisible();
+    const chosen = page.getByRole("button", { name: tag, exact: true });
+    await expect(chosen).toHaveAttribute("aria-pressed", "true");
+    // El color entra con transición (motion-effects): se espera al final.
+    await expect
+      .poll(() => chosen.evaluate((el) => getComputedStyle(el).backgroundColor))
+      .toBe(soft);
   });
 
   test("la pieza elegida de un grupo conectado toma el acento", async ({

@@ -4,6 +4,48 @@ import { apiRequest, uniqueName } from "./helpers";
 test.describe("RECIPES — loop end to end", () => {
   test.use({ storageState: ".auth/state.json" });
 
+  test("edit recipe from the detail page: page (not modal), saves and persists", async ({
+    page,
+  }) => {
+    const name = uniqueName("Editar E2E");
+    const renamed = uniqueName("Editada E2E");
+    const { id } = await apiRequest<{ id: number }>(
+      page.request,
+      "POST",
+      "/api/recipes",
+      {
+        name,
+        description: "e2e",
+        servings: 2,
+        ingredients: [{ food: "Sal", quantity: 1, unit: null }],
+        steps: ["Paso uno"],
+        materials: [],
+        tags: [],
+      },
+    );
+
+    await page.goto(`/recetario/${id}`);
+    await page.getByRole("link", { name: "Editar receta" }).click();
+    // Página propia: la ficha se desmonta y no queda detrás.
+    await expect(page).toHaveURL(new RegExp(`/recetario/${id}/editar$`));
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Editar receta" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Nombre")).toHaveValue(name);
+    await expect(page.getByLabel("Descripción")).toHaveValue("e2e");
+    expect(await page.getByLabel("Comensales").inputValue()).toBe("2");
+
+    await page.getByLabel("Nombre").fill(renamed);
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+    // Vuelve a la ficha con el nombre nuevo y lo guardado persiste.
+    await expect(page).toHaveURL(new RegExp(`/recetario/${id}$`));
+    await expect(page.getByRole("heading", { name: renamed })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: renamed })).toBeVisible();
+  });
+
   test("create recipe via page with photo → listed → detail shows ingredient", async ({
     page,
   }) => {

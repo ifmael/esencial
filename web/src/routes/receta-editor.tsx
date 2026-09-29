@@ -1,11 +1,13 @@
-// E8: página "Nueva receta" en /recetario/nueva. Misma mecánica de draft que el
-// modal recipe-editor (D2), pero como página: una columna en móvil y dos en lg,
-// dropzone con subida a /api/uploads (contrato fail-closed: 200 {photo_path},
-// 400 {error, field:"file"}) y preview por photo_path. description/servings
-// salen null. Cabecera con Cancelar y Guardar (como en el editor de ejercicios):
-// un solo POST y vuelta al recetario.
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
+// Editor de receta (crear y editar) como página propia: /recetario/nueva y
+// /recetario/:id/editar. Antes editar abría la modal recipe-editor (D2) sobre la
+// ficha; ahora la ficha se desmonta al entrar, como en plantillas y ejercicios.
+// Una columna en móvil y dos en lg, con subida a /api/uploads (contrato
+// fail-closed: 200 {photo_path}, 400 {error, field:"file"}) y preview por
+// photo_path. descripción y comensales solo se editan (al crear salen null, E8).
+// Guardar manda un único POST (crear) o PUT (editar) y vuelve a /recetario o a
+// la ficha; Cancelar y Escape vuelven sin llamadas a la API.
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router";
 import { Loader, Shape } from "../components/expressive";
 import {
   AddIcon,
@@ -16,6 +18,8 @@ import {
   SaveIcon,
 } from "../components/icons";
 import {
+  type FieldError,
+  type Recipe,
   type RecipeInput,
   useRecipes,
 } from "../components/recipes/use-recipes";
@@ -28,14 +32,18 @@ import {
   Field,
   Input,
   Select,
+  Textarea,
 } from "../components/ui";
 import { ApiError, apiFetch, photoSrc } from "../lib/api";
+import { pushEscape } from "../lib/escape-stack";
 import { useCreateMorph } from "../lib/view-transition";
 
 type IngRow = { food: string; quantity: string; unit: string };
 
 type Draft = {
   name: string;
+  description: string;
+  servings: string;
   photo_path: string;
   ingredients: IngRow[];
   steps: string[];
@@ -45,6 +53,8 @@ type Draft = {
 
 const blank = (): Draft => ({
   name: "",
+  description: "",
+  servings: "",
   photo_path: "",
   ingredients: [{ food: "", quantity: "", unit: "" }],
   steps: [""],
@@ -52,7 +62,30 @@ const blank = (): Draft => ({
   tags: [],
 });
 
+/** Borrador de partida al editar: la receta hidratada tal cual. El PUT
+ *  reemplaza el registro entero, así que nada puede quedarse fuera. */
+const fromRecipe = (r: Recipe): Draft => ({
+  name: r.name,
+  description: r.description ?? "",
+  servings: r.servings === null ? "" : String(r.servings),
+  photo_path: r.photo_path ?? "",
+  ingredients: r.ingredients.length
+    ? r.ingredients.map((i) => ({
+        food: i.food,
+        quantity: i.quantity === null ? "" : String(i.quantity),
+        unit: i.unit ?? "",
+      }))
+    : [{ food: "", quantity: "", unit: "" }],
+  steps: r.steps.length ? r.steps.map((s) => s.text) : [""],
+  materials: [...r.materials],
+  tags: [...r.tags],
+});
+
 const BASE_TAGS = ["Desayuno", "Almuerzo", "Cena", "Snack"];
+
+/** Unidades del desplegable. La API acepta texto libre, así que una unidad que
+ *  no esté aquí se añade como opción propia (nunca se pierde al editar). */
+const UNITS = ["gr", "ml", "ud"];
 
 /** Posición en la entrada escalonada (`.stagger`). */
 const at = (i: number) => ({ ["--i" as string]: i });
@@ -60,10 +93,70 @@ const at = (i: number) => ({ ["--i" as string]: i });
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
   rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
 
-export function NuevaRecetaPage() {
+/** Página del editor: la ruta decide si es crear (`/recetario/nueva`) o editar
+ *  (`/recetario/:id/editar`). Al editar espera al listado —el borrador sale de
+ *  la receta ya hidratada— y, si la del enlace ya no existe, vuelve al
+ *  recetario. */
+export function RecetaEditorPage() {
+  const { id } = useParams();
   const api = useRecipes();
   const navigate = useNavigate();
-  const [draft, setDraft] = useState<Draft>(blank);
+  const recipe =
+    id === undefined ? undefined : api.list.find((r) => String(r.id) === id);
+  const back = recipe ? `/recetario/${recipe.id}` : "/recetario";
+  // `replace`: la URL del editor no se apila, así que «atrás» desde la ficha o
+  // el recetario no reabre el formulario que se acaba de cerrar.
+  const close = useCallback(
+    () => navigate(back, { replace: true }),
+    [navigate, back],
+  );
+
+  if (id !== undefined && api.loading)
+    return <Loader label="Cargando recetario…" />;
+  if (id !== undefined && !recipe) return <Navigate to="/recetario" replace />;
+
+  const save = async (input: RecipeInput) => {
+    const ok = recipe
+      ? await api.update(recipe.id, input)
+      : await api.create(input);
+    if (ok) navigate(back, { replace: true });
+  };
+
+  return (
+    <RecipeEditor
+      key={recipe ? `r${recipe.id}` : "nueva"}
+      recipe={recipe}
+      submitting={api.saving}
+      fieldError={api.fieldError}
+      error={api.error}
+      onSave={save}
+      onCancel={close}
+    />
+  );
+}
+
+/** El borrador entero en tarjetas, con la cabecera de sección: la foto en una,
+ *  nombre (y, al editar, descripción y comensales) con las categorías en otra,
+ *  ingredientes, materiales y pasos debajo. */
+function RecipeEditor({
+  recipe,
+  submitting,
+  fieldError,
+  error,
+  onSave,
+  onCancel,
+}: {
+  recipe?: Recipe;
+  submitting: boolean;
+  fieldError: FieldError | null;
+  error: string | null;
+  onSave: (input: RecipeInput) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const editing = recipe !== undefined;
+  const [draft, setDraft] = useState<Draft>(() =>
+    recipe ? fromRecipe(recipe) : blank(),
+  );
   const draftRef = useRef(draft);
   draftRef.current = draft; // lectura fresca tras cualquier await
   const [nameError, setNameError] = useState<string | null>(null);
@@ -81,6 +174,12 @@ export function NuevaRecetaPage() {
   // Distingue la ELIMINACIÓN explícita (Quitar foto) del mero descarte del
   // reintento: solo la primera vacía la foto.
   const photoRemovedRef = useRef(false);
+
+  // Solo crear anima: lo pulsado (FAB, «Nueva receta») se transforma en la
+  // página. Carga directa y editar no.
+  const morph = useCreateMorph(!editing);
+  // Escape vuelve sin guardar, como Cancelar.
+  useEffect(() => pushEscape(onCancel), [onCancel]);
 
   const removePhoto = () => {
     uploadSessionRef.current += 1;
@@ -197,8 +296,10 @@ export function NuevaRecetaPage() {
 
   const payload = (photoPath: string): RecipeInput => ({
     name: draftRef.current.name.trim(),
-    description: null,
-    servings: null,
+    description: draftRef.current.description.trim() || null,
+    servings: draftRef.current.servings.trim()
+      ? Number(draftRef.current.servings)
+      : null,
     photo_path: photoPath || null,
     ingredients: draftRef.current.ingredients
       .filter((i) => i.food.trim())
@@ -212,9 +313,9 @@ export function NuevaRecetaPage() {
     tags: draftRef.current.tags,
   });
 
-  const busy = api.saving || uploading;
+  const busy = submitting || uploading;
 
-  /** Un solo POST; al terminar vuelve al recetario. */
+  /** Un solo POST o PUT; al terminar la página vuelve sola. */
   const save = async () => {
     if (busy) return;
     if (!draft.name.trim()) {
@@ -225,14 +326,13 @@ export function NuevaRecetaPage() {
     setNameError(null);
     const photoKey = await ensurePhotoUploaded();
     if (photoKey === null) return;
-    const ok = await api.create(payload(photoKey));
-    if (!ok) return;
-    navigate("/recetario");
+    await onSave(payload(photoKey));
   };
 
-  const morph = useCreateMorph();
   const serverNameError =
-    api.fieldError?.field === "name" ? api.fieldError.message : null;
+    fieldError?.field === "name" ? fieldError.message : null;
+  const otherFieldError =
+    fieldError && fieldError.field !== "name" ? fieldError.message : null;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4" style={morph}>
@@ -257,7 +357,9 @@ export function NuevaRecetaPage() {
             <BookIcon className="text-on-accent" />
           </Shape>
           <div className="min-w-0">
-            <h1 className="text-headline-l text-e">Nueva receta</h1>
+            <h1 className="text-headline-l text-e">
+              {editing ? "Editar receta" : "Nueva receta"}
+            </h1>
             <p className="text-body-m">
               Foto, ingredientes y pasos en una sola página.
             </p>
@@ -267,20 +369,20 @@ export function NuevaRecetaPage() {
           <Button
             variant="text"
             className="text-on-accent-container"
-            onClick={() => navigate("/recetario")}
+            onClick={onCancel}
           >
             Cancelar
           </Button>
           <Button disabled={busy} onClick={() => save()}>
             <SaveIcon width={20} height={20} />
-            {busy ? "Guardando…" : "Guardar receta"}
+            {busy ? "Guardando…" : editing ? "Guardar" : "Guardar receta"}
           </Button>
         </div>
       </header>
 
-      {api.fieldError && api.fieldError.field !== "name" && (
+      {(otherFieldError || error) && (
         <Alert tone="error">
-          <p className="text-body-m">{api.fieldError.message}</p>
+          <p className="text-body-m">{otherFieldError ?? error}</p>
           <Button
             variant="text"
             className="-mx-3 text-on-error-container"
@@ -377,6 +479,32 @@ export function NuevaRecetaPage() {
               />
             )}
           </Field>
+          {editing && (
+            <>
+              <Field label="Descripción">
+                {(a) => (
+                  <Textarea
+                    {...a}
+                    rows={3}
+                    value={draft.description}
+                    onChange={(e) => set("description", e.target.value)}
+                  />
+                )}
+              </Field>
+              <Field label="Comensales" className="sm:w-40">
+                {(a) => (
+                  <Input
+                    {...a}
+                    type="number"
+                    min={1}
+                    className="tabular"
+                    value={draft.servings}
+                    onChange={(e) => set("servings", e.target.value)}
+                  />
+                )}
+              </Field>
+            </>
+          )}
           <section className="flex flex-col gap-3">
             <h2 className="text-title-m">Categorías</h2>
             <ul className="flex flex-wrap gap-2">
@@ -462,9 +590,16 @@ export function NuevaRecetaPage() {
                     }
                   >
                     <option value="">—</option>
-                    <option value="gr">gr</option>
-                    <option value="ml">ml</option>
-                    <option value="ud">ud</option>
+                    {UNITS.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                    {/* La API acepta cualquier unidad: la receta que trae una
+                        fuera del enum («g», «pechuga») la conserva y se ve. */}
+                    {row.unit && !UNITS.includes(row.unit) && (
+                      <option value={row.unit}>{row.unit}</option>
+                    )}
                   </Select>
                   <Button
                     variant="text"
