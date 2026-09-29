@@ -466,6 +466,8 @@ siembra (una fila: el sóleo que faltaba en `Elevación de gemelos en prensa`).
 `0010` se queda congelada como sembrado histórico; cualquier arreglo de datos
 posterior va en su propio número. Los tests de la API **no** ven estas filas (su
 bootstrap no siembra regiones), así que lo verifica el e2e.
+- `0012_recetas_nutrirutina.sql` siembra el **recetario de Nutrirutina** (ver
+«Recetario sembrado» más abajo). Es generada: no se edita a mano.
 - En remoto el baseline ya está aplicado en la D1 de producción; pero cada delta
 nuevo hay que aplicarlo tras el deploy (`pnpm db:migrate:remote`; 0009 destruye
 el histórico de planificación — ver `DEPLOY.md` §4).
@@ -663,4 +665,29 @@ con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras authGuard, `C
 - El render usa `photoSrc()` (`web/src/lib/api.ts`): la key pelada + prefijo
 `/api/uploads/`, y delante la URL de la API (`VITE_API_URL`).
 - e2e y login dev usan la password `hola` (`ESENCIAL_DEV_PASSWORD=hola pnpm dev`).
+
+## Recetario sembrado (Nutrirutina)
+
+`0012_recetas_nutrirutina.sql` trae las **100 recetas de sistema** de
+`~/projects/nutrirutina` (volcado `db/data/backup-prod-full.sql`): 787
+ingredientes, pasos y utensilios (→ materiales). La genera
+`api/scripts/import-nutrirutina.ts sql <dir>` con la transformación pura de
+`api/scripts/nutrirutina.ts` (la cubre `api/tests/nutrirutina-import.test.ts`).
+
+- Unidad `g` → `gr` (el desplegable del editor); cantidad ≤ 0 («al gusto», -1 en
+  Nutrirutina) → sin cantidad ni unidad. Sin categorías ni nutrición (Esencial no
+  tiene columnas para las calorías/macros).
+- Una receta con un nombre que ya exista **se salta entera** (tabla auxiliar
+  `_nutrirutina_skip`, que la migración borra al final): nunca pisa ni añade
+  hijos a una receta propia.
+- **Las fotos no van en la migración.** 83 recetas tienen `photo_path` con una
+  key estable (`photoKey`, SHA-1 del id de Nutrirutina) y hay que subirlas a R2:
+  `node api/scripts/import-nutrirutina.ts photos ~/projects/nutrirutina` (R2 de
+  dev, `.wrangler/state`) o con `--remote` (producción). Las otras 17 no tenían
+  foto generada y salen con monograma. `pnpm db:migrate:local` carga las recetas
+  pero **no** sube las fotos (`pnpm dev` no migra): sin el modo `photos` la foto
+  da 404 (así pasa siempre en e2e). Editarla sigue funcionando: el `PUT` no
+  revalida en R2 la key que ya tenía guardada la receta, solo una foto nueva o
+  cambiada (lo cubre `recipes.test.ts`). En producción, las fotos se suben
+  **antes** de migrar (`DEPLOY.md` §4).
 
