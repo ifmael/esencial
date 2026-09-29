@@ -141,6 +141,16 @@ describe("header y navegación", () => {
     );
   });
 
+  it("'Hoy' aparece pulsado solo en el día de hoy (en móvil no hay otro indicador)", async () => {
+    renderAt("/");
+    await settle();
+    const hoy = screen.getByRole("button", { name: "Ir a hoy" });
+    expect(hoy.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Día siguiente" }));
+    await settle();
+    expect(hoy.getAttribute("aria-pressed")).toBe("false");
+  });
+
   it("el input de fecha salta a la fecha elegida", async () => {
     renderAt("/");
     await settle();
@@ -152,6 +162,21 @@ describe("header y navegación", () => {
       `/api/day/${DAY}`,
       expect.objectContaining({ credentials: "include" }),
     );
+  });
+
+  it("pulsar en cualquier punto de la fecha abre el calendario (no solo el icono)", async () => {
+    const showPicker = vi.fn();
+    HTMLInputElement.prototype.showPicker = showPicker;
+    try {
+      renderAt("/");
+      await settle();
+      fireEvent.click(screen.getByLabelText("Ir a una fecha"));
+      expect(showPicker).toHaveBeenCalledTimes(1);
+    } finally {
+      // jsdom no lo implementa: no dejar el stub para el resto del fichero.
+      delete (HTMLInputElement.prototype as Partial<HTMLInputElement>)
+        .showPicker;
+    }
   });
 
   it("enlaces rápidos al plan de recetas y de fuerza (scoped al header)", async () => {

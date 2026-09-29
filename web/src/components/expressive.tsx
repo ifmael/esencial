@@ -212,13 +212,14 @@ export function WavyRing({
   value,
   max,
   label,
-  size = 112,
+  className = "size-28",
   children,
 }: {
   value: number;
   max: number;
   label: string;
-  size?: number;
+  /** Tamaño por clases (`size-24 lg:size-28`): así puede cambiar por breakpoint. */
+  className?: string;
   children?: ReactNode;
 }) {
   const now = Math.max(0, Math.min(max, value));
@@ -245,14 +246,14 @@ export function WavyRing({
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={now}
-      className="relative inline-grid shrink-0 place-items-center text-accent"
-      style={{ width: size, height: size }}
+      className={cx(
+        "relative inline-grid shrink-0 place-items-center text-accent",
+        className,
+      )}
     >
       <svg
         viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        className="absolute inset-0"
+        className="absolute inset-0 size-full"
         aria-hidden="true"
       >
         <circle

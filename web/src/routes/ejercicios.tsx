@@ -843,44 +843,45 @@ export function EjercicioDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link
-        to="/ejercicios"
-        className={buttonClass({ variant: "text", className: "self-start" })}
-      >
-        <BackIcon /> Volver al catálogo
-      </Link>
-
-      <header className="relative flex flex-col gap-5 overflow-hidden rounded-xl rounded-tr-xxl bg-accent-container p-6 text-on-accent-container animate-rise sm:flex-row sm:items-end sm:justify-between">
+      {/* Barra superior M3 en una fila: volver, título y editar. */}
+      <header className="relative flex items-center gap-3 overflow-hidden rounded-xl rounded-tr-xxl bg-accent-container p-4 text-on-accent-container animate-rise">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-14 -right-12 text-accent opacity-15"
+          className="pointer-events-none absolute -top-10 -right-8 text-accent opacity-15"
         >
-          <Shape name="cookie-12" size={176} />
+          <Shape name="cookie-12" size={120} />
         </div>
-        <div className="relative flex min-w-0 items-center gap-4">
-          <Shape name="cookie-9" size={80} className="text-accent">
-            <KindIcon width={36} height={36} className="text-on-accent" />
-          </Shape>
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-label-l">
-              {KIND_LABELS[exercise.kind]} · {exercise.tags.length}{" "}
-              {exercise.tags.length === 1 ? "grupo" : "grupos"}
-            </p>
-            <h1 className="text-headline-l text-e break-words">
-              {exercise.name}
-            </h1>
-          </div>
+        <Link
+          to="/ejercicios"
+          aria-label="Volver al catálogo"
+          title="Volver al catálogo"
+          className={buttonClass({
+            variant: "text",
+            size: "icon",
+            className: "relative text-on-accent-container",
+          })}
+        >
+          <BackIcon />
+        </Link>
+        <div className="relative flex min-w-0 grow flex-col">
+          <p className="flex items-center gap-1 text-label-m">
+            <KindIcon width={16} height={16} aria-hidden="true" />
+            {KIND_LABELS[exercise.kind]} · {exercise.tags.length}{" "}
+            {exercise.tags.length === 1 ? "grupo" : "grupos"}
+          </p>
+          <h1 className="text-headline-s text-e break-words">
+            {exercise.name}
+          </h1>
         </div>
-        <div className="relative flex flex-wrap gap-2">
-          <Button
-            variant="tonal"
-            size="icon"
-            aria-label="Editar ejercicio"
-            onClick={() => setEditing(true)}
-          >
-            <EditIcon />
-          </Button>
-        </div>
+        <Button
+          variant="tonal"
+          size="icon"
+          aria-label="Editar ejercicio"
+          className="relative"
+          onClick={() => setEditing(true)}
+        >
+          <EditIcon />
+        </Button>
       </header>
 
       {/* Dos columnas en escritorio: el detalle a la izquierda y el dibujo a
