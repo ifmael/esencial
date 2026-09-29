@@ -19,6 +19,7 @@ import {
   OverlayHeader,
   Sheet,
   useSnackbar,
+  useTooltip,
 } from "../components/overlay";
 import {
   Alert,
@@ -133,6 +134,14 @@ export function UiPage() {
   const snackbar = useSnackbar();
   const [undone, setUndone] = useState(false);
   const shapeNames = Object.keys(SHAPES) as ShapeName[];
+  const tip = useTooltip(
+    <>
+      <Monogram name="Lentejas" size={208} />
+      <span className="px-1 text-title-s text-e">
+        Lentejas estofadas con chorizo y verduras de temporada
+      </span>
+    </>,
+  );
   const iconEntries = Object.entries(icons).filter(([k]) =>
     k.endsWith("Icon"),
   ) as [string, typeof CheckIcon][];
@@ -501,6 +510,10 @@ export function UiPage() {
           >
             Mostrar snackbar
           </Button>
+          <Button variant="outlined" {...tip.triggerProps}>
+            Tooltip (espera 500 ms)
+          </Button>
+          {tip.tooltip}
           {undone ? (
             <span className="self-center text-body-m">Deshecho ✓</span>
           ) : null}

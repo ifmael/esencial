@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Loader, Monogram } from "../components/expressive";
 import { AddIcon, CartIcon, CloseIcon } from "../components/icons";
-import { Dialog, OverlayHeader } from "../components/overlay";
+import { Dialog, OverlayHeader, useTooltip } from "../components/overlay";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
 import { Button, ripple, SearchBar } from "../components/ui";
 import { WeekGrid } from "../components/week-grid";
@@ -217,6 +217,14 @@ function SlotCell({
   onRemove: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const name = slot?.recipeName ?? "Receta";
+  // El nombre se recorta a dos líneas en la columna: el tooltip lo da entero.
+  const { triggerProps, tooltip } = useTooltip(
+    <>
+      <RecipeThumb name={name} photo={slot?.recipePhoto ?? null} size={208} />
+      <span className="px-1 text-title-s text-e">{name}</span>
+    </>,
+  );
   if (!slot?.recipeId) {
     return (
       <Button
@@ -230,13 +238,13 @@ function SlotCell({
       </Button>
     );
   }
-  const name = slot.recipeName ?? "Receta";
   return (
     <div className="flex flex-col gap-1 rounded-m bg-surface-container-high p-1">
       <div className="flex items-center">
         <Link
           to={`/recetario/${slot.recipeId}`}
           onPointerDown={ripple}
+          {...triggerProps}
           className="state flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-s p-1 text-on-surface"
         >
           <RecipeThumb name={name} photo={slot.recipePhoto} size={32} />
@@ -244,6 +252,7 @@ function SlotCell({
             {name}
           </span>
         </Link>
+        {tooltip}
         {/* 40 px: fila densa dentro de una columna estrecha (guía de migración). */}
         <Button
           variant="text"

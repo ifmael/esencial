@@ -52,7 +52,7 @@ Las pantallas consumen **las primitivas**:
   `Badge`, `Alert`, `Kbd`.
 - `expressive.tsx`: `Shape`, `Loader`, `WavyProgress`, `WavyRing`, `CountUp`,
   `RewardSeal`, `EmptyState`, `Monogram`.
-- `overlay.tsx`: `Dialog`, `Sheet`, `OverlayHeader`, `useSnackbar`.
+- `overlay.tsx`: `Dialog`, `Sheet`, `OverlayHeader`, `useSnackbar`, `useTooltip`.
 
 Los iconos son Material Symbols Rounded en línea (`icons.tsx`, generado por
 `web/scripts/gen-icons.py`; `filled` para el destino activo).
@@ -85,7 +85,7 @@ Escala vigente — todo lo demás sale de aquí:
 | Color | roles M3 (`primary`, `on-primary`, `primary-container`… `surface-container-lowest…highest`, `outline(-variant)`, `inverse-*`, `scrim`) + `accent*` = color de la sección |
 | Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 32 |
 | Forma | `none` 0 · `xs` 4 · `s` 8 · `m` 12 · `l` 16 · `l-inc` 20 · `xl` 28 · `xl-inc` 32 · `xxl` 48 · `full`; `--radius-pill` 28 para lo que cambia de forma |
-| Elevación | `shadow-1/2/3`, **solo** en el FAB, los menús, las hojas, la barra flotante y el snackbar; el resto, jerarquía por tono |
+| Elevación | `shadow-1/2/3`, **solo** en el FAB, los menús, los tooltips, las hojas, la barra flotante y el snackbar; el resto, jerarquía por tono |
 | Movimiento | muelles M3E: `motion-spatial-fast` (k 800, ζ 0,6) · `motion-spatial` (380, 0,8) · `motion-spatial-slow` (200, 0,8) rebotan (posición, tamaño, forma); `motion-effects-fast/-/-slow` (3800/1600/800, ζ 1) no rebotan (color, opacidad) |
 
 - **Color por sección**: `[data-section="deporte|nutricion|hoy"]` reescribe
@@ -200,6 +200,16 @@ día sin items, que no es representable (la API exige ≥1): desprograma la sesi
 (DELETE) y el día vuelve a su «+ añadir», igual que con la ✕ de la sesión. Su
 Deshacer la **recrea** con POST (misma fecha, nombre e items). Solo sirve para las
 planificadas: una registrada no tiene ✕, porque recrearla perdería su registro.
+
+En la celda de una comida (`SlotCell`, `web/src/routes/plan-recetas.tsx`) el
+nombre va recortado a dos líneas; al dejar el cursor **500 ms** encima (o al
+enfocarla con el teclado) sale un **tooltip** con la foto (o el `Monogram`) y el
+nombre completo. Se cierra al salir, al perder el foco, con Escape (pila de
+capas) o al desplazar. Es `useTooltip` (`overlay.tsx`): devuelve los manejadores
+del disparador y el tooltip, que se pinta `fixed` —el `overflow-y-auto` de la
+rejilla lo recortaría— y **como hermano** del enlace, no dentro: dentro, su texto
+entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
+`e2e/tests/meal-tooltip.spec.ts`.
 
 ### Editor de recetas (crear y editar)
 

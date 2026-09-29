@@ -890,6 +890,16 @@
       backwards;
     transform-origin: top left;
   }
+  /* Tooltip enriquecido M3: contenedor de superficie, forma M, elevación 2 (es
+     una superficie flotante como el menú). Solo lo pinta `useTooltip`. */
+  .tooltip {
+    background: var(--color-surface-container);
+    color: var(--color-on-surface);
+    border-radius: var(--radius-m);
+    box-shadow: var(--shadow-2);
+    animation: fade-in var(--duration-effects-fast) var(--ease-effects-fast)
+      backwards;
+  }
   .toolbar {
     background: var(--color-surface-container-high);
     color: var(--color-on-surface);
@@ -1144,6 +1154,7 @@
   .dialog,
   .sheet,
   .menu,
+  .tooltip,
   .toolbar,
   .snackbar,
   .search-view,

@@ -4,9 +4,12 @@ import {
   type ComponentProps,
   type CSSProperties,
   createContext,
+  type FocusEvent,
+  type MouseEvent,
   type ReactNode,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -222,6 +225,89 @@ export function OverlayHeader({
       >
         <CloseIcon />
       </Button>
+    </div>
+  );
+}
+
+// --- Tooltip --------------------------------------------------------------------
+
+/** Ancho fijo del tooltip (`w-56`): con él se evita que se salga por la derecha. */
+const TOOLTIP_WIDTH = 224;
+
+/** Tooltip M3 enriquecido: aparece tras `delay` ms con el cursor encima o con el
+ * foco de teclado, y se cierra al salir, al perder el foco, con Escape o al
+ * desplazar. Va `fixed`, así que no lo recorta el `overflow` de la rejilla.
+ * Pinta `tooltip` como hermano del disparador, nunca dentro (si no, su texto
+ * entraría en el nombre accesible del enlace). */
+export function useTooltip(content: ReactNode, delay = 500) {
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  const id = useId();
+  const close = () => {
+    window.clearTimeout(timer.current);
+    setAnchor(null);
+  };
+  const open = (e: MouseEvent | FocusEvent) => {
+    const el = e.currentTarget;
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(
+      () => setAnchor(el.getBoundingClientRect()),
+      delay,
+    );
+  };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  return {
+    triggerProps: {
+      onMouseEnter: open,
+      onMouseLeave: close,
+      onFocus: open,
+      onBlur: close,
+      "aria-describedby": anchor ? id : undefined,
+    },
+    tooltip: anchor ? (
+      <TooltipBubble id={id} anchor={anchor} onClose={close}>
+        {content}
+      </TooltipBubble>
+    ) : null,
+  };
+}
+
+function TooltipBubble({
+  id,
+  anchor,
+  onClose,
+  children,
+}: {
+  id: string;
+  anchor: DOMRect;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEscape(onClose);
+  useEffect(() => {
+    const opts = { capture: true, passive: true } as const;
+    window.addEventListener("scroll", onClose, opts);
+    return () => window.removeEventListener("scroll", onClose, opts);
+  }, [onClose]);
+  // Debajo del disparador; si está en la mitad inferior, encima.
+  const below = anchor.top < window.innerHeight / 2;
+  const style: CSSProperties = {
+    left: Math.max(
+      8,
+      Math.min(anchor.left, window.innerWidth - TOOLTIP_WIDTH - 8),
+    ),
+    ...(below
+      ? { top: anchor.bottom + 8 }
+      : { bottom: window.innerHeight - anchor.top + 8 }),
+  };
+  return (
+    <div
+      id={id}
+      role="tooltip"
+      style={style}
+      className="tooltip pointer-events-none fixed z-50 flex w-56 flex-col gap-2 p-2"
+    >
+      {children}
     </div>
   );
 }
