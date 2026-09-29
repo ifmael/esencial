@@ -156,9 +156,13 @@ test.describe("CALENDARIO — alto de ventana", () => {
           `${route}: ${name}`,
         ).toBeVisible();
       }
-      // Raíl de 80 px: el catálogo y «Cerrar sesión» ceden su sitio (siguen en
-      // la búsqueda ⌘K y al desplegar el menú); búsqueda y tema se quedan.
+      // Raíl de 80 px: búsqueda, Ajustes (tema y catálogo) y «Cerrar sesión»,
+      // solo con icono.
       await expect(rail.getByRole("button", { name: /Buscar/ })).toBeVisible();
+      await expect(rail.getByRole("link", { name: "Ajustes" })).toBeVisible();
+      await expect(
+        rail.getByRole("button", { name: "Cerrar sesión" }),
+      ).toBeVisible();
       // Sin desplegables de sección: el submenú está sobre el calendario. (El
       // menú FAB de crear sí es un desplegable.)
       await expect(rail.locator("button[aria-controls^='nav-']")).toHaveCount(

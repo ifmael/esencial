@@ -122,8 +122,13 @@ describe("Shell", () => {
     // Los destinos siguen ahí, con su nombre accesible, pero sin texto visible.
     expect(deporte?.getAttribute("href")).toBe("/plan-fuerza");
     expect(aside.textContent).not.toContain("Deporte");
-    expect(aside.textContent).not.toContain("Sistema de diseño");
+    expect(aside.textContent).not.toContain("Ajustes");
     expect(aside.textContent).not.toContain("Cerrar sesión");
+    // Sin etiqueta, pero con icono: salir sigue a mano con el raíl compacto.
+    expect(
+      aside.querySelector('button[aria-label="Cerrar sesión"]'),
+    ).not.toBeNull();
+    expect(aside.querySelector('a[aria-label="Ajustes"]')).not.toBeNull();
     // Sin desplegables de sección: en el raíl no caben y su submenú ya está
     // sobre la rejilla. (El menú FAB de crear sí es un desplegable.)
     expect(aside.querySelector("button[aria-controls^='nav-']")).toBeNull();
@@ -136,7 +141,7 @@ describe("Shell", () => {
       expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
     );
     const aside = document.querySelector("aside") as HTMLElement;
-    expect(aside.textContent).toContain("Sistema de diseño");
+    expect(aside.textContent).toContain("Ajustes");
     expect(aside.querySelector('a[aria-label="Deporte"]')).toBeNull();
     expect(
       screen.getByRole("button", { name: "Contraer Deporte" }),
@@ -149,17 +154,17 @@ describe("Shell", () => {
       expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
     );
     const aside = () => document.querySelector("aside") as HTMLElement;
-    expect(aside().textContent).toContain("Sistema de diseño");
+    expect(aside().textContent).toContain("Ajustes");
 
     fireEvent.click(screen.getByRole("button", { name: "Ocultar menú" }));
-    expect(aside().textContent).not.toContain("Sistema de diseño");
+    expect(aside().textContent).not.toContain("Ajustes");
     expect(aside().textContent).not.toContain("Cerrar sesión");
 
     // Remontar equivale a recargar: la preferencia del usuario se restaura.
     cleanup();
     renderAt("/");
     await screen.findByRole("button", { name: "Mostrar menú" });
-    expect(aside().textContent).not.toContain("Sistema de diseño");
+    expect(aside().textContent).not.toContain("Ajustes");
   });
 
   it("pulsar Deporte o Nutrición con el menú desplegado no lo pliega", async () => {
@@ -170,7 +175,7 @@ describe("Shell", () => {
     fireEvent.click(within(aside()).getByRole("link", { name: "Deporte" }));
     await waitFor(() => expect(window.location.pathname).toBe("/plan-fuerza"));
     expect(screen.getByRole("button", { name: "Ocultar menú" })).toBeDefined();
-    expect(aside().textContent).toContain("Sistema de diseño");
+    expect(aside().textContent).toContain("Ajustes");
 
     fireEvent.click(within(aside()).getByRole("link", { name: "Nutrición" }));
     await waitFor(() => expect(window.location.pathname).toBe("/plan-recetas"));
@@ -212,18 +217,6 @@ describe("Shell M3E", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
-  });
-
-  it("el conmutador de tema recorre sistema → claro → oscuro y lo aplica", async () => {
-    renderAt("/ejercicios");
-    const toggle = (
-      await screen.findAllByRole("button", { name: "Tema del sistema" })
-    )[0];
-    fireEvent.click(toggle);
-    expect(document.documentElement.dataset.theme).toBe("light");
-    fireEvent.click(screen.getAllByRole("button", { name: "Tema claro" })[0]);
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(window.localStorage.getItem("esencial.theme")).toBe("dark");
   });
 
   it("el menú FAB abre las tres acciones de crear y navega", async () => {

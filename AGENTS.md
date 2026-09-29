@@ -99,7 +99,11 @@ Escala vigente — todo lo demás sale de aquí:
   reescribe también (`schemeVars`).
 - **Tema** sistema/claro/oscuro: `web/public/theme.js` pone `data-theme` antes del
   primer pintado; `lib/theme.ts` lo cambia en vivo. Los dos comparten clave y
-  regla, y `tests/theme.test.ts` los ata.
+  regla, y `tests/theme.test.ts` los ata. Se elige **solo en Ajustes**
+  (`/ajustes`, `routes/ajustes.tsx`, entrada en el raíl, el cajón y la barra
+  inferior) o con «Cambiar tema» de ⌘K; el Shell ya no lleva conmutador.
+  `useTheme()` (`useSyncExternalStore`; `applyTheme` avisa) mantiene a los dos
+  al día. Lo cubre `tests/ajustes.test.tsx`.
 - **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
   cada superficie declara `--field-bg` para el recorte).
 - **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
@@ -128,8 +132,8 @@ Escala vigente — todo lo demás sale de aquí:
   `crossOrigin="use-credentials"`. El color dinámico lee la foto en un canvas, y
   si otra copia de la foto se pidió sin CORS, la caché sirve esa y la lectura
   falla.
-- Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
-  sesión»): míralo antes de inventar una pieza.
+- Catálogo de variantes en la ruta **`/ui`** (se llega desde Ajustes y desde
+  ⌘K): míralo antes de inventar una pieza.
 - `wireframes/DESIGN.md` y `docs/architecture/diseno.html` siguen con el sistema
   anterior; donde discrepen de `globals.css`, manda `globals.css`.
 
@@ -147,9 +151,8 @@ calendario lo plegaban solas y al pulsar Deporte o Nutrición en el cajón este 
 cerraba bajo el cursor (bug; lo cubren `shell.test.tsx` y `nav.spec.ts`).
 
 En esas rutas, **plegado, el raíl M3E es su versión compacta de 80 px**
-(`w-20`): iconos con el nombre en `aria-label`/`title`, menú FAB, búsqueda y tema,
-sin desplegables de sección. El catálogo y «Cerrar sesión» ceden su sitio, y siguen
-disponibles en la búsqueda y al desplegar el menú. Fuera del calendario el raíl
+(`w-20`): iconos con el nombre en `aria-label`/`title`, menú FAB, búsqueda,
+Ajustes y «Cerrar sesión», sin desplegables de sección. Fuera del calendario el raíl
 colapsado mide 96 px (con etiquetas) y el expandido 288 px. El submenú de la sección
 va como **grupo de botones conectados sobre el calendario**, en escritorio y en móvil.
 El `main` de estas rutas es `max-w-calendar` —el token `--container-calendar`,

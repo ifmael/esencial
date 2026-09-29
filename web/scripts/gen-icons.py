@@ -16,6 +16,7 @@ ICONS = {
     "RunIcon": "directions_run", "BikeIcon": "pedal_bike", "MoreIcon": "more_vert",
     "DropDownIcon": "arrow_drop_down", "EventIcon": "event_available", "CopyIcon": "content_copy",
     "NotesIcon": "notes", "PhotoIcon": "photo_camera", "MonthIcon": "calendar_month", "ScheduleIcon": "schedule",
+    "SettingsIcon": "settings",
 }
 URL = "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/{}/{}/24px.svg"
 
