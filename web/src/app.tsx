@@ -64,7 +64,7 @@ function GuardedShell() {
 
 import { EjercicioDetailPage, EjerciciosPage } from "./routes/ejercicios";
 import { NuevaRecetaPage } from "./routes/nueva-receta";
-import { PlantillasPage } from "./routes/plantillas";
+import { PlantillaEditorPage, PlantillasPage } from "./routes/plantillas";
 import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
 
 import { SesionPage } from "./routes/sesion";
@@ -83,9 +83,10 @@ const routes = createRoutesFromElements(
       <Route path="/recetario/:id" element={<RecetarioDetallePage />} />
       <Route path="/ejercicios" element={<EjerciciosPage />} />
       <Route path="/ejercicios/:id" element={<EjercicioDetailPage />} />
-      {/* La lista también sirve /plantillas/nueva y /plantillas/:id/editar:
-          la modal sale de la URL y la lista queda detrás, montada. */}
-      <Route path="/plantillas/*" element={<PlantillasPage />} />
+      {/* Crear y editar son páginas propias: la lista se desmonta al entrar. */}
+      <Route path="/plantillas" element={<PlantillasPage />} />
+      <Route path="/plantillas/nueva" element={<PlantillaEditorPage />} />
+      <Route path="/plantillas/:id/editar" element={<PlantillaEditorPage />} />
 
       <Route path="/sesion/:date" element={<SesionPage />} />
 

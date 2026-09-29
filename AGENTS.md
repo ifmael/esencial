@@ -201,23 +201,30 @@ día sin items, que no es representable (la API exige ≥1): desprograma la sesi
 Deshacer la **recrea** con POST (misma fecha, nombre e items). Solo sirve para las
 planificadas: una registrada no tiene ✕, porque recrearla perdería su registro.
 
-### Modal de plantillas (crear y editar)
+### Editor de plantillas (crear y editar)
 
-`app.tsx` registra **`/plantillas/*`** y `PlantillasPage` decide con `useMatch`
-si además pinta la modal, así que la lista nunca se desmonta: `/plantillas/nueva`
-y `/plantillas/:id/editar` funcionan al recargar, y «atrás» o Escape vuelven a
-`/plantillas`. Dentro hay un **único** `role=dialog`: a la izquierda el borrador
-con los ejercicios ordenables por asa (`web/src/components/sortable.tsx`, ratón,
-táctil y teclado) y a la derecha el selector **embebido** (búsqueda, mapa
-muscular y grupos plegables) — nunca una segunda modal encima. Guardar manda un
-solo POST (crear) o PUT (editar) con las posiciones 0..n-1; Cancelar, Escape o el
-fondo descartan el borrador sin llamadas a la API.
+`app.tsx` registra **`/plantillas`**, **`/plantillas/nueva`** y
+**`/plantillas/:id/editar`** como rutas propias: al abrir el editor la lista se
+desmonta y no queda detrás (ya no hay modal). Las dos rutas del editor funcionan
+al recargar (deep-link); «atrás», Escape o Cancelar vuelven a `/plantillas` sin
+llamadas a la API. Escape va por la pila de capas (`lib/escape-stack.ts`), que
+ignora el Escape con el que dnd-kit cancela un arrastre de teclado, así que la
+página no se abandona a media operación.
 
-Es un **diálogo M3** (`Dialog` de `overlay.tsx`; a pantalla completa en móvil) con
-una **barra de herramientas flotante** abajo (contador, Cancelar, Guardar). Escape
-va por la pila de capas (`lib/escape-stack.ts`), que ignora el Escape con el que
-dnd-kit cancela un arrastre de teclado, así que la modal no se cierra a media
-operación.
+La piel es la de «Nueva receta»: cabecera de sección (`bg-accent-container`) con
+Cancelar y Guardar, y dos tarjetas en columnas desde `lg` — el nombre y el
+borrador (ejercicios ordenables por asa, `web/src/components/sortable.tsx`,
+ratón, táctil y teclado) en una, y el selector **embebido** (búsqueda, mapa
+muscular y grupos plegables) en la otra. Guardar manda un solo POST (crear) o
+PUT (editar) con las posiciones 0..n-1 y vuelve a la lista con el id en el
+`state` de la navegación, así que la tarjeta guardada llega desplegada.
+
+El mapa del selector va en un recuadro dentro de su tarjeta, a alto fijo
+(`h-96`, `w-auto`: su alto manda en el tamaño de los músculos), y debajo siguen
+la búsqueda, el conmutador de vista, las fichas de grupo y la lista, que crece
+sin scroll propio: la página se desplaza como cualquier otra. Medido a
+1280×800: el dibujo frontal mide 145×384 px y la caja más pequeña de un músculo
+es la del hombro anterior (62×11); en la modal el dibujo medía 176×468.
 
 **Crear sigue un único patrón** (recetas, plantillas, ejercicios y el menú FAB):
 lo pulsado **crece hasta lo que abre** (transformación de contenedor con View
@@ -235,16 +242,6 @@ El **menú FAB** sigue el M3E: velo (`Scrim`) que tapa la página y la cierra al
 pulsarlo, y acciones planas sin sombra, cada una con el `accent-container` de la
 sección a la que lleva (`data-section={sectionOf(to)}`: Sesión y Plantilla en
 verde de Deporte, Receta en el de Nutrición).
-
-Desde `md` la modal mide **siempre lo mismo** (`h-[88vh]`, `max-w-6xl`; nada de `max-h`), así
-que no se redimensiona al cambiar el borrador ni la lista del selector. Desde
-`md`, dentro de la columna derecha el **mapa muscular se lleva el alto libre**
-(`md:h-full`, `w-auto`: crece y encoge con la ventana) y la lista de ejercicios
-tiene su propio scroll. En móvil las dos piezas se apilan y el conjunto se
-desplaza, como antes. Medido a 1280×800: la modal pasa de 896×680 a 1152×704 y el
-mapa de 120×320 a 176×468 (área ×2,1), sin scroll de página ni recorte; el músculo
-más estrecho de la vista frontal mide 33×55 px, así que todos los del dibujo se
-pulsan con holgura.
 
 El **mapa muscular** del selector vive en `web/src/components/body-map/`: 89
 regiones anatómicas entre las dos vistas (frontal y trasera), cada una con su

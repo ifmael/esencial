@@ -2,10 +2,10 @@
 // cardio, sin rotación). Vivían al pie de /plan-fuerza; ahora tienen su página
 // y el planificador solo las usa para expandirlas en un día.
 //
-// Crear y editar viven en una modal con URL propia (`/plantillas/nueva` y
-// `/plantillas/:id/editar`, rutas bajo la lista): el borrador se compone dentro
-// de un único `role=dialog` —ejercicios a la izquierda, selector con mapa
-// muscular a la derecha— y se persiste de una sola vez al guardar.
+// Crear y editar son páginas con URL propia (`/plantillas/nueva` y
+// `/plantillas/:id/editar`) con la piel de «Nueva receta»: el borrador se
+// compone en dos tarjetas —ejercicios ordenables a la izquierda, selector con
+// mapa muscular a la derecha— y se persiste de una sola vez al guardar.
 import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -13,8 +13,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useState } from "react";
-import { Link, Navigate, useMatch, useNavigate } from "react-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router";
 import { BodyMap, type BodyView } from "../components/body-map/body-map";
 import { regionLabel } from "../components/body-map/regions";
 import { EmptyState, Loader, Monogram, Shape } from "../components/expressive";
@@ -34,7 +40,6 @@ import {
   ListIcon,
   SaveIcon,
 } from "../components/icons";
-import { Dialog } from "../components/overlay";
 import {
   DRAG_INSTRUCTIONS,
   DragHandle,
@@ -45,6 +50,7 @@ import {
   Alert,
   Badge,
   Button,
+  Card,
   Chip,
   ConnectedGroup,
   ConnectedItem,
@@ -56,6 +62,7 @@ import {
   SearchBar,
 } from "../components/ui";
 import { apiField } from "../lib/api";
+import { pushEscape } from "../lib/escape-stack";
 import {
   type Exercise,
   KIND_LABELS,
@@ -94,12 +101,15 @@ const toDraft = (t: Template): Draft => ({
   })),
 });
 
-// --- Añadir ejercicio (columna de la modal) ----------------------------------
+/** Posición en la entrada escalonada (`.stagger`). */
+const at = (i: number) => ({ ["--i" as string]: i });
+
+// --- Añadir ejercicio (tarjeta del editor) ------------------------------------
 
 /** Selector de ejercicios embebido: vista de mapa corporal (que filtra por
  *  sub-región muscular), fichas de grupo padre, búsqueda y lista agrupada por
- *  músculo. Los dos niveles del filtro son excluyentes. Sin overlay ni
- *  `role=dialog` propios — la modal de plantilla es el único diálogo abierto. */
+ *  músculo. Los dos niveles del filtro son excluyentes. Sin overlay propio: la
+ *  página del editor es la que manda. */
 function ExercisePicker({
   exercises,
   draftEntries,
@@ -141,152 +151,144 @@ function ExercisePicker({
 
   return (
     <section
-      aria-label="Añadir ejercicio"
-      className="flex min-h-0 flex-col gap-3 rounded-xl bg-surface-container-low p-3"
+      aria-labelledby="pick-title"
+      className="flex min-w-0 flex-col gap-3"
     >
-      <h3 className="section-label px-1">Añadir ejercicio</h3>
+      <h2 id="pick-title" className="text-title-m">
+        Añadir ejercicio
+      </h2>
 
-      {/* Desde `md`, el dibujo se lleva el alto libre de la columna y la lista el
-          suyo (crece con la modal en vez de encogerse por la lista). En móvil se
-          apila y el conjunto se desplaza, como antes. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto md:flex-row md:overflow-visible">
-        <div className="flex shrink-0 justify-center rounded-l bg-surface-container px-2">
-          <BodyMap
-            view={view}
-            regions={region ? [region] : []}
-            onSelect={(id) => {
-              setRegion((r) => (r === id ? null : id));
-              setGroup(null);
-            }}
-          />
-        </div>
-
-        <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-y-auto">
-          <SearchBar
-            tone="high"
-            aria-label="Buscar ejercicio"
-            placeholder="Buscar ejercicio"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <ConnectedGroup label="Vista">
-            <ConnectedItem
-              pressed={view === "front"}
-              className="min-h-12"
-              onClick={() => setView("front")}
-            >
-              Frontal
-            </ConnectedItem>
-            <ConnectedItem
-              pressed={view === "back"}
-              className="min-h-12"
-              onClick={() => setView("back")}
-            >
-              Trasera
-            </ConnectedItem>
-          </ConnectedGroup>
-
-          <div
-            role="group"
-            aria-labelledby="pick-groups-label"
-            className="flex flex-wrap items-center gap-2"
-          >
-            <span
-              id="pick-groups-label"
-              className="text-label-l text-on-surface-variant"
-            >
-              Grupo:
-            </span>
-            <Chip
-              pressed={filter === null}
-              onClick={() => {
-                setRegion(null);
-                setGroup(null);
-              }}
-            >
-              {filter === null && <CheckIcon width={18} height={18} />}
-              Todos
-            </Chip>
-            {MUSCLE_GROUPS.map((g) => (
-              <Chip
-                key={g}
-                pressed={group === g}
-                onClick={() => {
-                  setGroup((prev) => (prev === g ? null : g));
-                  setRegion(null);
-                }}
-              >
-                {group === g && <CheckIcon width={18} height={18} />}
-                {GROUP_LABELS[g]}
-              </Chip>
-            ))}
-          </div>
-
-          <p className="px-1 text-body-m text-on-surface-variant">
-            {region ? `Músculo: ${filter}` : `Grupo: ${filter ?? "Todos"}`}
-          </p>
-
-          <div className="min-h-0 md:flex-1 md:overflow-y-auto">
-            {picks.length === 0 ? (
-              <EmptyState
-                title="Sin ejercicios"
-                shapes={["soft-diamond", "cookie-4", "clover"]}
-              />
-            ) : (
-              <GroupedExercises
-                exercises={picks}
-                forceOpen={q !== "" || group !== null || region !== null}
-                listClassName="flex flex-col gap-0.5"
-                renderItem={(e) => {
-                  const taken = inDraftIds.has(e.id);
-                  return (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        className="state flex min-h-12 w-full items-center gap-3 rounded-m px-3 py-2 text-left text-body-l transition-colors motion-effects disabled:text-on-surface-variant"
-                        // El nombre es el del ejercicio (con su tipo, como se ve); los
-                        // músculos van de descripción, no pegados al nombre.
-                        aria-label={`${e.name}${e.kind === "strength" ? "" : ` · ${KIND_LABELS[e.kind]}`}`}
-                        aria-describedby={
-                          e.regions.length > 0
-                            ? `pick-regions-${e.id}`
-                            : undefined
-                        }
-                        disabled={taken}
-                        onPointerDown={ripple}
-                        onClick={() => {
-                          if (taken) return;
-                          onAdd(e);
-                        }}
-                      >
-                        <span className="min-w-0 flex-1">
-                          {e.name}
-                          {e.kind === "strength"
-                            ? null
-                            : ` · ${KIND_LABELS[e.kind]}`}
-                          {e.regions.length > 0 && (
-                            <span
-                              id={`pick-regions-${e.id}`}
-                              className="block text-body-s text-on-surface-variant"
-                            >
-                              {e.regions.map(regionLabel).join(" · ")}
-                            </span>
-                          )}
-                        </span>
-                        {taken ? (
-                          <CheckIcon className="shrink-0 text-accent" />
-                        ) : (
-                          <AddIcon className="shrink-0 text-on-surface-variant" />
-                        )}
-                      </button>
-                    </li>
-                  );
-                }}
-              />
-            )}
-          </div>
-        </div>
+      {/* El dibujo manda: su alto fija el tamaño de sus músculos; la lista
+          crece debajo y la página se desplaza como cualquier otra. */}
+      <div className="flex justify-center rounded-l bg-surface-container-high p-3">
+        <BodyMap
+          view={view}
+          regions={region ? [region] : []}
+          onSelect={(id) => {
+            setRegion((r) => (r === id ? null : id));
+            setGroup(null);
+          }}
+          className="h-96 w-auto max-w-full"
+        />
       </div>
+
+      <SearchBar
+        tone="high"
+        aria-label="Buscar ejercicio"
+        placeholder="Buscar ejercicio"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      <ConnectedGroup label="Vista">
+        <ConnectedItem
+          pressed={view === "front"}
+          className="min-h-12"
+          onClick={() => setView("front")}
+        >
+          Frontal
+        </ConnectedItem>
+        <ConnectedItem
+          pressed={view === "back"}
+          className="min-h-12"
+          onClick={() => setView("back")}
+        >
+          Trasera
+        </ConnectedItem>
+      </ConnectedGroup>
+
+      <div
+        role="group"
+        aria-labelledby="pick-groups-label"
+        className="flex flex-wrap items-center gap-2"
+      >
+        <span
+          id="pick-groups-label"
+          className="text-label-l text-on-surface-variant"
+        >
+          Grupo:
+        </span>
+        <Chip
+          pressed={filter === null}
+          onClick={() => {
+            setRegion(null);
+            setGroup(null);
+          }}
+        >
+          {filter === null && <CheckIcon width={18} height={18} />}
+          Todos
+        </Chip>
+        {MUSCLE_GROUPS.map((g) => (
+          <Chip
+            key={g}
+            pressed={group === g}
+            onClick={() => {
+              setGroup((prev) => (prev === g ? null : g));
+              setRegion(null);
+            }}
+          >
+            {group === g && <CheckIcon width={18} height={18} />}
+            {GROUP_LABELS[g]}
+          </Chip>
+        ))}
+      </div>
+
+      <p className="px-1 text-body-m text-on-surface-variant">
+        {region ? `Músculo: ${filter}` : `Grupo: ${filter ?? "Todos"}`}
+      </p>
+
+      {picks.length === 0 ? (
+        <EmptyState
+          title="Sin ejercicios"
+          shapes={["soft-diamond", "cookie-4", "clover"]}
+        />
+      ) : (
+        <GroupedExercises
+          exercises={picks}
+          forceOpen={q !== "" || group !== null || region !== null}
+          listClassName="flex flex-col gap-0.5"
+          renderItem={(e) => {
+            const taken = inDraftIds.has(e.id);
+            return (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  className="state flex min-h-12 w-full items-center gap-3 rounded-m px-3 py-2 text-left text-body-l transition-colors motion-effects disabled:text-on-surface-variant"
+                  // El nombre es el del ejercicio (con su tipo, como se ve); los
+                  // músculos van de descripción, no pegados al nombre.
+                  aria-label={`${e.name}${e.kind === "strength" ? "" : ` · ${KIND_LABELS[e.kind]}`}`}
+                  aria-describedby={
+                    e.regions.length > 0 ? `pick-regions-${e.id}` : undefined
+                  }
+                  disabled={taken}
+                  onPointerDown={ripple}
+                  onClick={() => {
+                    if (taken) return;
+                    onAdd(e);
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    {e.name}
+                    {e.kind === "strength" ? null : ` · ${KIND_LABELS[e.kind]}`}
+                    {e.regions.length > 0 && (
+                      <span
+                        id={`pick-regions-${e.id}`}
+                        className="block text-body-s text-on-surface-variant"
+                      >
+                        {e.regions.map(regionLabel).join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  {taken ? (
+                    <CheckIcon className="shrink-0 text-accent" />
+                  ) : (
+                    <AddIcon className="shrink-0 text-on-surface-variant" />
+                  )}
+                </button>
+              </li>
+            );
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -400,10 +402,11 @@ function EntryRow({
   );
 }
 
-/** Modal de plantilla: un único diálogo con el nombre, la lista ordenable de
- *  ejercicios y el selector embebido. Guardar persiste el borrador completo;
- *  Cancelar, Escape o el fondo cierran sin llamadas a la API. */
-function TemplateDialog({
+/** Editor de plantilla (crear y editar): página con la piel de «Nueva receta»
+ *  —el nombre y la lista ordenable de ejercicios en una tarjeta, el selector
+ *  embebido en la otra—. Guardar persiste el borrador completo; Cancelar o
+ *  Escape vuelven a la lista sin llamadas a la API. */
+function TemplateEditor({
   draft: initial,
   title,
   create,
@@ -413,7 +416,7 @@ function TemplateDialog({
 }: {
   draft: Draft;
   title: string;
-  /** Crear: lo pulsado (FAB o «Nueva plantilla») se transforma en la modal. */
+  /** Crear: lo pulsado (FAB o «Nueva plantilla») se transforma en la página. */
   create: boolean;
   submitting: boolean;
   onSave: (draft: Draft) => Promise<void>;
@@ -424,6 +427,12 @@ function TemplateDialog({
   const [serverError, setServerError] = useState<string | null>(null);
   const sensors = useDragSensors();
   const { exercises } = useExercises();
+  const morph = useCreateMorph(create);
+
+  // Escape vuelve a la lista sin guardar. Un arrastre de teclado lo cancela
+  // dnd-kit y marca el evento como gestionado: la pila lo ignora y la página
+  // sigue abierta.
+  useEffect(() => pushEscape(onCancel), [onCancel]);
   const save = async () => {
     if (submitting) return;
     if (!draft.name.trim()) {
@@ -473,115 +482,127 @@ function TemplateDialog({
   const count = draft.entries.length;
 
   return (
-    <Dialog
-      // Escape durante un arrastre de teclado lo cancela dnd-kit y marca el
-      // evento como gestionado: la pila de Escape (lib/escape-stack) lo ignora
-      // y la modal sigue abierta.
-      onClose={onCancel}
-      labelledBy="tpl-editor-title"
-      style={useCreateMorph(create)}
-      // Alto fijo (no `max-h`) desde `md`: la modal guarda el mismo espacio
-      // aunque el borrador o la lista del selector cambien de tamaño.
-      className="gap-4 overflow-hidden md:h-[88vh] md:max-w-6xl"
-    >
-      <header className="flex flex-wrap items-center gap-4 px-6 pt-6">
-        <Shape name="cookie-9" size={48} className="text-accent-container">
-          <ListIcon className="text-on-accent-container" />
-        </Shape>
-        <h2 id="tpl-editor-title" className="text-headline-s text-e">
-          {title}
-        </h2>
-        <Field
-          label="Nombre"
-          error={nameError}
-          // La etiqueta flotante tapa el borde con el tono del diálogo.
-          className="min-w-48 flex-1"
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4" style={morph}>
+      <header className="relative flex flex-col items-start gap-5 rounded-xl rounded-tr-xxl bg-accent-container p-6 text-on-accent-container sm:flex-row sm:items-end sm:justify-between">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl rounded-tr-xxl"
         >
-          {(a) => (
-            <Input
-              {...a}
-              value={draft.name}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            />
-          )}
-        </Field>
+          <Shape
+            name="cookie-12"
+            size={176}
+            className="absolute -top-14 -right-12 text-accent opacity-15"
+          />
+          <Shape
+            name="clover"
+            size={72}
+            className="absolute right-36 -bottom-8 rotate-12 text-accent opacity-10"
+          />
+        </div>
+        <div className="relative flex min-w-0 items-center gap-4">
+          <Shape name="cookie-9" size={56} className="text-accent">
+            <ListIcon className="text-on-accent" />
+          </Shape>
+          <div className="min-w-0">
+            <h1 className="text-headline-l text-e">{title}</h1>
+            <p className="text-body-m">
+              Ejercicios y objetivos en una sola página.
+            </p>
+          </div>
+        </div>
+        <div className="relative flex flex-wrap gap-2">
+          <Button
+            variant="text"
+            className="text-on-accent-container"
+            onClick={onCancel}
+          >
+            Cancelar
+          </Button>
+          <Button disabled={submitting} onClick={save}>
+            <SaveIcon width={20} height={20} />
+            {submitting ? "Guardando…" : "Guardar"}
+          </Button>
+        </div>
       </header>
 
-      {serverError && <Alert className="mx-6">{serverError}</Alert>}
+      {serverError && <Alert>{serverError}</Alert>}
 
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 px-6 md:grid-cols-2 md:grid-rows-1">
-        <section className="flex min-h-0 flex-col gap-2">
-          <h3 className="section-label px-1">Ejercicios de la plantilla</h3>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={moveRow}
-            accessibility={{
-              screenReaderInstructions: DRAG_INSTRUCTIONS,
-              announcements,
-            }}
+      <div className="stagger grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="flex min-w-0 flex-col gap-6 rounded-xl" style={at(0)}>
+          <Field
+            label="Nombre"
+            support="Así aparecerá al planificar una sesión"
+            error={nameError}
           >
-            <SortableContext
-              items={draft.entries.map((e) => e.key)}
-              strategy={verticalListSortingStrategy}
+            {(a) => (
+              <Input
+                {...a}
+                className="text-title-m"
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
+            )}
+          </Field>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-title-m">Ejercicios de la plantilla</h2>
+            <p
+              aria-live="polite"
+              className="text-body-m text-on-surface-variant tabular"
             >
-              <ul
-                aria-label="Ejercicios de la plantilla"
-                className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
+              {count} {count === 1 ? "ejercicio" : "ejercicios"}
+            </p>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={moveRow}
+              accessibility={{
+                screenReaderInstructions: DRAG_INSTRUCTIONS,
+                announcements,
+              }}
+            >
+              <SortableContext
+                items={draft.entries.map((e) => e.key)}
+                strategy={verticalListSortingStrategy}
               >
-                {draft.entries.map((entry) => (
-                  <EntryRow
-                    key={entry.key}
-                    entry={entry}
-                    onPatch={(key, targets) =>
-                      setDraft(setTargets(draft, key, targets))
-                    }
-                    onRemove={(key) => setDraft(removeEntry(draft, key))}
-                  />
-                ))}
-                {count === 0 && (
-                  <li className="rounded-xl bg-surface-container">
-                    <EmptyState title="Aún no hay ejercicios">
-                      <p className="text-body-m text-on-surface-variant">
-                        Añádelos desde el selector.
-                      </p>
-                    </EmptyState>
-                  </li>
-                )}
-              </ul>
-            </SortableContext>
-          </DndContext>
-        </section>
+                <ul
+                  aria-label="Ejercicios de la plantilla"
+                  className="flex flex-col gap-2"
+                >
+                  {draft.entries.map((entry) => (
+                    <EntryRow
+                      key={entry.key}
+                      entry={entry}
+                      onPatch={(key, targets) =>
+                        setDraft(setTargets(draft, key, targets))
+                      }
+                      onRemove={(key) => setDraft(removeEntry(draft, key))}
+                    />
+                  ))}
+                  {count === 0 && (
+                    <li className="rounded-xl bg-surface-container">
+                      <EmptyState title="Aún no hay ejercicios">
+                        <p className="text-body-m text-on-surface-variant">
+                          Añádelos desde el selector.
+                        </p>
+                      </EmptyState>
+                    </li>
+                  )}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </section>
+        </Card>
 
-        <ExercisePicker
-          exercises={exercises}
-          draftEntries={draft.entries}
-          onAdd={add}
-        />
+        <Card className="min-w-0 rounded-xl" style={at(1)}>
+          <ExercisePicker
+            exercises={exercises}
+            draftEntries={draft.entries}
+            onAdd={add}
+          />
+        </Card>
       </div>
-
-      {/* Barra de herramientas flotante M3E: el recuento del borrador y sus
-          dos salidas, siempre a mano al pie del diálogo. */}
-      <div
-        role="toolbar"
-        aria-label="Acciones de la plantilla"
-        className="toolbar mx-auto mb-[max(1rem,env(safe-area-inset-bottom))] flex shrink-0 items-center gap-1 p-2"
-      >
-        <span
-          aria-live="polite"
-          className="px-3 text-label-l text-on-surface-variant tabular"
-        >
-          {count} {count === 1 ? "ejercicio" : "ejercicios"}
-        </span>
-        <Button variant="text" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button disabled={submitting} onClick={save}>
-          <SaveIcon />
-          {submitting ? "Guardando…" : "Guardar"}
-        </Button>
-      </div>
-    </Dialog>
+    </div>
   );
 }
 
@@ -734,44 +755,23 @@ function TemplateCard({
   );
 }
 
-// --- Page ------------------------------------------------------------------
+// --- Pages -----------------------------------------------------------------
 
+/** Lista de plantillas. Crear y editar son rutas propias (abajo), así que esta
+ *  página se desmonta al abrir el editor y no queda detrás. */
 export function PlantillasPage() {
-  const {
-    templates,
-    pending,
-    error,
-    reload,
-    createTemplate,
-    updateTemplate,
-    deleteTemplate,
-  } = useTemplates();
+  const { templates, pending, error, reload, createTemplate, deleteTemplate } =
+    useTemplates();
   const navigate = useNavigate();
-  const nueva = useMatch("/plantillas/nueva");
-  const editando = useMatch("/plantillas/:id/editar");
+  const location = useLocation();
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [submitting, setSubmitting] = useState(false);
 
-  // La modal sale de la URL: recargar la reabre y «atrás» la cierra.
-  const editing = editando
-    ? templates.find((t) => t.id === Number(editando.params.id))
-    : undefined;
-
-  const close = () => navigate("/plantillas");
-
-  const save = async (draft: Draft) => {
-    setSubmitting(true);
-    try {
-      const payload = buildTemplatePayload(draft);
-      const saved = editing
-        ? await updateTemplate(editing.id, payload)
-        : await createTemplate(payload);
-      setExpanded((x) => ({ ...x, [saved.id]: true }));
-      close();
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Guardar vuelve aquí con el id en el state de la navegación: su tarjeta
+  // llega desplegada.
+  const savedId = (location.state as { expand?: number } | null)?.expand;
+  useEffect(() => {
+    if (savedId) setExpanded((x) => ({ ...x, [savedId]: true }));
+  }, [savedId]);
 
   const duplicate = async (t: Template) => {
     await createTemplate(
@@ -852,23 +852,49 @@ export function PlantillasPage() {
           />
         ))}
       </div>
-
-      {(nueva || editing) && (
-        <TemplateDialog
-          key={editing ? `t${editing.id}` : "nueva"}
-          title={editing ? "Editar plantilla" : "Nueva plantilla"}
-          create={Boolean(nueva)}
-          draft={editing ? toDraft(editing) : { name: "", entries: [] }}
-          submitting={submitting}
-          onSave={save}
-          onCancel={close}
-        />
-      )}
-
-      {/* Enlace directo a una plantilla que ya no existe: de vuelta a la lista. */}
-      {editando && !editing && !pending && (
-        <Navigate to="/plantillas" replace />
-      )}
     </div>
+  );
+}
+
+/** Editor de plantilla (crear y editar): la lista le cede la página entera. Al
+ *  editar espera a las plantillas (necesita el borrador de partida) y, si la
+ *  del enlace ya no existe, vuelve a la lista. */
+export function PlantillaEditorPage() {
+  const { templates, pending, createTemplate, updateTemplate } = useTemplates();
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [submitting, setSubmitting] = useState(false);
+
+  const editing = id ? templates.find((t) => t.id === Number(id)) : undefined;
+
+  const close = useCallback(() => navigate("/plantillas"), [navigate]);
+
+  const save = async (draft: Draft) => {
+    setSubmitting(true);
+    try {
+      const payload = buildTemplatePayload(draft);
+      const saved = editing
+        ? await updateTemplate(editing.id, payload)
+        : await createTemplate(payload);
+      // El id viaja a la lista: su tarjeta se abre al llegar.
+      navigate("/plantillas", { state: { expand: saved.id } });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (id && pending) return <Loader label="Cargando plantilla…" />;
+  if (id && !editing) return <Navigate to="/plantillas" replace />;
+
+  return (
+    <TemplateEditor
+      key={editing ? `t${editing.id}` : "nueva"}
+      title={editing ? "Editar plantilla" : "Nueva plantilla"}
+      create={!editing}
+      draft={editing ? toDraft(editing) : { name: "", entries: [] }}
+      submitting={submitting}
+      onSave={save}
+      onCancel={close}
+    />
   );
 }

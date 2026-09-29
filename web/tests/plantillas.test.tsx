@@ -136,6 +136,20 @@ function cardOf(name: string): HTMLElement {
   return screen.getByText(name).closest("section")!;
 }
 
+/** Tarjeta del selector, que en el editor es una región más de la página. */
+function picker(): HTMLElement {
+  return screen.getByRole("region", { name: "Añadir ejercicio" });
+}
+
+/** El catálogo del selector llega async: mientras carga enseña su estado vacío.
+ *  Espera a que resuelva para poder consultar sus grupos sin carreras. */
+async function waitForPicker(): Promise<HTMLElement> {
+  await waitFor(() =>
+    expect(within(picker()).queryByText("Sin ejercicios")).toBeNull(),
+  );
+  return picker();
+}
+
 beforeEach(() => {
   api = mockApi({
     templates: [tplA(), tplB(), tplC()],
@@ -236,17 +250,20 @@ describe("template editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "+ Nueva plantilla" }));
     const name = await screen.findByLabelText("Nombre");
     expect(window.location.pathname).toBe("/plantillas/nueva");
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    // Página propia: sin diálogo y sin la lista de plantillas por debajo.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByText("B — Tirón")).toBeNull();
+    await waitForPicker();
     return name;
   }
 
-  it("create: valid save → single POST 201, card appears, modal closes", async () => {
+  it("create: valid save → single POST 201, card appears, page closes", async () => {
     await openEditor();
     fireEvent.change(screen.getByLabelText("Nombre"), {
       target: { value: "D — Movilidad" },
     });
-    // El selector vive dentro de la propia modal: no hay un segundo diálogo.
-    const dlg = within(screen.getByRole("dialog"));
+    // El selector es una tarjeta de la página: se acota a su región.
+    const dlg = within(picker());
     const searchesBefore = api.calls.filter(
       (c) => c.url === "/api/exercises",
     ).length;
@@ -278,7 +295,7 @@ describe("template editor", () => {
 
   it("cardio en plantilla: el picker lo lista con su tipo y acepta distancia/tiempo", async () => {
     await openEditor();
-    const dlg = within(screen.getByRole("dialog"));
+    const dlg = within(picker());
     fireEvent.change(dlg.getByPlaceholderText("Buscar ejercicio"), {
       target: { value: "running" },
     });
@@ -308,7 +325,7 @@ describe("template editor", () => {
 
   it("filtro por grupo padre: fichas, búsqueda dentro del filtro y estado vacío", async () => {
     await openEditor();
-    const dlg = within(screen.getByRole("dialog"));
+    const dlg = within(picker());
     // Grupos plegables: se despliegan al pulsar su cabecera.
     fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
     expect(dlg.getByRole("button", { name: /^Press banca\b/ })).toBeDefined();
@@ -380,6 +397,7 @@ describe("template editor", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     await screen.findByText("A — Empuje");
+    expect(window.location.pathname).toBe("/plantillas");
     expect(mutations().length).toBe(before);
     expect(api.state.templates[0].name).toBe("A — Empuje");
   });
@@ -494,7 +512,7 @@ describe("template editor", () => {
   });
 });
 
-describe("exercise picker modal", () => {
+describe("exercise picker", () => {
   async function openPicker() {
     await openPlantillas();
     fireEvent.click(
@@ -502,12 +520,11 @@ describe("exercise picker modal", () => {
     );
     await screen.findByLabelText("Nombre");
     expect(window.location.pathname).toBe("/plantillas/1/editar");
-    return screen.findByRole("dialog");
+    return waitForPicker();
   }
 
-  it("opens a dialog with exercises grouped by muscle group", async () => {
-    const dialog = await openPicker();
-    const dlg = within(dialog);
+  it("groups the exercises by muscle group, collapsed by default", async () => {
+    const dlg = within(await openPicker());
     // Cabeceras con nombre y conteo; plegadas por defecto.
     expect(dlg.getByRole("button", { name: /^Pecho \(1\)/ })).toBeDefined();
     expect(dlg.getByRole("button", { name: /^Espalda \(1\)/ })).toBeDefined();
@@ -529,8 +546,7 @@ describe("exercise picker modal", () => {
         remo,
       ],
     });
-    const dialog = await openPicker();
-    const dlg = within(dialog);
+    const dlg = within(await openPicker());
 
     // Sub-región del mapa: solo el ejercicio que la trabaja.
     fireEvent.click(
@@ -562,8 +578,7 @@ describe("exercise picker modal", () => {
   });
 
   it("draft exercises are disabled; re-adding is impossible", async () => {
-    const dialog = await openPicker();
-    const dlg = within(dialog);
+    const dlg = within(await openPicker());
     fireEvent.click(dlg.getByRole("button", { name: /^Pecho \(1\)/ }));
     const pressBtn = dlg.getByRole("button", { name: /^Press banca\b/ });
     expect(pressBtn.hasAttribute("disabled")).toBe(true);
@@ -579,70 +594,68 @@ describe("exercise picker modal", () => {
     expect(screen.getAllByRole("button", { name: "Quitar" })).toHaveLength(4);
   });
 
-  it("Cancelar cierra la modal, vuelve a la lista y descarta el borrador", async () => {
+  it("Cancelar vuelve a la lista y descarta el borrador", async () => {
     await openPicker();
     fireEvent.change(screen.getByLabelText("Nombre"), {
       target: { value: "basura" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await screen.findByRole("heading", { name: "Plantillas" });
     expect(window.location.pathname).toBe("/plantillas");
     expect(mutations()).toHaveLength(0);
     expect(api.state.templates[0].name).toBe("A — Empuje");
   });
 
-  it("Escape cierra la modal sin guardar", async () => {
+  it("Escape vuelve a la lista sin guardar", async () => {
     await openPicker();
     fireEvent.change(screen.getByLabelText("Nombre"), {
       target: { value: "A — Empuje 3" },
     });
     fireEvent.keyDown(document.body, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await screen.findByRole("heading", { name: "Plantillas" });
     expect(window.location.pathname).toBe("/plantillas");
     expect(mutations()).toHaveLength(0);
   });
 });
 
-describe("modal de plantilla con URL propia", () => {
-  it("entrar directo a /plantillas/1/editar abre la modal precargada", async () => {
+describe("página de plantilla con URL propia", () => {
+  it("entrar directo a /plantillas/1/editar abre la página precargada", async () => {
     renderAt("/plantillas/1/editar");
     const name = await screen.findByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("A — Empuje");
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
     // Editar no viene de un botón de crear: sin nombre, no hay morph.
-    expect(screen.getByRole("dialog").style.viewTransitionName).not.toBe(
-      "create",
-    );
-    // La lista sigue detrás: las otras tarjetas se ven.
-    expect(screen.getByText("B — Tirón")).toBeDefined();
+    expect(morphing()).toHaveLength(0);
+    // La página sustituye a la lista: las otras tarjetas no están.
+    expect(screen.queryByText("B — Tirón")).toBeNull();
   });
 
-  it("entrar directo a /plantillas/nueva abre la modal vacía", async () => {
+  it("entrar directo a /plantillas/nueva abre la página vacía", async () => {
     renderAt("/plantillas/nueva");
     const name = await screen.findByLabelText("Nombre");
     expect((name as HTMLInputElement).value).toBe("");
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
     // Carga directa: no hay nada pulsado de lo que crecer.
-    expect(screen.getByRole("dialog").style.viewTransitionName).not.toBe(
-      "create",
-    );
+    expect(morphing()).toHaveLength(0);
   });
 
-  it("«Nueva plantilla» se transforma en la modal", async () => {
+  it("«Nueva plantilla» se transforma en la página", async () => {
     const before = stubViewTransitions();
     await openPlantillas();
     const button = screen.getByRole("button", { name: "+ Nueva plantilla" });
     fireEvent.click(button);
     await waitFor(() => expect(before).toHaveLength(1));
     expect(before[0]).toEqual([button]);
-    await screen.findByRole("dialog");
-    expect(morphing()).toEqual([screen.getByRole("dialog")]);
+    const title = await screen.findByRole("heading", {
+      name: "Nueva plantilla",
+    });
+    expect(morphing()).toHaveLength(1);
+    expect(morphing()[0].contains(title)).toBe(true);
   });
 
   it("una plantilla inexistente devuelve a la lista", async () => {
     renderAt("/plantillas/99/editar");
     await screen.findByText("B — Tirón");
     await waitFor(() => expect(window.location.pathname).toBe("/plantillas"));
-    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
