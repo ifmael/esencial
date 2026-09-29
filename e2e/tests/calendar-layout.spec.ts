@@ -44,7 +44,7 @@ async function resetPlanned(request: APIRequestContext, date: string) {
 }
 
 test.describe("CALENDARIO — alto de ventana", () => {
-  // Las medidas son con el raíl plegado (80 px): el menú lo pliega el usuario,
+  // Las medidas son con el raíl plegado (96 px): el menú lo pliega el usuario,
   // navegar no lo cambia, y desplegado el cajón de 288 px come ancho de día.
   test.beforeEach(({ page }) =>
     page.addInitScript(() =>
@@ -145,20 +145,25 @@ test.describe("CALENDARIO — alto de ventana", () => {
 
     for (const route of ["/plan-fuerza", "/plan-recetas"] as const) {
       await page.goto(route);
-      // Raíl: ancho de icono, con los destinos accesibles por su nombre.
+      // Raíl de 96 px, el mismo que en el resto de rutas: secciones con etiqueta.
       const width = await rail.evaluate(
         (el) => el.getBoundingClientRect().width,
       );
-      expect(width, `${route}: ancho del raíl`).toBeLessThanOrEqual(80);
+      expect(width, `${route}: ancho del raíl`).toBeLessThanOrEqual(96);
       for (const name of ["Hoy", "Deporte", "Nutrición"]) {
         await expect(
           rail.getByRole("link", { name }),
           `${route}: ${name}`,
         ).toBeVisible();
+        await expect(rail.getByText(name, { exact: true })).toBeVisible();
       }
-      // Raíl de 80 px: el catálogo y «Cerrar sesión» ceden su sitio (siguen en
-      // la búsqueda ⌘K y al desplegar el menú); búsqueda y tema se quedan.
+      // Búsqueda, Ajustes (tema y catálogo) y «Cerrar sesión»,
+      // solo con icono.
       await expect(rail.getByRole("button", { name: /Buscar/ })).toBeVisible();
+      await expect(rail.getByRole("link", { name: "Ajustes" })).toBeVisible();
+      await expect(
+        rail.getByRole("button", { name: "Cerrar sesión" }),
+      ).toBeVisible();
       // Sin desplegables de sección: el submenú está sobre el calendario. (El
       // menú FAB de crear sí es un desplegable.)
       await expect(rail.locator("button[aria-controls^='nav-']")).toHaveCount(

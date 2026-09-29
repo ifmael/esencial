@@ -99,7 +99,11 @@ Escala vigente — todo lo demás sale de aquí:
   reescribe también (`schemeVars`).
 - **Tema** sistema/claro/oscuro: `web/public/theme.js` pone `data-theme` antes del
   primer pintado; `lib/theme.ts` lo cambia en vivo. Los dos comparten clave y
-  regla, y `tests/theme.test.ts` los ata.
+  regla, y `tests/theme.test.ts` los ata. Se elige **solo en Ajustes**
+  (`/ajustes`, `routes/ajustes.tsx`, entrada en el raíl, el cajón y la barra
+  inferior) o con «Cambiar tema» de ⌘K; el Shell ya no lleva conmutador.
+  `useTheme()` (`useSyncExternalStore`; `applyTheme` avisa) mantiene a los dos
+  al día. Lo cubre `tests/ajustes.test.tsx`.
 - **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
   cada superficie declara `--field-bg` para el recorte).
 - **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
@@ -128,8 +132,8 @@ Escala vigente — todo lo demás sale de aquí:
   `crossOrigin="use-credentials"`. El color dinámico lee la foto en un canvas, y
   si otra copia de la foto se pidió sin CORS, la caché sirve esa y la lectura
   falla.
-- Catálogo de variantes en la ruta **`/ui`** (en el menú, junto a «Cerrar
-  sesión»): míralo antes de inventar una pieza.
+- Catálogo de variantes en la ruta **`/ui`** (se llega desde Ajustes y desde
+  ⌘K): míralo antes de inventar una pieza.
 - `wireframes/DESIGN.md` y `docs/architecture/diseno.html` siguen con el sistema
   anterior; donde discrepen de `globals.css`, manda `globals.css`.
 
@@ -146,17 +150,18 @@ el mismo trato (sin título, alto completo, hueco inferior).
 calendario lo plegaban solas y al pulsar Deporte o Nutrición en el cajón este se
 cerraba bajo el cursor (bug; lo cubren `shell.test.tsx` y `nav.spec.ts`).
 
-En esas rutas, **plegado, el raíl M3E es su versión compacta de 80 px**
-(`w-20`): iconos con el nombre en `aria-label`/`title`, menú FAB, búsqueda y tema,
-sin desplegables de sección. El catálogo y «Cerrar sesión» ceden su sitio, y siguen
-disponibles en la búsqueda y al desplegar el menú. Fuera del calendario el raíl
-colapsado mide 96 px (con etiquetas) y el expandido 288 px. El submenú de la sección
-va como **grupo de botones conectados sobre el calendario**, en escritorio y en móvil.
+**Plegado, el raíl M3E es el mismo en todas las rutas**: 96 px (`w-24`) con la
+etiqueta bajo cada sección, menú FAB, y búsqueda, Ajustes y «Cerrar sesión» solo
+con icono; expandido mide 288 px. Antes, en el calendario, el raíl se quedaba en 80 px
+sin etiquetas y la barra cambiaba al pasar de Hoy a Deporte; se unificó a costa de
+unos 16 px de rejilla. En las rutas de calendario el raíl no lleva desplegables de
+sección: el submenú de la sección va como **grupo de botones conectados sobre el
+calendario**, en escritorio y en móvil.
 El `main` de estas rutas es `max-w-calendar` —el token `--container-calendar`,
 110rem = 1760 px— con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
-1280×800 con el raíl plegado: columna de día **153,14 px**, sin scroll de página ni
-horizontal (los e2e de `calendar-layout.spec.ts` miden con la preferencia plegada).
-Techo del ancho: a 1280 no cabe más de ~153 px por columna con el raíl; con el cajón
+1280×800 con el raíl plegado: columna de día **150,84 px** (`calendar-layout.spec.ts`
+exige ≥150 y mide con la preferencia plegada), sin scroll de página ni horizontal.
+Techo del ancho: a 1280 no cabe más de ~151 px por columna con el raíl; con el cajón
 de 288 px abierto la columna encoge. Con títulos largos (>20 caracteres)
 el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
 celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
@@ -167,7 +172,7 @@ una página larga (`/ejercicios`) empuja la búsqueda y el tema hasta el final (
 cubre `nav.spec.ts`).
 
 Ese `lg:overflow-y-auto` del raíl implica también `overflow-x`, así que cualquier
-desplegable `absolute` dentro de él se recorta a sus 80–96 px. El menú del FAB va
+desplegable `absolute` dentro de él se recorta a sus 96 px. El menú del FAB va
 por eso `fixed`, anclado al FAB al abrirse, y el raíl lleva `lg:z-10`: `sticky`
 abre su propio contexto de apilamiento y, sin z-index, el `main` pinta encima.
 
@@ -201,7 +206,7 @@ modal: la fila se convierte en su confirmación en línea (nombre truncado +
 guarda con el mismo PUT de los items que usa el arrastre (`usePlanWeek.saveItems`,
 optimista y con recarga). Después aparece un snackbar con **Deshacer**, que vuelve
 a guardar los items de antes. Los dos botones van en **una sola línea** a propósito:
-la columna mide ~153 px y dos botones de texto largo se salían de la fila y
+la columna mide ~151 px y dos botones de texto largo se salían de la fila y
 quedaban tapados por el día siguiente — de ahí las etiquetas cortas y los 44 px
 (excepción táctil documentada). Quitar el **último** ejercicio deja el
 día sin items, que no es representable (la API exige ≥1): desprograma la sesión

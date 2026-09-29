@@ -22,6 +22,7 @@ import {
   rankCommands,
 } from "../lib/command-palette";
 import { toISODate } from "../lib/day";
+import { applyTheme, nextTheme, THEME_NAME, useTheme } from "../lib/theme";
 import {
   AddIcon,
   BackIcon,
@@ -96,6 +97,13 @@ const STATIC: Command[] = [
     group: "Pantallas",
     label: "Plantillas",
     href: "/plantillas",
+  },
+  {
+    id: "p-ajustes",
+    group: "Pantallas",
+    label: "Ajustes",
+    href: "/ajustes",
+    keywords: ["configuración", "preferencias"],
   },
   {
     id: "p-ui",
@@ -189,16 +197,8 @@ export function useCommandPalette() {
   };
 }
 
-export function CommandPalette({
-  onClose,
-  onToggleTheme,
-  themeLabel,
-}: {
-  onClose: () => void;
-  onToggleTheme: () => void;
-  /** Tema actual, para decirlo en la acción («Cambiar tema · Sistema»). */
-  themeLabel: string;
-}) {
+export function CommandPalette({ onClose }: { onClose: () => void }) {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -225,7 +225,7 @@ export function CommandPalette({
 
   const run = (c: Command) => {
     onClose();
-    if (c.action === "theme") onToggleTheme();
+    if (c.action === "theme") applyTheme(nextTheme(theme));
     else navigate(c.href.replace(":hoy", toISODate(new Date())));
   };
 
@@ -347,7 +347,7 @@ export function CommandPalette({
                         {c.action === "theme" ? (
                           <span className="text-on-surface-variant">
                             {" "}
-                            · {themeLabel}
+                            · {THEME_NAME[theme]}
                           </span>
                         ) : null}
                       </span>

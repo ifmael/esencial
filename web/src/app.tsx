@@ -62,6 +62,7 @@ function GuardedShell() {
   );
 }
 
+import { AjustesPage } from "./routes/ajustes";
 import { EjercicioDetailPage, EjerciciosPage } from "./routes/ejercicios";
 import { PlantillaEditorPage, PlantillasPage } from "./routes/plantillas";
 import { RecetaEditorPage } from "./routes/receta-editor";
@@ -92,7 +93,8 @@ const routes = createRoutesFromElements(
 
       <Route path="/sesion/:date" element={<SesionPage />} />
 
-      {/* Referencia del sistema de diseño: fuera del menú, para consultarla. */}
+      <Route path="/ajustes" element={<AjustesPage />} />
+      {/* Referencia del sistema de diseño: se llega desde Ajustes. */}
       <Route path="/ui" element={<UiPage />} />
     </Route>
   </>,

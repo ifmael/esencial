@@ -139,7 +139,7 @@ describe("paleta de comandos", () => {
 
     // El usuario sigue a lo suyo: enfoca otro control y navega. Ni el
     // re-render del Shell ni su nuevo montaje deben devolverle el foco al botón.
-    const other = screen.getByRole("link", { name: "Sistema de diseño" });
+    const other = screen.getAllByRole("link", { name: "Ajustes" })[0];
     other.focus();
     fireEvent.click(screen.getAllByRole("link", { name: "Hoy" })[0]);
     await waitFor(() => expect(window.location.pathname).toBe("/"));

@@ -1,24 +1,18 @@
 // Armazón de la app (M3 Expressive):
 // - Escritorio: raíl de navegación M3E con el menú FAB arriba y el indicador
 //   activo en pastilla (cambia de forma y la etiqueta gana peso). El usuario lo
-//   expande a cajón con submenús o lo pliega; en las rutas de calendario el
-//   raíl plegado es compacto (80 px, AGENTS.md) para ceder ancho.
+//   expande a cajón con submenús o lo pliega (raíl de 96 px con etiquetas en
+//   todas las rutas).
 // - Móvil: barra de navegación inferior M3 con área segura y FAB flotante.
 // - Submenú de la sección en las rutas de calendario: grupo de botones
 //   conectados sobre la rejilla.
-// - Búsqueda ⌘K (search view M3), tema sistema/claro/oscuro y snackbar global.
+// - Búsqueda ⌘K (search view M3), acceso a Ajustes (tema y catálogo) y snackbar global.
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { apiFetchRaw } from "../lib/api";
 import { toISODate } from "../lib/day";
 import { pushEscape } from "../lib/escape-stack";
-import {
-  applyTheme,
-  followSystem,
-  nextTheme,
-  readTheme,
-  type Theme,
-} from "../lib/theme";
+import { followSystem, readTheme } from "../lib/theme";
 import { morphFrom } from "../lib/view-transition";
 import { CommandPalette, useCommandPalette } from "./command-palette";
 import {
@@ -27,16 +21,13 @@ import {
   ChevronDownIcon,
   ChevronLeftIcon,
   CloseIcon,
-  ContrastIcon,
-  DarkIcon,
   DumbbellIcon,
   HomeIcon,
   LeafIcon,
-  LightIcon,
   ListIcon,
   LogoutIcon,
   SearchIcon,
-  SwatchIcon,
+  SettingsIcon,
   UtensilsIcon,
 } from "./icons";
 import { Scrim, SnackbarHost } from "./overlay";
@@ -77,9 +68,9 @@ const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href);
 
 /** Rutas de calendario (fuerza y comidas): el calendario manda, así que la
- * página se queda sin cabecera y ocupa la ventana entera. Plegado, el raíl
- * es compacto, y el submenú de la sección va como grupo conectado sobre la
- * rejilla; abajo, un hueco reservado para acciones futuras. */
+ * página se queda sin cabecera y ocupa la ventana entera. El submenú de la
+ * sección va como grupo conectado sobre la rejilla; abajo, un hueco reservado
+ * para acciones futuras. */
 const CALENDAR_ROUTES: Record<string, true> = {
   "/plan-fuerza": true,
   "/plan-recetas": true,
@@ -93,7 +84,7 @@ const sectionActive = (pathname: string, section: NavSection) =>
   (section.children ?? []).some((child) => isActive(pathname, child.href));
 
 /** Sección de la ruta (su color: Deporte primary, Nutrición tertiary, Hoy
- * secondary). `/ui` y `/sesion` caen en la que les corresponde. */
+ * secondary). `/ajustes`, `/ui` y `/sesion` caen en la que les corresponde. */
 function sectionOf(pathname: string): NavSection["key"] {
   if (pathname.startsWith("/sesion")) return "deporte";
   return (
@@ -113,17 +104,6 @@ function readMenuPref(): "collapsed" | "expanded" | null {
   }
 }
 
-const THEME_LABEL: Record<Theme, string> = {
-  system: "Tema del sistema",
-  light: "Tema claro",
-  dark: "Tema oscuro",
-};
-const THEME_ICON: Record<Theme, IconType> = {
-  system: ContrastIcon,
-  light: LightIcon,
-  dark: DarkIcon,
-};
-
 /** Destino del raíl colapsado: icono en una pastilla de 56×32 que se
  * ensancha al activarse (cambio de forma) y etiqueta debajo que gana peso. */
 function RailItem({
@@ -132,21 +112,16 @@ function RailItem({
   icon: Icon,
   active,
   current,
-  compact,
 }: {
   href: string;
   label: string;
   icon: IconType;
   active: boolean;
   current: boolean;
-  /** Raíl de 80 px (calendario): la etiqueta va solo en aria-label/title. */
-  compact: boolean;
 }) {
   return (
     <Link
       to={href}
-      aria-label={compact ? label : undefined}
-      title={compact ? label : undefined}
       aria-current={current ? "page" : undefined}
       className={cx(
         "group flex w-full flex-col items-center gap-1 py-1",
@@ -164,16 +139,14 @@ function RailItem({
       >
         <Icon filled={active} />
       </span>
-      {compact ? null : (
-        <span
-          className={cx(
-            "type-move text-label-m",
-            active ? "font-extrabold" : "font-medium",
-          )}
-        >
-          {label}
-        </span>
-      )}
+      <span
+        className={cx(
+          "type-move text-label-m",
+          active ? "font-extrabold" : "font-medium",
+        )}
+      >
+        {label}
+      </span>
     </Link>
   );
 }
@@ -200,7 +173,7 @@ function FabMenu({
 }) {
   const [open, setOpen] = useState(false);
   // El raíl tiene `overflow-y-auto` (y con él `overflow-x`), que recortaría un
-  // menú `absolute` a sus 80–96 px: en el raíl el menú va `fixed`, bajo el FAB.
+  // menú `absolute` a sus 96 px: en el raíl el menú va `fixed`, bajo el FAB.
   const [anchor, setAnchor] = useState<{ top: number; left: number }>();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -298,22 +271,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const calendarRoute = CALENDAR_ROUTES[pathname] === true;
   // Solo lo pliega el usuario: navegar nunca cambia el menú.
   const collapsed = menuPref === "collapsed";
-  // Raíl compacto de 80 px (sin etiquetas) solo en el calendario; el resto del
-  // tiempo el raíl colapsado mide 96 px con etiquetas, como pide M3E.
-  const compact = collapsed && calendarRoute;
   const navSection = NAV.find((section) => section.href === pathname);
-  const [theme, setTheme] = useState<Theme>(readTheme);
   const palette = useCommandPalette();
   const section = sectionOf(pathname);
 
   useEffect(() => followSystem(readTheme), []);
-
-  const cycleTheme = () => {
-    const next = nextTheme(theme);
-    applyTheme(next);
-    setTheme(next);
-  };
-  const ThemeIcon = THEME_ICON[theme];
 
   const logout = async () => {
     await apiFetchRaw("/api/auth/logout", { method: "POST" });
@@ -330,21 +292,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const utility = [
-    {
-      key: "search",
-      label: "Buscar (⌘K)",
-      icon: SearchIcon,
-      onClick: palette.show,
-    },
-    {
-      key: "theme",
-      label: THEME_LABEL[theme],
-      icon: ThemeIcon,
-      onClick: cycleTheme,
-    },
-  ];
-
   const rail = (
     <nav
       aria-label="Principal"
@@ -358,7 +305,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             icon={s.icon}
             active={sectionActive(pathname, s)}
             current={isActive(pathname, s.href)}
-            compact={compact}
           />
         </div>
       ))}
@@ -466,11 +412,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             // `lg:z-10`: `sticky` abre un contexto de apilamiento; sin z-index el
             // `main` (posterior en el DOM) pinta encima del menú de crear.
             "hidden shrink-0 flex-col bg-surface py-5 lg:sticky lg:top-0 lg:z-10 lg:flex lg:h-dvh lg:overflow-y-auto transition-[width] motion-spatial",
-            collapsed
-              ? compact
-                ? "w-20 items-center gap-6 px-2"
-                : "w-24 items-center gap-6 px-2"
-              : "w-72 gap-6 px-3",
+            collapsed ? "w-24 items-center gap-6 px-2" : "w-72 gap-6 px-3",
           )}
         >
           <div
@@ -522,42 +464,35 @@ export function Shell({ children }: { children: React.ReactNode }) {
           >
             {collapsed ? (
               <>
-                {utility.map((u) => (
-                  <button
-                    key={u.key}
-                    type="button"
-                    aria-label={u.label}
-                    title={u.label}
-                    onClick={u.onClick}
-                    className="state grid size-12 place-items-center rounded-full text-on-surface-variant"
-                  >
-                    <u.icon />
-                  </button>
-                ))}
-                {compact ? null : (
-                  <>
-                    <Link
-                      to="/ui"
-                      aria-label="Sistema de diseño"
-                      title="Sistema de diseño"
-                      aria-current={
-                        isActive(pathname, "/ui") ? "page" : undefined
-                      }
-                      className="state grid size-12 place-items-center rounded-full text-on-surface-variant"
-                    >
-                      <SwatchIcon filled={isActive(pathname, "/ui")} />
-                    </Link>
-                    <button
-                      type="button"
-                      aria-label="Cerrar sesión"
-                      title="Cerrar sesión"
-                      onClick={logout}
-                      className="state grid size-12 place-items-center rounded-full text-on-surface-variant"
-                    >
-                      <LogoutIcon />
-                    </button>
-                  </>
-                )}
+                <button
+                  type="button"
+                  aria-label="Buscar (⌘K)"
+                  title="Buscar (⌘K)"
+                  onClick={palette.show}
+                  className="state grid size-12 place-items-center rounded-full text-on-surface-variant"
+                >
+                  <SearchIcon />
+                </button>
+                <Link
+                  to="/ajustes"
+                  aria-label="Ajustes"
+                  title="Ajustes"
+                  aria-current={
+                    isActive(pathname, "/ajustes") ? "page" : undefined
+                  }
+                  className="state grid size-12 place-items-center rounded-full text-on-surface-variant"
+                >
+                  <SettingsIcon filled={isActive(pathname, "/ajustes")} />
+                </Link>
+                <button
+                  type="button"
+                  aria-label="Cerrar sesión"
+                  title="Cerrar sesión"
+                  onClick={logout}
+                  className="state grid size-12 place-items-center rounded-full text-on-surface-variant"
+                >
+                  <LogoutIcon />
+                </button>
               </>
             ) : (
               <>
@@ -571,21 +506,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   <span className="flex-1 text-left">Buscar…</span>
                   <kbd className="text-label-m">⌘K</kbd>
                 </button>
-                <button
-                  type="button"
-                  onClick={cycleTheme}
-                  className={drawerRow(false)}
-                >
-                  <ThemeIcon />
-                  {THEME_LABEL[theme]}
-                </button>
                 <Link
-                  to="/ui"
-                  aria-current={isActive(pathname, "/ui") ? "page" : undefined}
-                  className={drawerRow(isActive(pathname, "/ui"))}
+                  to="/ajustes"
+                  aria-current={
+                    isActive(pathname, "/ajustes") ? "page" : undefined
+                  }
+                  className={drawerRow(isActive(pathname, "/ajustes"))}
                 >
-                  <SwatchIcon filled={isActive(pathname, "/ui")} />
-                  Sistema de diseño
+                  <SettingsIcon filled={isActive(pathname, "/ajustes")} />
+                  Ajustes
                 </Link>
                 <button
                   type="button"
@@ -618,14 +547,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             >
               <SearchIcon />
               <span className="truncate">Buscar en Esencial</span>
-            </button>
-            <button
-              type="button"
-              aria-label={THEME_LABEL[theme]}
-              onClick={cycleTheme}
-              className="state grid size-12 shrink-0 place-items-center rounded-full text-on-surface-variant"
-            >
-              <ThemeIcon />
             </button>
           </div>
 
@@ -703,11 +624,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
               );
             })}
             <Link
-              to="/ui"
-              aria-current={isActive(pathname, "/ui") ? "page" : undefined}
+              to="/ajustes"
+              aria-current={isActive(pathname, "/ajustes") ? "page" : undefined}
               className={cx(
                 "flex flex-1 flex-col items-center justify-center gap-1",
-                isActive(pathname, "/ui")
+                isActive(pathname, "/ajustes")
                   ? "text-on-surface"
                   : "text-on-surface-variant",
               )}
@@ -715,14 +636,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <span
                 className={cx(
                   "state grid h-8 place-items-center rounded-full transition-[width] motion-spatial-fast",
-                  isActive(pathname, "/ui")
+                  isActive(pathname, "/ajustes")
                     ? "w-16 bg-secondary-container"
                     : "w-8",
                 )}
               >
-                <SwatchIcon filled={isActive(pathname, "/ui")} />
+                <SettingsIcon filled={isActive(pathname, "/ajustes")} />
               </span>
-              <span className="text-label-m font-medium">UI</span>
+              <span className="text-label-m font-medium">Ajustes</span>
             </Link>
             <button
               type="button"
@@ -737,13 +658,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
 
-        {palette.open && (
-          <CommandPalette
-            onClose={palette.hide}
-            onToggleTheme={cycleTheme}
-            themeLabel={THEME_LABEL[theme]}
-          />
-        )}
+        {palette.open && <CommandPalette onClose={palette.hide} />}
       </div>
     </SnackbarHost>
   );

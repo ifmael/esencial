@@ -1,13 +1,21 @@
 // Tema sistema/claro/oscuro. `public/theme.js` pone `data-theme` antes del
 // primer pintado; aquí se cambia en caliente y se sigue al sistema mientras la
 // elección sea «sistema». Los tokens de color leen `[data-theme="dark"]`.
+// Se elige en Ajustes (`/ajustes`) y con «Cambiar tema» de la paleta ⌘K;
+// `useTheme` mantiene a los dos al día.
+import { useSyncExternalStore } from "react";
 
 export type Theme = "system" | "light" | "dark";
+export const THEMES: Theme[] = ["system", "light", "dark"];
+export const THEME_NAME: Record<Theme, string> = {
+  system: "Sistema",
+  light: "Claro",
+  dark: "Oscuro",
+};
 export const THEME_KEY = "esencial.theme";
-const CYCLE: Theme[] = ["system", "light", "dark"];
 
 export const nextTheme = (t: Theme): Theme =>
-  CYCLE[(CYCLE.indexOf(t) + 1) % CYCLE.length];
+  THEMES[(THEMES.indexOf(t) + 1) % THEMES.length];
 
 export const resolveTheme = (
   t: Theme,
@@ -24,6 +32,7 @@ export function readTheme(): Theme {
 }
 
 const SYSTEM_DARK = "(prefers-color-scheme: dark)";
+const listeners = new Set<() => void>();
 
 export function applyTheme(t: Theme) {
   const systemDark = window.matchMedia?.(SYSTEM_DARK).matches ?? false;
@@ -34,7 +43,19 @@ export function applyTheme(t: Theme) {
   } catch {
     // Almacenamiento bloqueado: el tema vive solo en esta pestaña.
   }
+  for (const l of listeners) l();
 }
+
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => listeners.delete(l);
+};
+
+/** Tema elegido, vivo: se re-renderiza al cambiarlo desde cualquier sitio.
+ * ponytail: la foto es localStorage; con el almacenamiento bloqueado se ve
+ * «sistema» aunque el tema aplicado sea otro. */
+export const useTheme = (): Theme =>
+  useSyncExternalStore(subscribe, readTheme, () => "system");
 
 /** Con «sistema», sigue los cambios del sistema en vivo. Devuelve la baja. */
 export function followSystem(get: () => Theme): () => void {
