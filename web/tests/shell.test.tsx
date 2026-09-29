@@ -109,7 +109,7 @@ describe("Shell", () => {
     ).toBe(true);
   });
 
-  it("en las rutas de calendario el raíl plegado es de iconos", async () => {
+  it("en las rutas de calendario el raíl plegado es el mismo que en el resto", async () => {
     window.localStorage.setItem("esencial.sidebar", "collapsed");
     renderAt("/plan-fuerza");
     // El submenú de la sección vive sobre el calendario (misma fila que en móvil).
@@ -118,13 +118,12 @@ describe("Shell", () => {
     expect(chips.textContent).toContain("Plantillas");
 
     const aside = document.querySelector("aside") as HTMLElement;
-    const deporte = aside.querySelector('a[aria-label="Deporte"]');
-    // Los destinos siguen ahí, con su nombre accesible, pero sin texto visible.
-    expect(deporte?.getAttribute("href")).toBe("/plan-fuerza");
-    expect(aside.textContent).not.toContain("Deporte");
-    expect(aside.textContent).not.toContain("Ajustes");
-    expect(aside.textContent).not.toContain("Cerrar sesión");
-    // Sin etiqueta, pero con icono: salir sigue a mano con el raíl compacto.
+    // Raíl M3E de 96 px: cada sección con su etiqueta visible, como en Hoy.
+    for (const name of ["Hoy", "Deporte", "Nutrición"]) {
+      expect(aside.textContent).toContain(name);
+    }
+    expect(aside.querySelector('a[aria-label="Deporte"]')).toBeNull();
+    // Búsqueda, Ajustes y salir van solo con icono, como en cualquier ruta.
     expect(
       aside.querySelector('button[aria-label="Cerrar sesión"]'),
     ).not.toBeNull();

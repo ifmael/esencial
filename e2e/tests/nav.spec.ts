@@ -250,8 +250,7 @@ test.describe("MENÚ — secciones colapsables", () => {
     await expect.poll(width).toBeGreaterThan(200); // menú completo
 
     await aside.getByRole("button", { name: "Ocultar menú" }).click();
-    // Raíl M3E colapsado: 96 px fuera del calendario (80 en él, ver
-    // calendar-layout.spec.ts).
+    // Raíl M3E colapsado: 96 px en todas las rutas.
     await expect.poll(width).toBeLessThanOrEqual(96);
     await expect(aside.getByRole("link", { name: "Hoy" })).toBeVisible();
 
@@ -322,7 +321,7 @@ test.describe("MENÚ — secciones colapsables", () => {
     await expect(aside.getByRole("link", { name: "Hoy" })).toBeInViewport();
   });
 
-  test("el menú de crear no se recorta en el raíl compacto", async ({
+  test("el menú de crear no se recorta en el raíl plegado", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -331,7 +330,7 @@ test.describe("MENÚ — secciones colapsables", () => {
     );
     await page.goto("/plan-fuerza");
     const aside = page.locator("aside");
-    await expect.poll(() => aside.evaluate((el) => el.clientWidth)).toBe(80);
+    await expect.poll(() => aside.evaluate((el) => el.clientWidth)).toBe(96);
     await aside.getByRole("button", { name: "Crear" }).click();
     const items = page.getByRole("menuitem");
     await expect(items).toHaveCount(3);

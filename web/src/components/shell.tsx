@@ -1,8 +1,8 @@
 // Armazón de la app (M3 Expressive):
 // - Escritorio: raíl de navegación M3E con el menú FAB arriba y el indicador
 //   activo en pastilla (cambia de forma y la etiqueta gana peso). El usuario lo
-//   expande a cajón con submenús o lo pliega; en las rutas de calendario el
-//   raíl plegado es compacto (80 px, AGENTS.md) para ceder ancho.
+//   expande a cajón con submenús o lo pliega (raíl de 96 px con etiquetas en
+//   todas las rutas).
 // - Móvil: barra de navegación inferior M3 con área segura y FAB flotante.
 // - Submenú de la sección en las rutas de calendario: grupo de botones
 //   conectados sobre la rejilla.
@@ -68,9 +68,9 @@ const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href);
 
 /** Rutas de calendario (fuerza y comidas): el calendario manda, así que la
- * página se queda sin cabecera y ocupa la ventana entera. Plegado, el raíl
- * es compacto, y el submenú de la sección va como grupo conectado sobre la
- * rejilla; abajo, un hueco reservado para acciones futuras. */
+ * página se queda sin cabecera y ocupa la ventana entera. El submenú de la
+ * sección va como grupo conectado sobre la rejilla; abajo, un hueco reservado
+ * para acciones futuras. */
 const CALENDAR_ROUTES: Record<string, true> = {
   "/plan-fuerza": true,
   "/plan-recetas": true,
@@ -112,21 +112,16 @@ function RailItem({
   icon: Icon,
   active,
   current,
-  compact,
 }: {
   href: string;
   label: string;
   icon: IconType;
   active: boolean;
   current: boolean;
-  /** Raíl de 80 px (calendario): la etiqueta va solo en aria-label/title. */
-  compact: boolean;
 }) {
   return (
     <Link
       to={href}
-      aria-label={compact ? label : undefined}
-      title={compact ? label : undefined}
       aria-current={current ? "page" : undefined}
       className={cx(
         "group flex w-full flex-col items-center gap-1 py-1",
@@ -144,16 +139,14 @@ function RailItem({
       >
         <Icon filled={active} />
       </span>
-      {compact ? null : (
-        <span
-          className={cx(
-            "type-move text-label-m",
-            active ? "font-extrabold" : "font-medium",
-          )}
-        >
-          {label}
-        </span>
-      )}
+      <span
+        className={cx(
+          "type-move text-label-m",
+          active ? "font-extrabold" : "font-medium",
+        )}
+      >
+        {label}
+      </span>
     </Link>
   );
 }
@@ -180,7 +173,7 @@ function FabMenu({
 }) {
   const [open, setOpen] = useState(false);
   // El raíl tiene `overflow-y-auto` (y con él `overflow-x`), que recortaría un
-  // menú `absolute` a sus 80–96 px: en el raíl el menú va `fixed`, bajo el FAB.
+  // menú `absolute` a sus 96 px: en el raíl el menú va `fixed`, bajo el FAB.
   const [anchor, setAnchor] = useState<{ top: number; left: number }>();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -278,9 +271,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const calendarRoute = CALENDAR_ROUTES[pathname] === true;
   // Solo lo pliega el usuario: navegar nunca cambia el menú.
   const collapsed = menuPref === "collapsed";
-  // Raíl compacto de 80 px (sin etiquetas) solo en el calendario; el resto del
-  // tiempo el raíl colapsado mide 96 px con etiquetas, como pide M3E.
-  const compact = collapsed && calendarRoute;
   const navSection = NAV.find((section) => section.href === pathname);
   const palette = useCommandPalette();
   const section = sectionOf(pathname);
@@ -315,7 +305,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             icon={s.icon}
             active={sectionActive(pathname, s)}
             current={isActive(pathname, s.href)}
-            compact={compact}
           />
         </div>
       ))}
@@ -423,11 +412,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             // `lg:z-10`: `sticky` abre un contexto de apilamiento; sin z-index el
             // `main` (posterior en el DOM) pinta encima del menú de crear.
             "hidden shrink-0 flex-col bg-surface py-5 lg:sticky lg:top-0 lg:z-10 lg:flex lg:h-dvh lg:overflow-y-auto transition-[width] motion-spatial",
-            collapsed
-              ? compact
-                ? "w-20 items-center gap-6 px-2"
-                : "w-24 items-center gap-6 px-2"
-              : "w-72 gap-6 px-3",
+            collapsed ? "w-24 items-center gap-6 px-2" : "w-72 gap-6 px-3",
           )}
         >
           <div
