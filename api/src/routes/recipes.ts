@@ -105,6 +105,14 @@ export const recipes = new Hono<{ Bindings: Env }>()
   .get("/", (c) =>
     guard(async () => {
       const db = getDb(c.env);
+      // Solo id y nombre (la búsqueda ⌘K): una consulta en vez de ~5 por receta.
+      if (c.req.query("summary"))
+        return json(
+          await rows(
+            db,
+            "SELECT id, name FROM recipes ORDER BY name COLLATE NOCASE",
+          ),
+        );
       const ids = await rows(
         db,
         "SELECT id FROM recipes ORDER BY name COLLATE NOCASE",

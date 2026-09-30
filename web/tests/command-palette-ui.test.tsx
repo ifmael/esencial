@@ -16,10 +16,11 @@ function stubApi() {
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.includes("/api/recipes"))
-        return Response.json([
-          { id: 4, name: "Crema de calabaza", tags: [], ingredients: [] },
-        ]);
+      // La paleta solo necesita nombres: el resumen (una consulta) y no la
+      // lista hidratada, que con 100 recetas tarda ~3 s en producción.
+      if (url.includes("/api/recipes?summary=1"))
+        return Response.json([{ id: 4, name: "Crema de calabaza" }]);
+      if (url.includes("/api/recipes")) return Response.json([]);
       if (url.includes("/api/exercises"))
         return Response.json([{ id: 9, name: "Press banca", tags: [] }]);
       if (url.includes("/api/templates")) return Response.json([]);

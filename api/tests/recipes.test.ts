@@ -59,6 +59,21 @@ describe("POST /api/recipes", () => {
     expect(list.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("GET list ?summary=1 returns only id and name, ordered by name", async () => {
+    for (const name of ["caldo", "arroz", "Bacalao"])
+      expect((await post("/api/recipes", { name })).status).toBe(201);
+    const res = await get("/api/recipes?summary=1");
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as Record<string, unknown>[];
+    expect(list.map((r) => Object.keys(r).sort())).toEqual(
+      list.map(() => ["id", "name"]),
+    );
+    const mine = list
+      .map((r) => r.name)
+      .filter((n) => ["caldo", "arroz", "Bacalao"].includes(String(n)));
+    expect(mine).toEqual(["arroz", "Bacalao", "caldo"]);
+  });
+
   it("400 {error, field} without name, nothing written", async () => {
     const before = await (await get("/api/recipes")).json();
     const res = await post("/api/recipes", { servings: 2 });
