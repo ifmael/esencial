@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { type ExerciseInput, exerciseSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
-import { listExercises, loadExercise, row, rows } from "../repo";
+import { listExercises, loadExercise, row } from "../repo";
 import { zBody } from "../validation";
 
 function tagStatements(
