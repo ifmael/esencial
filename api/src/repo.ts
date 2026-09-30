@@ -43,23 +43,28 @@ type IngredientMacros = {
   grams_per_unit: unknown;
 };
 
+/** Gramos (o ml) por unidad de medida directa; «ud» va aparte (grams_per_unit). */
+const GRAMS: Record<string, number> = { gr: 1, g: 1, ml: 1, kg: 1000, l: 1000 };
+
 /** Macros por ración a partir de los ingredientes unidos a `foods` (valores
  *  por 100 g/ml). «ud» se convierte con grams_per_unit; lo opcional y lo que va
- *  sin cantidad («al gusto») no cuentan. Sin raciones, la receta es una. */
+ *  sin cantidad («al gusto») no cuentan. Sin raciones, la receta es una. Si no
+ *  se pudo contar nada, sale aproximada: «0 kcal» no es un dato. */
 export function nutritionPerServing(
   ingredients: IngredientMacros[],
   servings: unknown,
 ): Nutrition {
   const sum = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
   let approximate = false;
+  let counted = 0;
   for (const i of ingredients) {
     if (i.optional || i.quantity === null) continue;
     const unit = String(i.unit ?? "");
     const grams =
       i.kcal === null
         ? null
-        : unit === "gr" || unit === "g" || unit === "ml"
-          ? Number(i.quantity)
+        : unit in GRAMS
+          ? Number(i.quantity) * GRAMS[unit]
           : unit === "ud" && i.grams_per_unit !== null
             ? Number(i.quantity) * Number(i.grams_per_unit)
             : null;
@@ -67,6 +72,7 @@ export function nutritionPerServing(
       approximate = true;
       continue;
     }
+    counted += 1;
     for (const k of ["kcal", "protein", "fat", "carbs"] as const)
       sum[k] += (grams * Number(i[k])) / 100;
   }
@@ -76,7 +82,7 @@ export function nutritionPerServing(
     protein: Math.round(sum.protein / n),
     fat: Math.round(sum.fat / n),
     carbs: Math.round(sum.carbs / n),
-    approximate,
+    approximate: approximate || counted === 0,
   };
 }
 

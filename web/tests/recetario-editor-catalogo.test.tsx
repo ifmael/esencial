@@ -61,6 +61,16 @@ describe("editor de receta: catálogo de alimentos", () => {
       screen.getByRole("combobox", { name: "Ingrediente 2 alimento" }),
       { target: { value: "Pollo" } },
     );
+    // «pechuga» no se puede pasar a gramos; en «ud» sí (Pollo pesa 150 g/ud).
+    expect(
+      screen.getByText("No cuenta: «pechuga» no se puede pasar a gramos"),
+    ).toBeDefined();
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Ingrediente 2 unidad" }),
+      {
+        target: { value: "ud" },
+      },
+    );
     expect(screen.getByText("Cuenta como «Pollo»")).toBeDefined();
     const body = await save(server);
     expect(body.ingredients[1]).toMatchObject({ food: "Pollo", foodId: 12 });
@@ -105,6 +115,12 @@ describe("editor de receta: catálogo de alimentos", () => {
       carbs: 0,
       gramsPerUnit: 150,
     });
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Ingrediente 2 unidad" }),
+      {
+        target: { value: "ud" },
+      },
+    );
     expect(screen.getByText("Cuenta como «Pechuga de pavo»")).toBeDefined();
     const created = server.foods.find((f) => f.name === "Pechuga de pavo");
     const body = await save(server);
@@ -138,6 +154,27 @@ describe("editor de receta: catálogo de alimentos", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Crear" }));
     expect(
       await within(dialog).findByText("Ya existe un alimento con ese nombre"),
+    ).toBeDefined();
+  });
+
+  it("enlaza sin fijarse en mayúsculas, tildes ni espacios", async () => {
+    const server = makeServer([recipe]);
+    await openEditor(server);
+    await screen.findByText("Cuenta como «Arroz»");
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Ingrediente 1 alimento" }),
+      { target: { value: " ÁRROZ " } },
+    );
+    expect(screen.getByText("Cuenta como «Arroz»")).toBeDefined();
+    const body = await save(server);
+    expect(body.ingredients[0]).toMatchObject({ foodId: 5 });
+  });
+
+  it("avisa si la unidad no se puede pasar a gramos aunque esté enlazado", async () => {
+    await openEditor(makeServer([recipe]));
+    // ajo: 1 «diente», enlazado a «Ajo» (que sí tiene peso por unidad, pero en «ud»)
+    expect(
+      await screen.findByText("No cuenta: «diente» no se puede pasar a gramos"),
     ).toBeDefined();
   });
 

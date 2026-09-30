@@ -707,7 +707,9 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   `nutrition {kcal, protein, fat, carbs, approximate}` **por ración** (sin
   raciones, la receta es una). No cuentan lo opcional ni lo que va sin cantidad;
   un ingrediente con cantidad sin `foodId` o en una unidad sin conversión deja
-  `approximate: true`. La ficha lo pinta en «Por ración».
+  `approximate: true`, y también una receta en la que **no se pudo contar nada**
+  («0 kcal» no es un dato). Unidades directas: `gr`/`g`/`ml`/`kg`/`l`; `ud` usa
+  `grams_per_unit`. La ficha lo pinta en «Por ración».
 - `foodId` se valida contra el catálogo en POST/PUT (400
   `{field:'ingredients.N.foodId'}`).
 - **Editor** (`receta-editor.tsx`): el campo del alimento lleva un `<datalist>`
@@ -731,7 +733,16 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   toca. Al final enlaza cualquier ingrediente cuyo texto sea un alimento exacto
   del catálogo (las 4 recetas que no están en el libro). Rangos del libro
   («4-5») → el mínimo; «<1 g» → sin cantidad; `kg`/`l` → `gr`/`ml`; lonchas,
-  ramitas y trozos → `ud`. Las raciones de cada receta **no cambian**.
+  ramitas y trozos → `ud`. Las raciones de cada receta **no cambian**. Agua,
+  hielo y sal van enlazados a alimentos de 0 kcal (si no, casi todas las recetas
+  saldrían aproximadas). Son **opcionales** (no cuentan): lo que no se come (la
+  costra de sal y su huevo en «Pescado a la sal», la corteza de piña), las
+  ralladuras y pieles, las variantes (hummus) y los batidos 2-4 de «4 smoothies
+  4U» (la receta tiene 1 ración). «Limón/Naranja (… zumo …)» cuenta como su zumo.
+- 22 alimentos del catálogo no venían de Nutrirutina (apio, corvina, salsa de
+  soja, uvas pasas…): sus valores por 100 g y los pesos por unidad son
+  **estimaciones estándar** (tipo BEDCA/USDA) hechas al generar 0014, no datos de
+  etiqueta.
 - Las fuentes de 0014 (respuestas de Gemini y el mapeo) no viven en el repo: la
-  migración se generó una vez y es el dato. Un arreglo posterior va en su propio
-  número.
+  migración es una **foto congelada**, no regenerable. Un arreglo posterior va en
+  su propio número.
