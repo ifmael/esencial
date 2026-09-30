@@ -60,6 +60,8 @@ describe("0014: ingredientes del libro", () => {
     });
     expect(r.ingredients[0].foodId).not.toBeNull();
     expect(r.nutrition.approximate).toBe(false);
+    // Calculado a mano con el catálogo: 2 raciones, huevos incluidos.
+    expect(r.nutrition.kcal).toBe(291);
   });
 
   it("una receta editada a mano se queda como la dejó el usuario", async () => {
