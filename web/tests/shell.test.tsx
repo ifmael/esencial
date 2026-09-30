@@ -9,6 +9,8 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import type { DayData } from "../src/lib/day";
@@ -234,6 +236,53 @@ describe("Shell M3E", () => {
     await waitFor(() =>
       expect(window.location.pathname).toBe("/recetario/nueva"),
     );
+  });
+
+  it("el menú FAB no vuelve abierto al regresar a la ruta donde se abrió", async () => {
+    renderAt("/");
+    await screen.findAllByText("Deporte");
+    const aside = document.querySelector("aside") as HTMLElement;
+    fireEvent.click(within(aside).getByRole("button", { name: "Crear" }));
+    fireEvent.click(within(aside).getByRole("menuitem", { name: "Receta" }));
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/recetario/nueva"),
+    );
+    fireEvent.click(within(aside).getAllByRole("link", { name: /Hoy/ })[0]);
+    await waitFor(() => expect(window.location.pathname).toBe("/"));
+    expect(within(aside).queryByRole("menu")).toBeNull();
+  });
+
+  it("el FAB abre aunque se pulse justo al montar, antes de los efectos", async () => {
+    // Fuera de `act`, como un usuario rápido (o el CI cargado): el clic llega
+    // tras el commit y antes de que React vacíe los efectos del montaje. Cerrar
+    // «al cambiar de ruta» con un efecto lo cerraba también al montar.
+    const env = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+    env.IS_REACT_ACT_ENVIRONMENT = false;
+    window.history.pushState({}, "", "/");
+    const host = document.body.appendChild(document.createElement("div"));
+    const root = createRoot(host);
+    try {
+      const mounted = Promise.withResolvers<HTMLElement>();
+      const seen = new MutationObserver(() => {
+        const fab = host.querySelector<HTMLElement>(
+          'aside button[aria-label="Crear"]',
+        );
+        if (fab) mounted.resolve(fab);
+      });
+      seen.observe(host, { childList: true, subtree: true });
+      root.render(<App />);
+      const fab = await mounted.promise;
+      seen.disconnect();
+      fab.click();
+      const settled = Promise.withResolvers<void>();
+      setTimeout(settled.resolve, 50);
+      await settled.promise;
+      expect(host.querySelector('aside [role="menu"]')).not.toBeNull();
+    } finally {
+      env.IS_REACT_ACT_ENVIRONMENT = true;
+      await act(async () => root.unmount());
+      host.remove();
+    }
   });
 
   it("cada acción del menú FAB lleva el color de su sección", async () => {
