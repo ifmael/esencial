@@ -45,6 +45,19 @@
     var(--color-surface-container-high)
   );
   --color-body: var(--color-outline-variant);
+  /* Grado de un músculo en su ejercicio: el principal va en primary y los
+     otros dos bajan de intensidad (luminosidad, no tono: se distinguen igual
+     con daltonismo). */
+  --color-muscle-secondary: color-mix(
+    in srgb,
+    var(--color-primary) 55%,
+    var(--color-surface-container-high)
+  );
+  --color-muscle-stabilizer: color-mix(
+    in srgb,
+    var(--color-primary) 28%,
+    var(--color-surface-container-high)
+  );
 
   /* Color de la sección activa: lo reescriben [data-section] y el color
      dinámico de receta. Deporte = primary, Nutrición = tertiary, Hoy = secondary.
@@ -134,6 +147,8 @@
   --color-muscle: var(--color-muscle);
   --color-muscle-strong: var(--color-muscle-strong);
   --color-body: var(--color-body);
+  --color-muscle-secondary: var(--color-muscle-secondary);
+  --color-muscle-stabilizer: var(--color-muscle-stabilizer);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
   --color-accent-container: var(--accent-container);

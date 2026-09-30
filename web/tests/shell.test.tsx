@@ -28,7 +28,7 @@ const press: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pecho"],
-  regions: ["chest-lower"],
+  regions: [{ region: "chest-lower", role: "primary" }],
   kind: "strength",
 };
 

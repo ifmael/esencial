@@ -21,8 +21,13 @@ import {
   useNavigate,
   useParams,
 } from "react-router";
+import { Body3D, hasWebGL } from "../components/body-3d/body-3d";
 import { BodyMap, type BodyView } from "../components/body-map/body-map";
-import { regionLabel } from "../components/body-map/regions";
+import {
+  MUSCLE_REGIONS,
+  regionLabel,
+  regionsOfGroup,
+} from "../components/body-map/regions";
 import { EmptyState, Loader, Monogram, Shape } from "../components/expressive";
 import {
   GROUP_LABELS,
@@ -123,20 +128,30 @@ function ExercisePicker({
   const [region, setRegion] = useState<string | null>(null);
   const [group, setGroup] = useState<string | null>(null);
   const [view, setView] = useState<BodyView>("front");
+  // El lienzo 3D no tiene botones: con él, los músculos del grupo elegido (o
+  // del músculo elegido) se ofrecen también como fichas, el camino por teclado.
+  const [threeD] = useState(hasWebGL);
+  const pickRegion = (id: string) => {
+    setRegion((r) => (r === id ? null : id));
+    setGroup(null);
+  };
+  const muscleGroup =
+    group ?? MUSCLE_REGIONS.find((r) => r.id === region)?.group ?? null;
 
   const q = search.trim().toLowerCase();
   const picks = exercises.filter((e) => {
     // Dos niveles excluyentes: la sub-región es lo fino y el grupo padre es lo
     // ancho. Como toda sub-región cuelga de un grupo que el ejercicio tiene
     // como tag, filtrar por el grupo devuelve también sus sub-regiones.
-    if (region !== null && !e.regions.includes(region)) return false;
+    if (region !== null && !e.regions.some((r) => r.region === region))
+      return false;
     if (group !== null && !e.tags.includes(group)) return false;
     if (
       q &&
       !(
         e.name.toLowerCase().includes(q) ||
         e.tags.some((t) => t.toLowerCase().includes(q)) ||
-        e.regions.some((r) => regionLabel(r).toLowerCase().includes(q))
+        e.regions.some((r) => regionLabel(r.region).toLowerCase().includes(q))
       )
     )
       return false;
@@ -158,17 +173,24 @@ function ExercisePicker({
         Añadir ejercicio
       </h2>
 
-      {/* El dibujo manda: su alto fija el tamaño de sus músculos; la lista
+      {/* El modelo manda: su alto fija el tamaño de sus músculos; la lista
           crece debajo y la página se desplaza como cualquier otra. */}
-      <div className="flex justify-center rounded-l bg-surface-container-high p-3">
-        <BodyMap
+      <div className="rounded-l bg-surface-container-high p-3">
+        <Body3D
+          regions={region ? [{ region, role: "primary" }] : []}
+          onSelect={pickRegion}
           view={view}
-          regions={region ? [region] : []}
-          onSelect={(id) => {
-            setRegion((r) => (r === id ? null : id));
-            setGroup(null);
-          }}
-          className="h-96 w-auto max-w-full"
+          className="h-96 w-full"
+          fallback={
+            <div className="flex justify-center">
+              <BodyMap
+                view={view}
+                regions={region ? [{ region, role: "primary" }] : []}
+                onSelect={pickRegion}
+                className="h-96 w-auto max-w-full"
+              />
+            </div>
+          }
         />
       </div>
 
@@ -232,6 +254,31 @@ function ExercisePicker({
         ))}
       </div>
 
+      {threeD && muscleGroup && (
+        <div
+          role="group"
+          aria-labelledby="pick-muscles-label"
+          className="flex flex-wrap items-center gap-2"
+        >
+          <span
+            id="pick-muscles-label"
+            className="text-label-l text-on-surface-variant"
+          >
+            Músculo:
+          </span>
+          {regionsOfGroup(muscleGroup).map((r) => (
+            <Chip
+              key={r.id}
+              pressed={region === r.id}
+              onClick={() => pickRegion(r.id)}
+            >
+              {region === r.id && <CheckIcon width={18} height={18} />}
+              {r.label}
+            </Chip>
+          ))}
+        </div>
+      )}
+
       <p className="px-1 text-body-m text-on-surface-variant">
         {region ? `Músculo: ${filter}` : `Grupo: ${filter ?? "Todos"}`}
       </p>
@@ -274,7 +321,9 @@ function ExercisePicker({
                         id={`pick-regions-${e.id}`}
                         className="block text-body-s text-on-surface-variant"
                       >
-                        {e.regions.map(regionLabel).join(" · ")}
+                        {e.regions
+                          .map((r) => regionLabel(r.region))
+                          .join(" · ")}
                       </span>
                     )}
                   </span>

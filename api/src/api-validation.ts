@@ -31,6 +31,9 @@ export type RecipeInput = z.infer<typeof recipeSchema>;
 
 export const KINDS = ["strength", "running", "bike"] as const;
 
+/** Grado de implicación de un músculo en un ejercicio, de más a menos. */
+export const REGION_ROLES = ["primary", "secondary", "stabilizer"] as const;
+
 export const exerciseSchema = z
   .object({
     name: z.string().min(1, "Exercise name is required"),
@@ -46,23 +49,31 @@ export const exerciseSchema = z
       .optional()
       .nullable(),
     tags: z.array(z.string().min(1)).min(1, "At least one tag is required"),
-    // Sub-regiones del mapa anatómico (opcionales: un ejercicio puede quedarse
-    // en el nivel del grupo).
-    regions: z.array(z.string().min(1)).optional().default([]),
+    // Sub-regiones del mapa anatómico con su grado (opcionales: un ejercicio
+    // puede quedarse en el nivel del grupo).
+    regions: z
+      .array(
+        z.object({ region: z.string().min(1), role: z.enum(REGION_ROLES) }),
+      )
+      .optional()
+      .default([]),
     kind: z.enum(KINDS).default("strength"),
   })
   .superRefine((v, ctx) => {
     // Fail closed: la sub-región tiene que existir y colgar de un grupo que el
     // ejercicio ya tenga como tag, o filtrar por el grupo padre dejaría de
     // encontrarlo (los dos niveles se contradirían).
-    for (const region of v.regions) {
+    const seen = new Set<string>();
+    for (const { region } of v.regions) {
       const parent = MUSCLE_REGION_GROUPS[region];
-      if (parent && v.tags.includes(parent)) continue;
-      ctx.addIssue({
-        code: "custom",
-        path: ["regions"],
-        message: `region ${region} must hang from one of the exercise tags`,
-      });
+      const message = seen.has(region)
+        ? `region ${region} is repeated`
+        : parent && v.tags.includes(parent)
+          ? null
+          : `region ${region} must hang from one of the exercise tags`;
+      seen.add(region);
+      if (!message) continue;
+      ctx.addIssue({ code: "custom", path: ["regions"], message });
       return;
     }
   });
