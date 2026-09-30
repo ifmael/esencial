@@ -8,14 +8,16 @@
 // el lienzo no tiene foco ni botones, solo un nombre que lista lo marcado.
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type ExerciseRegion, ROLE_LABELS } from "../../lib/exercises";
+import { isSoftwareRenderer } from "../../lib/webgl";
 import type { BodyView } from "../body-map/body-map";
 import { regionLabel } from "../body-map/regions";
 import { Loader } from "../expressive";
 import { cx } from "../ui";
 import type { SceneHandle } from "./scene";
 
-/** WebGL de verdad: el global existe y el navegador da un contexto (una GPU
- *  vetada devuelve null). Sin el global (jsdom) ni se intenta. El contexto de
+/** WebGL de verdad: el global existe, el navegador da un contexto (una GPU
+ *  vetada devuelve null) y lo pinta una GPU, no un renderizador por software
+ *  (`isSoftwareRenderer`). Sin el global (jsdom) ni se intenta. El contexto de
  *  prueba se suelta al acabar: Chrome tiene un tope de contextos vivos y, al
  *  pasarlo, pierde el más antiguo, que puede ser el del propio visor. Lo usa
  *  también quien tenga que ofrecer por su cuenta el camino por teclado que el
@@ -26,8 +28,13 @@ export function hasWebGL(): boolean {
   const gl = (canvas.getContext("webgl2") ??
     canvas.getContext("webgl")) as WebGLRenderingContext | null;
   if (!gl) return false;
+  // La extensión da el nombre real; sin ella (obsoleta en Firefox), RENDERER.
+  const info = gl.getExtension?.("WEBGL_debug_renderer_info");
+  const renderer = gl.getParameter?.(
+    info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER,
+  );
   gl.getExtension?.("WEBGL_lose_context")?.loseContext();
-  return true;
+  return !isSoftwareRenderer(renderer);
 }
 
 export function Body3D({

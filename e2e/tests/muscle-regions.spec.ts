@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { MUSCLE_REGION_GROUPS } from "../../api/src/muscle-regions";
+import { isSoftwareRenderer } from "../../web/src/lib/webgl";
 import { apiRequest } from "./helpers";
 
 /** Pulsa un músculo del mapa por su forma pintada. Dos motivos: Playwright
@@ -52,6 +53,24 @@ async function findOnModel(page: Page, model: Locator, label: string) {
   throw new Error(`«${label}» no aparece en el modelo 3D`);
 }
 
+/** Sin GPU (el CI: Chromium pinta WebGL con SwiftShader, o no da contexto) la
+ *  app enseña el mapa SVG en vez del visor 3D: sus tests no tienen qué probar.
+ *  Misma regla que `hasWebGL()`. */
+async function skipWithoutGPU(page: Page) {
+  const renderer = await page.evaluate(() => {
+    const gl = document.createElement("canvas").getContext("webgl2");
+    if (!gl) return "sin contexto WebGL";
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    return String(
+      gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER),
+    );
+  });
+  test.skip(
+    renderer === "sin contexto WebGL" || isSoftwareRenderer(renderer),
+    `sin GPU (${renderer})`,
+  );
+}
+
 /** Sub-regiones musculares: el modelo filtra por el músculo concreto y las
  *  fichas de grupo devuelven todas las sub-regiones de ese grupo. */
 test.describe("SUB-REGIONES — el mapa filtra fino", () => {
@@ -60,6 +79,7 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
   test("el modelo 3D filtra por el músculo que se pulsa, también los fabricados", async ({
     page,
   }) => {
+    await skipWithoutGPU(page);
     await page.goto("/plantillas/nueva");
     const picker = page.getByRole("region", { name: "Añadir ejercicio" });
     const model = picker.getByRole("img", { name: /^Mapa muscular 3D/ });
@@ -116,6 +136,7 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
   test("con el modelo 3D, el teclado elige el músculo con las fichas de su grupo", async ({
     page,
   }) => {
+    await skipWithoutGPU(page);
     await page.goto("/plantillas/nueva");
     const picker = page.getByRole("region", { name: "Añadir ejercicio" });
     await expect(
@@ -184,6 +205,7 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
     page,
     request,
   }) => {
+    await skipWithoutGPU(page);
     const list = await apiRequest<{ id: number; name: string }[]>(
       request,
       "GET",

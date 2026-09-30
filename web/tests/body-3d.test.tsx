@@ -17,11 +17,22 @@ const regions = [
 
 const loseContext = vi.fn();
 
-function withWebGL() {
+/** WebGL con el renderizador indicado; `null` = el navegador no lo revela
+ *  (Firefox con `resistFingerprinting`, algunos Safari). */
+function withWebGL(
+  renderer: string | null = "ANGLE (Apple, ANGLE Metal Renderer: Apple M2)",
+) {
   vi.stubGlobal("WebGL2RenderingContext", class {});
+  const info = { UNMASKED_RENDERER_WEBGL: 0x9246 };
   const gl = {
     getExtension: (name: string) =>
-      name === "WEBGL_lose_context" ? { loseContext } : null,
+      name === "WEBGL_lose_context"
+        ? { loseContext }
+        : name === "WEBGL_debug_renderer_info" && renderer !== null
+          ? info
+          : null,
+    getParameter: (p: number) =>
+      p === info.UNMASKED_RENDERER_WEBGL ? renderer : null,
   } as never;
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(gl);
 }
@@ -38,6 +49,29 @@ describe("Body3D", () => {
     render(<Body3D regions={regions} fallback={<p>dibujo SVG</p>} />);
     expect(screen.getByText("dibujo SVG")).toBeDefined();
     expect(mount).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)",
+    "llvmpipe (LLVM 15.0.7, 256 bits)",
+    "Microsoft Basic Render Driver",
+  ])(
+    "sin GPU (%s) pinta el respaldo: por software el 3D congela la página",
+    (renderer) => {
+      withWebGL(renderer);
+      render(<Body3D regions={regions} fallback={<p>dibujo SVG</p>} />);
+      expect(screen.getByText("dibujo SVG")).toBeDefined();
+      expect(mount).not.toHaveBeenCalled();
+    },
+  );
+
+  it("si el navegador no revela el renderizador, se fía y pinta el 3D", async () => {
+    withWebGL(null);
+    mount.mockResolvedValue(handle);
+    render(<Body3D regions={regions} fallback={<p>dibujo SVG</p>} />);
+    expect(
+      await screen.findByRole("img", { name: /^Músculos:/ }),
+    ).toBeDefined();
   });
 
   it("suelta el contexto de prueba: Chrome limita los contextos WebGL vivos", async () => {

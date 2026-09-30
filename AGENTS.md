@@ -407,6 +407,13 @@ en su cabecera.
   que es el camino por teclado. Sin WebGL no hacen falta: los botones son los del
   SVG. jsdom no tiene WebGL, así que los tests unitarios ven el SVG salvo que
   sustituyan `body-3d/scene`.
+- **Sin GPU no hay 3D**: `hasWebGL()` descarta los renderizadores por software
+  (SwiftShader, llvmpipe, Microsoft Basic Render: `lib/webgl.ts`) y pinta el SVG,
+  porque así el visor bloquea el hilo principal (~0,9 s por pintado en un M4 Pro,
+  mucho más en el runner) y congelaba el CI. Chromium headless usa SwiftShader:
+  la config de e2e fuerza `--use-angle=metal` en macOS para que los tests del 3D
+  corran en local, y en el CI (Linux sin GPU) se saltan (`skipWithoutGPU` en
+  `muscle-regions.spec.ts`); el respaldo SVG sí se prueba allí.
 
 ## Taxonomía muscular: dos niveles
 
