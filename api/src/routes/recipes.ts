@@ -104,7 +104,17 @@ function childStatements(
 export const recipes = new Hono<{ Bindings: Env }>()
   .get("/", (c) =>
     guard(async () => {
-      return json(await listRecipes(getDb(c.env)));
+      const db = getDb(c.env);
+      // Solo id y nombre (la búsqueda ⌘K): una consulta y unos KB, no la lista
+      // hidratada (~337 KB).
+      if (c.req.query("summary"))
+        return json(
+          await rows(
+            db,
+            "SELECT id, name FROM recipes ORDER BY name COLLATE NOCASE",
+          ),
+        );
+      return json(await listRecipes(db));
     }),
   )
   .post("/", zBody(recipeSchema), (c) =>
