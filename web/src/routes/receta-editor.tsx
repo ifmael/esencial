@@ -17,6 +17,8 @@ import {
   PhotoIcon,
   SaveIcon,
 } from "../components/icons";
+import { NewFoodDialog } from "../components/recipes/new-food-dialog";
+import { useFoods } from "../components/recipes/use-foods";
 import {
   type FieldError,
   type Recipe,
@@ -28,6 +30,7 @@ import {
   Alert,
   Button,
   Card,
+  Checkbox,
   Chip,
   Field,
   Input,
@@ -192,6 +195,9 @@ function RecipeEditor({
   // Distingue la ELIMINACIÓN explícita (Quitar foto) del mero descarte del
   // reintento: solo la primera vacía la foto.
   const photoRemovedRef = useRef(false);
+  const { foods, create: createFood } = useFoods();
+  // Fila del ingrediente para la que se está creando un alimento (o null).
+  const [creatingFor, setCreatingFor] = useState<number | null>(null);
 
   // Solo crear anima: lo pulsado (FAB, «Nueva receta») se transforma en la
   // página. Carga directa y editar no.
@@ -573,16 +579,20 @@ function RecipeEditor({
                 <li key={i} className="flex flex-wrap items-center gap-2">
                   <Input
                     aria-label={`Ingrediente ${i + 1} alimento`}
-                    className="basis-full sm:basis-0 sm:flex-1"
+                    className="basis-full"
                     placeholder="Alimento"
+                    list="foods-catalog"
                     value={row.food}
                     onChange={(e) =>
                       set(
                         "ingredients",
-                        // Otro texto puede ser otro alimento: el enlace se suelta.
+                        // El nombre exacto de un alimento del catálogo lo
+                        // enlaza; cualquier otro texto suelta el enlace.
                         setRow(draft.ingredients, i, {
                           food: e.target.value,
-                          foodId: null,
+                          foodId:
+                            foods.find((f) => f.name === e.target.value)?.id ??
+                            null,
                         }),
                       )
                     }
@@ -638,9 +648,66 @@ function RecipeEditor({
                   >
                     <CloseIcon />
                   </Button>
+                  <div className="flex basis-full flex-wrap items-center gap-x-3 text-body-s text-on-surface-variant">
+                    <label className="flex items-center gap-1">
+                      <Checkbox
+                        aria-label={`Ingrediente ${i + 1} opcional`}
+                        checked={row.optional}
+                        onChange={(e) =>
+                          set(
+                            "ingredients",
+                            setRow(draft.ingredients, i, {
+                              optional: e.target.checked,
+                            }),
+                          )
+                        }
+                      />
+                      Opcional
+                    </label>
+                    {row.foodId !== null ? (
+                      <span>
+                        {foods.some((f) => f.id === row.foodId)
+                          ? `Cuenta como «${foods.find((f) => f.id === row.foodId)?.name}»`
+                          : "Cuenta en los macros"}
+                      </span>
+                    ) : row.food.trim() ? (
+                      <>
+                        <span>No cuenta en los macros</span>
+                        <Button
+                          variant="text"
+                          aria-label={`Crear alimento para el ingrediente ${i + 1}`}
+                          onClick={() => setCreatingFor(i)}
+                        >
+                          Crear alimento
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
+            <datalist id="foods-catalog">
+              {foods.map((f) => (
+                <option key={f.id} value={f.name} />
+              ))}
+            </datalist>
+            {creatingFor !== null && (
+              <NewFoodDialog
+                initialName={draft.ingredients[creatingFor]?.food.trim() ?? ""}
+                onCreate={createFood}
+                onCreated={(food) => {
+                  set(
+                    "ingredients",
+                    setRow(draftRef.current.ingredients, creatingFor, {
+                      food: food.name,
+                      foodId: food.id,
+                    }),
+                  );
+                  setCreatingFor(null);
+                }}
+                onClose={() => setCreatingFor(null)}
+              />
+            )}
             <Button
               variant="outlined"
               className="self-start"

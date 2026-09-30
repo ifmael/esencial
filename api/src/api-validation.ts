@@ -31,6 +31,18 @@ export const recipeSchema = z.object({
 });
 export type RecipeInput = z.infer<typeof recipeSchema>;
 
+// --- Foods (catálogo para macros) --------------------------------------------
+
+/** Valores por 100 g (o 100 ml); gramsPerUnit convierte «ud» a gramos. */
+export const foodSchema = z.object({
+  name: z.string().trim().min(1, "El nombre es obligatorio"),
+  kcal: z.number().min(0),
+  protein: z.number().min(0),
+  fat: z.number().min(0),
+  carbs: z.number().min(0),
+  gramsPerUnit: z.number().positive().optional().nullable(),
+});
+
 // --- Exercises -------------------------------------------------------------
 
 export const KINDS = ["strength", "running", "bike"] as const;

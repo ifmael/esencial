@@ -122,7 +122,7 @@ describe("/recetario/:id", () => {
         }) as HTMLInputElement
       ).value,
     ).toBe("4");
-    const ingredients = screen.getAllByRole("textbox", {
+    const ingredients = screen.getAllByRole("combobox", {
       name: /^Ingrediente \d+ alimento$/,
     });
     expect((ingredients[1] as HTMLInputElement).value).toBe("pollo");

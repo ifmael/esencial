@@ -50,7 +50,7 @@ describe("editor de receta: editar", () => {
       "4",
     );
     expect(
-      value(screen.getByRole("textbox", { name: "Ingrediente 2 alimento" })),
+      value(screen.getByRole("combobox", { name: "Ingrediente 2 alimento" })),
     ).toBe("pollo");
     // La unidad es texto libre en la API: la que no está en el enum de la
     // página («g», «pechuga») se muestra tal cual, no como «—».
@@ -186,7 +186,7 @@ describe("editor de receta: editar", () => {
     renderAt("/recetario/7/editar");
     await screen.findByRole("heading", { name: "Editar receta" });
     fireEvent.change(
-      screen.getByRole("textbox", { name: "Ingrediente 1 alimento" }),
+      screen.getByRole("combobox", { name: "Ingrediente 1 alimento" }),
       { target: { value: "arroz integral" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));

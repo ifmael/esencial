@@ -709,8 +709,14 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   un ingrediente con cantidad sin `foodId` o en una unidad sin conversión deja
   `approximate: true`. La ficha lo pinta en «Por ración».
 - `foodId` se valida contra el catálogo en POST/PUT (400
-  `{field:'ingredients.N.foodId'}`). El editor lo conserva al guardar y **lo
-  suelta si cambias el texto del ingrediente** (otro texto puede ser otro alimento).
+  `{field:'ingredients.N.foodId'}`).
+- **Editor** (`receta-editor.tsx`): el campo del alimento lleva un `<datalist>`
+  con el catálogo (`useFoods`, `GET /api/foods` entero; por eso su rol es
+  `combobox`, no `textbox`). El **nombre exacto** de un alimento lo enlaza;
+  cualquier otro texto suelta el enlace. Cada fila dice si cuenta («Cuenta como
+  «Arroz»») o no, con **Crear alimento** (`NewFoodDialog`, `POST /api/foods`:
+  valores por 100 g + peso de una unidad opcional; nombre repetido → 400
+  `field:'name'`) y la casilla **Opcional** (no cuenta en los macros).
 - `0014_recetas_libro.sql` sustituye los ingredientes de 96 recetas por los del
   libro de cocina del usuario (extraídos con Gemini), enlazados a `foods`. Solo
   toca una receta si sus ingredientes siguen **exactamente** como los dejó 0012
