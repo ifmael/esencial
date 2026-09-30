@@ -27,4 +27,23 @@ test.describe("DETALLE DE EJERCICIO", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await expect.poll(height).toBeLessThan(100);
   });
+
+  test("al estrechar la ventana el visor encoge con ella, sin desplazar la página", async ({
+    page,
+  }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/ejercicios/${press.id}`);
+    // Con GPU el lienzo 3D; sin ella (el CI) el SVG de solo lectura, que ya
+    // encogía: el test solo discrimina con GPU.
+    await expect(page.locator('canvas, svg[role="img"]').first()).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        ),
+      )
+      .toBe(0);
+  });
 });

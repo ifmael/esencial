@@ -171,16 +171,21 @@ function FabMenu({
   extended: boolean;
   placement: "rail" | "float";
 }) {
-  const [open, setOpen] = useState(false);
+  // La ruta en la que se abrió: navegar lo cierra sin un efecto. Con
+  // `useEffect(() => setOpen(false), [pathname])` se cerraba también al montar,
+  // y un clic que llegaba antes de ese efecto se perdía. Al cambiar de ruta se
+  // olvida en el propio render (si no, volver a ella lo reabriría).
+  const [openAt, setOpenAt] = useState<string | null>(null);
   // El raíl tiene `overflow-y-auto` (y con él `overflow-x`), que recortaría un
   // menú `absolute` a sus 96 px: en el raíl el menú va `fixed`, bajo el FAB.
   const [anchor, setAnchor] = useState<{ top: number; left: number }>();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  useEffect(() => setOpen(false), [pathname]);
+  const open = openAt === pathname;
+  if (openAt !== null && !open) setOpenAt(null);
   useEffect(() => {
     if (!open) return;
-    return pushEscape(() => setOpen(false));
+    return pushEscape(() => setOpenAt(null));
   }, [open]);
   const items = [
     {
@@ -194,7 +199,7 @@ function FabMenu({
   return (
     <>
       {/* Velo: separa el menú de la página que tapa, y pulsarlo lo cierra. */}
-      {open ? <Scrim onClose={() => setOpen(false)} /> : null}
+      {open ? <Scrim onClose={() => setOpenAt(null)} /> : null}
       <div
         // `relative` y `fixed` a la vez: gana el que Tailwind emita después
         // (relative), y el FAB flotante acababa al final del documento. Abierto
@@ -213,7 +218,7 @@ function FabMenu({
           onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect();
             setAnchor({ top: r.bottom + 8, left: r.left });
-            setOpen((o) => !o);
+            setOpenAt(open ? null : pathname);
           }}
           className={cx(extended && !open ? "px-5" : "w-14 px-0")}
         >

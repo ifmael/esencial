@@ -24,14 +24,11 @@ export type SceneHandle = {
   dispose(): void;
 };
 
-type Palette = Record<
-  RegionRole | "rest" | "hover" | "filler" | "skin",
-  T.Color
->;
+type Palette = Record<RegionRole | "hover" | "filler" | "skin", T.Color>;
 
 /** Resuelve un token (cualquier sintaxis de color CSS, `color-mix` incluido)
  *  pintando un píxel: `getComputedStyle` no traduce `color-mix` a RGB. */
-function palette(el: HTMLElement, interactive: boolean): Palette {
+function palette(el: HTMLElement): Palette {
   const probe = document.createElement("span");
   el.appendChild(probe);
   const ctx = document
@@ -50,10 +47,9 @@ function palette(el: HTMLElement, interactive: boolean): Palette {
     primary: read("--color-primary"),
     secondary: read("--color-muscle-secondary"),
     stabilizer: read("--color-muscle-stabilizer"),
-    // En el selector, el músculo que se puede pulsar va en verde de reposo; al
-    // informar, todo lo que no trabaja va en gris, como el relleno.
-    rest: read(interactive ? "--color-muscle" : "--color-body"),
     hover: read("--color-muscle-strong"),
+    // Lo que no está marcado va en gris, como el relleno: en el selector solo
+    // destaca lo elegido (y lo que hay bajo el ratón).
     filler: read("--color-body"),
     skin: read("--color-surface-container-highest"),
   };
@@ -75,7 +71,10 @@ export async function mountScene(
   opts: {
     interactive: boolean;
     onSelect: (region: string) => void;
-    onHover: (region: string | null) => void;
+    /** El músculo bajo el ratón y dónde (px sobre el lienzo); `null` al salir. */
+    onHover: (region: string | null, x: number, y: number) => void;
+    /** El usuario giró o acercó la cámara. */
+    onMoved: () => void;
     onLost: () => void;
   },
 ): Promise<SceneHandle> {
@@ -87,7 +86,12 @@ export async function mountScene(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
+  // El lienzo sigue al visor por CSS, no con un ancho en px: fijado en px
+  // (`setSize` por defecto) sostiene su columna al estrechar la ventana, el
+  // visor ya no encoge y la página se sale por la derecha.
   renderer.domElement.style.display = "block";
+  renderer.domElement.style.width = "100%";
+  renderer.domElement.style.height = "100%";
   host.appendChild(renderer.domElement);
 
   const scene = new T.Scene();
@@ -106,7 +110,10 @@ export async function mountScene(
   controls.target.copy(TARGET);
   controls.enablePan = false;
   controls.enableDamping = !reduced;
-  controls.minDistance = 1.2;
+  // La rueda (o el pellizco) acerca hacia lo que hay bajo el cursor, no hacia el
+  // centro del cuerpo: así se ve de cerca una zona concreta.
+  controls.zoomToCursor = true;
+  controls.minDistance = 0.6;
   controls.maxDistance = 6;
   // Una figura de pie solo gira en horizontal: el gesto vertical queda para
   // desplazar la página. OrbitControls pone `touch-action: none` al lienzo al
@@ -138,7 +145,7 @@ export async function mountScene(
     else others.push({ mesh: o, skin: o.userData.filler === "skin" });
   });
 
-  let colors = palette(host, opts.interactive);
+  let colors = palette(host);
   let marks = new Map<string, RegionRole>();
   let hovered: string | null = null;
   let frame = 0;
@@ -151,32 +158,41 @@ export async function mountScene(
     if (!frame) frame = requestAnimationFrame(render);
   };
   const recolor = () => {
+    if (opts.interactive)
+      renderer.domElement.style.cursor = hovered ? "pointer" : "grab";
     for (const [region, mesh] of meshes) {
       const role = marks.get(region);
       mesh.material.color.copy(
-        opts.interactive
-          ? role
+        role
+          ? opts.interactive
             ? colors.primary
-            : region === hovered
-              ? colors.hover
-              : colors.rest
-          : role
-            ? colors[role]
-            : colors.rest,
+            : colors[role]
+          : opts.interactive && region === hovered
+            ? colors.hover
+            : colors.filler,
       );
     }
     for (const { mesh, skin } of others)
       mesh.material.color.copy(skin ? colors.skin : colors.filler);
     request();
   };
-  controls.addEventListener("change", request);
+  // `start` llega con cualquier toque o rueda; solo cuenta si la cámara se mueve
+  // de verdad después (un toque para elegir no la mueve). `view()` lo apaga.
+  let touched = false;
+  controls.addEventListener("start", () => {
+    touched = true;
+  });
+  controls.addEventListener("change", () => {
+    if (touched) opts.onMoved();
+    request();
+  });
 
   const resize = () => {
     const { clientWidth: w, clientHeight: h } = host;
     if (!w || !h) return;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
+    renderer.setSize(w, h, false);
     request();
   };
   const sizes = new ResizeObserver(resize);
@@ -185,7 +201,7 @@ export async function mountScene(
 
   // El tema cambia `data-theme` en <html> (y el sistema, la preferencia).
   const retheme = () => {
-    colors = palette(host, opts.interactive);
+    colors = palette(host);
     recolor();
   };
   const themes = new MutationObserver(retheme);
@@ -219,26 +235,28 @@ export async function mountScene(
     const region = regionAt(e);
     if (region) opts.onSelect(region);
   };
-  const onMove = (e: PointerEvent) => {
-    if (e.buttons || e.pointerType === "touch") return;
-    const region = regionAt(e);
-    if (region === hovered) return;
-    hovered = region;
-    renderer.domElement.style.cursor = region ? "pointer" : "grab";
-    opts.onHover(region);
-    recolor();
-  };
   const onLeave = () => {
     if (hovered === null) return;
     hovered = null;
-    opts.onHover(null);
+    opts.onHover(null, 0, 0);
     recolor();
   };
+  const onMove = (e: PointerEvent) => {
+    // Arrastrando se gira: ni realce ni tooltip.
+    if (e.buttons || e.pointerType === "touch") return onLeave();
+    const region = regionAt(e);
+    if (!region) return onLeave();
+    const r = renderer.domElement.getBoundingClientRect();
+    opts.onHover(region, e.clientX - r.left, e.clientY - r.top);
+    if (region === hovered) return;
+    hovered = region;
+    recolor();
+  };
+  renderer.domElement.addEventListener("pointermove", onMove);
+  renderer.domElement.addEventListener("pointerleave", onLeave);
   if (opts.interactive) {
     renderer.domElement.addEventListener("pointerdown", onDown);
     renderer.domElement.addEventListener("pointerup", onUp);
-    renderer.domElement.addEventListener("pointermove", onMove);
-    renderer.domElement.addEventListener("pointerleave", onLeave);
   }
   const lost = (e: Event) => {
     e.preventDefault();
@@ -252,6 +270,8 @@ export async function mountScene(
       recolor();
     },
     view(v) {
+      touched = false;
+      controls.target.copy(TARGET);
       camera.position.set(
         0,
         TARGET.y + 0.05,

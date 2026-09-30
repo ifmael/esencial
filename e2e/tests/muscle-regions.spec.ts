@@ -37,18 +37,20 @@ async function clickMuscle(page: Page, muscle: Locator) {
   await page.mouse.click(point.x, point.y);
 }
 
-/** Busca en el lienzo 3D un punto donde el ratón nombra `label` (el visor
- *  pone el músculo de debajo en el `title`) y lo devuelve. Recorre una
+/** Busca en el lienzo 3D un punto donde el tooltip nombra `label` (el visor
+ *  nombra así el músculo de debajo del ratón) y lo devuelve. Recorre una
  *  rejilla sobre el lienzo: la cámara puede cambiar sin tocar el test. */
 async function findOnModel(page: Page, model: Locator, label: string) {
   const box = await model.boundingBox();
   if (!box) throw new Error("El modelo 3D no tiene caja");
+  const tooltip = page.getByRole("tooltip");
   for (let fy = 0.05; fy < 1; fy += 0.025)
     for (let fx = 0.2; fx < 0.8; fx += 0.025) {
       const x = box.x + box.width * fx,
         y = box.y + box.height * fy;
       await page.mouse.move(x, y);
-      if ((await model.getAttribute("title")) === label) return { x, y };
+      if ((await tooltip.count()) && (await tooltip.textContent()) === label)
+        return { x, y };
     }
   throw new Error(`«${label}» no aparece en el modelo 3D`);
 }
@@ -104,6 +106,23 @@ test.describe("SUB-REGIONES — el mapa filtra fino", () => {
         exact: true,
       }),
     ).toHaveCount(0);
+
+    // La rueda acerca hacia el cursor: el músculo de debajo sigue siendo el
+    // mismo (hacia la cadera, el pecho se iría por arriba). «Restablecer
+    // vista» deshace el zoom; el toque de antes, que no movió la cámara, no
+    // lo ofrece.
+    const reset = picker.getByRole("button", { name: "Restablecer vista" });
+    await expect(reset).toHaveCount(0);
+    await page.mouse.wheel(0, -600);
+    await expect(reset).toBeVisible();
+    await page.waitForTimeout(500);
+    await page.mouse.move(chest.x + 1, chest.y);
+    await page.mouse.move(chest.x, chest.y);
+    await expect(page.getByRole("tooltip")).toHaveText(
+      "Pecho superior (clavicular)",
+    );
+    await reset.click();
+    await expect(reset).toHaveCount(0);
 
     // El recto abdominal no existe en el atlas: sale de la aponeurosis del
     // oblicuo. Pulsarlo filtra como cualquier otro músculo.

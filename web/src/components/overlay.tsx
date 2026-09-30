@@ -301,14 +301,25 @@ function TooltipBubble({
       : { bottom: window.innerHeight - anchor.top + 8 }),
   };
   return (
-    <div
+    <Tooltip
       id={id}
-      role="tooltip"
       style={style}
-      className="tooltip pointer-events-none fixed z-50 flex w-56 flex-col gap-2 p-2"
+      className="fixed flex w-56 flex-col gap-2 p-2"
     >
       {children}
-    </div>
+    </Tooltip>
+  );
+}
+
+/** La piel del tooltip, sin posición: la pone quien lo pinta. No recibe el
+ *  puntero, así que nunca tapa lo que señala. */
+export function Tooltip({ className, ...rest }: ComponentProps<"div">) {
+  return (
+    <div
+      role="tooltip"
+      className={cx("tooltip pointer-events-none z-50", className)}
+      {...rest}
+    />
   );
 }
 
