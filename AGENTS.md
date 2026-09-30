@@ -726,7 +726,7 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   costra de sal y su huevo en «Pescado a la sal», la corteza de piña), las
   ralladuras y pieles, las variantes (hummus) y los batidos 2-4 de «4 smoothies
   4U» (la receta tiene 1 ración). «Limón/Naranja (… zumo …)» cuenta como su zumo.
-- 21 alimentos del catálogo no venían de Nutrirutina (apio, corvina, salsa de
+- 22 alimentos del catálogo no venían de Nutrirutina (apio, corvina, salsa de
   soja, uvas pasas…): sus valores por 100 g y los pesos por unidad son
   **estimaciones estándar** (tipo BEDCA/USDA) hechas al generar 0014, no datos de
   etiqueta.
