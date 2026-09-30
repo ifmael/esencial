@@ -1,4 +1,4 @@
-// Mapa muscular: 89 regiones anatómicas entre las dos vistas. Cada músculo
+// Mapa muscular: 87 regiones anatómicas entre las dos vistas. Cada músculo
 // pertenece a una sub-región (`MUSCLE_REGIONS`) y las dos mitades — izquierda y
 // derecha — van en **un solo `<g role="button">`**, así que hay un botón por
 // músculo, no por pieza dibujada. La anatomía de relleno (cabeza, manos, pies,
@@ -18,8 +18,16 @@
 // `--color-muscle-strong`, el músculo afectado o elegido en `--color-primary`,
 // la anatomía sin filtro en `--color-border-strong` y el trazo que separa las
 // piezas, el de la superficie.
+import type { ExerciseRegion, RegionRole } from "../../lib/exercises";
 import { BACK_REGIONS, type BodyRegion, FRONT_REGIONS } from "./data";
 import { canonicalRegionId, MUSCLE_REGIONS, regionLabel } from "./regions";
+
+/** Color de cada grado en el dibujo de solo lectura (tokens de `globals.css`). */
+const ROLE_FILL: Record<RegionRole, string> = {
+  primary: "fill-primary",
+  secondary: "fill-muscle-secondary",
+  stabilizer: "fill-muscle-stabilizer",
+};
 
 export type BodyView = "front" | "back";
 
@@ -42,8 +50,9 @@ export function BodyMap({
   className = "h-64 w-auto md:h-full",
 }: {
   view: BodyView;
-  /** Sub-regiones resaltadas (`MUSCLE_REGIONS`): el filtro o lo que se marca. */
-  regions: string[];
+  /** Sub-regiones resaltadas (`MUSCLE_REGIONS`) con su grado: el filtro o lo
+   *  que trabaja el ejercicio. En el selector el grado no cuenta. */
+  regions: ExerciseRegion[];
   /** Sin él, el dibujo es solo lectura: informa y no filtra. */
   onSelect?: (region: string) => void;
   className?: string;
@@ -58,7 +67,7 @@ export function BodyMap({
     else layers.set(id, [r]);
   }
 
-  const active = new Set(regions);
+  const active = new Map(regions.map((r) => [r.region, r.role]));
   // `MUSCLE_REGIONS` va en orden alfabético por nombre: el mismo para el filtro
   // y para el nombre accesible del dibujo.
   const highlighted = MUSCLE_REGIONS.filter(
@@ -86,15 +95,19 @@ export function BodyMap({
       {MUSCLE_REGIONS.map(({ id }) => {
         const list = layers.get(id);
         if (!list) return null;
-        const on = active.has(id);
+        const role = active.get(id);
+        const on = role !== undefined;
         // Solo lectura: el cuerpo en gris (el mismo tono de la anatomía de
-        // relleno) y solo en verde lo que trabaja el ejercicio, para que los
-        // músculos afectados salten a la vista. En el selector manda el verde
-        // de reposo, porque ahí lo que importa es el filtro elegido.
-        const skin = on
-          ? "fill-primary"
-          : onSelect
-            ? "fill-muscle"
+        // relleno) y en verde lo que trabaja el ejercicio, más intenso cuanto
+        // más trabaja, para que los músculos afectados salten a la vista. En el
+        // selector manda el verde de reposo, porque ahí lo que importa es el
+        // filtro elegido.
+        const skin = onSelect
+          ? on
+            ? "fill-primary"
+            : "fill-muscle"
+          : role
+            ? ROLE_FILL[role]
             : "fill-body";
         const pieces = list.map((r) => <Muscle key={r.id} region={r} />);
         if (!onSelect)

@@ -11,6 +11,19 @@ export const KIND_LABELS: Record<ExerciseKind, string> = {
   bike: "Bici",
 };
 
+/** Grado de implicación de un músculo, de más a menos (espejo de
+ *  `REGION_ROLES` en la API; `tests/muscle-regions.test.ts` los ata). */
+export type RegionRole = "primary" | "secondary" | "stabilizer";
+
+export const ROLE_LABELS: Record<RegionRole, string> = {
+  primary: "Principal",
+  secondary: "Secundario",
+  stabilizer: "Estabilizador",
+};
+
+/** Un músculo que trabaja el ejercicio y cuánto. */
+export type ExerciseRegion = { region: string; role: RegionRole };
+
 /** Info compacta del objetivo de un ejercicio (formato único de la app):
  *  fuerza → «3 series» (null si no hay series); cardio → «10 km · 45 min». */
 export function targetSummary(e: {
@@ -42,8 +55,9 @@ export type Exercise = {
   techniqueUrl: string | null;
   steps: string[] | null;
   tags: string[];
-  /** Sub-regiones del mapa anatómico (`web/src/components/body-map/regions`). */
-  regions: string[];
+  /** Sub-regiones del mapa anatómico (`web/src/components/body-map/regions`)
+   *  con su grado, ordenadas por región. */
+  regions: ExerciseRegion[];
   kind: ExerciseKind;
 };
 
@@ -54,7 +68,7 @@ export type ExerciseInput = {
   techniqueUrl?: string | null;
   steps?: string[] | null;
   tags: string[];
-  regions?: string[];
+  regions?: ExerciseRegion[];
   /** Ausente = el servidor aplica "strength". */
   kind?: ExerciseKind;
 };

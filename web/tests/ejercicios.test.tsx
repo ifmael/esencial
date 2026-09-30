@@ -30,7 +30,10 @@ const press: Exercise = {
     "Baja controlado y sube empujando.",
   ],
   tags: ["pecho", "tríceps"],
-  regions: ["chest-lower", "triceps-lateral"],
+  regions: [
+    { region: "chest-lower", role: "primary" },
+    { region: "triceps-lateral", role: "secondary" },
+  ],
   kind: "strength",
 };
 const remo: Exercise = {
@@ -41,7 +44,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
-  regions: ["lats-mid"],
+  regions: [{ region: "lats-mid", role: "primary" }],
   kind: "strength",
 };
 const peso: Exercise = {
@@ -52,7 +55,7 @@ const peso: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
-  regions: ["quads"],
+  regions: [{ region: "quads", role: "primary" }],
   kind: "strength",
 };
 
@@ -202,6 +205,14 @@ describe("catalog", () => {
     expect(screen.getByText(/elige al menos un músculo/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Glúteo mayor" }));
+    // Cada músculo elegido lleva su grado: nace principal y se cambia aquí.
+    const grade = screen.getByRole("group", { name: "Grado: Glúteo mayor" });
+    expect(
+      within(grade)
+        .getByRole("button", { name: "Principal" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    fireEvent.click(within(grade).getByRole("button", { name: "Secundario" }));
 
     fireEvent.click(
       within(screen.getByRole("group", { name: "Tipo" })).getByRole("button", {
@@ -232,11 +243,13 @@ describe("catalog", () => {
     // `post.body` es el JSON que mandó el cliente al mock: es lo que se comprueba.
     const body = post.body as {
       steps: string[] | null;
-      regions: string[];
+      regions: unknown[];
       kind: string;
     };
     expect(body.steps).toEqual(["Paso uno", "Paso dos"]);
-    expect(body.regions).toEqual(["gluteus-maximus"]);
+    expect(body.regions).toEqual([
+      { region: "gluteus-maximus", role: "secondary" },
+    ]);
     expect(body.kind).toBe("bike");
   });
 
@@ -252,6 +265,9 @@ describe("catalog", () => {
     fireEvent.click(gluteo);
     expect(gluteo.getAttribute("aria-pressed")).toBe("false");
     expect(screen.queryByRole("button", { name: "Glúteo mayor" })).toBeNull();
+    expect(
+      screen.queryByRole("group", { name: "Grado: Glúteo mayor" }),
+    ).toBeNull();
   });
 });
 
@@ -301,6 +317,47 @@ describe("detail", () => {
         name: "Vista trasera: Tríceps (cabeza lateral)",
       }),
     ).toBeDefined();
+  });
+
+  it("la ficha agrupa los músculos por grado y calla los grados vacíos", async () => {
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    const primary = screen.getByRole("list", { name: "Principal" });
+    expect(
+      within(primary).getByText("Pecho inferior (esternal)"),
+    ).toBeDefined();
+    const secondary = screen.getByRole("list", { name: "Secundario" });
+    expect(
+      within(secondary).getByText("Tríceps (cabeza lateral)"),
+    ).toBeDefined();
+    expect(screen.queryByRole("list", { name: "Estabilizador" })).toBeNull();
+  });
+
+  it("editar conserva el grado de cada músculo y lo manda en el PUT", async () => {
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    fireEvent.click(screen.getByRole("button", { name: /editar/i }));
+    const grade = await screen.findByRole("group", {
+      name: "Grado: Tríceps (cabeza lateral)",
+    });
+    expect(
+      within(grade)
+        .getByRole("button", { name: "Secundario" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    fireEvent.click(
+      within(grade).getByRole("button", { name: "Estabilizador" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(api.calls.some((c) => c.method === "PUT")).toBe(true),
+    );
+    const put = api.calls.find((c) => c.method === "PUT")!;
+    const sent = put.body as { regions: unknown[] };
+    expect(sent.regions).toEqual([
+      { region: "chest-lower", role: "primary" },
+      { region: "triceps-lateral", role: "stabilizer" },
+    ]);
   });
 
   it("non-YouTube techniqueUrl → link only, no iframe", async () => {
@@ -370,6 +427,30 @@ describe("detail", () => {
     // Sin texto: un botón de texto se llamaría "Editar", no por aria-label.
     const edit = screen.getByRole("button", { name: "Editar ejercicio" });
     expect(edit.textContent).toBe("");
+  });
+
+  it("un 400 en regions.N.role se muestra junto a «Músculos»", async () => {
+    renderAt("/ejercicios/8");
+    await screen.findByRole("heading", { name: "Remo" });
+    fireEvent.click(screen.getByRole("button", { name: /editar/i }));
+    await screen.findByLabelText("Nombre");
+    const real = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      async (input: RequestInfo | URL, init?: RequestInit) =>
+        init?.method === "PUT"
+          ? new Response(
+              JSON.stringify({
+                error: "Invalid option",
+                field: "regions.0.role",
+              }),
+              { status: 400, headers: { "content-type": "application/json" } },
+            )
+          : real(input, init),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    const alert = await screen.findByText("Invalid option");
+    expect(alert.id).toBe("ex-regions-error");
   });
 
   it("edit flow: pre-filled PUT; server 400 on techniqueUrl shown inline, draft kept", async () => {

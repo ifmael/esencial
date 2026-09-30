@@ -1,7 +1,7 @@
 // /api/exercises — GET (?tag=) · POST · /:id GET/PUT/DELETE · /:id/last GET.
 // last-values endpoint per E1 design D5.
 import { Hono } from "hono";
-import { exerciseSchema } from "../api-validation";
+import { type ExerciseInput, exerciseSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
 import { loadExercise, row, rows } from "../repo";
@@ -23,15 +23,15 @@ function tagStatements(
 
 function regionStatements(
   name: string,
-  regions: readonly string[],
+  regions: ExerciseInput["regions"],
   db: D1Database,
 ): D1PreparedStatement[] {
-  return [...new Set(regions)].map((r) =>
+  return regions.map(({ region, role }) =>
     db
       .prepare(
-        `INSERT INTO exercise_regions (exercise_id, region) VALUES ((SELECT id FROM exercises WHERE name = ?), ?)`,
+        `INSERT INTO exercise_regions (exercise_id, region, role) VALUES ((SELECT id FROM exercises WHERE name = ?), ?, ?)`,
       )
-      .bind(name, r),
+      .bind(name, region, role),
   );
 }
 

@@ -1,11 +1,12 @@
-// Mapa muscular (89 regiones, vista frontal y trasera).
+// Mapa muscular (87 regiones, vista frontal y trasera).
 //
 // Datos SVG derivados de `body-muscles` — Copyright 2024 Ivan Vulović,
 // licencia Apache-2.0 (ver `LICENSE` y `NOTICE` en esta carpeta).
 // https://github.com/vulovix/body-muscles
 //
 // Cambios respecto al original: se conservan los `path` tal cual; se añade el
-// grupo (`tag`) al que filtra cada músculo y la etiqueta en español.
+// grupo (`tag`) al que filtra cada músculo y la etiqueta en español, y la pieza
+// del cuadrado lumbar va dentro de la de Lumbares (no se filtra aparte).
 export type BodyRegion = {
   id: string;
   /** Grupo de `GROUP_LABELS` que filtra este músculo, o `null` si es anatomía
@@ -427,25 +428,15 @@ export const BACK_REGIONS: BodyRegion[] = [
     id: "lower-back-erectors-left",
     tag: "espalda",
     label: "Lumbares (erectores) (izquierda)",
-    path: "M 52.100,37.310 L 49.537,36.465 L 50.244,40.788 L 52.200,42.030 L 52.200,40.270 L 52.150,40.280 Z",
-  },
-  {
-    id: "lower-back-ql-left",
-    tag: "espalda",
-    label: "Cuadrado lumbar (izquierda)",
-    path: "M 49.389,36.490 L 46.240,35.460 L 44.720,39.420 L 50.096,40.812 Z",
+    // Con la pieza del cuadrado lumbar del original: es profundo, no se filtra
+    // aparte y su zona del dibujo cuenta como Lumbares (migración 0013).
+    path: "M 52.100,37.310 L 49.537,36.465 L 50.244,40.788 L 52.200,42.030 L 52.200,40.270 L 52.150,40.280 Z M 49.389,36.490 L 46.240,35.460 L 44.720,39.420 L 50.096,40.812 Z",
   },
   {
     id: "lower-back-erectors-right",
     tag: "espalda",
     label: "Lumbares (erectores) (derecha)",
-    path: "M 52.800,42.030 L 52.800,40.270 L 52.850,40.260 L 52.900,37.290 L 55.289,36.625 L 54.805,40.801 Z",
-  },
-  {
-    id: "lower-back-ql-right",
-    tag: "espalda",
-    label: "Cuadrado lumbar (derecha)",
-    path: "M 55.439,36.643 L 55.980,36.470 L 58.320,35.720 L 59.660,39.450 L 54.955,40.819 Z",
+    path: "M 52.800,42.030 L 52.800,40.270 L 52.850,40.260 L 52.900,37.290 L 55.289,36.625 L 54.805,40.801 Z M 55.439,36.643 L 55.980,36.470 L 58.320,35.720 L 59.660,39.450 L 54.955,40.819 Z",
   },
   {
     id: "gluteus-medius-left",
