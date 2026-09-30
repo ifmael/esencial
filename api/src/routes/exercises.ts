@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { type ExerciseInput, exerciseSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
-import { loadExercise, row, rows } from "../repo";
+import { listExercises, loadExercise, row, rows } from "../repo";
 import { zBody } from "../validation";
 
 function tagStatements(
@@ -38,21 +38,7 @@ function regionStatements(
 export const exercises = new Hono<{ Bindings: Env }>()
   .get("/", (c) =>
     guard(async () => {
-      const db = getDb(c.env);
-      const tag = c.req.query("tag");
-      const ids = tag
-        ? await rows(
-            db,
-            "SELECT e.id FROM exercises e JOIN exercise_tags t ON t.exercise_id = e.id WHERE t.tag = ? ORDER BY e.name COLLATE NOCASE",
-            tag,
-          )
-        : await rows(
-            db,
-            "SELECT id FROM exercises ORDER BY name COLLATE NOCASE",
-          );
-      return json(
-        await Promise.all(ids.map((r) => loadExercise(db, Number(r.id)))),
-      );
+      return json(await listExercises(getDb(c.env), c.req.query("tag")));
     }),
   )
   .post("/", zBody(exerciseSchema), (c) =>

@@ -3,7 +3,12 @@
 // fetch to answer the auth probe. If a test's own mock already answers the
 // probe with an `authenticated` payload (e.g. auth-web), we honor it; otherwise
 // we default to authenticated so page tests render past the guard.
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
+import { clearApiCache } from "../src/lib/api";
+
+// La caché de lecturas vive en el módulo: sin vaciarla, un caso vería la
+// respuesta simulada del anterior.
+afterEach(clearApiCache);
 
 function withAuthProbe(mock: unknown): unknown {
   if (typeof mock !== "function") return mock;

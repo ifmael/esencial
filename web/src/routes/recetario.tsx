@@ -41,6 +41,8 @@ function Thumb({ recipe, hero }: { recipe: Recipe; hero?: boolean }) {
   return recipe.photo_path ? (
     <img
       crossOrigin="use-credentials"
+      loading={hero ? undefined : "lazy"}
+      decoding="async"
       src={photoSrc(recipe.photo_path)}
       alt=""
       style={morph(recipe.id)}

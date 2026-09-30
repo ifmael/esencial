@@ -13,7 +13,7 @@ import {
   useState,
 } from "react";
 import { useNavigate } from "react-router";
-import { apiGet } from "../lib/api";
+import { apiGet, apiGetCached } from "../lib/api";
 import {
   type Command,
   type CommandGroup,
@@ -139,11 +139,11 @@ function useSearchables(): Command[] {
           searchOnly: true,
         }));
     Promise.all([
-      apiGet<Named[]>("/api/recipes").then(
+      apiGetCached<Named[]>("/api/recipes").then(
         as("Recetas", (id) => `/recetario/${id}`),
         () => [],
       ),
-      apiGet<Named[]>("/api/exercises").then(
+      apiGetCached<Named[]>("/api/exercises").then(
         as("Ejercicios", (id) => `/ejercicios/${id}`),
         () => [],
       ),

@@ -12,19 +12,30 @@ export class ApiError extends Error {
   }
 }
 
+/** Caché en memoria de `apiGetCached`, por ruta. */
+const CACHE_MS = 5 * 60_000;
+const cache = new Map<string, { at: number; value: Promise<unknown> }>();
+
+/** Vacía la caché de lecturas (la llama cada escritura; los tests, entre casos). */
+export const clearApiCache = () => cache.clear();
+
 /** fetch a la API con la cookie de sesión incluida: en cross-origin el
  *  navegador no la manda si no se pide (credentials: include). La URL sale de
  *  VITE_API_URL (B': la API es otro Worker) y se lee en cada llamada para poder
  *  sustituirla en tests; sin ella quedan rutas relativas. Sin envoltorio JSON,
- *  para llamadas que gestionan la respuesta a mano. */
+ *  para llamadas que gestionan la respuesta a mano. Toda escritura vacía la
+ *  caché al terminar, también lo que se pidió mientras tanto. */
 export const apiFetchRaw = (
   path: string,
   init?: RequestInit,
-): Promise<Response> =>
-  fetch(`${import.meta.env.VITE_API_URL ?? ""}${path}`, {
+): Promise<Response> => {
+  const res = fetch(`${import.meta.env.VITE_API_URL ?? ""}${path}`, {
     credentials: "include",
     ...init,
   });
+  const write = (init?.method ?? "GET").toUpperCase() !== "GET";
+  return write ? res.finally(clearApiCache) : res;
+};
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -62,6 +73,21 @@ export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const apiGet = <T>(path: string) => request<T>(path);
+
+/** apiGet que reutiliza la respuesta durante 5 minutos: volver a una pantalla
+ *  no vuelve a descargar la lista. Guarda la promesa, así que dos pantallas a la
+ *  vez comparten una petición; un fallo no se guarda. Los cambios hechos desde
+ *  otro dispositivo tardan hasta 5 minutos en verse. */
+export function apiGetCached<T>(path: string): Promise<T> {
+  const hit = cache.get(path);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.value as Promise<T>;
+  const value = request<T>(path);
+  cache.set(path, { at: Date.now(), value });
+  value.catch(() => {
+    if (cache.get(path)?.value === value) cache.delete(path);
+  });
+  return value;
+}
 
 export const apiSend = <T>(path: string, method: string, body: unknown) =>
   request<T>(path, {

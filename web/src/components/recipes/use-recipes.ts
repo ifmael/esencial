@@ -1,7 +1,7 @@
 // E2 D1: one hook owns all recipe data access against same-origin /api/recipes.
 // GET list returns fully hydrated recipes, so detail reads from `list`.
 import { useCallback, useEffect, useState } from "react";
-import { apiFetchRaw } from "../../lib/api";
+import { apiFetchRaw, apiGetCached } from "../../lib/api";
 
 export type Ingredient = {
   id: number;
@@ -84,11 +84,7 @@ export function useRecipes() {
     let alive = true;
     setLoading(true);
     setError(null);
-    apiFetchRaw("/api/recipes")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`GET /api/recipes ${res.status}`);
-        return (await res.json()) as Recipe[];
-      })
+    apiGetCached<Recipe[]>("/api/recipes")
       .then((data) => alive && setList(data.map(normalizeRecipe)))
       .catch(() => alive && setError("No se pudo cargar el recetario."))
       .finally(() => alive && setLoading(false));

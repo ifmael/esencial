@@ -739,6 +739,29 @@ con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras authGuard, `C
 `/api/uploads/`, y delante la URL de la API (`VITE_API_URL`).
 - e2e y login dev usan la password `hola` (`ESENCIAL_DEV_PASSWORD=hola pnpm dev`).
 
+## Carga de las listas (recetas y ejercicios)
+
+- **Sin N+1**: `GET /api/recipes` y `GET /api/exercises` hidratan con **una
+  consulta por tabla** en un solo `db.batch` (`queryRecipes`/`queryExercises` en
+  `api/src/repo.ts`; la ficha usa el mismo código con `WHERE r.id = ?`). Antes
+  eran 5 consultas por receta (501 en total) y 3 por ejercicio (274). En local:
+  recetas de ~180 ms a ~12 ms y ejercicios de ~90 ms a ~5 ms, con JSON idéntico
+  byte a byte. `api/tests/lists.test.ts` exige que el número de consultas no
+  crezca con las filas.
+- **La lista no liga un parámetro por fila**: D1 admite como máximo 100 por
+  consulta, así que un `IN (?,…)` con cada id rompería desde la receta 101 (y la
+  D1 local podría no avisar). Los hijos se filtran con una subconsulta
+  (`recipe_id IN (SELECT r.id FROM recipes r …)`).
+- **Caché del cliente**: `apiGetCached` (`web/src/lib/api.ts`) guarda la
+  respuesta de un GET **5 minutos** en memoria (la promesa: dos pantallas a la
+  vez comparten una petición; un fallo no se guarda). **Toda escritura** que
+  pase por `apiFetchRaw` la vacía al terminar. La usan las listas de recetas y
+  ejercicios (hooks, selector del plan y ⌘K). Un cambio hecho desde otro
+  dispositivo tarda hasta 5 minutos en verse (o recargando). `tests/setup.ts`
+  la vacía entre casos.
+- Las fotos de las listas (recetario salvo la destacada, selector del plan) van
+  con `loading="lazy"`: son ~120 KB cada una (1200×900) y 83 en total.
+
 ## Recetario sembrado (Nutrirutina)
 
 `0012_recetas_nutrirutina.sql` trae las **100 recetas de sistema** de
