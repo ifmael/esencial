@@ -754,6 +754,11 @@ ingredientes, pasos y utensilios (→ materiales). La genera
 - Una receta con un nombre que ya exista **se salta entera** (tabla auxiliar
   `_nutrirutina_skip`, que la migración borra al final): nunca pisa ni añade
   hijos a una receta propia.
+- **`GET /api/recipes` completo es caro**: hidrata cada receta con `loadRecipe`
+  (~5 consultas por receta; con 103 son 516 consultas, ~3 s y 337 KB en
+  producción). Quien solo necesite el nombre usa `GET /api/recipes?summary=1`
+  (`[{id, name}]`, una consulta, ~0,1 s): así lo pide la búsqueda ⌘K, que antes
+  decía «Sin resultados» los ~3 s que tardaba la lista entera.
 - **Las fotos no van en la migración.** 83 recetas tienen `photo_path` con una
   key estable (`photoKey`, SHA-1 del id de Nutrirutina) y hay que subirlas a R2:
   `node api/scripts/import-nutrirutina.ts photos ~/projects/nutrirutina` (R2 de

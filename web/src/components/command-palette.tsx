@@ -139,7 +139,7 @@ function useSearchables(): Command[] {
           searchOnly: true,
         }));
     Promise.all([
-      apiGet<Named[]>("/api/recipes").then(
+      apiGet<Named[]>("/api/recipes?summary=1").then(
         as("Recetas", (id) => `/recetario/${id}`),
         () => [],
       ),
