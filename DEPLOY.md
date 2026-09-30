@@ -52,6 +52,22 @@ pnpm db:migrate:remote
 
 La base es la MISMA para los dos Workers; solo la API la toca.
 
+**0013–0015 (grado de los músculos) se aplican ANTES de hacer merge a `main`.**
+Un merge dispara Workers Builds, que publica los dos Workers a la vez y en orden
+indeterminado, y la API nueva hace `SELECT region, role`: sin la columna, todo
+`GET /api/exercises` daría 500. Son aditivas (la columna tiene DEFAULT), así que
+la API vieja convive con ellas. Aun así queda una ventana de minutos, mientras
+terminan los dos builds, en la que el frontal y la API pueden no coincidir en el
+formato de `regions` (cadenas en el viejo, `{ region, role }` en el nuevo): el
+mapa de un ejercicio puede salir vacío hasta recargar.
+
+**0016–0017 (catálogo de alimentos y recetas del libro) también van ANTES del
+merge**, por lo mismo: la API nueva hace `LEFT JOIN foods` en cada receta y, sin
+la tabla, todo `GET /api/recipes` daría 500. Son seguras con la API vieja: 0016
+solo añade una tabla y dos columnas con valor por defecto, y 0017 rellena datos
+que la API vieja ignora (la lista de ingredientes cambia, pero sigue siendo
+texto, cantidad y unidad).
+
 En local, la config de la API vive en `api/`, así que los scripts llevan
 `--persist-to .wrangler/state`: la base de desarrollo sigue en la raíz y no en
 `api/.wrangler/state`.

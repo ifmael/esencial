@@ -54,3 +54,24 @@ export function regionLabel(id: string): string {
 export function regionsOfGroup(group: string): MuscleRegion[] {
   return MUSCLE_REGIONS.filter((r) => r.group === group);
 }
+
+const FRONT_IDS = new Set(
+  FRONT_REGIONS.filter((r) => r.tag).map((r) => canonicalRegionId(r.id)),
+);
+const BACK_IDS = new Set(
+  BACK_REGIONS.filter((r) => r.tag).map((r) => canonicalRegionId(r.id)),
+);
+
+/** Vista por la que abrir el dibujo de un ejercicio: la que muestra más de sus
+ *  músculos, contando los principales antes que el resto (en Dominadas los
+ *  dorsales, que solo se ven de espaldas). Empate o nada: de frente. */
+export function bestView(
+  regions: { region: string; role: string }[],
+): "front" | "back" {
+  const score = (ids: Set<string>) =>
+    regions.reduce(
+      (s, r) => s + (ids.has(r.region) ? (r.role === "primary" ? 10 : 1) : 0),
+      0,
+    );
+  return score(BACK_IDS) > score(FRONT_IDS) ? "back" : "front";
+}

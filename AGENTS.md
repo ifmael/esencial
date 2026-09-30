@@ -360,12 +360,13 @@ pulsarlo, y acciones planas sin sombra, cada una con el `accent-container` de la
 sección a la que lleva (`data-section={sectionOf(to)}`: Sesión y Plantilla en
 verde de Deporte, Receta en el de Nutrición).
 
-El **mapa muscular** del selector vive en `web/src/components/body-map/`: 89
-regiones anatómicas entre las dos vistas (frontal y trasera), cada una con su
-nombre en español y su grupo de la taxonomía (`hombro`, `pecho`, `core`,
-`bíceps`, `antebrazo`, `espalda`, `tríceps`, `glúteo`, `pierna`, `gemelo`) o
-marcada sin grupo, que es anatomía de relleno (cabeza, manos, pies,
-articulaciones).
+El **mapa muscular** se ve en 3D (`web/src/components/body-3d/`) y el dibujo SVG
+(`web/src/components/body-map/`) queda de respaldo: sin WebGL o si el modelo no
+carga, cada pantalla pinta el SVG de siempre. El SVG tiene 87 regiones
+anatómicas entre las dos vistas (frontal y trasera), cada una con su nombre en
+español y su grupo de la taxonomía (`hombro`, `pecho`, `core`, `bíceps`,
+`antebrazo`, `espalda`, `tríceps`, `glúteo`, `pierna`, `gemelo`) o marcada sin
+grupo, que es anatomía de relleno (cabeza, manos, pies, articulaciones).
 
 Los `path` no son nuestros: proceden de `body-muscles` (Ivan Vulović,
 **Apache-2.0**) y se conservan tal cual; los `LICENSE` y `NOTICE` de esa licencia
@@ -376,6 +377,44 @@ tokens `--color-muscle` / `--color-muscle-strong` de `globals.css`, más
 `web/src/components/body-map/data.ts` es generado a partir del original y lo dice
 en su cabecera.
 
+### Modelo 3D de los músculos
+
+- **El modelo** es `web/public/models/muscles.glb.gz` (≈1,2 MB, 36 mallas: una por
+  sub-región, el relleno muscular visible y la piel de cabeza, manos y pies). Sale
+  de **BodyParts3D 4.0 (CC BY 4.0)** tal como lo empaqueta human-atlas y lo genera
+  `node web/scripts/gen-muscle-model.ts <human-atlas>/public/models` (≈1 min); el
+  resultado se versiona con su `ATTRIBUTION.md` al lado, **que hay que mantener**.
+  `tests/muscle-model.test.ts` falla si sus mallas no son exactamente el
+  vocabulario de la API, si alguna posición no es finita o si falta la atribución.
+- **Lo que el atlas no trae se fabrica con su geometría**: el recto abdominal es la
+  aponeurosis del oblicuo externo junto a la línea media (partida por el ombligo)
+  y el dorsal ancho es una lámina calcada de la piel y ceñida por rayos a lo que
+  tiene debajo, partida en tres abanicos que convergen en la axila. El trapecio
+  conserva la división anatómica del atlas (transversa = medio, ascendente =
+  inferior), que **no** es la del dibujo SVG.
+- Va **sin normales** (el visor las calcula: las mallas van soldadas) y en **gzip**,
+  que el visor abre con `DecompressionStream`: sin WebAssembly, así que la CSP no
+  cambia.
+- **El visor** (`Body3D`) carga three con `import()` desde `body-3d/scene.ts`: solo
+  se descarga donde hay visor. Pinta bajo demanda, no en bucle; sin paneo, con la
+  vista frontal/trasera de partida, y los colores salen de los tokens leídos sobre
+  el propio visor (siguen el tema). Con `onSelect` filtra: un toque elige, un
+  arrastre gira, y el `title` del lienzo nombra el músculo bajo el ratón (de eso
+  tira el e2e para encontrar dónde pulsar).
+- **Accesibilidad**: el lienzo es un `role="img"` sin foco. De solo lectura se
+  nombra con cada músculo y su grado; en el selector, con WebGL, los músculos del
+  grupo elegido (o del músculo elegido) se ofrecen además como fichas («Músculo:»),
+  que es el camino por teclado. Sin WebGL no hacen falta: los botones son los del
+  SVG. jsdom no tiene WebGL, así que los tests unitarios ven el SVG salvo que
+  sustituyan `body-3d/scene`.
+- **Sin GPU no hay 3D**: `hasWebGL()` descarta los renderizadores por software
+  (SwiftShader, llvmpipe, Microsoft Basic Render: `lib/webgl.ts`) y pinta el SVG,
+  porque así el visor bloquea el hilo principal (~0,9 s por pintado en un M4 Pro,
+  mucho más en el runner) y congelaba el CI. Chromium headless usa SwiftShader:
+  la config de e2e fuerza `--use-angle=metal` en macOS para que los tests del 3D
+  corran en local, y en el CI (Linux sin GPU) se saltan (`skipWithoutGPU` en
+  `muscle-regions.spec.ts`); el respaldo SVG sí se prueba allí.
+
 ## Taxonomía muscular: dos niveles
 
 El músculo fino manda al filtrar; el grupo padre lo agrupa. Es lo que se usa en
@@ -384,20 +423,33 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
 - **Nivel 1 — grupos (`exercise_tags`, 10).** Sin cambios: es lo que agrupa las
   listas (`GroupedExercises`), lo que se edita como «tag» y lo que usan las
   fichas de grupo del selector.
-- **Nivel 2 — sub-regiones (`exercise_regions`, 35).** El músculo concreto del
+- **Nivel 2 — sub-regiones (`exercise_regions`, 34).** El músculo concreto del
   mapa, **sin lado** (izquierda y derecha son la misma sub-región) y sin
   anatomía de relleno. **Toda sub-región cuelga de un grupo que el ejercicio ya
   tiene como tag**: lo valida la API (400 `{field:'regions'}`) y lo comprueba el
   e2e, así que filtrar por el grupo padre siempre devuelve sus sub-regiones.
+- **Cada sub-región lleva su grado** (`exercise_regions.role`, 0014): `primary`
+  (mueve el ejercicio), `secondary` (ayuda) o `stabilizer` (sostiene la postura en
+  isométrico). La API los recibe y devuelve como `regions: [{ region, role }]`,
+  ordenados por región; una región repetida o sin grado es un 400. La siembra se
+  gradúa en `0015` (134 principales, 80 secundarios, 24 estabilizadores; todo
+  ejercicio sembrado tiene al menos un principal, y lo comprueba el e2e). Los
+  grados se pintan por luminosidad del mismo verde (`--color-primary`,
+  `--color-muscle-secondary`, `--color-muscle-stabilizer`), que se distingue
+  también con daltonismo; `ROLE_LABELS` (web) y `REGION_ROLES` (API) son espejos
+  que ata `tests/muscle-regions.test.ts`. Filtrar por un músculo no mira el grado.
 - El vocabulario son **dos espejos que un test ata**:
   `api/src/muscle-regions.ts` (lo que valida la API) y
   `web/src/components/body-map/regions.ts` (derivado del dibujo, con las
   etiquetas en español). `web/tests/muscle-regions.test.ts` falla si divergen.
-  Dos regiones (`tibialis-anterior`, `lower-back-ql`) no las trabaja ningún
-  ejercicio del catálogo: se dibujan y se filtran, y devuelven lista vacía.
+  La región `tibialis-anterior` no la trabaja ningún ejercicio del catálogo: se
+  dibuja y se filtra, y devuelve lista vacía. El cuadrado lumbar ya no es una
+  sub-región: es profundo y no lo trae el modelo 3D, así que su zona del dibujo
+  cuenta como Lumbares (`lower-back-erectors`; `0013_fusion_cuadrado_lumbar.sql`
+  mueve las filas que hubiera).
 - **El mapa se pulsa por músculo, no por grupo**: cada sub-región es **un solo
   `<g role="button">`** con sus dos mitades dentro, así que la rejilla de teclado
-  tiene un botón por músculo (14 en la vista frontal, 21 en la trasera) en lugar
+  tiene un botón por músculo (14 en la vista frontal, 20 en la trasera) en lugar
   de uno por grupo. El selector anuncia el músculo elegido («Músculo: …») y cada
   fila de ejercicio lleva sus músculos como **descripción**
   (`aria-describedby`, no pegados al nombre accesible). Las fichas de grupo van
@@ -412,7 +464,9 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
 - En el editor de ejercicios los músculos se eligen por grupo y solo aparecen los
   de los grupos ya elegidos como tag (el invariante de arriba): elegir un músculo
   añade su grupo si falta, quitar un grupo se lleva sus músculos, y guardar exige
-  al menos uno.
+  al menos uno. Cada músculo elegido nace principal y su grado se cambia en un
+  grupo conectado («Grado: …») debajo de sus fichas; la ficha del ejercicio lista
+  los músculos por grado.
 - El editor de ejercicios (crear y editar) tiene **la piel de «Nueva receta»**:
   página propia que sustituye a la lista o al detalle, cabecera de sección con
   Cancelar/Guardar y tarjetas en dos columnas desde `lg` (dibujo de los músculos
@@ -468,14 +522,16 @@ posterior va en su propio número. Los tests de la API **no** ven estas filas (s
 bootstrap no siembra regiones), así que lo verifica el e2e.
 - `0012_recetas_nutrirutina.sql` siembra el **recetario de Nutrirutina** (ver
 «Recetario sembrado» más abajo). Es generada: no se edita a mano.
-- `0013_alimentos.sql` es **aditiva** (tabla `foods` + `recipe_ingredients.food_id`
+- `0016_alimentos.sql` es **aditiva** (tabla `foods` + `recipe_ingredients.food_id`
 /`optional`) y va en el bootstrap de tests con `foods` en `TABLES`. Sin `;` en
-sus comentarios: el bootstrap parte el fichero por ellos. `0014_recetas_libro.sql`
+sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sql`
 es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
-cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0014.
-- En remoto el baseline ya está aplicado en la D1 de producción; pero cada delta
-nuevo hay que aplicarlo tras el deploy (`pnpm db:migrate:remote`; 0009 destruye
-el histórico de planificación — ver `DEPLOY.md` §4).
+cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
+- En remoto el baseline ya está aplicado en la D1 de producción; cada delta
+nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
+histórico de planificación, justo después del deploy; **0013–0015 van antes del
+merge a `main`**, porque el merge publica la API que ya lee
+`exercise_regions.role` — ver `DEPLOY.md` §4).
 
 ### 2. wrangler pide confirmación y cuelga en no-TTY
 
@@ -650,10 +706,10 @@ Los pasos solo faltan en ejercicios creados a mano — rellenarlos desde el
 editor (textarea "Pasos de ejecución", un paso por línea).
 
 Las **sub-regiones** de esos 91 ejercicios vienen en
-`0010_exercise_regions.sql`: 237 filas, 33 de las 35 regiones del vocabulario
-usadas, 0 ejercicios sembrados sin sub-región y 0 regiones que no cuelguen de un
-grupo ya presente en sus tags (las dos sin uso son `tibialis-anterior` y
-`lower-back-ql`). La auditoría de esos 91 ejercicios (2026-09-22, tres revisiones
+`0010_exercise_regions.sql`: 237 filas, 33 de las 35 regiones que tenía entonces
+el vocabulario, 0 ejercicios sembrados sin sub-región y 0 regiones que no
+cuelguen de un grupo ya presente en sus tags (las dos sin uso eran
+`tibialis-anterior` y `lower-back-ql`, fusionada después en Lumbares por `0013`). La auditoría de esos 91 ejercicios (2026-09-22, tres revisiones
 independientes + comprobación SQL) dejó **una** corrección, en
 `0011_exercise_regions_semilla.sql`: el sóleo de `Elevación de gemelos en prensa`
 —238 filas en total—. El resto de candidatos eran discusiones de grado de
@@ -726,7 +782,7 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   (`api/src/repo.ts`). «Hoy» lo pinta bajo el carrusel de comidas («Total del
   día») y el plan al pie de cada columna (kcal y `P · G · C`, con el texto
   completo en `sr-only`; «≈» si es aproximado).
-- `0014_recetas_libro.sql` sustituye los ingredientes de 96 recetas por los del
+- `0017_recetas_libro.sql` sustituye los ingredientes de 96 recetas por los del
   libro de cocina del usuario (extraídos con Gemini), enlazados a `foods`. Solo
   toca una receta si sus ingredientes siguen **exactamente** como los dejó 0012
   (mismo número, nombres y suma de cantidades): una receta editada a mano no se
@@ -741,8 +797,8 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   4U» (la receta tiene 1 ración). «Limón/Naranja (… zumo …)» cuenta como su zumo.
 - 22 alimentos del catálogo no venían de Nutrirutina (apio, corvina, salsa de
   soja, uvas pasas…): sus valores por 100 g y los pesos por unidad son
-  **estimaciones estándar** (tipo BEDCA/USDA) hechas al generar 0014, no datos de
+  **estimaciones estándar** (tipo BEDCA/USDA) hechas al generar 0017, no datos de
   etiqueta.
-- Las fuentes de 0014 (respuestas de Gemini y el mapeo) no viven en el repo: la
+- Las fuentes de 0017 (respuestas de Gemini y el mapeo) no viven en el repo: la
   migración es una **foto congelada**, no regenerable. Un arreglo posterior va en
   su propio número.

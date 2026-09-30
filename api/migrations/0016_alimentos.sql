@@ -1,7 +1,7 @@
 -- Catálogo de alimentos para calcular macros. Valores por 100 g (o 100 ml).
 -- grams_per_unit convierte la unidad «ud» a gramos (NULL = no se sabe).
 -- Aditivo: el runner de wrangler la ejecuta una sola vez (ADD COLUMN no es
--- repetible). Se siembra en 0014. Sin punto y coma en los comentarios: el
+-- repetible). Se siembra en 0017. Sin punto y coma en los comentarios: el
 -- bootstrap de tests parte el fichero por ellos.
 CREATE TABLE IF NOT EXISTS foods (
   id             INTEGER PRIMARY KEY,

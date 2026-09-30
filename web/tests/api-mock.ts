@@ -240,7 +240,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           techniqueUrl?: string | null;
           steps?: string[] | null;
           tags: string[];
-          regions?: string[];
+          regions?: Exercise["regions"];
           kind?: "strength" | "running" | "bike";
         };
         const bad = validate(b);

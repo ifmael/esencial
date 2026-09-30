@@ -206,10 +206,10 @@ export async function loadExercise(
   head.regions = (
     await rows(
       db,
-      "SELECT region FROM exercise_regions WHERE exercise_id = ? ORDER BY region",
+      "SELECT region, role FROM exercise_regions WHERE exercise_id = ? ORDER BY region",
       id,
     )
-  ).map((r) => String(r.region));
+  ).map((r) => ({ region: String(r.region), role: String(r.role) }));
   return head;
 }
 

@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router";
+import { Body3D } from "../components/body-3d/body-3d";
 import { BodyMap } from "../components/body-map/body-map";
 import {
+  bestView,
   type MuscleRegion,
   regionLabel,
   regionsOfGroup,
@@ -36,6 +38,7 @@ import {
   ConnectedGroup,
   ConnectedItem,
   cardClass,
+  cx,
   Field,
   Input,
   ripple,
@@ -47,7 +50,10 @@ import {
   type Exercise,
   type ExerciseInput,
   type ExerciseKind,
+  type ExerciseRegion,
   KIND_LABELS,
+  type RegionRole,
+  ROLE_LABELS,
   useExercises,
 } from "../lib/exercises";
 import type { ShapeName } from "../lib/shapes";
@@ -102,6 +108,64 @@ const TagChips = ({
   </ul>
 );
 
+/** Muestra de cada grado en la leyenda: el mismo token que el modelo y el SVG. */
+const ROLE_SWATCH: Record<RegionRole, string> = {
+  primary: "bg-primary",
+  secondary: "bg-muscle-secondary",
+  stabilizer: "bg-muscle-stabilizer",
+};
+
+/** Los músculos de un ejercicio en 3D, con el dibujo SVG de las dos vistas de
+ *  respaldo y la leyenda de los grados que aparecen. */
+function MusclesFigure({
+  regions,
+  height,
+}: {
+  regions: ExerciseRegion[];
+  height: string;
+}) {
+  const roles = (Object.keys(ROLE_LABELS) as RegionRole[]).filter((k) =>
+    regions.some((r) => r.role === k),
+  );
+  return (
+    <div className="flex flex-col gap-3 rounded-xl bg-surface-container-low p-4">
+      <Body3D
+        regions={regions}
+        view={bestView(regions)}
+        className={cx(height, "w-full")}
+        fallback={
+          <div className={cx(height, "flex items-start justify-center gap-4")}>
+            <BodyMap
+              view="front"
+              regions={regions}
+              className="h-full w-auto max-w-full"
+            />
+            <BodyMap
+              view="back"
+              regions={regions}
+              className="h-full w-auto max-w-full"
+            />
+          </div>
+        }
+      />
+      <ul
+        aria-label="Leyenda"
+        className="flex flex-wrap justify-center gap-4 text-label-l text-on-surface-variant"
+      >
+        {roles.map((k) => (
+          <li key={k} className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className={cx("size-3 rounded-full", ROLE_SWATCH[k])}
+            />
+            {ROLE_LABELS[k]}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // --- Editor (create + edit) --------------------------------------------------
 
 type Draft = {
@@ -111,7 +175,7 @@ type Draft = {
   techniqueUrl: string;
   steps: string[];
   tags: string[];
-  regions: string[];
+  regions: ExerciseRegion[];
   kind: ExerciseKind;
 };
 
@@ -133,7 +197,7 @@ const toDraft = (x: Exercise): Draft => ({
   techniqueUrl: x.techniqueUrl ?? "",
   steps: x.steps?.length ? [...x.steps] : [""],
   tags: [...x.tags],
-  regions: [...x.regions],
+  regions: x.regions.map((r) => ({ ...r })),
   kind: x.kind,
 });
 
@@ -180,18 +244,27 @@ function ExerciseEditor({
   const morph = useCreateMorph();
 
   const toggleRegion = (region: MuscleRegion) => {
-    const on = draft.regions.includes(region.id);
+    const on = draft.regions.some((r) => r.region === region.id);
     setDraft({
       ...draft,
+      // Un músculo nuevo nace principal; su grado se cambia debajo.
       regions: on
-        ? draft.regions.filter((x) => x !== region.id)
-        : [...draft.regions, region.id],
+        ? draft.regions.filter((r) => r.region !== region.id)
+        : [...draft.regions, { region: region.id, role: "primary" }],
       // Toda sub-región cuelga de su grupo: elegirla añade el tag si falta.
       tags: draft.tags.includes(region.group)
         ? draft.tags
         : [...draft.tags, region.group],
     });
   };
+
+  const setRole = (region: string, role: RegionRole) =>
+    setDraft({
+      ...draft,
+      regions: draft.regions.map((r) =>
+        r.region === region ? { region, role } : r,
+      ),
+    });
 
   /** Quitar un grupo se lleva sus músculos: sin él no colgarían de nada. */
   const toggleTag = (tag: string) => {
@@ -203,7 +276,7 @@ function ExerciseEditor({
     setDraft({
       ...draft,
       tags: draft.tags.filter((x) => x !== tag),
-      regions: draft.regions.filter((id) => !orphans.has(id)),
+      regions: draft.regions.filter((r) => !orphans.has(r.region)),
     });
   };
 
@@ -220,7 +293,9 @@ function ExerciseEditor({
       await onSubmit(toInput(draft));
     } catch (e) {
       // Envelope-driven (D6): el mensaje del servidor va junto al campo que falló.
-      const field = apiField(e);
+      // `regions.0.role` y compañía son errores de `regions`: van junto a ese campo.
+      const raw = apiField(e);
+      const field = raw?.startsWith("regions") ? "regions" : raw;
       setErrors(
         field === "techniqueUrl" ||
           field === "name" ||
@@ -289,20 +364,9 @@ function ExerciseEditor({
           <section className="flex flex-col gap-4">
             <h2 className="text-title-m">Músculos trabajados</h2>
             {draft.regions.length > 0 ? (
-              <div className="flex h-56 items-start justify-center gap-4 rounded-l bg-surface-container-high p-3">
-                <BodyMap
-                  view="front"
-                  regions={draft.regions}
-                  className="h-full w-auto max-w-full"
-                />
-                <BodyMap
-                  view="back"
-                  regions={draft.regions}
-                  className="h-full w-auto max-w-full"
-                />
-              </div>
+              <MusclesFigure regions={draft.regions} height="h-72" />
             ) : (
-              <div className="flex h-56 flex-col items-center justify-center gap-3 rounded-l bg-surface-container-high text-body-m text-on-surface-variant">
+              <div className="flex h-72 flex-col items-center justify-center gap-3 rounded-l bg-surface-container-high text-body-m text-on-surface-variant">
                 <Shape
                   name="cookie-9"
                   size={72}
@@ -420,7 +484,7 @@ function ExerciseEditor({
                   </legend>
                   <div className="flex flex-wrap gap-2">
                     {regionsOfGroup(t).map((r) => {
-                      const on = draft.regions.includes(r.id);
+                      const on = draft.regions.some((x) => x.region === r.id);
                       return (
                         <Chip
                           key={r.id}
@@ -433,6 +497,34 @@ function ExerciseEditor({
                       );
                     })}
                   </div>
+                  {regionsOfGroup(t).map((r) => {
+                    const role = draft.regions.find(
+                      (x) => x.region === r.id,
+                    )?.role;
+                    if (!role) return null;
+                    return (
+                      <div
+                        key={r.id}
+                        className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <span className="text-body-m">{r.label}</span>
+                        <ConnectedGroup label={`Grado: ${r.label}`}>
+                          {(Object.keys(ROLE_LABELS) as RegionRole[]).map(
+                            (k) => (
+                              <ConnectedItem
+                                key={k}
+                                pressed={role === k}
+                                className="min-h-12"
+                                onClick={() => setRole(r.id, k)}
+                              >
+                                {ROLE_LABELS[k]}
+                              </ConnectedItem>
+                            ),
+                          )}
+                        </ConnectedGroup>
+                      </div>
+                    );
+                  })}
                 </fieldset>
               ))
             )}
@@ -890,18 +982,10 @@ export function EjercicioDetailPage() {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4 lg:order-2">
           {exercise.regions.length > 0 && (
-            <div className="flex items-start justify-center gap-4 rounded-xl bg-surface-container-low p-4">
-              <BodyMap
-                view="front"
-                regions={exercise.regions}
-                className="h-72 w-auto max-w-full lg:h-[55vh]"
-              />
-              <BodyMap
-                view="back"
-                regions={exercise.regions}
-                className="h-72 w-auto max-w-full lg:h-[55vh]"
-              />
-            </div>
+            <MusclesFigure
+              regions={exercise.regions}
+              height="h-96 lg:h-[60vh]"
+            />
           )}
           <AddToTemplate exercise={exercise} state={templates} />
         </div>
@@ -912,18 +996,27 @@ export function EjercicioDetailPage() {
               <span className="section-label">Grupos</span>
               <TagChips tags={exercise.tags} tone="accent" />
             </div>
-            {exercise.regions.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <span className="section-label">Músculos</span>
-                <ul className="flex flex-wrap gap-1" aria-label="Músculos">
-                  {exercise.regions.map((r) => (
-                    <li key={r}>
-                      <Badge>{regionLabel(r)}</Badge>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {(Object.keys(ROLE_LABELS) as RegionRole[]).map((role) => {
+              const mine = exercise.regions.filter((r) => r.role === role);
+              if (mine.length === 0) return null;
+              return (
+                <div key={role} className="flex flex-col gap-2">
+                  <span id={`ex-role-${role}`} className="section-label">
+                    {ROLE_LABELS[role]}
+                  </span>
+                  <ul
+                    className="flex flex-wrap gap-1"
+                    aria-labelledby={`ex-role-${role}`}
+                  >
+                    {mine.map((r) => (
+                      <li key={r.region}>
+                        <Badge>{regionLabel(r.region)}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
           {exercise.description && (
             <p className="text-body-l">{exercise.description}</p>

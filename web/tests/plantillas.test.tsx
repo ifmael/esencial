@@ -21,6 +21,12 @@ import {
   unstubViewTransitions,
 } from "./view-transition-stub";
 
+// Con WebGL el selector pinta el modelo 3D (la escena va sustituida: jsdom no
+// tiene GPU); sin él, el mapa SVG de siempre.
+vi.mock("../src/components/body-3d/scene", () => ({
+  mountScene: async () => ({ paint() {}, view() {}, dispose() {} }),
+}));
+
 const press: Exercise = {
   id: 7,
   name: "Press banca",
@@ -29,7 +35,7 @@ const press: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pecho"],
-  regions: ["chest-lower"],
+  regions: [{ region: "chest-lower", role: "primary" }],
   kind: "strength",
 };
 const remo: Exercise = {
@@ -40,7 +46,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
-  regions: ["lats-mid"],
+  regions: [{ region: "lats-mid", role: "primary" }],
   kind: "strength",
 };
 const sent: Exercise = {
@@ -51,7 +57,7 @@ const sent: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
-  regions: ["quads"],
+  regions: [{ region: "quads", role: "primary" }],
   kind: "strength",
 };
 const run: Exercise = {
@@ -542,7 +548,12 @@ describe("exercise picker", () => {
       templates: [tplA(), tplB(), tplC()],
       exercises: [
         press,
-        { ...press, id: 21, name: "Aperturas", regions: ["chest-upper"] },
+        {
+          ...press,
+          id: 21,
+          name: "Aperturas",
+          regions: [{ region: "chest-upper", role: "primary" }],
+        },
         remo,
       ],
     });
@@ -575,6 +586,47 @@ describe("exercise picker", () => {
     expect(dlg.getByText("Grupo: Todos")).toBeDefined();
     fireEvent.click(dlg.getByRole("button", { name: /^Espalda \(1\)/ }));
     expect(dlg.getByRole("button", { name: /^Remo\b/ })).toBeDefined();
+  });
+
+  it("con el modelo 3D, cada músculo se elige también con las fichas de su grupo", async () => {
+    // `mockApi` vuelve a poner su `fetch`: primero se limpia, luego WebGL.
+    vi.unstubAllGlobals();
+    vi.stubGlobal("WebGL2RenderingContext", class {});
+    const context = {} as never;
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      context,
+    );
+    api = mockApi({
+      templates: [tplA(), tplB(), tplC()],
+      exercises: [
+        press,
+        {
+          ...press,
+          id: 21,
+          name: "Aperturas",
+          regions: [{ region: "chest-upper", role: "primary" }],
+        },
+        remo,
+      ],
+    });
+    const dlg = within(await openPicker());
+    // El lienzo no tiene botones: sin grupo elegido no hay fichas de músculo.
+    expect(dlg.queryByRole("group", { name: "Músculo:" })).toBeNull();
+    fireEvent.click(dlg.getByRole("button", { name: "Pecho" }));
+    const muscles = within(dlg.getByRole("group", { name: "Músculo:" }));
+    fireEvent.click(
+      muscles.getByRole("button", { name: "Pecho inferior (esternal)" }),
+    );
+    expect(dlg.getByText("Músculo: Pecho inferior (esternal)")).toBeDefined();
+    expect(dlg.getByRole("button", { name: /^Press banca\b/ })).toBeDefined();
+    expect(dlg.queryByRole("button", { name: /^Aperturas\b/ })).toBeNull();
+    // Las fichas siguen a la vista (las del grupo del músculo) para cambiarlo.
+    expect(
+      muscles
+        .getByRole("button", { name: "Pecho inferior (esternal)" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    vi.restoreAllMocks();
   });
 
   it("draft exercises are disabled; re-adding is impossible", async () => {

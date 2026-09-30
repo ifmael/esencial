@@ -1,10 +1,10 @@
-// 0014 cambia los ingredientes de las recetas de Nutrirutina (0012) por los del
+// 0017 cambia los ingredientes de las recetas de Nutrirutina (0012) por los del
 // libro, enlazados al catálogo, pero solo si la receta sigue como la dejó 0012:
 // una receta editada a mano no se toca.
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import m0012 from "../migrations/0012_recetas_nutrirutina.sql?raw";
-import m0014 from "../migrations/0014_recetas_libro.sql?raw";
+import m0017 from "../migrations/0017_recetas_libro.sql?raw";
 import { d1, freshDb, get, put } from "./helpers";
 
 async function apply(sql: string): Promise<void> {
@@ -37,18 +37,18 @@ const ESTRELLADOS = "Huevos estrellados con hash de patatas";
 const REVUELTO = "Revuelto de setas (con o sin chorizo)";
 const MAGRET = "Magret de pato a baja temperatura con salsa de ciruelas";
 
-describe("0014: ingredientes del libro", () => {
+describe("0017: ingredientes del libro", () => {
   beforeAll(async () => {
     await freshDb();
     await apply(m0012);
-    // El usuario edita una receta importada antes de que llegue 0014.
+    // El usuario edita una receta importada antes de que llegue 0017.
     const r = await recipe(REVUELTO);
     await put(`/api/recipes/${r.id}`, {
       name: REVUELTO,
       servings: 2,
       ingredients: [{ food: "Huevos camperos", quantity: 6, unit: "ud" }],
     });
-    await apply(m0014);
+    await apply(m0017);
   });
 
   it("una receta intacta pasa a la lista del libro, enlazada y con huevos", async () => {

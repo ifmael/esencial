@@ -49,7 +49,14 @@ export default defineConfig({
     launchOptions: {
       // Brave en local; en CI, el chromium que instala Playwright.
       executablePath: existsSync(BRAVE) ? BRAVE : undefined,
-      args: ["--no-sandbox"],
+      // Headless, Chromium pinta WebGL con SwiftShader (por software) y la app
+      // enseña el mapa SVG: los tests del visor 3D se saltarían. En macOS,
+      // Metal da la GPU de verdad también en headless; el CI (Linux sin GPU)
+      // los salta.
+      args: [
+        "--no-sandbox",
+        ...(process.platform === "darwin" ? ["--use-angle=metal"] : []),
+      ],
     },
   },
   webServer: [

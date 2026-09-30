@@ -24,7 +24,6 @@ export const MUSCLE_REGION_GROUPS: Record<string, string> = {
   "lats-lower": "espalda",
   spine: "espalda",
   "lower-back-erectors": "espalda",
-  "lower-back-ql": "espalda",
   // bíceps
   biceps: "bíceps",
   // tríceps
