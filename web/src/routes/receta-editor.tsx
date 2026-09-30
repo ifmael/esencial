@@ -18,7 +18,7 @@ import {
   SaveIcon,
 } from "../components/icons";
 import { NewFoodDialog } from "../components/recipes/new-food-dialog";
-import { useFoods } from "../components/recipes/use-foods";
+import { type Food, useFoods } from "../components/recipes/use-foods";
 import {
   type FieldError,
   type Recipe,
@@ -113,6 +113,33 @@ const at = (i: number) => ({ ["--i" as string]: i });
 
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
   rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
+
+/** Clave para comparar nombres de alimento: sin mayúsculas, tildes ni espacios
+ *  de sobra («  Árroz » enlaza con «Arroz»). */
+const foodKey = (s: string) =>
+  s
+    .trim()
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+/** Unidades que se pasan a gramos sin más; «ud» necesita el peso del alimento.
+ *  Espejo de `nutritionPerServing` (api/src/repo.ts). */
+const DIRECT_UNITS = ["gr", "g", "ml", "kg", "l"];
+
+/** Qué dice una fila enlazada sobre los macros. */
+function linkStatus(row: IngRow, foods: Food[]): string {
+  const food = foods.find((f) => f.id === row.foodId);
+  const counts =
+    !row.quantity.trim() ||
+    DIRECT_UNITS.includes(row.unit) ||
+    (row.unit === "ud" && food?.gramsPerUnit != null);
+  if (!counts)
+    return row.unit
+      ? `No cuenta: «${row.unit}» no se puede pasar a gramos`
+      : "No cuenta: falta la unidad";
+  return food ? `Cuenta como «${food.name}»` : "Cuenta en los macros";
+}
 
 /** Página del editor: la ruta decide si es crear (`/recetario/nueva`) o editar
  *  (`/recetario/:id/editar`). Al editar espera al listado —el borrador sale de
@@ -591,8 +618,10 @@ function RecipeEditor({
                         setRow(draft.ingredients, i, {
                           food: e.target.value,
                           foodId:
-                            foods.find((f) => f.name === e.target.value)?.id ??
-                            null,
+                            foods.find(
+                              (f) =>
+                                foodKey(f.name) === foodKey(e.target.value),
+                            )?.id ?? null,
                         }),
                       )
                     }
@@ -665,11 +694,7 @@ function RecipeEditor({
                       Opcional
                     </label>
                     {row.foodId !== null ? (
-                      <span>
-                        {foods.some((f) => f.id === row.foodId)
-                          ? `Cuenta como «${foods.find((f) => f.id === row.foodId)?.name}»`
-                          : "Cuenta en los macros"}
-                      </span>
+                      <span>{linkStatus(row, foods)}</span>
                     ) : row.food.trim() ? (
                       <>
                         <span>No cuenta en los macros</span>
@@ -691,23 +716,6 @@ function RecipeEditor({
                 <option key={f.id} value={f.name} />
               ))}
             </datalist>
-            {creatingFor !== null && (
-              <NewFoodDialog
-                initialName={draft.ingredients[creatingFor]?.food.trim() ?? ""}
-                onCreate={createFood}
-                onCreated={(food) => {
-                  set(
-                    "ingredients",
-                    setRow(draftRef.current.ingredients, creatingFor, {
-                      food: food.name,
-                      foodId: food.id,
-                    }),
-                  );
-                  setCreatingFor(null);
-                }}
-                onClose={() => setCreatingFor(null)}
-              />
-            )}
             <Button
               variant="outlined"
               className="self-start"
@@ -778,6 +786,23 @@ function RecipeEditor({
           </section>
         </Card>
       </div>
+      {creatingFor !== null && (
+        <NewFoodDialog
+          initialName={draft.ingredients[creatingFor]?.food.trim() ?? ""}
+          onCreate={createFood}
+          onCreated={(food) => {
+            set(
+              "ingredients",
+              setRow(draftRef.current.ingredients, creatingFor, {
+                food: food.name,
+                foodId: food.id,
+              }),
+            );
+            setCreatingFor(null);
+          }}
+          onClose={() => setCreatingFor(null)}
+        />
+      )}
     </div>
   );
 }
