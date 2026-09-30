@@ -87,14 +87,14 @@ describe("nueva-receta: filas", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Añadir ingrediente" }));
     expect(
-      screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ })
+      screen.getAllByRole("combobox", { name: /^Ingrediente \d+ alimento$/ })
         .length,
     ).toBe(2);
     fireEvent.click(
       screen.getByRole("button", { name: "Quitar ingrediente 2" }),
     );
     expect(
-      screen.getAllByRole("textbox", { name: /^Ingrediente \d+ alimento$/ })
+      screen.getAllByRole("combobox", { name: /^Ingrediente \d+ alimento$/ })
         .length,
     ).toBe(1);
 
@@ -174,7 +174,7 @@ describe("nueva-receta: guardado", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Desayuno" }));
     fireEvent.change(
-      screen.getByRole("textbox", { name: "Ingrediente 1 alimento" }),
+      screen.getByRole("combobox", { name: "Ingrediente 1 alimento" }),
       {
         target: { value: "huevo" },
       },

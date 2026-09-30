@@ -23,7 +23,113 @@ export async function row(
   return (await rows(db, sql, ...args))[0];
 }
 
-/** Load one recipe with ordered ingredients, 1..N numbered steps, material names. */
+export type Nutrition = {
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  /** Algún ingrediente con cantidad no se pudo contar (sin alimento o sin conversión). */
+  approximate: boolean;
+};
+
+type IngredientMacros = {
+  quantity: unknown;
+  unit: unknown;
+  optional: unknown;
+  kcal: unknown;
+  protein: unknown;
+  fat: unknown;
+  carbs: unknown;
+  grams_per_unit: unknown;
+};
+
+/** Gramos (o ml) por unidad de medida directa; «ud» va aparte (grams_per_unit). */
+const GRAMS: Record<string, number> = { gr: 1, g: 1, ml: 1, kg: 1000, l: 1000 };
+
+/** Macros por ración a partir de los ingredientes unidos a `foods` (valores
+ *  por 100 g/ml). «ud» se convierte con grams_per_unit; lo opcional y lo que va
+ *  sin cantidad («al gusto») no cuentan. Sin raciones, la receta es una. Si no
+ *  se pudo contar nada, sale aproximada: «0 kcal» no es un dato. */
+export function nutritionPerServing(
+  ingredients: IngredientMacros[],
+  servings: unknown,
+): Nutrition {
+  const sum = { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+  let approximate = false;
+  let counted = 0;
+  for (const i of ingredients) {
+    if (i.optional || i.quantity === null) continue;
+    const unit = String(i.unit ?? "");
+    const grams =
+      i.kcal === null
+        ? null
+        : unit in GRAMS
+          ? Number(i.quantity) * GRAMS[unit]
+          : unit === "ud" && i.grams_per_unit !== null
+            ? Number(i.quantity) * Number(i.grams_per_unit)
+            : null;
+    if (grams === null) {
+      approximate = true;
+      continue;
+    }
+    counted += 1;
+    for (const k of ["kcal", "protein", "fat", "carbs"] as const)
+      sum[k] += (grams * Number(i[k])) / 100;
+  }
+  const n = Number(servings) || 1;
+  return {
+    kcal: Math.round(sum.kcal / n),
+    protein: Math.round(sum.protein / n),
+    fat: Math.round(sum.fat / n),
+    carbs: Math.round(sum.carbs / n),
+    approximate: approximate || counted === 0,
+  };
+}
+
+/** Macros por ración de varias recetas en una sola consulta (una receta sin
+ *  ingredientes sale a cero). */
+export async function nutritionByRecipe(
+  db: D1Database,
+  ids: number[],
+): Promise<Map<number, Nutrition>> {
+  const unique = [...new Set(ids)];
+  const out = new Map<number, Nutrition>();
+  if (!unique.length) return out;
+  const found = await rows(
+    db,
+    `SELECT r.id AS recipe_id, r.servings, ri.quantity, ri.unit, ri.optional,
+            f.kcal, f.protein, f.fat, f.carbs, f.grams_per_unit
+       FROM recipes r
+       LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+       LEFT JOIN foods f ON f.id = ri.food_id
+      WHERE r.id IN (${unique.map(() => "?").join(",")})`,
+    ...unique,
+  );
+  for (const id of unique) {
+    const mine = found.filter((x) => Number(x.recipe_id) === id);
+    if (mine.length)
+      out.set(
+        id,
+        nutritionPerServing(mine as IngredientMacros[], mine[0].servings),
+      );
+  }
+  return out;
+}
+
+/** Suma de raciones (una por comida); null si no hay ninguna. */
+export function sumNutrition(list: Nutrition[]): Nutrition | null {
+  if (!list.length) return null;
+  return list.reduce((a, b) => ({
+    kcal: a.kcal + b.kcal,
+    protein: a.protein + b.protein,
+    fat: a.fat + b.fat,
+    carbs: a.carbs + b.carbs,
+    approximate: a.approximate || b.approximate,
+  }));
+}
+
+/** Load one recipe with ordered ingredients, 1..N numbered steps, material names
+ *  and its macros per serving. */
 export async function loadRecipe(
   db: D1Database,
   id: number,
@@ -34,11 +140,27 @@ export async function loadRecipe(
     id,
   );
   if (!head) return null;
-  head.ingredients = await rows(
+  const ingredients = await rows(
     db,
-    "SELECT id, food, quantity, unit, section FROM recipe_ingredients WHERE recipe_id = ? ORDER BY position, id",
+    `SELECT ri.id, ri.food, ri.quantity, ri.unit, ri.section, ri.food_id, ri.optional,
+            f.kcal, f.protein, f.fat, f.carbs, f.grams_per_unit
+       FROM recipe_ingredients ri LEFT JOIN foods f ON f.id = ri.food_id
+      WHERE ri.recipe_id = ? ORDER BY ri.position, ri.id`,
     id,
   );
+  head.nutrition = nutritionPerServing(
+    ingredients as IngredientMacros[],
+    head.servings,
+  );
+  head.ingredients = ingredients.map((i) => ({
+    id: i.id,
+    food: i.food,
+    quantity: i.quantity,
+    unit: i.unit,
+    section: i.section,
+    foodId: i.food_id,
+    optional: Boolean(i.optional),
+  }));
   head.steps = (
     await rows(
       db,

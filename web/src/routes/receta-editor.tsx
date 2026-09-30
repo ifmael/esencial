@@ -17,6 +17,8 @@ import {
   PhotoIcon,
   SaveIcon,
 } from "../components/icons";
+import { NewFoodDialog } from "../components/recipes/new-food-dialog";
+import { type Food, useFoods } from "../components/recipes/use-foods";
 import {
   type FieldError,
   type Recipe,
@@ -28,6 +30,7 @@ import {
   Alert,
   Button,
   Card,
+  Checkbox,
   Chip,
   Field,
   Input,
@@ -38,7 +41,23 @@ import { ApiError, apiFetch, photoSrc } from "../lib/api";
 import { pushEscape } from "../lib/escape-stack";
 import { useCreateMorph } from "../lib/view-transition";
 
-type IngRow = { food: string; quantity: string; unit: string };
+/** `foodId`/`optional` viajan tal cual hasta el PUT: si no, editar una receta
+ *  borraría su enlace al catálogo y sus macros. */
+type IngRow = {
+  food: string;
+  quantity: string;
+  unit: string;
+  foodId: number | null;
+  optional: boolean;
+};
+
+const emptyRow = (): IngRow => ({
+  food: "",
+  quantity: "",
+  unit: "",
+  foodId: null,
+  optional: false,
+});
 
 type Draft = {
   name: string;
@@ -56,7 +75,7 @@ const blank = (): Draft => ({
   description: "",
   servings: "",
   photo_path: "",
-  ingredients: [{ food: "", quantity: "", unit: "" }],
+  ingredients: [emptyRow()],
   steps: [""],
   materials: [],
   tags: [],
@@ -74,8 +93,10 @@ const fromRecipe = (r: Recipe): Draft => ({
         food: i.food,
         quantity: i.quantity === null ? "" : String(i.quantity),
         unit: i.unit ?? "",
+        foodId: i.foodId,
+        optional: i.optional,
       }))
-    : [{ food: "", quantity: "", unit: "" }],
+    : [emptyRow()],
   steps: r.steps.length ? r.steps.map((s) => s.text) : [""],
   materials: [...r.materials],
   tags: [...r.tags],
@@ -92,6 +113,33 @@ const at = (i: number) => ({ ["--i" as string]: i });
 
 const setRow = (rows: IngRow[], i: number, patch: Partial<IngRow>): IngRow[] =>
   rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
+
+/** Clave para comparar nombres de alimento: sin mayúsculas, tildes ni espacios
+ *  de sobra («  Árroz » enlaza con «Arroz»). */
+const foodKey = (s: string) =>
+  s
+    .trim()
+    .toLocaleLowerCase("es")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+/** Unidades que se pasan a gramos sin más; «ud» necesita el peso del alimento.
+ *  Espejo de `nutritionPerServing` (api/src/repo.ts). */
+const DIRECT_UNITS = ["gr", "g", "ml", "kg", "l"];
+
+/** Qué dice una fila enlazada sobre los macros. */
+function linkStatus(row: IngRow, foods: Food[]): string {
+  const food = foods.find((f) => f.id === row.foodId);
+  const counts =
+    !row.quantity.trim() ||
+    DIRECT_UNITS.includes(row.unit) ||
+    (row.unit === "ud" && food?.gramsPerUnit != null);
+  if (!counts)
+    return row.unit
+      ? `No cuenta: «${row.unit}» no se puede pasar a gramos`
+      : "No cuenta: falta la unidad";
+  return food ? `Cuenta como «${food.name}»` : "Cuenta en los macros";
+}
 
 /** Página del editor: la ruta decide si es crear (`/recetario/nueva`) o editar
  *  (`/recetario/:id/editar`). Al editar espera al listado —el borrador sale de
@@ -174,6 +222,9 @@ function RecipeEditor({
   // Distingue la ELIMINACIÓN explícita (Quitar foto) del mero descarte del
   // reintento: solo la primera vacía la foto.
   const photoRemovedRef = useRef(false);
+  const { foods, create: createFood } = useFoods();
+  // Fila del ingrediente para la que se está creando un alimento (o null).
+  const [creatingFor, setCreatingFor] = useState<number | null>(null);
 
   // Solo crear anima: lo pulsado (FAB, «Nueva receta») se transforma en la
   // página. Carga directa y editar no.
@@ -307,6 +358,8 @@ function RecipeEditor({
         food: i.food.trim(),
         quantity: i.quantity.trim() ? Number(i.quantity) : null,
         unit: i.unit.trim() || null,
+        foodId: i.foodId,
+        optional: i.optional,
       })),
     steps: draftRef.current.steps.map((s) => s.trim()).filter(Boolean),
     materials: draftRef.current.materials,
@@ -553,13 +606,23 @@ function RecipeEditor({
                 <li key={i} className="flex flex-wrap items-center gap-2">
                   <Input
                     aria-label={`Ingrediente ${i + 1} alimento`}
-                    className="basis-full sm:basis-0 sm:flex-1"
+                    className="basis-full"
                     placeholder="Alimento"
+                    list="foods-catalog"
                     value={row.food}
                     onChange={(e) =>
                       set(
                         "ingredients",
-                        setRow(draft.ingredients, i, { food: e.target.value }),
+                        // El nombre exacto de un alimento del catálogo lo
+                        // enlaza; cualquier otro texto suelta el enlace.
+                        setRow(draft.ingredients, i, {
+                          food: e.target.value,
+                          foodId:
+                            foods.find(
+                              (f) =>
+                                foodKey(f.name) === foodKey(e.target.value),
+                            )?.id ?? null,
+                        }),
                       )
                     }
                   />
@@ -614,17 +677,50 @@ function RecipeEditor({
                   >
                     <CloseIcon />
                   </Button>
+                  <div className="flex basis-full flex-wrap items-center gap-x-3 text-body-s text-on-surface-variant">
+                    <label className="flex items-center gap-1">
+                      <Checkbox
+                        aria-label={`Ingrediente ${i + 1} opcional`}
+                        checked={row.optional}
+                        onChange={(e) =>
+                          set(
+                            "ingredients",
+                            setRow(draft.ingredients, i, {
+                              optional: e.target.checked,
+                            }),
+                          )
+                        }
+                      />
+                      Opcional
+                    </label>
+                    {row.foodId !== null ? (
+                      <span>{linkStatus(row, foods)}</span>
+                    ) : row.food.trim() ? (
+                      <>
+                        <span>No cuenta en los macros</span>
+                        <Button
+                          variant="text"
+                          aria-label={`Crear alimento para el ingrediente ${i + 1}`}
+                          onClick={() => setCreatingFor(i)}
+                        >
+                          Crear alimento
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
+            <datalist id="foods-catalog">
+              {foods.map((f) => (
+                <option key={f.id} value={f.name} />
+              ))}
+            </datalist>
             <Button
               variant="outlined"
               className="self-start"
               onClick={() =>
-                set("ingredients", [
-                  ...draft.ingredients,
-                  { food: "", quantity: "", unit: "" },
-                ])
+                set("ingredients", [...draft.ingredients, emptyRow()])
               }
             >
               <AddIcon />
@@ -690,6 +786,23 @@ function RecipeEditor({
           </section>
         </Card>
       </div>
+      {creatingFor !== null && (
+        <NewFoodDialog
+          initialName={draft.ingredients[creatingFor]?.food.trim() ?? ""}
+          onCreate={createFood}
+          onCreated={(food) => {
+            set(
+              "ingredients",
+              setRow(draftRef.current.ingredients, creatingFor, {
+                food: food.name,
+                foodId: food.id,
+              }),
+            );
+            setCreatingFor(null);
+          }}
+          onClose={() => setCreatingFor(null)}
+        />
+      )}
     </div>
   );
 }

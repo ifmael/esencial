@@ -522,6 +522,11 @@ posterior va en su propio número. Los tests de la API **no** ven estas filas (s
 bootstrap no siembra regiones), así que lo verifica el e2e.
 - `0012_recetas_nutrirutina.sql` siembra el **recetario de Nutrirutina** (ver
 «Recetario sembrado» más abajo). Es generada: no se edita a mano.
+- `0016_alimentos.sql` es **aditiva** (tabla `foods` + `recipe_ingredients.food_id`
+/`optional`) y va en el bootstrap de tests con `foods` en `TABLES`. Sin `;` en
+sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sql`
+es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
+cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
 nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
 histórico de planificación, justo después del deploy; **0013–0015 van antes del
@@ -731,8 +736,9 @@ ingredientes, pasos y utensilios (→ materiales). La genera
 `api/scripts/nutrirutina.ts` (la cubre `api/tests/nutrirutina-import.test.ts`).
 
 - Unidad `g` → `gr` (el desplegable del editor); cantidad ≤ 0 («al gusto», -1 en
-  Nutrirutina) → sin cantidad ni unidad. Sin categorías ni nutrición (Esencial no
-  tiene columnas para las calorías/macros).
+  Nutrirutina) → sin cantidad ni unidad. Sin categorías. La nutrición guardada en
+  Nutrirutina **no se importa**: tiene proteínas y carbohidratos intercambiados y
+  le faltaban ingredientes (ver «Macros» abajo).
 - Una receta con un nombre que ya exista **se salta entera** (tabla auxiliar
   `_nutrirutina_skip`, que la migración borra al final): nunca pisa ni añade
   hijos a una receta propia.
@@ -747,3 +753,52 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   cambiada (lo cubre `recipes.test.ts`). En producción, las fotos se suben
   **antes** de migrar (`DEPLOY.md` §4).
 
+## Macros por ración (catálogo `foods`)
+
+- `foods`: 309 alimentos (los 288 de Nutrirutina + los que faltaban), con kcal,
+  proteínas, grasas y carbohidratos **por 100 g/ml** y `grams_per_unit` para la
+  unidad `ud` (huevo 55, diente de ajo 5, zumo de limón 40…).
+- Los macros **no se guardan**: `loadRecipe` los calcula al leer
+  (`nutritionPerServing` en `api/src/repo.ts`) y la respuesta lleva
+  `nutrition {kcal, protein, fat, carbs, approximate}` **por ración** (sin
+  raciones, la receta es una). No cuentan lo opcional ni lo que va sin cantidad;
+  un ingrediente con cantidad sin `foodId` o en una unidad sin conversión deja
+  `approximate: true`, y también una receta en la que **no se pudo contar nada**
+  («0 kcal» no es un dato). Unidades directas: `gr`/`g`/`ml`/`kg`/`l`; `ud` usa
+  `grams_per_unit`. La ficha lo pinta en «Por ración».
+- `foodId` se valida contra el catálogo en POST/PUT (400
+  `{field:'ingredients.N.foodId'}`).
+- **Editor** (`receta-editor.tsx`): el campo del alimento lleva un `<datalist>`
+  con el catálogo (`useFoods`, `GET /api/foods` entero; por eso su rol es
+  `combobox`, no `textbox`). El **nombre exacto** de un alimento lo enlaza;
+  cualquier otro texto suelta el enlace. Cada fila dice si cuenta («Cuenta como
+  «Arroz»») o no, con **Crear alimento** (`NewFoodDialog`, `POST /api/foods`:
+  valores por 100 g + peso de una unidad opcional; nombre repetido → 400
+  `field:'name'`) y la casilla **Opcional** (no cuenta en los macros).
+- **Totales del día** (1 ración por comida, lo decidido: en casa se cocina para
+  dos y cada uno come una ración): `GET /api/day/:date` devuelve `nutrition`
+  (null sin recetas) y `GET /api/meal-plan/:week` `totals[7]` (0 = lunes, null
+  en los días sin recetas), los dos con `nutritionByRecipe` + `sumNutrition`
+  (`api/src/repo.ts`). «Hoy» lo pinta bajo el carrusel de comidas («Total del
+  día») y el plan al pie de cada columna (kcal y `P · G · C`, con el texto
+  completo en `sr-only`; «≈» si es aproximado).
+- `0017_recetas_libro.sql` sustituye los ingredientes de 96 recetas por los del
+  libro de cocina del usuario (extraídos con Gemini), enlazados a `foods`. Solo
+  toca una receta si sus ingredientes siguen **exactamente** como los dejó 0012
+  (mismo número, nombres y suma de cantidades): una receta editada a mano no se
+  toca. Al final enlaza cualquier ingrediente cuyo texto sea un alimento exacto
+  del catálogo (las 4 recetas que no están en el libro). Rangos del libro
+  («4-5») → el mínimo; «<1 g» → sin cantidad; `kg`/`l` → `gr`/`ml`; lonchas,
+  ramitas y trozos → `ud`. Las raciones de cada receta **no cambian**. Agua,
+  hielo y sal van enlazados a alimentos de 0 kcal (si no, casi todas las recetas
+  saldrían aproximadas). Son **opcionales** (no cuentan): lo que no se come (la
+  costra de sal y su huevo en «Pescado a la sal», la corteza de piña), las
+  ralladuras y pieles, las variantes (hummus) y los batidos 2-4 de «4 smoothies
+  4U» (la receta tiene 1 ración). «Limón/Naranja (… zumo …)» cuenta como su zumo.
+- 22 alimentos del catálogo no venían de Nutrirutina (apio, corvina, salsa de
+  soja, uvas pasas…): sus valores por 100 g y los pesos por unidad son
+  **estimaciones estándar** (tipo BEDCA/USDA) hechas al generar 0017, no datos de
+  etiqueta.
+- Las fuentes de 0017 (respuestas de Gemini y el mapeo) no viven en el repo: la
+  migración es una **foto congelada**, no regenerable. Un arreglo posterior va en
+  su propio número.

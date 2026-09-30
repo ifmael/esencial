@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { dayIndexOf, isoWeekOf } from "../dates";
 import { type Env, getDb } from "../db";
 import { fail, guard, json } from "../http";
-import { row, rows } from "../repo";
+import { nutritionByRecipe, row, rows, sumNutrition } from "../repo";
 
 // `:date{.*}` so the trailing-slash case (`/api/day/`) reaches validation too:
 // Hono mounts do not route an empty param to `/`, and the spec wants 400 there.
@@ -31,6 +31,14 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
        ORDER BY CASE ms.meal WHEN 'desayuno' THEN 0 WHEN 'almuerzo' THEN 1 ELSE 2 END`,
       isoWeek,
       dayIndex,
+    );
+    // Cada comida cuenta una ración de su receta.
+    const perRecipe = await nutritionByRecipe(
+      db,
+      meals.flatMap((m) => (m.recipeId == null ? [] : [Number(m.recipeId)])),
+    );
+    const nutrition = sumNutrition(
+      meals.flatMap((m) => perRecipe.get(Number(m.recipeId)) ?? []),
     );
 
     const session = await row(
@@ -70,6 +78,7 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
       isoWeek,
       dayIndex,
       meals,
+      nutrition,
       session: session
         ? {
             id: Number(session.id),

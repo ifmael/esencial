@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { ISO_WEEK, mealPlanSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
 import { fail, guard, json } from "../http";
-import { row, rows } from "../repo";
+import { nutritionByRecipe, row, rows, sumNutrition } from "../repo";
 import { zBody } from "../validation";
 
 async function serializeSlots(
@@ -21,7 +21,19 @@ async function serializeSlots(
     weekPlanId,
   );
   // recipe_id may point at a cleared slot; LEFT JOIN keeps row, name null → empty render
-  return json({ isoWeek, slots });
+  // Un total por día (0 = lunes): una ración por comida; null sin recetas.
+  const perRecipe = await nutritionByRecipe(
+    db,
+    slots.flatMap((s) => (s.recipeId == null ? [] : [Number(s.recipeId)])),
+  );
+  const totals = Array.from({ length: 7 }, (_, day) =>
+    sumNutrition(
+      slots.flatMap((s) =>
+        Number(s.day) === day ? (perRecipe.get(Number(s.recipeId)) ?? []) : [],
+      ),
+    ),
+  );
+  return json({ isoWeek, slots, totals });
 }
 
 export const mealPlan = new Hono<{ Bindings: Env }>()
@@ -36,7 +48,8 @@ export const mealPlan = new Hono<{ Bindings: Env }>()
         "SELECT id FROM week_plans WHERE iso_week = ?",
         week,
       );
-      if (!plan) return json({ isoWeek: week, slots: [] });
+      if (!plan)
+        return json({ isoWeek: week, slots: [], totals: Array(7).fill(null) });
       return serializeSlots(db, Number(plan.id), week);
     }),
   )

@@ -122,9 +122,33 @@ describe("/recetario/:id", () => {
         }) as HTMLInputElement
       ).value,
     ).toBe("4");
-    const ingredients = screen.getAllByRole("textbox", {
+    const ingredients = screen.getAllByRole("combobox", {
       name: /^Ingrediente \d+ alimento$/,
     });
     expect((ingredients[1] as HTMLInputElement).value).toBe("pollo");
+  });
+
+  it("muestra calorías y macros por ración y avisa si son aproximados", async () => {
+    vi.stubGlobal("fetch", makeServer([recipe]).fetchMock);
+    renderAt("/recetario/7");
+    const box = await screen.findByRole("region", { name: "Por ración" });
+    expect(box.textContent).toContain("520");
+    expect(box.textContent).toContain("kcal");
+    expect(box.textContent).toContain("32 g");
+    expect(box.textContent).toContain("Proteínas");
+    expect(box.textContent).toContain("12 g");
+    expect(box.textContent).toContain("70 g");
+    expect(box.textContent).toMatch(/aproximad/i);
+  });
+
+  it("sin ningún ingrediente contado no muestra el bloque de macros", async () => {
+    const empty = makeRecipe({
+      id: 8,
+      nutrition: { kcal: 0, protein: 0, fat: 0, carbs: 0, approximate: false },
+    });
+    vi.stubGlobal("fetch", makeServer([empty]).fetchMock);
+    renderAt("/recetario/8");
+    await screen.findByText("Arroz con pollo");
+    expect(screen.queryByRole("region", { name: "Por ración" })).toBeNull();
   });
 });

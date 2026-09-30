@@ -9,6 +9,10 @@ export const ingredientSchema = z.object({
   quantity: z.number().positive().optional().nullable(),
   unit: z.string().optional().nullable(),
   section: z.string().optional().nullable(),
+  /** Alimento del catálogo `foods`: con él, el ingrediente cuenta en los macros. */
+  foodId: z.number().int().positive().optional().nullable(),
+  /** Lo opcional no cuenta en los macros. */
+  optional: z.boolean().optional().default(false),
 });
 
 export const recipeSchema = z.object({
@@ -26,6 +30,18 @@ export const recipeSchema = z.object({
   tags: z.array(z.string().min(1)).optional().default([]),
 });
 export type RecipeInput = z.infer<typeof recipeSchema>;
+
+// --- Foods (catálogo para macros) --------------------------------------------
+
+/** Valores por 100 g (o 100 ml); gramsPerUnit convierte «ud» a gramos. */
+export const foodSchema = z.object({
+  name: z.string().trim().min(1, "El nombre es obligatorio"),
+  kcal: z.number().min(0),
+  protein: z.number().min(0),
+  fat: z.number().min(0),
+  carbs: z.number().min(0),
+  gramsPerUnit: z.number().positive().optional().nullable(),
+});
 
 // --- Exercises -------------------------------------------------------------
 

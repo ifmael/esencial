@@ -1,5 +1,6 @@
 // Shared E2 test fixtures: fake hydrated recipe + in-memory /api/recipes server
 // driven through a fetch stub (same-origin paths only).
+import type { Food } from "../src/components/recipes/use-foods";
 import type { Recipe } from "../src/components/recipes/use-recipes";
 
 export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
@@ -10,9 +11,30 @@ export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
     servings: 4,
     photo_path: null,
     ingredients: [
-      { id: 11, food: "arroz", quantity: 300, unit: "g" },
-      { id: 12, food: "pollo", quantity: 2, unit: "pechuga" },
-      { id: 13, food: "ajo", quantity: 1, unit: "diente" },
+      {
+        id: 11,
+        food: "arroz",
+        quantity: 300,
+        unit: "g",
+        foodId: 5,
+        optional: false,
+      },
+      {
+        id: 12,
+        food: "pollo",
+        quantity: 2,
+        unit: "pechuga",
+        foodId: null,
+        optional: false,
+      },
+      {
+        id: 13,
+        food: "ajo",
+        quantity: 1,
+        unit: "diente",
+        foodId: 9,
+        optional: true,
+      },
     ],
     steps: [
       { id: 21, position: 0, step: 1, text: "Sofreír" },
@@ -22,6 +44,13 @@ export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
     ],
     materials: ["olla", "sartén"],
     tags: ["almuerzo"],
+    nutrition: {
+      kcal: 520,
+      protein: 32,
+      fat: 12,
+      carbs: 70,
+      approximate: true,
+    },
     ...over,
   };
 }
@@ -37,6 +66,35 @@ export function makeServer(initial: Recipe[] = []) {
   const server = { nextUploadFails: false, nextUploadStatus: 500 };
   const calls: ServerCall[] = [];
   let nextId = 100;
+  const foods: Food[] = [
+    {
+      id: 5,
+      name: "Arroz",
+      kcal: 350,
+      protein: 7,
+      fat: 1,
+      carbs: 78,
+      gramsPerUnit: null,
+    },
+    {
+      id: 9,
+      name: "Ajo",
+      kcal: 149,
+      protein: 6,
+      fat: 0.5,
+      carbs: 33,
+      gramsPerUnit: 5,
+    },
+    {
+      id: 12,
+      name: "Pollo",
+      kcal: 120,
+      protein: 22,
+      fat: 3,
+      carbs: 0,
+      gramsPerUnit: 150,
+    },
+  ];
   const json = (data: unknown, status = 200) =>
     new Response(JSON.stringify(data), {
       status,
@@ -95,6 +153,19 @@ export function makeServer(initial: Recipe[] = []) {
         return new Response(null, { status: 204 });
       }
     }
+    if (url === "/api/foods" && method === "GET") return json(foods);
+    if (url === "/api/foods" && method === "POST") {
+      const input = body as Record<string, unknown>;
+      if (foods.some((f) => f.name === input.name))
+        return json({ error: "Already exists", field: "name" }, 400);
+      const created = {
+        gramsPerUnit: null,
+        ...input,
+        id: nextId++,
+      } as unknown as Food;
+      foods.push(created);
+      return json(created, 201);
+    }
     if (url === "/api/uploads" && method === "POST") {
       if (server.nextUploadFails)
         return json(
@@ -106,5 +177,5 @@ export function makeServer(initial: Recipe[] = []) {
     return json({ error: "Not found" }, 404);
   };
 
-  return { fetchMock, calls, recipes, server };
+  return { fetchMock, calls, recipes, server, foods };
 }

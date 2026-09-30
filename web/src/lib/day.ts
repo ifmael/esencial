@@ -1,6 +1,7 @@
 // E5 (design D4): un fetch por fecha a /api/day/:date con estado { data,
 // loading, error, reload }. Las respuestas de fechas ya superadas se descartan.
 import { useEffect, useRef, useState } from "react";
+import type { Nutrition } from "../components/recipes/use-recipes";
 import { apiFetchRaw } from "./api";
 import type { ExerciseKind } from "./exercises";
 
@@ -31,6 +32,8 @@ export type DayData = {
   date: string;
   isoWeek: string;
   dayIndex: number;
+  /** Una ración de cada comida del día; null sin recetas. */
+  nutrition: Nutrition | null;
   meals: DayMeal[];
   session: DaySession | null;
   note: { text: string };

@@ -9,7 +9,11 @@ import { EmptyState, Loader, Monogram, Shape } from "../components/expressive";
 import { AddIcon, BackIcon, DeleteIcon, EditIcon } from "../components/icons";
 import { Dialog, useSnackbar } from "../components/overlay";
 import { filterRecipes } from "../components/recipes/filter";
-import { type Recipe, useRecipes } from "../components/recipes/use-recipes";
+import {
+  type Nutrition,
+  type Recipe,
+  useRecipes,
+} from "../components/recipes/use-recipes";
 import {
   Alert,
   Badge,
@@ -68,6 +72,45 @@ function Tags({ tags }: { tags: string[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Calorías y macros por ración (los calcula la API). Sin nada contado, nada. */
+function Macros({ n }: { n: Nutrition }) {
+  if (!n.kcal && !n.protein && !n.fat && !n.carbs) return null;
+  const items = [
+    ["Proteínas", n.protein],
+    ["Grasas", n.fat],
+    ["Carbohidratos", n.carbs],
+  ] as const;
+  return (
+    <section
+      aria-labelledby="macros-title"
+      className="flex flex-col gap-3 rounded-xl bg-surface-container-low p-5"
+    >
+      <h2 id="macros-title" className="text-title-l text-e">
+        Por ración
+      </h2>
+      <p className="text-display-s text-e text-accent tabular">
+        {n.kcal} <span className="text-title-m">kcal</span>
+      </p>
+      <dl className="grid grid-cols-3 gap-2">
+        {items.map(([label, grams]) => (
+          <div
+            key={label}
+            className="flex flex-col rounded-m bg-surface-container-high p-3"
+          >
+            <dt className="text-body-s text-on-surface-variant">{label}</dt>
+            <dd className="text-title-m tabular">{grams} g</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-body-s text-on-surface-variant">
+        {n.approximate
+          ? "Aproximado: algún ingrediente no se ha podido contar."
+          : "Sin contar lo que va al gusto ni lo opcional."}
+      </p>
+    </section>
   );
 }
 
@@ -324,6 +367,7 @@ export function RecetarioDetallePage() {
 
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="flex flex-col gap-4 lg:col-span-2">
+          <Macros n={recipe.nutrition} />
           <section className="flex flex-col gap-2 rounded-xl bg-surface-container-low p-5">
             <h2 className="text-title-l text-e">Ingredientes</h2>
             <ul className="flex flex-col">

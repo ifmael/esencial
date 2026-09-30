@@ -7,6 +7,7 @@ import { Link, useSearchParams } from "react-router";
 import { Loader, Monogram } from "../components/expressive";
 import { AddIcon, CartIcon, CloseIcon } from "../components/icons";
 import { Dialog, OverlayHeader, useTooltip } from "../components/overlay";
+import type { Nutrition } from "../components/recipes/use-recipes";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
 import { Button, ripple, SearchBar } from "../components/ui";
 import { WeekGrid } from "../components/week-grid";
@@ -26,9 +27,33 @@ export type RecipeSummary = { id: number; name: string; photo: string | null };
 
 const slotKey = (day: number, meal: string) => `${day}|${meal}`;
 
+/** Totales por día de la semana (0 = lunes); null en los días sin recetas. */
+type DayTotals = (Nutrition | null)[];
+
+/** Total del día al pie de su columna: kcal y, en pequeño, los macros. */
+function DayTotal({ n }: { n: Nutrition }) {
+  const macros = `${n.protein} g de proteínas, ${n.fat} g de grasas y ${n.carbs} g de carbohidratos`;
+  return (
+    <p className="mt-auto flex flex-col rounded-m bg-surface-container-low px-2 py-1 tabular">
+      <span className="sr-only">
+        {n.approximate ? "Total aproximado del día" : "Total del día"}: {n.kcal}{" "}
+        kcal, {macros}
+      </span>
+      <span aria-hidden="true" className="text-title-s">
+        {n.approximate ? "≈ " : ""}
+        {n.kcal} kcal
+      </span>
+      <span aria-hidden="true" className="text-label-s text-on-surface-variant">
+        P {n.protein} · G {n.fat} · C {n.carbs}
+      </span>
+    </p>
+  );
+}
+
 /** GET/PUT de la semana completa; PUT fallido recarga el estado del servidor. */
 export function useMealPlan(isoWeek: string) {
   const [slots, setSlots] = useState<Slot[] | null>(null);
+  const [totals, setTotals] = useState<DayTotals>([]);
   // Semana a la que pertenecen `slots` (al navegar, las de la anterior siguen
   // pintadas hasta que llega la nueva: la rejilla espera con `busy`).
   const [loadedWeek, setLoadedWeek] = useState<string | null>(null);
@@ -40,10 +65,12 @@ export function useMealPlan(isoWeek: string) {
     setError(null);
     apiFetchRaw(`/api/meal-plan/${isoWeek}`)
       .then(async (res) => {
-        const data: { slots: Slot[]; error?: string } = await res.json();
+        const data: { slots: Slot[]; totals?: DayTotals; error?: string } =
+          await res.json();
         if (!res.ok) throw new Error(data.error ?? "Error");
         if (!cancelled) {
           setSlots(data.slots);
+          setTotals(data.totals ?? []);
           setLoadedWeek(isoWeek);
         }
       })
@@ -83,8 +110,9 @@ export function useMealPlan(isoWeek: string) {
         setAttempt((a) => a + 1); // recarga server state: la rejilla refleja la verdad
         return false;
       }
-      const data: { slots: Slot[] } = await res.json();
+      const data: { slots: Slot[]; totals?: DayTotals } = await res.json();
       setSlots(data.slots);
+      setTotals(data.totals ?? []);
       setError(null);
       return true;
     },
@@ -93,6 +121,7 @@ export function useMealPlan(isoWeek: string) {
 
   return {
     slots,
+    totals,
     busy: loadedWeek !== isoWeek && !error,
     error,
     save,
@@ -284,7 +313,7 @@ function SlotCell({
 export function PlanRecetasPage() {
   const [params, setParams] = useSearchParams();
   const isoWeek = params.get("week") ?? currentIsoWeek();
-  const { slots, busy, error, save, retry } = useMealPlan(isoWeek);
+  const { slots, totals, busy, error, save, retry } = useMealPlan(isoWeek);
   const [picker, setPicker] = useState<{ day: number; meal: string } | null>(
     null,
   );
@@ -321,18 +350,24 @@ export function PlanRecetasPage() {
           </Button>
         }
       >
-        {({ index }) =>
-          MEALS.map((meal) => (
-            <div key={meal} className="flex flex-col gap-1">
-              <span className="section-label px-1">{meal}</span>
-              <SlotCell
-                slot={bySlot.get(slotKey(index, meal))}
-                onAdd={() => setPicker({ day: index, meal })}
-                onRemove={() => write(index, meal, null)}
-              />
-            </div>
-          ))
-        }
+        {({ index }) => {
+          const total = totals[index];
+          return (
+            <>
+              {MEALS.map((meal) => (
+                <div key={meal} className="flex flex-col gap-1">
+                  <span className="section-label px-1">{meal}</span>
+                  <SlotCell
+                    slot={bySlot.get(slotKey(index, meal))}
+                    onAdd={() => setPicker({ day: index, meal })}
+                    onRemove={() => write(index, meal, null)}
+                  />
+                </div>
+              ))}
+              {total && <DayTotal n={total} />}
+            </>
+          );
+        }}
       </WeekGrid>
 
       {picker ? (

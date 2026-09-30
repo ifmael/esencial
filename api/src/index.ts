@@ -10,6 +10,7 @@ import { authGuard, cors, securityHeaders } from "./middleware";
 import { authRoutes } from "./routes/auth";
 import { day } from "./routes/day";
 import { exercises } from "./routes/exercises";
+import { foods } from "./routes/foods";
 import { mealPlan } from "./routes/meal-plan";
 import { notes } from "./routes/notes";
 import { planSessions } from "./routes/plan-sessions";
@@ -25,6 +26,7 @@ export const api = new Hono<{ Bindings: Env }>()
   .route("/auth", authRoutes())
   .route("/recipes", recipes)
   .route("/exercises", exercises)
+  .route("/foods", foods)
   .route("/templates", templates)
   .route("/meal-plan", mealPlan)
   .route("/plan-sessions", planSessions)

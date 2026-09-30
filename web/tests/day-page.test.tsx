@@ -58,6 +58,7 @@ function payload(over: Partial<DayData> = {}): DayData {
     isoWeek: "2026-W36",
     dayIndex: 2,
     meals: [],
+    nutrition: null,
     session: null,
     note: { text: "" },
     ...over,
@@ -260,6 +261,38 @@ describe("sección RECETA", () => {
         .getByRole("link", { name: "Ir al plan semanal" })
         .getAttribute("href"),
     ).toBe("/plan-recetas");
+  });
+
+  it("muestra el total del día (una ración por comida) y avisa si es aproximado", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        payload({
+          meals: [
+            {
+              meal: "cena",
+              recipeId: 9,
+              recipeName: "Ensalada",
+              recipePhoto: null,
+            },
+          ],
+          nutrition: {
+            kcal: 1850,
+            protein: 95,
+            fat: 60,
+            carbs: 200,
+            approximate: true,
+          },
+        }),
+      ),
+    );
+    renderAt("/");
+    await settle();
+    const total = screen.getByRole("region", { name: "Total del día" });
+    expect(total.textContent).toContain("1850 kcal");
+    expect(total.textContent).toContain("95 g");
+    expect(total.textContent).toContain("60 g");
+    expect(total.textContent).toContain("200 g");
+    expect(total.textContent).toMatch(/aproximad/i);
   });
 });
 
