@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { recipeSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
-import { loadRecipe, row, rows } from "../repo";
+import { listRecipes, loadRecipe, row, rows } from "../repo";
 import { zBody } from "../validation";
 
 // Name is UNIQUE, so children can resolve the parent id inside one atomic batch.
@@ -105,7 +105,8 @@ export const recipes = new Hono<{ Bindings: Env }>()
   .get("/", (c) =>
     guard(async () => {
       const db = getDb(c.env);
-      // Solo id y nombre (la búsqueda ⌘K): una consulta en vez de ~5 por receta.
+      // Solo id y nombre (la búsqueda ⌘K): una consulta y unos KB, no la lista
+      // hidratada (~337 KB).
       if (c.req.query("summary"))
         return json(
           await rows(
@@ -113,14 +114,7 @@ export const recipes = new Hono<{ Bindings: Env }>()
             "SELECT id, name FROM recipes ORDER BY name COLLATE NOCASE",
           ),
         );
-      const ids = await rows(
-        db,
-        "SELECT id FROM recipes ORDER BY name COLLATE NOCASE",
-      );
-      const list = await Promise.all(
-        ids.map((r) => loadRecipe(db, Number(r.id))),
-      );
-      return json(list);
+      return json(await listRecipes(db));
     }),
   )
   .post("/", zBody(recipeSchema), (c) =>

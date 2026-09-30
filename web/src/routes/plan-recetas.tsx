@@ -11,7 +11,7 @@ import type { Nutrition } from "../components/recipes/use-recipes";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
 import { Button, ripple, SearchBar } from "../components/ui";
 import { WeekGrid } from "../components/week-grid";
-import { apiFetchRaw, photoSrc } from "../lib/api";
+import { apiFetchRaw, apiGetCached, photoSrc } from "../lib/api";
 import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
 
 export const MEALS = ["desayuno", "almuerzo", "cena"] as const;
@@ -142,6 +142,8 @@ function RecipeThumb({
   return photo ? (
     <img
       crossOrigin="use-credentials"
+      loading="lazy"
+      decoding="async"
       src={photoSrc(photo)}
       alt=""
       width={size}
@@ -165,10 +167,10 @@ function RecipePicker({
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    apiFetchRaw("/api/recipes")
-      .then(async (res) => {
-        const all: { id: number; name: string; photo_path?: string | null }[] =
-          await res.json();
+    apiGetCached<{ id: number; name: string; photo_path?: string | null }[]>(
+      "/api/recipes",
+    )
+      .then((all) => {
         // El backend devuelve recetas completas; solo se necesita id, nombre y foto.
         setRecipes(
           all.map((r) => ({

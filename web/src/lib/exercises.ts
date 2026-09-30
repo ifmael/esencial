@@ -1,7 +1,7 @@
 // useExercises hook (E4, E2 useRecipes pattern): full list + mutate + refetch.
 // kind: fuerza (series/reps) o cardio (distancia/tiempo).
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "./api";
+import { apiFetch, apiGetCached } from "./api";
 
 export type ExerciseKind = "strength" | "running" | "bike";
 
@@ -91,7 +91,7 @@ export function useExercises(): ExercisesState {
   useEffect(() => {
     let alive = true;
     setPending(true);
-    apiFetch<Exercise[]>("/api/exercises")
+    apiGetCached<Exercise[]>("/api/exercises")
       .then((list) => {
         if (alive) {
           setExercises(list);

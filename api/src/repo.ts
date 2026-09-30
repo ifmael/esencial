@@ -128,89 +128,149 @@ export function sumNutrition(list: Nutrition[]): Nutrition | null {
   }));
 }
 
-/** Load one recipe with ordered ingredients, 1..N numbered steps, material names
- *  and its macros per serving. */
+/** Agrupa filas por su padre, conservando el orden de la consulta. */
+function byParent(list: Row[], key: string): Map<number, Row[]> {
+  const out = new Map<number, Row[]>();
+  for (const r of list) {
+    const id = Number(r[key]);
+    const group = out.get(id);
+    if (group) group.push(r);
+    else out.set(id, [r]);
+  }
+  return out;
+}
+
+/** Cabeceras filtradas por `where` y sus hijos: una consulta por tabla (no una
+ *  por fila: en producción cada consulta es un viaje a D1) y todas en un solo
+ *  batch. Cada consulta liga sus propios `args`; la lista va sin ninguno, porque
+ *  D1 admite 100 por consulta y un IN con cada id rompería desde la fila 101. */
+async function hydrate(
+  db: D1Database,
+  args: unknown[],
+  head: string,
+  children: string[],
+): Promise<{ heads: Row[]; kids: Map<number, Row[]>[] }> {
+  const [heads, ...kids] = await db.batch<Row>(
+    [head, ...children].map((sql) =>
+      db.prepare(sql).bind(...(args as never[])),
+    ),
+  );
+  return {
+    heads: heads.results ?? [],
+    kids: kids.map((k) => byParent(k.results ?? [], "parent")),
+  };
+}
+
+/** Recetas con sus ingredientes en orden, pasos numerados 1..N, materiales,
+ *  tags y macros por ración. `where` filtra `recipes r`. */
+async function queryRecipes(
+  db: D1Database,
+  where = "",
+  ...args: unknown[]
+): Promise<Row[]> {
+  const mine = `recipe_id IN (SELECT r.id FROM recipes r ${where})`;
+  const {
+    heads,
+    kids: [ingredients, steps, materials, tags],
+  } = await hydrate(
+    db,
+    args,
+    `SELECT r.id, r.name, r.description, r.servings, r.photo_path FROM recipes r ${where} ORDER BY r.name COLLATE NOCASE`,
+    [
+      `SELECT ri.recipe_id AS parent, ri.id, ri.food, ri.quantity, ri.unit, ri.section, ri.food_id, ri.optional,
+              f.kcal, f.protein, f.fat, f.carbs, f.grams_per_unit
+         FROM recipe_ingredients ri LEFT JOIN foods f ON f.id = ri.food_id
+        WHERE ri.${mine} ORDER BY ri.recipe_id, ri.position, ri.id`,
+      `SELECT recipe_id AS parent, id, position, text FROM recipe_steps WHERE ${mine} ORDER BY recipe_id, position, id`,
+      `SELECT recipe_id AS parent, name FROM recipe_materials WHERE ${mine} ORDER BY recipe_id, id`,
+      `SELECT recipe_id AS parent, tag FROM recipe_tags WHERE ${mine} ORDER BY recipe_id, tag`,
+    ],
+  );
+  return heads.map((h) => {
+    const id = Number(h.id);
+    const mineOf = (m: Map<number, Row[]>) => m.get(id) ?? [];
+    const ings = mineOf(ingredients);
+    return {
+      ...h,
+      nutrition: nutritionPerServing(ings as IngredientMacros[], h.servings),
+      ingredients: ings.map((i) => ({
+        id: i.id,
+        food: i.food,
+        quantity: i.quantity,
+        unit: i.unit,
+        section: i.section,
+        foodId: i.food_id,
+        optional: Boolean(i.optional),
+      })),
+      steps: mineOf(steps).map((s, i) => ({
+        id: s.id,
+        position: s.position,
+        text: s.text,
+        step: i + 1,
+      })),
+      materials: mineOf(materials).map((m) => String(m.name)),
+      tags: mineOf(tags).map((t) => String(t.tag)),
+    };
+  });
+}
+
+export const listRecipes = (db: D1Database) => queryRecipes(db);
+
 export async function loadRecipe(
   db: D1Database,
   id: number,
 ): Promise<Row | null> {
-  const head = await row(
-    db,
-    "SELECT id, name, description, servings, photo_path FROM recipes WHERE id = ?",
-    id,
-  );
-  if (!head) return null;
-  const ingredients = await rows(
-    db,
-    `SELECT ri.id, ri.food, ri.quantity, ri.unit, ri.section, ri.food_id, ri.optional,
-            f.kcal, f.protein, f.fat, f.carbs, f.grams_per_unit
-       FROM recipe_ingredients ri LEFT JOIN foods f ON f.id = ri.food_id
-      WHERE ri.recipe_id = ? ORDER BY ri.position, ri.id`,
-    id,
-  );
-  head.nutrition = nutritionPerServing(
-    ingredients as IngredientMacros[],
-    head.servings,
-  );
-  head.ingredients = ingredients.map((i) => ({
-    id: i.id,
-    food: i.food,
-    quantity: i.quantity,
-    unit: i.unit,
-    section: i.section,
-    foodId: i.food_id,
-    optional: Boolean(i.optional),
-  }));
-  head.steps = (
-    await rows(
-      db,
-      "SELECT id, position, text FROM recipe_steps WHERE recipe_id = ? ORDER BY position, id",
-      id,
-    )
-  ).map((s, i) => ({ ...s, step: i + 1 }));
-  head.materials = (
-    await rows(
-      db,
-      "SELECT name FROM recipe_materials WHERE recipe_id = ? ORDER BY id",
-      id,
-    )
-  ).map((m) => String(m.name));
-  head.tags = (
-    await rows(
-      db,
-      "SELECT tag FROM recipe_tags WHERE recipe_id = ? ORDER BY tag",
-      id,
-    )
-  ).map((t) => String(t.tag));
-  return head;
+  return (await queryRecipes(db, "WHERE r.id = ?", id))[0] ?? null;
 }
+
+/** Ejercicios con sus tags y sus regiones (con grado). `where` filtra
+ *  `exercises e`. */
+async function queryExercises(
+  db: D1Database,
+  where = "",
+  ...args: unknown[]
+): Promise<Row[]> {
+  const mine = `exercise_id IN (SELECT e.id FROM exercises e ${where})`;
+  const {
+    heads,
+    kids: [tags, regions],
+  } = await hydrate(
+    db,
+    args,
+    `SELECT e.id, e.name, e.description, e.setup_cues AS setupCues, e.technique_url AS techniqueUrl, e.steps, e.kind FROM exercises e ${where} ORDER BY e.name COLLATE NOCASE`,
+    [
+      `SELECT exercise_id AS parent, tag FROM exercise_tags WHERE ${mine} ORDER BY exercise_id, tag`,
+      `SELECT exercise_id AS parent, region, role FROM exercise_regions WHERE ${mine} ORDER BY exercise_id, region`,
+    ],
+  );
+  return heads.map((h) => {
+    const id = Number(h.id);
+    return {
+      ...h,
+      steps: h.steps == null ? h.steps : JSON.parse(String(h.steps)),
+      tags: (tags.get(id) ?? []).map((t) => String(t.tag)),
+      regions: (regions.get(id) ?? []).map((r) => ({
+        region: String(r.region),
+        role: String(r.role),
+      })),
+    };
+  });
+}
+
+export const listExercises = (db: D1Database, tag?: string) =>
+  tag
+    ? queryExercises(
+        db,
+        "WHERE e.id IN (SELECT exercise_id FROM exercise_tags WHERE tag = ?)",
+        tag,
+      )
+    : queryExercises(db);
 
 export async function loadExercise(
   db: D1Database,
   id: number,
 ): Promise<Row | null> {
-  const head = await row(
-    db,
-    "SELECT id, name, description, setup_cues AS setupCues, technique_url AS techniqueUrl, steps, kind FROM exercises WHERE id = ?",
-    id,
-  );
-  if (!head) return null;
-  if (head.steps != null) head.steps = JSON.parse(String(head.steps));
-  head.tags = (
-    await rows(
-      db,
-      "SELECT tag FROM exercise_tags WHERE exercise_id = ? ORDER BY tag",
-      id,
-    )
-  ).map((t) => String(t.tag));
-  head.regions = (
-    await rows(
-      db,
-      "SELECT region, role FROM exercise_regions WHERE exercise_id = ? ORDER BY region",
-      id,
-    )
-  ).map((r) => ({ region: String(r.region), role: String(r.role) }));
-  return head;
+  return (await queryExercises(db, "WHERE e.id = ?", id))[0] ?? null;
 }
 
 export async function loadTemplate(
