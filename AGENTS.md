@@ -398,9 +398,21 @@ en su cabecera.
 - **El visor** (`Body3D`) carga three con `import()` desde `body-3d/scene.ts`: solo
   se descarga donde hay visor. Pinta bajo demanda, no en bucle; sin paneo, con la
   vista frontal/trasera de partida, y los colores salen de los tokens leídos sobre
-  el propio visor (siguen el tema). Con `onSelect` filtra: un toque elige, un
-  arrastre gira, y el `title` del lienzo nombra el músculo bajo el ratón (de eso
-  tira el e2e para encontrar dónde pulsar).
+  el propio visor (siguen el tema). Lo no marcado va en gris (`--color-body`)
+  también en el selector: solo destaca lo elegido y, bajo el ratón,
+  `--color-muscle-strong`. La rueda o el pellizco acercan **hacia el cursor**
+  (`zoomToCursor`, hasta 0,6 m); tras girar o acercar aparece «Restablecer
+  vista», que vuelve a la de partida (cambiar de vista también). Con `onSelect`
+  filtra: un toque elige, un arrastre gira. En los dos modos un tooltip
+  (`Tooltip` de `overlay.tsx`, sobre el cursor y fuera del `role="img"`) nombra
+  el músculo bajo el ratón; de él tira el e2e para encontrar dónde pulsar.
+  El lienzo mide `100 %` por CSS y `setSize(w, h, false)` solo toca el búfer: con
+  el ancho en px que pone `setSize` por defecto, al estrechar la ventana el lienzo
+  sostenía su columna y la página se salía por la derecha (lo cubre
+  `exercise-detail.spec.ts`). «Restablecer vista» sale solo si la cámara se movió
+  (OrbitControls emite `start` también con un toque) y es solo icono: con texto
+  tapaba medio modelo en móvil. Con `legend` va a la izquierda de la leyenda,
+  fuera del modelo; sin ella, abajo a la izquierda sobre el visor.
 - **Accesibilidad**: el lienzo es un `role="img"` sin foco. De solo lectura se
   nombra con cada músculo y su grado; en el selector, con WebGL, los músculos del
   grupo elegido (o del músculo elegido) se ofrecen además como fichas («Músculo:»),

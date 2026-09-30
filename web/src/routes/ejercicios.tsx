@@ -147,21 +147,23 @@ function MusclesFigure({
             />
           </div>
         }
+        legend={
+          <ul
+            aria-label="Leyenda"
+            className="flex flex-wrap justify-center gap-4 text-label-l text-on-surface-variant"
+          >
+            {roles.map((k) => (
+              <li key={k} className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className={cx("size-3 rounded-full", ROLE_SWATCH[k])}
+                />
+                {ROLE_LABELS[k]}
+              </li>
+            ))}
+          </ul>
+        }
       />
-      <ul
-        aria-label="Leyenda"
-        className="flex flex-wrap justify-center gap-4 text-label-l text-on-surface-variant"
-      >
-        {roles.map((k) => (
-          <li key={k} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className={cx("size-3 rounded-full", ROLE_SWATCH[k])}
-            />
-            {ROLE_LABELS[k]}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

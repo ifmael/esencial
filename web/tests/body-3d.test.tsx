@@ -2,7 +2,13 @@
 // WebGL, así que la escena (three) se sustituye y aquí se prueba el contrato
 // del componente: el respaldo SVG cuando no hay WebGL o la escena falla, y el
 // nombre accesible, que es lo único que un lector de pantalla recibe del lienzo.
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Body3D } from "../src/components/body-3d/body-3d";
 
@@ -49,6 +55,17 @@ describe("Body3D", () => {
     render(<Body3D regions={regions} fallback={<p>dibujo SVG</p>} />);
     expect(screen.getByText("dibujo SVG")).toBeDefined();
     expect(mount).not.toHaveBeenCalled();
+  });
+
+  it("sin WebGL, la leyenda sigue bajo el respaldo", () => {
+    render(
+      <Body3D
+        regions={regions}
+        legend={<p>leyenda</p>}
+        fallback={<p>dibujo SVG</p>}
+      />,
+    );
+    expect(screen.getByText("leyenda")).toBeDefined();
   });
 
   it.each([
@@ -100,5 +117,40 @@ describe("Body3D", () => {
       }),
     ).toBeDefined();
     expect(screen.queryByText("dibujo SVG")).toBeNull();
+  });
+
+  it("un tooltip nombra el músculo bajo el cursor, también de solo lectura", async () => {
+    withWebGL();
+    mount.mockResolvedValue(handle);
+    render(<Body3D regions={regions} fallback={<p>dibujo SVG</p>} />);
+    await screen.findByRole("img");
+    const opts = mount.mock.calls[0][1];
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    act(() => opts.onHover("chest-lower", 40, 60));
+    expect(screen.getByRole("tooltip").textContent).toBe(
+      "Pecho inferior (esternal)",
+    );
+    act(() => opts.onHover(null, 0, 0));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("tras girar o acercar, «Restablecer vista» vuelve a la vista de partida", async () => {
+    withWebGL();
+    mount.mockResolvedValue(handle);
+    handle.view.mockClear();
+    render(
+      <Body3D regions={regions} view="back" fallback={<p>dibujo SVG</p>} />,
+    );
+    await screen.findByRole("img");
+    expect(
+      screen.queryByRole("button", { name: "Restablecer vista" }),
+    ).toBeNull();
+    act(() => mount.mock.calls[0][1].onMoved());
+    fireEvent.click(screen.getByRole("button", { name: "Restablecer vista" }));
+    expect(handle.view).toHaveBeenCalledTimes(2);
+    expect(handle.view).toHaveBeenLastCalledWith("back");
+    expect(
+      screen.queryByRole("button", { name: "Restablecer vista" }),
+    ).toBeNull();
   });
 });
