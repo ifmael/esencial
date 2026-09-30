@@ -717,6 +717,13 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   «Arroz»») o no, con **Crear alimento** (`NewFoodDialog`, `POST /api/foods`:
   valores por 100 g + peso de una unidad opcional; nombre repetido → 400
   `field:'name'`) y la casilla **Opcional** (no cuenta en los macros).
+- **Totales del día** (1 ración por comida, lo decidido: en casa se cocina para
+  dos y cada uno come una ración): `GET /api/day/:date` devuelve `nutrition`
+  (null sin recetas) y `GET /api/meal-plan/:week` `totals[7]` (0 = lunes, null
+  en los días sin recetas), los dos con `nutritionByRecipe` + `sumNutrition`
+  (`api/src/repo.ts`). «Hoy» lo pinta bajo el carrusel de comidas («Total del
+  día») y el plan al pie de cada columna (kcal y `P · G · C`, con el texto
+  completo en `sr-only`; «≈» si es aproximado).
 - `0014_recetas_libro.sql` sustituye los ingredientes de 96 recetas por los del
   libro de cocina del usuario (extraídos con Gemini), enlazados a `foods`. Solo
   toca una receta si sus ingredientes siguen **exactamente** como los dejó 0012

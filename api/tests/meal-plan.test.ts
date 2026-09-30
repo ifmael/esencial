@@ -107,7 +107,11 @@ describe("/api/meal-plan/:week", () => {
   it("GET unknown week → 200 with empty slots", async () => {
     const res = await get("/api/meal-plan/2030-W01");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ isoWeek: "2030-W01", slots: [] });
+    expect(await res.json()).toEqual({
+      isoWeek: "2030-W01",
+      slots: [],
+      totals: [null, null, null, null, null, null, null],
+    });
   });
 
   it("400 on invalid week", async () => {

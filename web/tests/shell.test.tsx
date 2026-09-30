@@ -333,6 +333,7 @@ describe("Día (E5)", () => {
       isoWeek: "2026-W36",
       dayIndex: 2,
       meals: [],
+      nutrition: null,
       session: null,
       note: { text: "" },
     };

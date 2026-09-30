@@ -28,6 +28,14 @@ const RECIPES = [
 ];
 
 let slots: Slot[] = [];
+type Totals = ({
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  approximate: boolean;
+} | null)[];
+let totals: Totals | undefined;
 let recipeCalls = 0;
 let mealPlanCalls: string[] = [];
 let failNextPut = false;
@@ -46,6 +54,7 @@ function renderAt(path: string) {
 
 beforeEach(() => {
   slots = [];
+  totals = undefined;
   recipeCalls = 0;
   mealPlanCalls = [];
   failNextPut = false;
@@ -83,7 +92,7 @@ beforeEach(() => {
                 : (RECIPES.find((r) => r.id === s.recipeId)?.photo ?? null),
           }));
         }
-        return jsonResponse({ isoWeek: week, slots });
+        return jsonResponse({ isoWeek: week, slots, totals });
       }
       if (url.startsWith("/api/recipes")) {
         recipeCalls += 1;
@@ -140,6 +149,38 @@ describe("rejilla 7×3", () => {
     expect(
       (await screen.findAllByRole("button", { name: "+ añadir" })).length,
     ).toBe(20);
+  });
+
+  it("cada día muestra su total (una ración por comida) y lo aproximado", async () => {
+    slots = [
+      {
+        day: 2,
+        meal: "desayuno",
+        recipeId: 7,
+        recipeName: "Pollo al horno",
+        recipePhoto: null,
+      },
+    ];
+    totals = [
+      null,
+      null,
+      { kcal: 640, protein: 48, fat: 20, carbs: 55, approximate: false },
+      null,
+      { kcal: 300, protein: 10, fat: 5, carbs: 50, approximate: true },
+      null,
+      null,
+    ];
+    renderAt("/plan-recetas?week=2026-W36");
+    const miercoles = await screen.findByText(
+      "Total del día: 640 kcal, 48 g de proteínas, 20 g de grasas y 55 g de carbohidratos",
+    );
+    expect(miercoles.closest("p")?.textContent).toContain("P 48 · G 20 · C 55");
+    expect(
+      screen.getByText(/^Total aproximado del día: 300 kcal/),
+    ).toBeDefined();
+    expect(screen.getAllByText(/^Total (aproximado )?del día:/)).toHaveLength(
+      2,
+    );
   });
 
   it("fallo de API → tarjeta de error con reintento; reintentar carga la rejilla", async () => {

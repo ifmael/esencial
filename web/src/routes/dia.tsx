@@ -255,7 +255,13 @@ function SectionEmpty({
 
 /** Carrusel M3 *multi-browse*: la primera comida grande, las demás más
  * estrechas, todas de la misma altura; se desliza con `scroll-snap`. */
-function MealsSection({ meals }: { meals: DayData["meals"] }) {
+function MealsSection({
+  meals,
+  nutrition,
+}: {
+  meals: DayData["meals"];
+  nutrition: DayData["nutrition"];
+}) {
   const planned = meals.filter((m) => m.recipeName !== null);
   if (planned.length === 0) {
     return (
@@ -320,7 +326,33 @@ function MealsSection({ meals }: { meals: DayData["meals"] }) {
           </li>
         ))}
       </ul>
+      {nutrition && <DayTotal n={nutrition} />}
     </Section>
+  );
+}
+
+/** Lo que suman las comidas del día: una ración de cada receta. */
+function DayTotal({ n }: { n: NonNullable<DayData["nutrition"]> }) {
+  return (
+    <section
+      aria-label="Total del día"
+      className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-l bg-surface-container-low px-4 py-3"
+    >
+      <span className="text-label-l text-on-surface-variant">
+        Total del día
+      </span>
+      <span className="text-title-l text-e text-accent tabular">
+        {n.kcal} kcal
+      </span>
+      <span className="text-body-m tabular">
+        {n.protein} g proteínas · {n.fat} g grasas · {n.carbs} g carbohidratos
+      </span>
+      {n.approximate && (
+        <span className="basis-full text-body-s text-on-surface-variant">
+          Aproximado: alguna receta tiene ingredientes sin contar.
+        </span>
+      )}
+    </section>
   );
 }
 
@@ -596,7 +628,10 @@ export function DiaPage() {
             className="min-w-0 lg:col-span-2"
             style={{ ["--i" as string]: 0 }}
           >
-            <MealsSection meals={data.meals ?? []} />
+            <MealsSection
+              meals={data.meals ?? []}
+              nutrition={data.nutrition ?? null}
+            />
           </div>
           <div className="min-w-0" style={{ ["--i" as string]: 1 }}>
             <StrengthSection session={data.session} date={iso} />

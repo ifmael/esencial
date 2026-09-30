@@ -80,6 +80,48 @@ export function nutritionPerServing(
   };
 }
 
+/** Macros por ración de varias recetas en una sola consulta (una receta sin
+ *  ingredientes sale a cero). */
+export async function nutritionByRecipe(
+  db: D1Database,
+  ids: number[],
+): Promise<Map<number, Nutrition>> {
+  const unique = [...new Set(ids)];
+  const out = new Map<number, Nutrition>();
+  if (!unique.length) return out;
+  const found = await rows(
+    db,
+    `SELECT r.id AS recipe_id, r.servings, ri.quantity, ri.unit, ri.optional,
+            f.kcal, f.protein, f.fat, f.carbs, f.grams_per_unit
+       FROM recipes r
+       LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+       LEFT JOIN foods f ON f.id = ri.food_id
+      WHERE r.id IN (${unique.map(() => "?").join(",")})`,
+    ...unique,
+  );
+  for (const id of unique) {
+    const mine = found.filter((x) => Number(x.recipe_id) === id);
+    if (mine.length)
+      out.set(
+        id,
+        nutritionPerServing(mine as IngredientMacros[], mine[0].servings),
+      );
+  }
+  return out;
+}
+
+/** Suma de raciones (una por comida); null si no hay ninguna. */
+export function sumNutrition(list: Nutrition[]): Nutrition | null {
+  if (!list.length) return null;
+  return list.reduce((a, b) => ({
+    kcal: a.kcal + b.kcal,
+    protein: a.protein + b.protein,
+    fat: a.fat + b.fat,
+    carbs: a.carbs + b.carbs,
+    approximate: a.approximate || b.approximate,
+  }));
+}
+
 /** Load one recipe with ordered ingredients, 1..N numbered steps, material names
  *  and its macros per serving. */
 export async function loadRecipe(
