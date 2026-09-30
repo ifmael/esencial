@@ -8,8 +8,22 @@ export type Ingredient = {
   food: string;
   quantity: number | null;
   unit: string | null;
+  /** Alimento del catálogo: con él, el ingrediente cuenta en los macros. */
+  foodId: number | null;
+  /** Lo opcional no cuenta en los macros. */
+  optional: boolean;
 };
 export type Step = { id: number; position: number; step: number; text: string };
+
+/** Macros por ración que calcula la API al leer la receta. */
+export type Nutrition = {
+  kcal: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  /** Algún ingrediente con cantidad no se pudo contar. */
+  approximate: boolean;
+};
 
 export type Recipe = {
   id: number;
@@ -21,6 +35,7 @@ export type Recipe = {
   steps: Step[];
   materials: string[];
   tags: string[];
+  nutrition: Nutrition;
 };
 
 /** What the API accepts on POST/PUT (children without ids; PUT replaces them
@@ -34,6 +49,8 @@ export type RecipeInput = {
     food: string;
     quantity?: number | null;
     unit?: string | null;
+    foodId?: number | null;
+    optional?: boolean;
   }[];
   steps?: string[];
   materials?: string[];

@@ -468,6 +468,11 @@ posterior va en su propio número. Los tests de la API **no** ven estas filas (s
 bootstrap no siembra regiones), así que lo verifica el e2e.
 - `0012_recetas_nutrirutina.sql` siembra el **recetario de Nutrirutina** (ver
 «Recetario sembrado» más abajo). Es generada: no se edita a mano.
+- `0013_alimentos.sql` es **aditiva** (tabla `foods` + `recipe_ingredients.food_id`
+/`optional`) y va en el bootstrap de tests con `foods` en `TABLES`. Sin `;` en
+sus comentarios: el bootstrap parte el fichero por ellos. `0014_recetas_libro.sql`
+es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
+cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0014.
 - En remoto el baseline ya está aplicado en la D1 de producción; pero cada delta
 nuevo hay que aplicarlo tras el deploy (`pnpm db:migrate:remote`; 0009 destruye
 el histórico de planificación — ver `DEPLOY.md` §4).
@@ -675,8 +680,9 @@ ingredientes, pasos y utensilios (→ materiales). La genera
 `api/scripts/nutrirutina.ts` (la cubre `api/tests/nutrirutina-import.test.ts`).
 
 - Unidad `g` → `gr` (el desplegable del editor); cantidad ≤ 0 («al gusto», -1 en
-  Nutrirutina) → sin cantidad ni unidad. Sin categorías ni nutrición (Esencial no
-  tiene columnas para las calorías/macros).
+  Nutrirutina) → sin cantidad ni unidad. Sin categorías. La nutrición guardada en
+  Nutrirutina **no se importa**: tiene proteínas y carbohidratos intercambiados y
+  le faltaban ingredientes (ver «Macros» abajo).
 - Una receta con un nombre que ya exista **se salta entera** (tabla auxiliar
   `_nutrirutina_skip`, que la migración borra al final): nunca pisa ni añade
   hijos a una receta propia.
@@ -691,3 +697,28 @@ ingredientes, pasos y utensilios (→ materiales). La genera
   cambiada (lo cubre `recipes.test.ts`). En producción, las fotos se suben
   **antes** de migrar (`DEPLOY.md` §4).
 
+## Macros por ración (catálogo `foods`)
+
+- `foods`: 309 alimentos (los 288 de Nutrirutina + los que faltaban), con kcal,
+  proteínas, grasas y carbohidratos **por 100 g/ml** y `grams_per_unit` para la
+  unidad `ud` (huevo 55, diente de ajo 5, zumo de limón 40…).
+- Los macros **no se guardan**: `loadRecipe` los calcula al leer
+  (`nutritionPerServing` en `api/src/repo.ts`) y la respuesta lleva
+  `nutrition {kcal, protein, fat, carbs, approximate}` **por ración** (sin
+  raciones, la receta es una). No cuentan lo opcional ni lo que va sin cantidad;
+  un ingrediente con cantidad sin `foodId` o en una unidad sin conversión deja
+  `approximate: true`. La ficha lo pinta en «Por ración».
+- `foodId` se valida contra el catálogo en POST/PUT (400
+  `{field:'ingredients.N.foodId'}`). El editor lo conserva al guardar y **lo
+  suelta si cambias el texto del ingrediente** (otro texto puede ser otro alimento).
+- `0014_recetas_libro.sql` sustituye los ingredientes de 96 recetas por los del
+  libro de cocina del usuario (extraídos con Gemini), enlazados a `foods`. Solo
+  toca una receta si sus ingredientes siguen **exactamente** como los dejó 0012
+  (mismo número, nombres y suma de cantidades): una receta editada a mano no se
+  toca. Al final enlaza cualquier ingrediente cuyo texto sea un alimento exacto
+  del catálogo (las 4 recetas que no están en el libro). Rangos del libro
+  («4-5») → el mínimo; «<1 g» → sin cantidad; `kg`/`l` → `gr`/`ml`; lonchas,
+  ramitas y trozos → `ud`. Las raciones de cada receta **no cambian**.
+- Las fuentes de 0014 (respuestas de Gemini y el mapeo) no viven en el repo: la
+  migración se generó una vez y es el dato. Un arreglo posterior va en su propio
+  número.

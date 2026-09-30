@@ -9,6 +9,10 @@ export const ingredientSchema = z.object({
   quantity: z.number().positive().optional().nullable(),
   unit: z.string().optional().nullable(),
   section: z.string().optional().nullable(),
+  /** Alimento del catálogo `foods`: con él, el ingrediente cuenta en los macros. */
+  foodId: z.number().int().positive().optional().nullable(),
+  /** Lo opcional no cuenta en los macros. */
+  optional: z.boolean().optional().default(false),
 });
 
 export const recipeSchema = z.object({

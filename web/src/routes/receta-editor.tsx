@@ -38,7 +38,23 @@ import { ApiError, apiFetch, photoSrc } from "../lib/api";
 import { pushEscape } from "../lib/escape-stack";
 import { useCreateMorph } from "../lib/view-transition";
 
-type IngRow = { food: string; quantity: string; unit: string };
+/** `foodId`/`optional` viajan tal cual hasta el PUT: si no, editar una receta
+ *  borraría su enlace al catálogo y sus macros. */
+type IngRow = {
+  food: string;
+  quantity: string;
+  unit: string;
+  foodId: number | null;
+  optional: boolean;
+};
+
+const emptyRow = (): IngRow => ({
+  food: "",
+  quantity: "",
+  unit: "",
+  foodId: null,
+  optional: false,
+});
 
 type Draft = {
   name: string;
@@ -56,7 +72,7 @@ const blank = (): Draft => ({
   description: "",
   servings: "",
   photo_path: "",
-  ingredients: [{ food: "", quantity: "", unit: "" }],
+  ingredients: [emptyRow()],
   steps: [""],
   materials: [],
   tags: [],
@@ -74,8 +90,10 @@ const fromRecipe = (r: Recipe): Draft => ({
         food: i.food,
         quantity: i.quantity === null ? "" : String(i.quantity),
         unit: i.unit ?? "",
+        foodId: i.foodId,
+        optional: i.optional,
       }))
-    : [{ food: "", quantity: "", unit: "" }],
+    : [emptyRow()],
   steps: r.steps.length ? r.steps.map((s) => s.text) : [""],
   materials: [...r.materials],
   tags: [...r.tags],
@@ -307,6 +325,8 @@ function RecipeEditor({
         food: i.food.trim(),
         quantity: i.quantity.trim() ? Number(i.quantity) : null,
         unit: i.unit.trim() || null,
+        foodId: i.foodId,
+        optional: i.optional,
       })),
     steps: draftRef.current.steps.map((s) => s.trim()).filter(Boolean),
     materials: draftRef.current.materials,
@@ -559,7 +579,11 @@ function RecipeEditor({
                     onChange={(e) =>
                       set(
                         "ingredients",
-                        setRow(draft.ingredients, i, { food: e.target.value }),
+                        // Otro texto puede ser otro alimento: el enlace se suelta.
+                        setRow(draft.ingredients, i, {
+                          food: e.target.value,
+                          foodId: null,
+                        }),
                       )
                     }
                   />
@@ -621,10 +645,7 @@ function RecipeEditor({
               variant="outlined"
               className="self-start"
               onClick={() =>
-                set("ingredients", [
-                  ...draft.ingredients,
-                  { food: "", quantity: "", unit: "" },
-                ])
+                set("ingredients", [...draft.ingredients, emptyRow()])
               }
             >
               <AddIcon />

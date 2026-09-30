@@ -23,6 +23,26 @@ async function validPhoto(
   return (await env.PHOTOS.head(photo_path)) !== null;
 }
 
+/** Índice del primer ingrediente cuyo foodId no está en el catálogo (o null). */
+async function unknownFood(
+  db: D1Database,
+  ingredients: { foodId?: number | null }[],
+): Promise<number | null> {
+  const ids = [...new Set(ingredients.flatMap((i) => i.foodId ?? []))];
+  if (!ids.length) return null;
+  const known = new Set(
+    (
+      await rows(
+        db,
+        `SELECT id FROM foods WHERE id IN (${ids.map(() => "?").join(",")})`,
+        ...ids,
+      )
+    ).map((r) => Number(r.id)),
+  );
+  const i = ingredients.findIndex((x) => x.foodId && !known.has(x.foodId));
+  return i === -1 ? null : i;
+}
+
 function childStatements(
   name: string,
   input: {
@@ -31,6 +51,8 @@ function childStatements(
       quantity?: number | null;
       unit?: string | null;
       section?: string | null;
+      foodId?: number | null;
+      optional?: boolean;
     }[];
     steps: string[];
     materials: string[];
@@ -42,7 +64,7 @@ function childStatements(
     ...input.ingredients.map((i, pos) =>
       db
         .prepare(
-          `INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit, section) VALUES (${RECIPE_ID}, ?, ?, ?, ?, ?)`,
+          `INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit, section, food_id, optional) VALUES (${RECIPE_ID}, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           name,
@@ -51,6 +73,8 @@ function childStatements(
           i.quantity ?? null,
           i.unit ?? null,
           i.section ?? null,
+          i.foodId ?? null,
+          i.optional ? 1 : 0,
         ),
     ),
     ...input.steps.map((text, pos) =>
@@ -101,6 +125,12 @@ export const recipes = new Hono<{ Bindings: Env }>()
           "photo_path",
         );
       const db = getDb(c.env);
+      const bad = await unknownFood(db, input.ingredients);
+      if (bad !== null)
+        return fail(
+          "foodId no está en el catálogo",
+          `ingredients.${bad}.foodId`,
+        );
       const name = input.name.trim();
       const results = await db.batch([
         db
@@ -150,6 +180,12 @@ export const recipes = new Hono<{ Bindings: Env }>()
           "photo_path no corresponde a una foto subida",
           "photo_path",
         );
+      const bad = await unknownFood(db, input.ingredients);
+      if (bad !== null)
+        return fail(
+          "foodId no está en el catálogo",
+          `ingredients.${bad}.foodId`,
+        );
       const name = input.name.trim();
       await db.batch([
         db
@@ -171,7 +207,7 @@ export const recipes = new Hono<{ Bindings: Env }>()
           ...input.ingredients.map((i, pos) =>
             db
               .prepare(
-                "INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit, section) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO recipe_ingredients (recipe_id, position, food, quantity, unit, section, food_id, optional) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
               )
               .bind(
                 id,
@@ -180,6 +216,8 @@ export const recipes = new Hono<{ Bindings: Env }>()
                 i.quantity ?? null,
                 i.unit ?? null,
                 i.section ?? null,
+                i.foodId ?? null,
+                i.optional ? 1 : 0,
               ),
           ),
           ...input.steps.map((text, pos) =>

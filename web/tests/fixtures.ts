@@ -10,9 +10,30 @@ export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
     servings: 4,
     photo_path: null,
     ingredients: [
-      { id: 11, food: "arroz", quantity: 300, unit: "g" },
-      { id: 12, food: "pollo", quantity: 2, unit: "pechuga" },
-      { id: 13, food: "ajo", quantity: 1, unit: "diente" },
+      {
+        id: 11,
+        food: "arroz",
+        quantity: 300,
+        unit: "g",
+        foodId: 5,
+        optional: false,
+      },
+      {
+        id: 12,
+        food: "pollo",
+        quantity: 2,
+        unit: "pechuga",
+        foodId: null,
+        optional: false,
+      },
+      {
+        id: 13,
+        food: "ajo",
+        quantity: 1,
+        unit: "diente",
+        foodId: 9,
+        optional: true,
+      },
     ],
     steps: [
       { id: 21, position: 0, step: 1, text: "Sofreír" },
@@ -22,6 +43,13 @@ export function makeRecipe(over: Partial<Recipe> = {}): Recipe {
     ],
     materials: ["olla", "sartén"],
     tags: ["almuerzo"],
+    nutrition: {
+      kcal: 520,
+      protein: 32,
+      fat: 12,
+      carbs: 70,
+      approximate: true,
+    },
     ...over,
   };
 }

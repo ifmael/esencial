@@ -160,9 +160,15 @@ describe("editor de receta: editar", () => {
       servings: 6,
       photo_path: "recipe-7.png",
       ingredients: [
-        { food: "arroz", quantity: 300, unit: "g" },
-        { food: "pollo", quantity: 2, unit: "pechuga" },
-        { food: "ajo", quantity: 1, unit: "diente" },
+        { food: "arroz", quantity: 300, unit: "g", foodId: 5, optional: false },
+        {
+          food: "pollo",
+          quantity: 2,
+          unit: "pechuga",
+          foodId: null,
+          optional: false,
+        },
+        { food: "ajo", quantity: 1, unit: "diente", foodId: 9, optional: true },
       ],
       steps: ["Sofreír con calma", "Añadir arroz", "Cocer", "Servir"],
       materials: ["olla", "sartén"],
@@ -172,6 +178,28 @@ describe("editor de receta: editar", () => {
     expect(
       await screen.findByRole("heading", { name: "Arroz recaliente" }),
     ).toBeDefined();
+  });
+
+  it("cambiar el texto de un ingrediente suelta su alimento enlazado", async () => {
+    const server = makeServer([recipe]);
+    vi.stubGlobal("fetch", server.fetchMock);
+    renderAt("/recetario/7/editar");
+    await screen.findByRole("heading", { name: "Editar receta" });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Ingrediente 1 alimento" }),
+      { target: { value: "arroz integral" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/recetario/7"));
+    const put = server.calls.find((c) => c.method === "PUT");
+    const body = put?.body as {
+      ingredients: { food: string; foodId: unknown }[];
+    };
+    expect(body.ingredients[0]).toMatchObject({
+      food: "arroz integral",
+      foodId: null,
+    });
+    expect(body.ingredients[2]).toMatchObject({ food: "ajo", foodId: 9 });
   });
 
   it("nombre vacío: error local junto al campo y cero escrituras", async () => {
