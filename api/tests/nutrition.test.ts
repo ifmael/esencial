@@ -87,6 +87,22 @@ describe("macros por ración", () => {
     ]);
   });
 
+  it("sin nada que contar (sin ingredientes o todo al gusto) sale aproximada, no «0 kcal»", async () => {
+    const vacia = await create({ name: "Sin ingredientes" });
+    expect(vacia.nutrition).toEqual({
+      kcal: 0,
+      protein: 0,
+      fat: 0,
+      carbs: 0,
+      approximate: true,
+    });
+    const alGusto = await create({
+      name: "Solo sal",
+      ingredients: [{ food: "Sal", quantity: null, unit: null }],
+    });
+    expect(alGusto.nutrition.approximate).toBe(true);
+  });
+
   it("sin raciones cuenta la receta entera como una", async () => {
     const r = await create({
       name: "Patata sola",
