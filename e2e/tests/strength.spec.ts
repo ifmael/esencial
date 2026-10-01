@@ -1148,6 +1148,117 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     expect(after.exercises[0].targetSets).toBe(3);
   });
 
+  test("copiar por serie las marcas de la sesión igual", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const name = "Empuje copia e2e";
+    // Las dos sesiones acaban `logged` (la API no borra registros): cada
+    // reintento estrena su propio par de semanas.
+    const offset = 210 + testInfo.retry * 14;
+    const before = mondayOf(weekOf(offset));
+    const date = mondayOf(weekOf(offset + 7));
+    const prev = await apiRequest<{ exercises: { id: number }[] }>(
+      page.request,
+      "POST",
+      "/api/plan-sessions",
+      { date: before, name, items: [{ exerciseId: press.id, targetSets: 2 }] },
+    );
+    const seId = prev.exercises[0].id;
+    const set = (setIndex: number, weightKg: number, reps: number) => ({
+      planSessionExerciseId: seId,
+      setIndex,
+      weightKg,
+      reps,
+      done: true,
+    });
+    await apiRequest(page.request, "POST", `/api/workout-logs/${before}`, {
+      effort: 3,
+      sets: [set(0, 60, 10), set(1, 55, 6)],
+    });
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3, targetRepsMin: 8 }],
+      name,
+    );
+
+    await page.goto(`/sesion/${date}`);
+    await page
+      .getByRole("button", { name: "Series de Press banca", exact: true })
+      .click();
+    const box1 = page.getByRole("checkbox", { name: "Press banca serie 1" });
+    const reps1 = page.getByLabel("Reps · Press banca serie 1", {
+      exact: true,
+    });
+    const weight1 = page.getByLabel("Peso (kg) · Press banca serie 1", {
+      exact: true,
+    });
+
+    // El valor es el de la serie homóloga, y solo donde la había: la 3 no.
+    const chip1 = page.getByRole("button", {
+      name: "Copiar 60×10 de la sesión anterior a Press banca serie 1",
+    });
+    await expect(chip1).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Copiar 55×6 de la sesión anterior a Press banca serie 2",
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /a Press banca serie 3$/ }),
+    ).toHaveCount(0);
+
+    await chip1.click();
+    await expect(reps1).toHaveValue("10");
+    await expect(weight1).toHaveValue("60");
+    await expect(box1).not.toBeChecked(); // copiar no marca la serie
+    // Solo esa serie: la 2 sigue con lo precargado por /last (55×6).
+    await expect(
+      page.getByLabel("Reps · Press banca serie 2", { exact: true }),
+    ).toHaveValue("6");
+
+    // En móvil el botón cabe en la fila, mide lo que un objetivo táctil y ni la
+    // tarjeta ni la página se salen de ancho.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(chip1).toBeVisible();
+    const chipBox = await chip1.boundingBox();
+    if (!chipBox) throw new Error("la copia no tiene caja");
+    expect(chipBox.height).toBeGreaterThanOrEqual(48);
+    expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(390);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    await page.getByText("Moderado", { exact: true }).click();
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Cerrar sesión" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+
+    type Logged = {
+      sets: {
+        setIndex: number;
+        weightKg: number;
+        reps: number;
+        done: boolean;
+      }[];
+    };
+    const logged = await apiRequest<Logged>(
+      page.request,
+      "GET",
+      `/api/workout-logs/${date}`,
+    );
+    expect(logged.sets[0]).toMatchObject({
+      setIndex: 0,
+      weightKg: 60,
+      reps: 10,
+      done: false,
+    });
+  });
+
   test("en móvil las series caben en una línea, con scroll e indicador", async ({
     page,
   }, testInfo) => {

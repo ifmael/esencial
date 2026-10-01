@@ -812,6 +812,132 @@ describe("marcas de la sesión anterior con el mismo nombre", () => {
   });
 });
 
+describe("copiar la serie homóloga de la sesión anterior", () => {
+  /** Registro previo del mismo nombre con las marcas [kilos, reps] por serie. */
+  const prevPayload = (sets: [number | null, number][], date: string) => ({
+    ...loggedPayload(
+      sets.map(([weightKg, reps], setIndex) => ({
+        planSessionExerciseId: SE_BENCH,
+        setIndex,
+        weightKg,
+        reps,
+        done: true,
+      })),
+    ),
+    date,
+  });
+
+  const prevSessions = [
+    { id: 8, date: "2026-08-28", name: "Empuje A", status: "logged" },
+    { id: 1, date: "2026-09-02", name: "Empuje A", status: "planned" },
+  ];
+
+  const expandBench = async () => {
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^peso \(kg\) · press banca serie 1$/i);
+  };
+
+  const chip = (n: number, value: string) =>
+    screen.getByRole("button", {
+      name: new RegExp(
+        `^copiar ${value} de la sesión anterior a press banca serie ${n}$`,
+        "i",
+      ),
+    });
+
+  it("muestra el valor de cada serie homóloga y solo donde la hay", async () => {
+    mockApi({
+      sessions: prevSessions,
+      logs: {
+        "2026-08-28": prevPayload(
+          [
+            [60, 10],
+            [55, 8],
+          ],
+          "2026-08-28",
+        ),
+      },
+    });
+    renderAt("/sesion/2026-09-02");
+    await expandBench();
+    expect(chip(1, "60×10")).toBeDefined();
+    expect(chip(2, "55×8")).toBeDefined();
+    // el borrador tiene 3 series y la anterior solo 2: la tercera no copia nada
+    expect(
+      screen.queryByRole("button", {
+        name: /de la sesión anterior a press banca serie 3/i,
+      }),
+    ).toBeNull();
+  });
+
+  it("copiar rellena reps y kilos sin marcar la serie, y así viaja al registro", async () => {
+    const api = mockApi({
+      sessions: prevSessions,
+      // /last distinto: lo copiado es la serie homóloga, no «última».
+      last: { 21: { weightKg: 40, reps: 6, date: "2026-08-29" } },
+      logs: {
+        "2026-08-28": prevPayload(
+          [
+            [60, 10],
+            [55, 8],
+          ],
+          "2026-08-28",
+        ),
+      },
+    });
+    renderAt("/sesion/2026-09-02");
+    await expandBench();
+    expect(boxOf("press banca", 1).checked).toBe(false);
+
+    fireEvent.click(chip(1, "60×10"));
+    await waitFor(() => expect(weightOf("press banca", 1).value).toBe("60"));
+    expect(repsOf("press banca", 1).value).toBe("10");
+    expect(boxOf("press banca", 1).checked).toBe(false); // copiar no marca
+    // solo esa serie: la 2 conserva la precarga de /last
+    expect(weightOf("press banca", 2).value).toBe("40");
+    expect(repsOf("press banca", 2).value).toBe("6");
+
+    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    const close = await primaryClose();
+    await waitFor(() => expect(close.disabled).toBe(false));
+    fireEvent.click(close);
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    const sets = (api.posts[0] as { sets: SetItem[] }).sets.filter(
+      (s) => s.planSessionExerciseId === SE_BENCH,
+    );
+    expect(sets[0]).toMatchObject({
+      setIndex: 0,
+      weightKg: 60,
+      reps: 10,
+      done: false,
+    });
+    expect(sets[1]).toMatchObject({ setIndex: 1, weightKg: 40, reps: 6 });
+  });
+
+  it("origen sin kilos: copia solo las reps y no conmuta «Sin peso»", async () => {
+    mockApi({
+      sessions: prevSessions,
+      last: { 21: { weightKg: 40, reps: 6, date: "2026-08-29" } },
+      logs: { "2026-08-28": prevPayload([[null, 12]], "2026-08-28") },
+    });
+    renderAt("/sesion/2026-09-02");
+    await expandBench();
+    const sw = () =>
+      screen.getByRole("switch", {
+        name: /sin peso · press banca/i,
+      }) as HTMLInputElement;
+    expect(sw().checked).toBe(false);
+
+    fireEvent.click(chip(1, "12 reps"));
+    await waitFor(() => expect(repsOf("press banca", 1).value).toBe("12"));
+    expect(weightOf("press banca", 1).value).toBe("40"); // kilos intactos
+    expect(boxOf("press banca", 1).checked).toBe(false);
+    expect(sw().checked).toBe(false);
+  });
+});
+
 const logged = loggedPayload(
   [
     {

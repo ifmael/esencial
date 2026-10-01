@@ -23,6 +23,7 @@ import {
   BikeIcon,
   CheckIcon,
   ChevronDownIcon,
+  CopyIcon,
   EditIcon,
   RunIcon,
 } from "../components/icons";
@@ -51,10 +52,12 @@ import type { ShapeName } from "../lib/shapes";
 import { useCreateMorph } from "../lib/view-transition";
 import {
   addedSet,
+  copiedMarks,
   defaultSetCount,
   formatLast,
   formatPrevious,
   formatSetText,
+  type HomologMarks,
   isNoWeight,
   isSetFilled,
   isValidDateStr,
@@ -63,6 +66,7 @@ import {
   noteOrNull,
   numOrNull,
   parseDateEs,
+  previousMarks,
   previousSession,
   setsProgress,
 } from "../lib/workout";
@@ -115,6 +119,8 @@ type DraftExercise = {
   last: LastValue | null;
   /** Marcas de la sesión anterior con el mismo nombre («vie, 26/09: 60×10 · …»). */
   previous: string | null;
+  /** Esa misma sesión, serie a serie: la homóloga de cada serie del borrador. */
+  prevSets: (HomologMarks | null)[];
   /** Sin peso: se oculta el campo de kilos, bastan las reps y viaja weightKg null. */
   noWeight: boolean;
   sets: DraftSet[];
@@ -198,6 +204,7 @@ async function buildDraft(
           se,
           last,
           previous: prev && formatPrevious(prev.date, prevSets),
+          prevSets: previousMarks(prevSets),
           noWeight:
             logged.length > 0
               ? isNoWeight(logged)
@@ -359,6 +366,14 @@ export function useWorkoutDay(date: string) {
       ...s,
       done: !s.done && isSetFilled(s, ex.noWeight),
     }));
+
+  /** Copia la serie homóloga de la sesión anterior: no marca la serie (ver
+   * `copiedMarks`) y sin homóloga no toca nada. */
+  const copyPrevious = (seId: number, setIdx: number) =>
+    mutateSet(seId, setIdx, (s, ex) => {
+      const src = ex.prevSets[setIdx] ?? null;
+      return src ? copiedMarks(s, src, ex.noWeight) : s;
+    });
 
   /** Cambiar «sin peso» cambia qué es una serie completa: recalcula las editadas. */
   const toggleNoWeight = (seId: number) =>
@@ -533,6 +548,7 @@ export function useWorkoutDay(date: string) {
     setDraftValue,
     stepValue,
     toggleDone,
+    copyPrevious,
     toggleNoWeight,
     addSet,
     removeSet,
@@ -1070,6 +1086,8 @@ function SesionView() {
                   <ul className="stagger mt-3 flex flex-col gap-2">
                     {ex.sets.map((s, i) => {
                       const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
+                      // La homóloga de la sesión anterior: solo si la hubo.
+                      const prev = ex.prevSets[i] ?? null;
                       return (
                         <li
                           key={i}
@@ -1091,6 +1109,20 @@ function SesionView() {
                             <span className="w-14 text-label-l text-on-surface-variant">
                               Serie {i + 1}
                             </span>
+                            {prev && (
+                              // El valor de la serie homóloga y, a la vez, el
+                              // botón que la copia (reps y kilos, sin marcar).
+                              <Button
+                                variant="text"
+                                size="md"
+                                className="tabular shrink-0"
+                                aria-label={`Copiar ${formatSetText(prev)} de la sesión anterior a ${ctx}`}
+                                onClick={() => day.copyPrevious(ex.se.id, i)}
+                              >
+                                <CopyIcon width={18} height={18} />
+                                {formatSetText(prev)}
+                              </Button>
+                            )}
                           </div>
                           <div
                             className={cx(

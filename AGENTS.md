@@ -286,6 +286,15 @@ es largo, crece en altura (no se recorta, porque es el `h1`). Lo cubre
   («sáb, 26/09: 60×10 · 60×8»), emparejadas por `exerciseId` (lo devuelve
   `serialize` en `/api/workout-logs`), y sustituyen a «última: X×Y». Son solo
   informativas: la precarga sigue saliendo de `/last`.
+- **Valor de la serie homóloga, con copia**: en cada fila de serie de la tarjeta
+  desplegada, y solo ahí, se ve el valor de **esa misma serie** (por índice
+  estricto: sin homóloga no hay valor ni control) y el propio control la copia a
+  la serie actual: repeticiones siempre y kilos solo si la anterior los trae.
+  Copiar **nunca marca** la serie (`done` y `touched` quedan a `false`, así que
+  ni el conmutador «Sin peso» la re-marca después) y **nunca** conmuta «Sin
+  peso». El emparejamiento y el efecto son puros: `previousMarks` y `copiedMarks`
+  en `lib/workout.ts`. La tarjeta plegada no cambia (sigue con su tira de
+  casillas y la línea resumen), y la vista registrada no lo muestra.
 - `GET /api/exercises/:id/last?before=YYYY-MM-DD` limita el histórico a lo
   anterior a esa fecha. El borrador siempre lo pide con la fecha del día, así que
   registrar o corregir un día pasado no precarga marcas de días posteriores.
