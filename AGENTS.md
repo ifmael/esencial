@@ -359,11 +359,22 @@ no pega items viejos encima ni pisa el cursor nuevo (ni deja el «Ver más»
 deshabilitado).
 
 En la ficha, `ExerciseHistory` (`web/src/routes/ejercicios.tsx`) es una tarjeta
-bajo los datos del ejercicio: las series marcadas de cada día (o el cardio
-hecho, con su distancia y su tiempo), del más reciente al más antiguo, con la
-**mejor serie** de lo cargado (`bestMark`: más kilos y, a igualdad, más reps) y
-un `Link` al día registrado. «Ver más» pagina igual. Es de solo lectura: el
-histórico se escribe cerrando sesiones.
+bajo los datos del ejercicio: la **progresión** en barras, las series marcadas de
+cada día (o el cardio hecho, con su distancia y su tiempo), del más reciente al
+más antiguo, el **mejor del histórico entero** y un `Link` al día registrado.
+«Ver más» pagina igual. Es de solo lectura: el histórico se escribe cerrando
+sesiones.
+
+- La gráfica es `ProgressChart` (`expressive.tsx`): una barra por día con el
+  valor más alto (`progressPoints`), del más antiguo al más nuevo, y la altura es
+  relativa al mínimo y al máximo **de lo cargado** — si no, 57,5 y 60 kg se
+  verían iguales. Qué mide lo elige `progressMetric`: **kilos** si alguna serie
+  los trae, si no **repeticiones**, y en cardio **kilómetros**. Dibuja lo cargado
+  (crece con «Ver más»), no el histórico entero; el resumen va en su nombre
+  accesible y cada barra dice su valor al pasar el ratón.
+- El «mejor» **no** se calcula en el cliente: lo manda el API en `best`
+  (una consulta más, con el mismo rango pedido), así que puede ser un día que no
+  esté en la página cargada. Se enseña con su fecha.
 
 Los dos endpoints:
 
@@ -371,9 +382,11 @@ Los dos endpoints:
   `{ date, sessionName, effort, note, exercises, sets, cardio }` por día; el
   detalle del día sigue en `GET /api/workout-logs/:date`.
 - `GET /api/exercises/:id/history?before=&from=&to=&limit=` → `{ exerciseId, kind,
-  sessions, next }`; cada sesión lleva `sets` (fuerza) o `cardio`
+  best, sessions, next }`; cada sesión lleva `sets` (fuerza) o `cardio`
   (distancia/tiempo), y `null` en el que no aplica. Sirve también para los
-  ejercicios de cardio.
+  ejercicios de cardio. `best` es la mejor marca del histórico (o del rango
+  pedido): la serie más pesada —y a igualdad, la que más repite— o la distancia
+  más larga, con la forma de una sesión para que la pinte el mismo código.
 - Los dos leen el cursor y el rango con `readCursor`/`dateFilter`
   (`api/src/http.ts`, que responden 400 `{field:'before'|'from'|'to'|'limit'}`,
   y el rango invertido es 400 `{field:'to'}`) y resuelven la página con un número **fijo** de

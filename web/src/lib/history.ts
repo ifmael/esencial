@@ -44,6 +44,8 @@ export type HistoryDayPage = { days: HistoryDay[]; next: string | null };
 export type ExerciseHistoryPage = {
   exerciseId: number;
   kind: string;
+  /** Mejor marca del histórico entero (o del rango pedido), no de la página. */
+  best: ExerciseHistorySession | null;
   sessions: ExerciseHistorySession[];
   next: string | null;
 };
@@ -61,6 +63,10 @@ export type HistoryState<T> = {
   loadMore: () => void;
   reload: () => void;
 };
+
+/** Un resumen que viaja en cada página (p. ej. el «mejor» de un ejercicio).
+ *  La función ha de ser estable: entra en las dependencias del efecto. */
+type MetaOf<P, M> = (page: P) => M;
 
 /** Rango de fechas pedido a la API, con los dos extremos incluidos; `""` en un
  *  lado significa «sin límite» por ahí. */
@@ -100,12 +106,13 @@ function pageUrl(
 }
 
 /** Índice del histórico y el de un ejercicio: misma página, distinto extractor. */
-function useHistoryPage<T, P extends { next: string | null }>(
+function useHistoryPage<T, P extends { next: string | null }, M = null>(
   path: string,
   pick: (page: P) => T[],
   range: HistoryRange = NO_RANGE,
+  metaOf?: MetaOf<P, M>,
   limit = HISTORY_PAGE,
-): HistoryState<T> {
+): HistoryState<T> & { meta: M | null } {
   // Solo los dos extremos: el objeto del rango puede ser nuevo en cada render.
   const { from, to } = range;
   const [items, setItems] = useState<T[]>([]);
@@ -113,6 +120,7 @@ function useHistoryPage<T, P extends { next: string | null }>(
   const [pending, setPending] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<M | null>(null);
   const [nonce, setNonce] = useState(0);
   /** Generación de la lista: una respuesta que llega después de una recarga (o
    *  de otro «Ver más») se descarta; si no, pegaría la página vieja encima de la
@@ -141,6 +149,7 @@ function useHistoryPage<T, P extends { next: string | null }>(
         if (!alive || mine !== generation.current) return;
         setItems(pick(page));
         setNext(page.next);
+        if (metaOf) setMeta(metaOf(page));
       })
       .catch((e: unknown) => {
         if (alive && mine === generation.current)
@@ -152,7 +161,7 @@ function useHistoryPage<T, P extends { next: string | null }>(
     return () => {
       alive = false;
     };
-  }, [path, limit, pick, from, to, nonce]);
+  }, [path, limit, pick, metaOf, from, to, nonce]);
 
   const loadMore = useCallback(() => {
     if (next === null) return;
@@ -175,30 +184,41 @@ function useHistoryPage<T, P extends { next: string | null }>(
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { items, next, pending, loadingMore, error, loadMore, reload };
+  return { items, next, pending, loadingMore, error, loadMore, reload, meta };
 }
 
 /** Índice de días registrados (lo consume /historial). */
 export function useWorkoutHistory(
   range: HistoryRange = NO_RANGE,
 ): HistoryState<HistoryDay> {
-  return useHistoryPage<HistoryDay, HistoryDayPage>(
+  const { meta, ...state } = useHistoryPage<HistoryDay, HistoryDayPage>(
     "/api/workout-logs",
     DAYS_OF,
     range,
   );
+  void meta;
+  return state;
 }
 
 /** Historial de un ejercicio (lo consume su ficha). */
+export type ExerciseHistoryState = HistoryState<ExerciseHistorySession> & {
+  /** La mejor marca del ejercicio entero, que el API manda con cada página. */
+  best: ExerciseHistorySession | null;
+};
+
+/** El «mejor» viaja en la página: el hook lo saca aparte. */
+const BEST_OF = (page: ExerciseHistoryPage) => page.best;
+
 export function useExerciseHistory(
   exerciseId: number,
   range: HistoryRange = NO_RANGE,
-): HistoryState<ExerciseHistorySession> {
-  return useHistoryPage<ExerciseHistorySession, ExerciseHistoryPage>(
-    `/api/exercises/${exerciseId}/history`,
-    SESSIONS_OF,
-    range,
-  );
+): ExerciseHistoryState {
+  const { meta, ...state } = useHistoryPage<
+    ExerciseHistorySession,
+    ExerciseHistoryPage,
+    ExerciseHistorySession | null
+  >(`/api/exercises/${exerciseId}/history`, SESSIONS_OF, range, BEST_OF);
+  return { ...state, best: meta };
 }
 
 const MONTH_LABEL = new Intl.DateTimeFormat("es-ES", {
@@ -252,22 +272,60 @@ export function marksText(sets: readonly ExerciseMark[]): string | null {
   return sets.map((s) => formatSetText(s)).join(" · ");
 }
 
-/** La mejor serie del historial: más kilos y, a igualdad, más repeticiones.
- *  Sin kilos («sin peso») compite como peso 0, así que nunca gana a una con
- *  carga. null si no hay ninguna serie. */
-export function bestMark(sets: readonly ExerciseMark[]): ExerciseMark | null {
-  let best: ExerciseMark | null = null;
-  for (const s of sets) {
-    if (best === null) {
-      best = s;
-      continue;
-    }
-    const weight = s.weightKg ?? 0;
-    const bestWeight = best.weightKg ?? 0;
-    if (weight > bestWeight || (weight === bestWeight && s.reps > best.reps))
-      best = s;
+/** Qué mide la gráfica de progresión: kilos si alguna serie los trae, si no
+ *  repeticiones; en cardio, kilómetros. null cuando no hay nada que dibujar. */
+export type ProgressMetric = "weightKg" | "reps" | "distanceKm";
+
+export const PROGRESS_UNIT: Record<ProgressMetric, string> = {
+  weightKg: "kg",
+  reps: "reps",
+  distanceKm: "km",
+};
+
+export function progressMetric(
+  sessions: readonly ExerciseHistorySession[],
+): ProgressMetric | null {
+  if (sessions.some((s) => s.sets.some((x) => x.weightKg !== null)))
+    return "weightKg";
+  if (sessions.some((s) => s.sets.length > 0)) return "reps";
+  if (sessions.some((s) => s.cardio !== null && s.cardio.distanceKm !== null))
+    return "distanceKm";
+  return null;
+}
+
+export type ProgressPoint = { date: string; value: number };
+
+/** El valor más alto de cada día con la métrica elegida, del más antiguo al más
+ *  reciente. Los días sin nada marcado no pintan barra. */
+export function progressPoints(
+  sessions: readonly ExerciseHistorySession[],
+  metric: ProgressMetric,
+): ProgressPoint[] {
+  const points: ProgressPoint[] = [];
+  for (const session of [...sessions].reverse()) {
+    const values =
+      metric === "distanceKm"
+        ? session.cardio?.distanceKm == null
+          ? []
+          : [session.cardio.distanceKm]
+        : session.sets
+            .map((s) => s[metric])
+            .filter((value): value is number => value !== null);
+    if (values.length === 0) continue;
+    points.push({ date: session.date, value: Math.max(...values) });
   }
-  return best;
+  return points;
+}
+
+/** Nombre accesible de la gráfica: «de 55 a 60 kg en 20 sesiones». */
+export function progressLabel(
+  points: readonly ProgressPoint[],
+  unit: string,
+): string {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (points.length === 1) return `${first.value} ${unit} en 1 sesión`;
+  return `de ${first.value} a ${last.value} ${unit} en ${points.length} sesiones`;
 }
 
 /** «5 km · 30 min» del cardio de un día; null sin distancia ni tiempo. */

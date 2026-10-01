@@ -95,7 +95,14 @@ test.describe("HISTORIAL", () => {
     await page.goto(`/ejercicios/${exerciseId}`);
     const history = page.getByRole("region", { name: "Historial" });
     await expect(history).toBeVisible();
-    await expect(history.getByText("Mejor: 62.5×5")).toBeVisible();
+    // El «mejor» lo calcula el API sobre todo el histórico, con su fecha.
+    await expect(history.getByText(/^Mejor: 62\.5×5 · /)).toBeVisible();
+    // Y la progresión se dibuja (un día sembrado, una barra).
+    await expect(
+      history.getByRole("img", {
+        name: /^Progresión de .*: 62\.5 kg en 1 sesión$/,
+      }),
+    ).toBeVisible();
 
     await expect(
       history.getByRole("link", { name: /62\.5×5 · 60×8/ }),

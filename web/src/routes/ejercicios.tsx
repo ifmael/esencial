@@ -11,7 +11,13 @@ import {
   regionLabel,
   regionsOfGroup,
 } from "../components/body-map/regions";
-import { EmptyState, Loader, Monogram, Shape } from "../components/expressive";
+import {
+  EmptyState,
+  Loader,
+  Monogram,
+  ProgressChart,
+  Shape,
+} from "../components/expressive";
 import { GROUP_LABELS, MUSCLE_GROUPS } from "../components/grouped-exercises";
 import {
   AddIcon,
@@ -57,9 +63,12 @@ import {
   useExercises,
 } from "../lib/exercises";
 import {
-  bestMark,
   cardioText,
   marksText,
+  PROGRESS_UNIT,
+  progressLabel,
+  progressMetric,
+  progressPoints,
   useExerciseHistory,
 } from "../lib/history";
 import type { ShapeName } from "../lib/shapes";
@@ -73,7 +82,7 @@ import {
   runViewTransition,
   useCreateMorph,
 } from "../lib/view-transition";
-import { formatSetText, formatShortDate } from "../lib/workout";
+import { formatShortDate } from "../lib/workout";
 
 const errorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : "Error inesperado";
@@ -890,12 +899,19 @@ function AddToTemplate({
 
 // --- Detail page ---------------------------------------------------------------
 
-/** Historial del ejercicio (sección de la ficha): las series marcadas de cada
- *  día, del más reciente al más antiguo, con la mejor serie del histórico y un
- *  enlace al día registrado. Solo lee. */
-function ExerciseHistory({ exerciseId }: { exerciseId: number }) {
+/** Historial del ejercicio (sección de la ficha): la progresión de un vistazo,
+ *  las series marcadas de cada día —del más reciente al más antiguo—, la mejor
+ *  marca del histórico entero y un enlace al día registrado. Solo lee. */
+function ExerciseHistory({
+  exerciseId,
+  exerciseName,
+}: {
+  exerciseId: number;
+  exerciseName: string;
+}) {
   const {
     items: sessions,
+    best,
     next,
     pending,
     loadingMore,
@@ -904,9 +920,13 @@ function ExerciseHistory({ exerciseId }: { exerciseId: number }) {
     reload,
   } = useExerciseHistory(exerciseId);
 
-  // La mejor serie y, en cardio, las marcas: una sola pasada por lo cargado.
-  const marks = sessions.flatMap((s) => s.sets);
-  const best = bestMark(marks);
+  // El «mejor» lo manda el API (todo el histórico, no la página) y la gráfica
+  // sale de lo cargado, que crece con «Ver más».
+  const metric = progressMetric(sessions);
+  const points = metric ? progressPoints(sessions, metric) : [];
+  const bestText = best
+    ? (marksText(best.sets) ?? cardioText(best.cardio))
+    : null;
 
   return (
     <Card className="flex flex-col gap-4 rounded-xl">
@@ -915,9 +935,9 @@ function ExerciseHistory({ exerciseId }: { exerciseId: number }) {
           <h2 id="ex-history" className="text-title-m text-e">
             Historial
           </h2>
-          {best && (
+          {bestText && best && (
             <p className="tabular text-label-l text-on-surface-variant">
-              Mejor: {formatSetText(best)}
+              Mejor: {bestText} · {formatShortDate(best.date)}
             </p>
           )}
         </div>
@@ -940,6 +960,17 @@ function ExerciseHistory({ exerciseId }: { exerciseId: number }) {
             Aún no hay series registradas. Aparecerán aquí al cerrar una sesión
             con este ejercicio.
           </p>
+        )}
+
+        {points.length > 0 && metric && (
+          <ProgressChart
+            points={points}
+            unit={PROGRESS_UNIT[metric]}
+            label={`Progresión de ${exerciseName}: ${progressLabel(
+              points,
+              PROGRESS_UNIT[metric],
+            )}`}
+          />
         )}
 
         {sessions.length > 0 && (
@@ -1188,7 +1219,10 @@ export function EjercicioDetailPage() {
               </section>
             )}
           </Card>
-          <ExerciseHistory exerciseId={exercise.id} />
+          <ExerciseHistory
+            exerciseId={exercise.id}
+            exerciseName={exercise.name}
+          />
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@
 // `prefers-reduced-motion` (globals.css).
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type ShapeName, shapePath } from "../lib/shapes";
-import { EFFORT_SHAPES } from "../lib/workout";
+import { EFFORT_SHAPES, formatShortDate } from "../lib/workout";
 import { cx } from "./ui";
 
 /** Esfuerzo percibido en lectura (1–5): las mismas formas del selector de la
@@ -39,6 +39,61 @@ export function EffortScale({
         );
       })}
     </span>
+  );
+}
+
+/** Progresión: una barra por sesión, con el valor más alto de cada día. La
+ *  altura es relativa al mínimo y al máximo de lo cargado — si no, 57,5 y
+ *  60 kg se verían iguales — y el nombre accesible lleva el resumen; cada barra
+ *  dice su valor al pasar el ratón. */
+export function ProgressChart({
+  points,
+  unit,
+  label,
+  className,
+}: {
+  points: readonly { date: string; value: number }[];
+  /** Lo que miden las barras («kg», «reps», «km»), para el `title` de cada una. */
+  unit: string;
+  /** Qué se anuncia: «Progresión de Press banca: de 45 a 60 kg en 25 sesiones». */
+  label: string;
+  className?: string;
+}) {
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min;
+  const first = points[0];
+  const last = points[points.length - 1];
+  return (
+    <div className={cx("flex flex-col gap-1", className)}>
+      <div
+        role="img"
+        aria-label={label}
+        className="flex h-24 items-end gap-0.5 border-b border-outline-variant"
+      >
+        {points.map((point) => (
+          <span
+            key={point.date}
+            title={`${formatShortDate(point.date)}: ${point.value} ${unit}`}
+            // Sin datos planos: una sola sesión (o todas iguales) pinta a media
+            // altura, que es lo honesto si no hay tendencia que enseñar.
+            style={{
+              height: `${
+                span === 0 ? 60 : 34 + (66 * (point.value - min)) / span
+              }%`,
+            }}
+            className="min-w-0 flex-1 rounded-t-s bg-accent"
+          />
+        ))}
+      </div>
+      {points.length > 1 && (
+        <div className="flex justify-between text-label-s text-on-surface-variant">
+          <span>{formatShortDate(first.date)}</span>
+          <span>{formatShortDate(last.date)}</span>
+        </div>
+      )}
+    </div>
   );
 }
 
