@@ -1,11 +1,78 @@
-// /api/exercises — GET (?tag=) · POST · /:id GET/PUT/DELETE · /:id/last GET.
-// last-values endpoint per E1 design D5.
+// /api/exercises — GET (?tag=) · POST · /:id GET/PUT/DELETE · /:id/last GET ·
+// /:id/history GET. last-values endpoint per E1 design D5.
 import { Hono } from "hono";
 import { type ExerciseInput, exerciseSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
-import { fail, guard, json, parseId } from "../http";
-import { listExercises, loadExercise, row } from "../repo";
+import { dateFilter, fail, guard, json, parseId, readCursor } from "../http";
+import { listExercises, loadExercise, type Row, row, rows } from "../repo";
 import { zBody } from "../validation";
+
+/** Serie marcada de un ejercicio (el `done` ya lo garantiza la consulta). */
+type Mark = { setIndex: number; weightKg: number | null; reps: number };
+/** Marca de cardio hecha. */
+type CardioMark = { distanceKm: number | null; durationMin: number | null };
+
+const markOf = (r: Row): Mark => ({
+  setIndex: Number(r.setIndex),
+  weightKg: r.weightKg === null ? null : Number(r.weightKg),
+  reps: Number(r.reps),
+});
+
+const cardioMarkOf = (r: Row): CardioMark => ({
+  distanceKm: r.distanceKm === null ? null : Number(r.distanceKm),
+  durationMin: r.durationMin === null ? null : Number(r.durationMin),
+});
+
+/** Días con series marcadas del ejercicio (una fila por fecha). */
+const SET_DATES = `SELECT wl.date AS date, MAX(ps.name) AS sessionName
+FROM set_logs sl
+JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = sl.workout_log_id
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+WHERE pse.exercise_id = ? AND sl.done = 1`;
+
+/** Días con cardio hecho del ejercicio. */
+const CARDIO_DATES = `SELECT wl.date AS date, MAX(ps.name) AS sessionName
+FROM cardio_logs cl
+JOIN plan_session_exercises pse ON pse.id = cl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = cl.workout_log_id
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+WHERE pse.exercise_id = ? AND cl.done = 1`;
+
+/** Series marcadas del ejercicio (la fecha va en el IN que añade la ruta). */
+const SET_MARKS = `SELECT wl.date AS date, sl.set_index AS setIndex,
+       sl.weight_kg AS weightKg, sl.reps AS reps
+FROM set_logs sl
+JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = sl.workout_log_id
+WHERE pse.exercise_id = ? AND sl.done = 1`;
+
+/** Las mejores series KILOS primero (y a igualdad, reps) y, sin kilos, las
+ *  que más repiten: la fila es la del día que las consiguió. */
+const SET_BEST = `SELECT wl.date AS date,
+       (SELECT name FROM plan_sessions WHERE id = wl.plan_session_id) AS sessionName,
+       sl.set_index AS setIndex, sl.weight_kg AS weightKg, sl.reps AS reps
+FROM set_logs sl
+JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = sl.workout_log_id
+WHERE pse.exercise_id = ? AND sl.done = 1`;
+
+/** La mejor marca de cardio: la distancia más larga (y a igualdad, el tiempo). */
+const CARDIO_BEST = `SELECT wl.date AS date,
+       (SELECT name FROM plan_sessions WHERE id = wl.plan_session_id) AS sessionName,
+       cl.distance_km AS distanceKm, cl.duration_min AS durationMin
+FROM cardio_logs cl
+JOIN plan_session_exercises pse ON pse.id = cl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = cl.workout_log_id
+WHERE pse.exercise_id = ? AND cl.done = 1`;
+
+/** Marcas de cardio del ejercicio. */
+const CARDIO_MARKS = `SELECT wl.date AS date, cl.distance_km AS distanceKm,
+       cl.duration_min AS durationMin
+FROM cardio_logs cl
+JOIN plan_session_exercises pse ON pse.id = cl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = cl.workout_log_id
+WHERE pse.exercise_id = ? AND cl.done = 1`;
 
 function tagStatements(
   name: string,
@@ -150,5 +217,101 @@ export const exercises = new Hono<{ Bindings: Env }>()
         before,
       );
       return json({ exerciseId: id, last: last ?? null });
+    }),
+  )
+  // Historial del ejercicio: las series marcadas (o el cardio hecho) por día,
+  // del más reciente al más antiguo. Fuerza y cardio comparten el índice, pero
+  // cada uno lee su tabla: dos consultas fijas —fechas y marcas de esas fechas—.
+  .get("/:id/history", (c) =>
+    guard(async () => {
+      const id = parseId(c.req.param("id"));
+      if (id === null) return fail("id must be a positive integer", "id");
+      const cursor = readCursor((key) => c.req.query(key));
+      if (cursor instanceof Response) return cursor;
+      const db = getDb(c.env);
+      const exercise = await row(
+        db,
+        "SELECT id, kind FROM exercises WHERE id = ?",
+        id,
+      );
+      if (!exercise) return fail("Not found", undefined, 404);
+      const isCardio = String(exercise.kind) !== "strength";
+      // El rango pedido y el cursor son las mismas condiciones para las dos consultas.
+      const filter = dateFilter(cursor);
+      const dates = await rows(
+        db,
+        `${isCardio ? CARDIO_DATES : SET_DATES}${filter.conditions
+          .map((condition) => ` AND ${condition}`)
+          .join("")}
+         GROUP BY wl.date ORDER BY wl.date DESC LIMIT ?`,
+        id,
+        ...filter.args,
+        cursor.limit + 1,
+      );
+      const page = dates.slice(0, cursor.limit);
+      // Las marcas de la página: la lista de fechas acota la subconsulta, así que
+      // el número de consultas no crece con el histórico (≤ 61 parámetros).
+      const marks =
+        page.length === 0
+          ? []
+          : await rows(
+              db,
+              `${isCardio ? CARDIO_MARKS : SET_MARKS}
+               AND wl.date IN (${page.map(() => "?").join(",")})
+               ORDER BY wl.date DESC${isCardio ? ", cl.id" : ", sl.set_index, sl.id"}`,
+              id,
+              ...page.map((d) => String(d.date)),
+            );
+      const setsByDate = new Map<string, Mark[]>();
+      const cardioByDate = new Map<string, CardioMark>();
+      for (const m of marks) {
+        const date = String(m.date);
+        if (isCardio) cardioByDate.set(date, cardioMarkOf(m));
+        else setsByDate.set(date, [...(setsByDate.get(date) ?? []), markOf(m)]);
+      }
+      const sessions = page.map((d) => {
+        const date = String(d.date);
+        return {
+          date,
+          sessionName: d.sessionName === null ? null : String(d.sessionName),
+          sets: setsByDate.get(date) ?? [],
+          cardio: cardioByDate.get(date) ?? null,
+        };
+      });
+      // El «mejor» del ejercicio entero (con el rango pedido si lo hay), no el de
+      // la página: una consulta más, ajena al número de filas.
+      const bestRow = await row(
+        db,
+        `${isCardio ? CARDIO_BEST : SET_BEST}${filter.conditions
+          .map((condition) => ` AND ${condition}`)
+          .join("")}
+         ORDER BY ${
+           isCardio
+             ? "(cl.distance_km IS NULL), cl.distance_km DESC, cl.duration_min DESC"
+             : "(sl.weight_kg IS NULL), sl.weight_kg DESC, sl.reps DESC"
+}, wl.date DESC
+         LIMIT 1`,
+        id,
+        ...filter.args,
+      );
+      const best = bestRow
+        ? {
+            date: String(bestRow.date),
+            sessionName:
+              bestRow.sessionName === null ? null : String(bestRow.sessionName),
+            sets: isCardio ? [] : [markOf(bestRow)],
+            cardio: isCardio ? cardioMarkOf(bestRow) : null,
+          }
+        : null;
+      return json({
+        exerciseId: id,
+        kind: String(exercise.kind),
+        best,
+        sessions,
+        next:
+          dates.length > cursor.limit
+            ? sessions[sessions.length - 1].date
+            : null,
+      });
     }),
   );

@@ -69,6 +69,62 @@ export function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+const DATE_STR = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Página de los índices del histórico: 20 filas por defecto, hasta 60.
+ *  `before` es exclusivo (la última fecha ya vista); `from`/`to` son el rango
+ *  pedido por el usuario, con los dos extremos incluidos. */
+export const HISTORY_PAGE = 20;
+export const HISTORY_MAX = 60;
+export type Cursor = {
+  before: string | null;
+  limit: number;
+  from: string | null;
+  to: string | null;
+};
+
+/** `?before=&from=&to=YYYY-MM-DD&limit=1-60` → cursor, o la respuesta 400. */
+export function readCursor(
+  query: (key: string) => string | undefined,
+): Cursor | Response {
+  const dates: Record<"before" | "from" | "to", string | null> = {
+    before: null,
+    from: null,
+    to: null,
+  };
+  for (const key of ["before", "from", "to"] as const) {
+    const value = query(key);
+    if (value !== undefined && !DATE_STR.test(value))
+      return fail(`${key} must be YYYY-MM-DD`, key);
+    dates[key] = value ?? null;
+  }
+  if (dates.from !== null && dates.to !== null && dates.from > dates.to)
+    return fail("to must not be before from", "to");
+  const raw = query("limit") ?? String(HISTORY_PAGE);
+  if (!/^\d+$/.test(raw) || Number(raw) < 1 || Number(raw) > HISTORY_MAX)
+    return fail(`limit must be 1-${HISTORY_MAX}`, "limit");
+  return { ...dates, limit: Number(raw) };
+}
+
+/** Condiciones de fecha del histórico y **sus argumentos en el mismo orden**
+ *  (los huecos del SQL se cuentan en el orden en que se empalman). */
+export function dateFilter(cursor: Cursor): {
+  conditions: string[];
+  args: string[];
+} {
+  const conditions: string[] = [];
+  const args: string[] = [];
+  const add = (sql: string, value: string | null) => {
+    if (value === null) return;
+    conditions.push(sql);
+    args.push(value);
+  };
+  add("wl.date < ?", cursor.before);
+  add("wl.date >= ?", cursor.from);
+  add("wl.date <= ?", cursor.to);
+  return { conditions, args };
+}
+
 /** Wrap a handler body so thrown D1 errors become safe responses (E1 guard). */
 export async function guard(fn: () => Promise<Response>): Promise<Response> {
   try {

@@ -11,7 +11,13 @@ import {
   regionLabel,
   regionsOfGroup,
 } from "../components/body-map/regions";
-import { EmptyState, Loader, Monogram, Shape } from "../components/expressive";
+import {
+  EmptyState,
+  Loader,
+  Monogram,
+  ProgressChart,
+  Shape,
+} from "../components/expressive";
 import { GROUP_LABELS, MUSCLE_GROUPS } from "../components/grouped-exercises";
 import {
   AddIcon,
@@ -56,6 +62,15 @@ import {
   ROLE_LABELS,
   useExercises,
 } from "../lib/exercises";
+import {
+  cardioText,
+  marksText,
+  PROGRESS_UNIT,
+  progressLabel,
+  progressMetric,
+  progressPoints,
+  useExerciseHistory,
+} from "../lib/history";
 import type { ShapeName } from "../lib/shapes";
 import {
   type Template,
@@ -67,6 +82,7 @@ import {
   runViewTransition,
   useCreateMorph,
 } from "../lib/view-transition";
+import { formatShortDate } from "../lib/workout";
 
 const errorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : "Error inesperado";
@@ -883,6 +899,121 @@ function AddToTemplate({
 
 // --- Detail page ---------------------------------------------------------------
 
+/** Historial del ejercicio (sección de la ficha): la progresión de un vistazo,
+ *  las series marcadas de cada día —del más reciente al más antiguo—, la mejor
+ *  marca del histórico entero y un enlace al día registrado. Solo lee. */
+function ExerciseHistory({
+  exerciseId,
+  exerciseName,
+}: {
+  exerciseId: number;
+  exerciseName: string;
+}) {
+  const {
+    items: sessions,
+    best,
+    next,
+    pending,
+    loadingMore,
+    error,
+    loadMore,
+    reload,
+  } = useExerciseHistory(exerciseId);
+
+  // El «mejor» lo manda el API (todo el histórico, no la página) y la gráfica
+  // sale de lo cargado, que crece con «Ver más».
+  const metric = progressMetric(sessions);
+  const points = metric ? progressPoints(sessions, metric) : [];
+  const bestText = best
+    ? (marksText(best.sets) ?? cardioText(best.cardio))
+    : null;
+
+  return (
+    <Card className="flex flex-col gap-4 rounded-xl">
+      <section aria-labelledby="ex-history" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="ex-history" className="text-title-m text-e">
+            Historial
+          </h2>
+          {bestText && best && (
+            <p className="tabular text-label-l text-on-surface-variant">
+              Mejor: {bestText} · {formatShortDate(best.date)}
+            </p>
+          )}
+        </div>
+
+        {error && (
+          <Alert>
+            <p className="text-body-m">{error}</p>
+            <Button variant="outlined" onClick={reload}>
+              Reintentar
+            </Button>
+          </Alert>
+        )}
+
+        {pending && sessions.length === 0 && (
+          <Loader label="Cargando historial…" />
+        )}
+
+        {!pending && !error && sessions.length === 0 && (
+          <p className="text-body-m text-on-surface-variant">
+            Aún no hay series registradas. Aparecerán aquí al cerrar una sesión
+            con este ejercicio.
+          </p>
+        )}
+
+        {points.length > 0 && metric && (
+          <ProgressChart
+            points={points}
+            unit={PROGRESS_UNIT[metric]}
+            label={`Progresión de ${exerciseName}: ${progressLabel(
+              points,
+              PROGRESS_UNIT[metric],
+            )}`}
+          />
+        )}
+
+        {sessions.length > 0 && (
+          <ul className="flex flex-col gap-1">
+            {sessions.map((s) => (
+              <li key={s.date}>
+                <Link
+                  to={`/sesion/${s.date}`}
+                  className="list-row state min-h-12 gap-3 px-2"
+                  onPointerDown={ripple}
+                >
+                  <span className="w-24 shrink-0 text-body-m text-on-surface-variant">
+                    {formatShortDate(s.date)}
+                  </span>
+                  <span className="min-w-0 grow truncate tabular text-body-m">
+                    {marksText(s.sets) ?? cardioText(s.cardio) ?? "Sin marcas"}
+                  </span>
+                  {s.sessionName && (
+                    <span className="min-w-0 shrink truncate text-body-s text-on-surface-variant">
+                      {s.sessionName}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {next && (
+          <Button
+            variant="text"
+            className="self-start"
+            disabled={loadingMore}
+            onClick={loadMore}
+          >
+            {loadingMore ? "Cargando…" : "Ver más"}
+          </Button>
+        )}
+      </section>
+    </Card>
+  );
+}
+
 export function EjercicioDetailPage() {
   const { id } = useParams();
   const { exercises, pending, error, reload, updateExercise } = useExercises();
@@ -992,101 +1123,107 @@ export function EjercicioDetailPage() {
           <AddToTemplate exercise={exercise} state={templates} />
         </div>
 
-        <Card className="flex flex-col gap-6 rounded-xl">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <span className="section-label">Grupos</span>
-              <TagChips tags={exercise.tags} tone="accent" />
-            </div>
-            {(Object.keys(ROLE_LABELS) as RegionRole[]).map((role) => {
-              const mine = exercise.regions.filter((r) => r.role === role);
-              if (mine.length === 0) return null;
-              return (
-                <div key={role} className="flex flex-col gap-2">
-                  <span id={`ex-role-${role}`} className="section-label">
-                    {ROLE_LABELS[role]}
-                  </span>
-                  <ul
-                    className="flex flex-wrap gap-1"
-                    aria-labelledby={`ex-role-${role}`}
-                  >
-                    {mine.map((r) => (
-                      <li key={r.region}>
-                        <Badge>{regionLabel(r.region)}</Badge>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-          {exercise.description && (
-            <p className="text-body-l">{exercise.description}</p>
-          )}
-          {exercise.setupCues && (
-            <section className="flex flex-col gap-2">
-              <h2 className="text-title-m text-e">Preparación</h2>
-              <p className="whitespace-pre-line text-body-l">
-                {exercise.setupCues}
-              </p>
-            </section>
-          )}
-          {exercise.steps && exercise.steps.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-title-m text-e">Cómo se ejecuta</h2>
-              <ol className="stagger flex flex-col gap-3">
-                {exercise.steps.map((step, i) => (
-                  <li
-                    key={i}
-                    style={{ ["--i" as string]: i }}
-                    className="flex items-start gap-3"
-                  >
-                    <Shape
-                      name={STEP_SHAPES[i % STEP_SHAPES.length]}
-                      size={36}
-                      className="text-accent-container"
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card className="flex flex-col gap-6 rounded-xl">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <span className="section-label">Grupos</span>
+                <TagChips tags={exercise.tags} tone="accent" />
+              </div>
+              {(Object.keys(ROLE_LABELS) as RegionRole[]).map((role) => {
+                const mine = exercise.regions.filter((r) => r.role === role);
+                if (mine.length === 0) return null;
+                return (
+                  <div key={role} className="flex flex-col gap-2">
+                    <span id={`ex-role-${role}`} className="section-label">
+                      {ROLE_LABELS[role]}
+                    </span>
+                    <ul
+                      className="flex flex-wrap gap-1"
+                      aria-labelledby={`ex-role-${role}`}
                     >
-                      <span className="tabular text-label-l text-e text-on-accent-container">
-                        {i + 1}
-                      </span>
-                    </Shape>
-                    <span className="pt-1.5 text-body-l">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-          {exercise.techniqueUrl && (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-title-m text-e">Técnica</h2>
-              {embedId && (
-                <div className="overflow-hidden rounded-xl bg-surface-container-highest">
-                  <iframe
-                    className="block aspect-video w-full"
-                    src={`https://www.youtube.com/embed/${embedId}`}
-                    title={`Vídeo de técnica de ${exercise.name}`}
-                    loading="lazy"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
-                </div>
-              )}
-              <a
-                className={buttonClass({
-                  variant: "outlined",
-                  className: "self-start",
-                })}
-                href={exercise.techniqueUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <PlayIcon width={20} height={20} />
-                Ver técnica
-              </a>
-            </section>
-          )}
-        </Card>
+                      {mine.map((r) => (
+                        <li key={r.region}>
+                          <Badge>{regionLabel(r.region)}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+            {exercise.description && (
+              <p className="text-body-l">{exercise.description}</p>
+            )}
+            {exercise.setupCues && (
+              <section className="flex flex-col gap-2">
+                <h2 className="text-title-m text-e">Preparación</h2>
+                <p className="whitespace-pre-line text-body-l">
+                  {exercise.setupCues}
+                </p>
+              </section>
+            )}
+            {exercise.steps && exercise.steps.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <h2 className="text-title-m text-e">Cómo se ejecuta</h2>
+                <ol className="stagger flex flex-col gap-3">
+                  {exercise.steps.map((step, i) => (
+                    <li
+                      key={i}
+                      style={{ ["--i" as string]: i }}
+                      className="flex items-start gap-3"
+                    >
+                      <Shape
+                        name={STEP_SHAPES[i % STEP_SHAPES.length]}
+                        size={36}
+                        className="text-accent-container"
+                      >
+                        <span className="tabular text-label-l text-e text-on-accent-container">
+                          {i + 1}
+                        </span>
+                      </Shape>
+                      <span className="pt-1.5 text-body-l">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+            {exercise.techniqueUrl && (
+              <section className="flex flex-col gap-3">
+                <h2 className="text-title-m text-e">Técnica</h2>
+                {embedId && (
+                  <div className="overflow-hidden rounded-xl bg-surface-container-highest">
+                    <iframe
+                      className="block aspect-video w-full"
+                      src={`https://www.youtube.com/embed/${embedId}`}
+                      title={`Vídeo de técnica de ${exercise.name}`}
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
+                <a
+                  className={buttonClass({
+                    variant: "outlined",
+                    className: "self-start",
+                  })}
+                  href={exercise.techniqueUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <PlayIcon width={20} height={20} />
+                  Ver técnica
+                </a>
+              </section>
+            )}
+          </Card>
+          <ExerciseHistory
+            exerciseId={exercise.id}
+            exerciseName={exercise.name}
+          />
+        </div>
       </div>
     </div>
   );

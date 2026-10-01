@@ -48,12 +48,13 @@ import {
   type SessionExercise,
 } from "../lib/plan-week";
 import { isSessionComplete } from "../lib/reward";
-import type { ShapeName } from "../lib/shapes";
 import { useCreateMorph } from "../lib/view-transition";
 import {
   addedSet,
   copiedMarks,
   defaultSetCount,
+  EFFORT_LABELS,
+  EFFORT_SHAPES,
   formatLast,
   formatPrevious,
   formatSetText,
@@ -151,16 +152,6 @@ type View =
       editing: LoggedDay | null;
     }
   | { kind: "logged"; session: PlanSession | null; log: LoggedDay };
-
-const EFFORT_LABELS = ["Muy fácil", "Fácil", "Moderado", "Duro", "Máximo"];
-/** Cada punto de esfuerzo gana lóbulos al llenarse: de círculo a sol. */
-const EFFORT_SHAPES: ShapeName[] = [
-  "circle",
-  "cookie-4",
-  "cookie-7",
-  "cookie-9",
-  "sunny",
-];
 
 type Draft = Extract<View, { kind: "draft" }>;
 
