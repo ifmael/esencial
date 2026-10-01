@@ -3,6 +3,7 @@
 // (`?before=&limit=`, con `next` en la respuesta), así que comparten hook.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet } from "./api";
+import { toISODate } from "./day";
 import { formatSetText, parseDateEs } from "./workout";
 
 /** Filas por página: cortas para que el móvil no cargue un histórico entero. */
@@ -61,18 +62,52 @@ export type HistoryState<T> = {
   reload: () => void;
 };
 
+/** Rango de fechas pedido a la API, con los dos extremos incluidos; `""` en un
+ *  lado significa «sin límite» por ahí. */
+export type HistoryRange = { from: string; to: string };
+export const NO_RANGE: HistoryRange = { from: "", to: "" };
+
+/** La fecha «desde» va por delante de la «hasta»: no hay nada que pedir. */
+export function rangeIsBackwards(range: HistoryRange): boolean {
+  return range.from !== "" && range.to !== "" && range.from > range.to;
+}
+
+/** `from`/`to` de los últimos N meses (el día de hoy queda dentro). */
+export function monthsBack(months: number, today = new Date()): HistoryRange {
+  const from = new Date(today);
+  from.setMonth(from.getMonth() - months);
+  return { from: toISODate(from), to: "" };
+}
+
+/** Rango preseleccionado activo, o null si las fechas no son las suyas. */
+export function sameRange(a: HistoryRange, b: HistoryRange): boolean {
+  return a.from === b.from && a.to === b.to;
+}
+
 /** URL de una página del histórico: `limit` primero y `before` después (el
- *  orden lo atan los tests y el e2e). */
-function pageUrl(path: string, limit: number, before: string | null): string {
-  return `${path}?limit=${limit}${before === null ? "" : `&before=${before}`}`;
+ *  orden lo atan los tests y el e2e); el rango va detrás. */
+function pageUrl(
+  path: string,
+  limit: number,
+  before: string | null,
+  range: HistoryRange,
+): string {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before !== null) params.set("before", before);
+  if (range.from !== "") params.set("from", range.from);
+  if (range.to !== "") params.set("to", range.to);
+  return `${path}?${params}`;
 }
 
 /** Índice del histórico y el de un ejercicio: misma página, distinto extractor. */
 function useHistoryPage<T, P extends { next: string | null }>(
   path: string,
   pick: (page: P) => T[],
+  range: HistoryRange = NO_RANGE,
   limit = HISTORY_PAGE,
 ): HistoryState<T> {
+  // Solo los dos extremos: el objeto del rango puede ser nuevo en cada render.
+  const { from, to } = range;
   const [items, setItems] = useState<T[]>([]);
   const [next, setNext] = useState<string | null>(null);
   const [pending, setPending] = useState(true);
@@ -91,10 +126,17 @@ function useHistoryPage<T, P extends { next: string | null }>(
     let alive = true;
     setPending(true);
     setError(null);
+    // Rango al revés: no se pide nada y la pantalla lo dice (la lista que hay
+    // se queda, como cuando falla una petición).
+    if (rangeIsBackwards({ from, to })) {
+      setPending(false);
+      setError("La fecha «Desde» es posterior a «Hasta»");
+      return;
+    }
     // Un «Ver más» en vuelo es de la generación anterior: se descarta también su
     // indicador (si no, el botón se queda deshabilitado para siempre).
     setLoadingMore(false);
-    apiGet<P>(pageUrl(path, limit, null))
+    apiGet<P>(pageUrl(path, limit, null, { from, to }))
       .then((page) => {
         if (!alive || mine !== generation.current) return;
         setItems(pick(page));
@@ -110,13 +152,13 @@ function useHistoryPage<T, P extends { next: string | null }>(
     return () => {
       alive = false;
     };
-  }, [path, limit, pick, nonce]);
+  }, [path, limit, pick, from, to, nonce]);
 
   const loadMore = useCallback(() => {
     if (next === null) return;
     const mine = generation.current;
     setLoadingMore(true);
-    apiGet<P>(pageUrl(path, limit, next))
+    apiGet<P>(pageUrl(path, limit, next, { from, to }))
       .then((page) => {
         if (mine !== generation.current) return;
         setItems((prev) => [...prev, ...pick(page)]);
@@ -129,7 +171,7 @@ function useHistoryPage<T, P extends { next: string | null }>(
       .finally(() => {
         if (mine === generation.current) setLoadingMore(false);
       });
-  }, [path, limit, next, pick]);
+  }, [path, limit, next, pick, from, to]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
@@ -137,20 +179,25 @@ function useHistoryPage<T, P extends { next: string | null }>(
 }
 
 /** Índice de días registrados (lo consume /historial). */
-export function useWorkoutHistory(): HistoryState<HistoryDay> {
+export function useWorkoutHistory(
+  range: HistoryRange = NO_RANGE,
+): HistoryState<HistoryDay> {
   return useHistoryPage<HistoryDay, HistoryDayPage>(
     "/api/workout-logs",
     DAYS_OF,
+    range,
   );
 }
 
 /** Historial de un ejercicio (lo consume su ficha). */
 export function useExerciseHistory(
   exerciseId: number,
+  range: HistoryRange = NO_RANGE,
 ): HistoryState<ExerciseHistorySession> {
   return useHistoryPage<ExerciseHistorySession, ExerciseHistoryPage>(
     `/api/exercises/${exerciseId}/history`,
     SESSIONS_OF,
+    range,
   );
 }
 
@@ -178,18 +225,25 @@ export function groupByMonth(days: readonly HistoryDay[]): HistoryMonth[] {
   return months;
 }
 
-/** «3 ejercicios · 12 series · 1 cardio», sin mencionar lo que no hubo. */
-export function daySummary(day: HistoryDay): string {
-  const parts: string[] = [];
-  if (day.exercises > 0)
-    parts.push(
-      `${day.exercises} ${day.exercises === 1 ? "ejercicio" : "ejercicios"}`,
-    );
-  if (day.sets > 0)
-    parts.push(`${day.sets} ${day.sets === 1 ? "serie" : "series"}`);
-  if (day.cardio > 0)
-    parts.push(`${day.cardio} ${day.cardio === 1 ? "cardio" : "cardios"}`);
-  return parts.length === 0 ? "Sin marcas" : parts.join(" · ");
+/** El día tiene algo marcado (series hechas o cardio): si no, no hay volumen
+ *  que pintar y la fila lo dice. */
+export function hasMarks(day: HistoryDay): boolean {
+  return day.exercises > 0 || day.sets > 0 || day.cardio > 0;
+}
+
+const VOLUME_WORDS = {
+  exercises: ["ejercicio", "ejercicios"],
+  sets: ["serie", "series"],
+  cardio: ["cardio", "cardios"],
+} as const satisfies Record<string, readonly [string, string]>;
+
+export type VolumeKind = keyof typeof VOLUME_WORDS;
+
+/** «3 ejercicios», «1 serie», «2 cardios»: el nombre de un dato del volumen.
+ *  Es lo que llevan el `aria-label` y el `title` de su icono en la fila. */
+export function volumeLabel(kind: VolumeKind, count: number): string {
+  const [one, many] = VOLUME_WORDS[kind];
+  return `${count} ${count === 1 ? one : many}`;
 }
 
 /** «60×8 · 60×7» de las series marcadas de un día; null si no hay marcas. */

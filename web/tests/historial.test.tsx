@@ -10,10 +10,15 @@ import {
   renderHook,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
-import { type HistoryDay, useWorkoutHistory } from "../src/lib/history";
+import {
+  type HistoryDay,
+  monthsBack,
+  useWorkoutHistory,
+} from "../src/lib/history";
 
 const day = (over: Partial<HistoryDay> = {}): HistoryDay => ({
   date: "2026-09-03",
@@ -28,13 +33,19 @@ const day = (over: Partial<HistoryDay> = {}): HistoryDay => ({
 
 type Page = { days: HistoryDay[]; next: string | null };
 
-/** Stub de fetch: la sonda de sesión del guard + el índice por cursor. */
-function stubHistory(pages: Record<string, Page> | (() => Response)) {
+/** Stub de fetch: la sonda de sesión del guard + el índice por cursor. Las
+ *  páginas se eligen por la URL pedida (o por una función que la mira). */
+function stubHistory(
+  pages: Record<string, Page> | ((url: string) => Response | Page),
+) {
   const mock = vi.fn(async (url: string) => {
     const path = String(url);
     if (path.includes("/api/auth/status"))
       return Response.json({ authenticated: true });
-    if (typeof pages === "function") return pages();
+    if (typeof pages === "function") {
+      const answer = pages(path);
+      return answer instanceof Response ? answer : Response.json(answer);
+    }
     return Response.json(pages[path] ?? { days: [], next: null });
   });
   vi.stubGlobal("fetch", mock);
@@ -165,8 +176,19 @@ describe("/historial", () => {
 
     const first = await screen.findByRole("link", { name: /Empuje A/ });
     expect(first.getAttribute("href")).toBe("/sesion/2026-09-03");
-    expect(first.textContent).toContain("2 ejercicios · 6 series · 1 cardio");
-    expect(first.textContent).toContain("Esfuerzo 4/5");
+    // El volumen va en iconos: la cifra se ve y cada dato lleva su nombre (el
+    // del lector de pantalla y el del tooltip).
+    for (const name of ["2 ejercicios", "6 series", "1 cardio"]) {
+      const dato = within(first).getByRole("img", { name });
+      expect(dato).toBeDefined();
+      expect(dato.getAttribute("title")).toBe(name);
+    }
+    // El esfuerzo percibido, en formas (misma escala que el selector).
+    expect(
+      within(first).getByRole("img", { name: "Esfuerzo 4 de 5" }),
+    ).toBeDefined();
+
+    expect(screen.getByText("3 días registrados")).toBeDefined();
 
     // Dos meses, en el orden recibido (el más reciente primero).
     const months = screen.getAllByRole("heading", { level: 2 });
@@ -239,6 +261,113 @@ describe("/historial", () => {
         String(c[0]).startsWith("/api/workout-logs?"),
       ).length,
     ).toBe(2);
+  });
+
+  it("el rango de fechas pide `from`/`to` y las preselecciones lo rellenan", async () => {
+    const mock = stubHistory({
+      "/api/workout-logs?limit=20": { days: [day()], next: null },
+    });
+
+    renderAt("/historial");
+    await screen.findByRole("link", { name: /Empuje A/ });
+    expect(screen.getByText("1 día registrado")).toBeDefined();
+
+    // Las dos fechas: cada cambio vuelve a pedir la primera página con el rango.
+    fireEvent.change(screen.getByLabelText("Desde"), {
+      target: { value: "2026-08-01" },
+    });
+    await waitFor(() =>
+      expect(mock.mock.calls.map((c) => String(c[0]))).toContain(
+        "/api/workout-logs?limit=20&from=2026-08-01",
+      ),
+    );
+    fireEvent.change(screen.getByLabelText("Hasta"), {
+      target: { value: "2026-09-30" },
+    });
+    await waitFor(() =>
+      expect(mock.mock.calls.map((c) => String(c[0]))).toContain(
+        "/api/workout-logs?limit=20&from=2026-08-01&to=2026-09-30",
+      ),
+    );
+    // Los dos campos muestran el rango activo.
+    expect(screen.getByLabelText("Desde")).toHaveProperty(
+      "value",
+      "2026-08-01",
+    );
+    expect(screen.getByLabelText("Hasta")).toHaveProperty(
+      "value",
+      "2026-09-30",
+    );
+
+    // El chip de preselección pone el «desde» y vuelve a «Todo» al despulsarlo.
+    fireEvent.click(screen.getByRole("button", { name: /Últimos 3 meses/ }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Hasta")).toHaveProperty("value", ""),
+    );
+    const desde = (
+      screen.getByLabelText("Desde") as HTMLInputElement
+    ).value.slice(0, 7);
+    const esperado = monthsBack(3).from.slice(0, 7);
+    expect(desde).toBe(esperado);
+  });
+
+  it("un rango al revés se avisa y no se pide nada", async () => {
+    // Cualquier rango devuelve el mismo día: lo que se mide son las peticiones.
+    const mock = stubHistory(() => ({ days: [day()], next: null }));
+
+    renderAt("/historial");
+    await screen.findByRole("link", { name: /Empuje A/ });
+
+    // Un «desde» solo sí se pide (es un rango abierto por delante).
+    fireEvent.change(screen.getByLabelText("Desde"), {
+      target: { value: "2026-09-30" },
+    });
+    await waitFor(() =>
+      expect(mock.mock.calls.map((c) => String(c[0]))).toContain(
+        "/api/workout-logs?limit=20&from=2026-09-30",
+      ),
+    );
+    const antes = mock.mock.calls.filter((c) =>
+      String(c[0]).startsWith("/api/workout-logs?"),
+    ).length;
+
+    // El «hasta» por detrás del «desde» ya no pide: avisa y deja la lista.
+    fireEvent.change(screen.getByLabelText("Hasta"), {
+      target: { value: "2026-08-01" },
+    });
+
+    expect(
+      await screen.findByText("La fecha «Desde» es posterior a «Hasta»"),
+    ).toBeDefined();
+    // La lista que había se queda donde estaba.
+    expect(screen.getByRole("link", { name: /Empuje A/ })).toBeDefined();
+    expect(
+      mock.mock.calls.filter((c) =>
+        String(c[0]).startsWith("/api/workout-logs?"),
+      ).length,
+    ).toBe(antes);
+  });
+
+  it("sin días en el rango lo dice y ofrece quitar el filtro", async () => {
+    stubHistory((url) =>
+      String(url).includes("from=")
+        ? { days: [], next: null }
+        : { days: [day()], next: null },
+    );
+
+    renderAt("/historial");
+    await screen.findByRole("link", { name: /Empuje A/ });
+    fireEvent.change(screen.getByLabelText("Desde"), {
+      target: { value: "2020-01-01" },
+    });
+
+    expect(
+      await screen.findByText("No hay días registrados en ese rango"),
+    ).toBeDefined();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ver todo el historial" }),
+    );
+    expect(await screen.findByRole("link", { name: /Empuje A/ })).toBeDefined();
   });
 
   it("el raíl de Deporte lleva a Historial y marca la sección activa", async () => {

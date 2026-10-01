@@ -321,9 +321,17 @@ Deporte, así que no hay token de color nuevo) y también está en ⌘K, porque 
 barra inferior de móvil solo lleva las tres secciones.
 
 Lista los **días registrados**, del más reciente al más antiguo, agrupados por
-mes (`groupByMonth`), con lo hecho ese día —«2 ejercicios · 6 series · 1
-cardio»—, el esfuerzo y la nota. Cada fila es un `Link` a `/sesion/:date` (la
-vista registrada, que ya existía): la pantalla no tiene detalle propio.
+mes (`groupByMonth`), con lo hecho ese día, el esfuerzo y la nota. Cada fila es
+un `Link` a `/sesion/:date` (la vista registrada, que ya existía): la pantalla
+no tiene detalle propio.
+
+**La fila es iconográfica**: el volumen va con icono + cifra (`DumbbellIcon`
+ejercicios, `ListIcon` series, `RunIcon` cardio) y cada dato lleva su nombre
+(«3 ejercicios», `volumeLabel`) en el `aria-label` **y** en el `title`: el icono
+solo se leería como un número suelto. El **esfuerzo percibido** va con
+`EffortScale` (`expressive.tsx`), las mismas formas que el selector de la sesión
+—`EFFORT_LABELS`/`EFFORT_SHAPES` viven en `lib/workout.ts`, compartidas por los
+dos—, y se anuncia como una imagen («Esfuerzo 4 de 5»).
 
 **Lo hecho es lo marcado**: los recuentos salen de `set_logs.done = 1` y
 `cardio_logs.done = 1`, no de las filas guardadas — el borrador guarda una fila
@@ -332,13 +340,23 @@ lo que el usuario no marcó. Un día sin ninguna marca dice «Sin marcas». (El
 resumen de `/api/day` y la celda del calendario sí cuentan filas del log: no dan
 el mismo número que el historial.)
 
+**Rango de fechas** (`RangePicker`): preselecciones `Todo` / `Último mes` /
+`Últimos 3 meses` / `Últimos 6 meses` (`monthsBack`) y las dos fechas nativas
+(`Desde`/`Hasta`, con `min`/`max` cruzados), que se mandan como `?from=&to=`
+—extremos incluidos—. Cambiar el rango vuelve a la primera página; el «Cargar
+más» sigue paginando dentro del rango. Si las fechas se cruzan, el hook **no
+pide nada** (`rangeIsBackwards`), deja la lista que ya había y la pantalla avisa;
+la API devuelve 400 `{field:'to'}` por si alguien la llama directamente. Sin
+días en el rango, el estado vacío ofrece quitar el filtro.
+
 Pagina con cursor (`?before=&limit=`: 20 por página, 60 de techo) y un «Cargar
 más»; `next` solo viene cuando queda página (se piden `limit + 1` filas y la de
 más se descarta). El hook es `useHistoryPage` (`web/src/lib/history.ts`), que
 comparte con la ficha del ejercicio: la URL sale de `pageUrl` (`limit` primero,
-`before` después — lo atan los tests) y cada lista lleva una **generación**: una
-página que llega después de una recarga se descarta, así que no pega items
-viejos encima ni pisa el cursor nuevo (ni deja el «Ver más» deshabilitado).
+`before` después y el rango al final — lo atan los tests) y cada lista lleva una
+**generación**: una página que llega después de una recarga se descarta, así que
+no pega items viejos encima ni pisa el cursor nuevo (ni deja el «Ver más»
+deshabilitado).
 
 En la ficha, `ExerciseHistory` (`web/src/routes/ejercicios.tsx`) es una tarjeta
 bajo los datos del ejercicio: las series marcadas de cada día (o el cardio
@@ -349,15 +367,16 @@ histórico se escribe cerrando sesiones.
 
 Los dos endpoints:
 
-- `GET /api/workout-logs?before=&limit=` → `{ days, next }`, con
+- `GET /api/workout-logs?before=&from=&to=&limit=` → `{ days, next }`, con
   `{ date, sessionName, effort, note, exercises, sets, cardio }` por día; el
   detalle del día sigue en `GET /api/workout-logs/:date`.
-- `GET /api/exercises/:id/history?before=&limit=` → `{ exerciseId, kind,
+- `GET /api/exercises/:id/history?before=&from=&to=&limit=` → `{ exerciseId, kind,
   sessions, next }`; cada sesión lleva `sets` (fuerza) o `cardio`
   (distancia/tiempo), y `null` en el que no aplica. Sirve también para los
   ejercicios de cardio.
-- Los dos leen el cursor con `readCursor` (`api/src/http.ts`, que responde 400
-  `{field:'before'|'limit'}`) y resuelven la página con un número **fijo** de
+- Los dos leen el cursor y el rango con `readCursor`/`dateFilter`
+  (`api/src/http.ts`, que responden 400 `{field:'before'|'from'|'to'|'limit'}`,
+  y el rango invertido es 400 `{field:'to'}`) y resuelven la página con un número **fijo** de
   consultas: subconsultas correlacionadas y un `IN` con las fechas de la página
   (≤ 61 parámetros, muy por debajo de los 100 de D1). Lo ata
   `api/tests/workout-history.test.ts`.

@@ -78,8 +78,7 @@ test.describe("HISTORIAL", () => {
     await page.goto("/historial");
     const row = page.getByRole("link", { name: new RegExp(sessionName) });
     await expect(row).toBeVisible();
-    await expect(row).toContainText("1 ejercicio · 2 series");
-    await expect(row).toContainText("Esfuerzo 4/5");
+    // El volumen y el esfuerzo los cubre el test del rango/iconos.
 
     await row.click();
     await expect(page).toHaveURL(new RegExp(`/sesion/${date}$`));
@@ -148,6 +147,39 @@ test.describe("HISTORIAL", () => {
       );
     });
     expect(spill).toBeLessThanOrEqual(0);
+  });
+
+  test("el rango filtra los días y la fila enseña volumen y esfuerzo", async ({
+    page,
+    request,
+  }, testInfo) => {
+    const { date, sessionName } = await loggedDay(request, 3, testInfo.retry);
+
+    await page.goto("/historial");
+    const row = page.getByRole("link", { name: new RegExp(sessionName) });
+    await expect(row).toBeVisible();
+    // El volumen va en iconos con su nombre accesible, y el esfuerzo en formas.
+    await expect(row.getByRole("img", { name: "1 ejercicio" })).toBeVisible();
+    await expect(row.getByRole("img", { name: "2 series" })).toBeVisible();
+    await expect(
+      row.getByRole("img", { name: "Esfuerzo 4 de 5" }),
+    ).toBeVisible();
+
+    // Un rango de un día deja solo ese día (nadie más escribe en el año 2020).
+    await page.getByLabel("Desde").fill(date);
+    await page.getByLabel("Hasta").fill(date);
+    await expect(page.locator("main a.card-interactive")).toHaveCount(1);
+    await expect(row).toBeVisible();
+    await expect(page.locator("header p")).toHaveText("1 día registrado");
+
+    // Un rango sin días lo dice y ofrece volver a todo el historial.
+    await page.getByLabel("Desde").fill("2021-01-01");
+    await page.getByLabel("Hasta").fill("2021-12-31");
+    await expect(
+      page.getByText("No hay días registrados en ese rango"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Ver todo el historial" }).click();
+    await expect(row).toBeVisible();
   });
 
   test("el raíl de Deporte ofrece Historial", async ({ page }) => {

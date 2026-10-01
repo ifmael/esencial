@@ -1,4 +1,5 @@
 // Pure helpers for the workout-day screen (E6 task 2.3). No React, no fetch.
+import type { ShapeName } from "./shapes";
 
 /** `targetSets ?? 3`: the client owns set-row count (design D2). */
 export function defaultSetCount(targetSets?: number | null): number {
@@ -147,6 +148,24 @@ export function numOrNull(value: string): number | null {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
+
+/** Esfuerzo percibido (1–5): la etiqueta de cada nivel y la forma que gana al
+ *  llenarse. Las comparten el selector de la sesión y la lectura del historial
+ *  (`EffortScale`), para que la escala se vea igual en toda la app. */
+export const EFFORT_LABELS = [
+  "Muy fácil",
+  "Fácil",
+  "Moderado",
+  "Duro",
+  "Máximo",
+];
+export const EFFORT_SHAPES: ShapeName[] = [
+  "circle",
+  "cookie-4",
+  "cookie-7",
+  "cookie-9",
+  "sunny",
+];
 
 /** Text values: "60×8", "12 reps" sin peso, or "—" when there is nothing. */
 export function formatSetText(set: Marks): string {

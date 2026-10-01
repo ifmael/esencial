@@ -4,7 +4,43 @@
 // `prefers-reduced-motion` (globals.css).
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type ShapeName, shapePath } from "../lib/shapes";
+import { EFFORT_SHAPES } from "../lib/workout";
 import { cx } from "./ui";
+
+/** Esfuerzo percibido en lectura (1–5): las mismas formas del selector de la
+ *  sesión, en pequeño. Se anuncia como una sola imagen («Esfuerzo 4 de 5»), así
+ *  que las formas van ocultas al lector. */
+export function EffortScale({
+  effort,
+  size = 18,
+  className,
+}: {
+  effort: number;
+  size?: number;
+  className?: string;
+}) {
+  const label = `Esfuerzo ${effort} de ${EFFORT_SHAPES.length}`;
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cx("flex shrink-0 items-center gap-0.5", className)}
+    >
+      {EFFORT_SHAPES.map((shape, i) => {
+        const filled = i < effort;
+        return (
+          <Shape
+            key={shape}
+            name={filled ? shape : "circle"}
+            size={filled ? size : size - 6}
+            className={filled ? "text-accent" : "text-outline-variant"}
+          />
+        );
+      })}
+    </span>
+  );
+}
 
 /** Forma M3E rellena de `currentColor`. Cambiar `name` la transforma (el `d`
  * se anima por CSS: mismas coordenadas en todas las formas). */
