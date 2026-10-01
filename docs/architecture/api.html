@@ -205,7 +205,7 @@
               <tr><td class="m get">GET</td><td><code>/api/plan-sessions</code></td><td><span class="pill">Sesión</span></td><td>Sesiones planificadas ordenadas por fecha.</td></tr>
               <tr><td class="m post">POST</td><td><code>/api/plan-sessions</code></td><td><span class="pill">Sesión</span></td><td>Crea el día; 409 si ya hay sesión esa fecha.</td></tr>
               <tr><td class="m get">GET</td><td><code>/api/plan-sessions/:id</code></td><td><span class="pill">Sesión</span></td><td>Día con sus ejercicios expandidos y ordenados.</td></tr>
-              <tr><td class="m put">PUT</td><td><code>/api/plan-sessions/:id</code></td><td><span class="pill">Sesión</span></td><td>Edita nombre y ejercicios; 409 si el día ya está registrado.</td></tr>
+              <tr><td class="m put">PUT</td><td><code>/api/plan-sessions/:id</code></td><td><span class="pill">Sesión</span></td><td>Edita nombre y ejercicios (los items que siguen conservan su id); en un día registrado solo admite el recuento de series, el resto es 409.</td></tr>
               <tr><td class="m del">DEL</td><td><code>/api/plan-sessions/:id</code></td><td><span class="pill">Sesión</span></td><td>Desprograma el día; 409 si ya está registrado.</td></tr>
               <tr><td class="m get">GET</td><td><code>/api/workout-logs/:date</code></td><td><span class="pill">Sesión</span></td><td>Registro del día en modo lectura.</td></tr>
               <tr><td class="m post">POST</td><td><code>/api/workout-logs/:date</code></td><td><span class="pill">Sesión</span></td><td>Cierra la sesión: series, cardio, esfuerzo y estado <code>logged</code>.</td></tr>

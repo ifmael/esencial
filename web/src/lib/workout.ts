@@ -16,7 +16,17 @@ export function formatLast(
     : `última: ${last.weightKg}×${last.reps}`;
 }
 
-type Marks = { weightKg: number | null; reps: number | null };
+export type Marks = { weightKg: number | null; reps: number | null };
+
+/** Series por ejercicio en el registro: suelo 1 (ahí se apaga el ➖) y techo 20. */
+export const MIN_SETS = 1;
+export const MAX_SETS = 20;
+
+/** Serie nueva del ➕: copia las marcas de la última y nace sin marcar. */
+export function addedSet(sets: readonly Marks[]): Marks {
+  const last = sets[sets.length - 1];
+  return { weightKg: last?.weightKg ?? null, reps: last?.reps ?? null };
+}
 
 /** Serie con sus marcas completas: kilos y reps, o solo reps si va sin peso. */
 export function isSetFilled(set: Marks, noWeight: boolean): boolean {

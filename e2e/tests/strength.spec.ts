@@ -1054,6 +1054,154 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await expect(page.getByText("15 reps")).toBeVisible();
   });
 
+  test("añadir y quitar series en el registro sincroniza el plan", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    // La sesión acaba `logged`: cada reintento estrena su propia semana.
+    const offset = 147 + testInfo.retry * 14;
+    const week = weekOf(offset);
+    const date = mondayOf(week);
+    await resetPlanned(page.request, date);
+    const session = await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 3, targetRepsMin: 8 }],
+      "Empuje series",
+    );
+
+    await page.goto(`/sesion/${date}`);
+    await page
+      .getByRole("button", { name: "Series de Press banca", exact: true })
+      .click();
+    // La base es compartida: «Sin peso» sale de lo último registrado.
+    await page
+      .getByRole("switch", { name: "Sin peso · Press banca" })
+      .uncheck();
+
+    const reps3 = page.getByLabel("Reps · Press banca serie 3", {
+      exact: true,
+    });
+    const lastMarks = await reps3.inputValue();
+    const addButton = page.getByRole("button", {
+      name: "Añadir serie a Press banca",
+    });
+    await addButton.click();
+    // El ➕ nace con las marcas de la última serie.
+    await expect(
+      page.getByLabel("Reps · Press banca serie 4", { exact: true }),
+    ).toHaveValue(lastMarks);
+
+    // Móvil: los dos botones caben en la tarjeta (48 px de alto, sin desborde).
+    await page.setViewportSize({ width: 390, height: 844 });
+    const removeButton = page.getByRole("button", {
+      name: "Quitar serie a Press banca",
+    });
+    await expect(removeButton).toBeVisible();
+    const box = await addButton.boundingBox();
+    if (!box) throw new Error("el ➕ no tiene caja");
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    expect(box.height).toBeGreaterThanOrEqual(48);
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    await page.getByText("Moderado", { exact: true }).click();
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Cerrar sesión" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+
+    // El plan del día sigue al borrador: 4 series en los dos sitios.
+    type Planned = { exercises: { exerciseId: number; targetSets: number }[] };
+    const planned = await apiRequest<Planned>(
+      page.request,
+      "GET",
+      `/api/plan-sessions/${session.id}`,
+    );
+    expect(planned.exercises[0].targetSets).toBe(4);
+    const logged = await apiRequest<{ sets: unknown[] }>(
+      page.request,
+      "GET",
+      `/api/workout-logs/${date}`,
+    );
+    expect(logged.sets).toHaveLength(4);
+
+    // Corregir: quitar la última serie también reescribe el plan.
+    await page.getByRole("button", { name: "Editar" }).click();
+    await page
+      .getByRole("button", { name: "Series de Press banca", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Quitar serie a Press banca" })
+      .click();
+    await page
+      .getByRole("main")
+      .getByRole("button", { name: "Guardar" })
+      .click();
+    await expect(page.getByText("Registrado")).toBeVisible();
+
+    const after = await apiRequest<Planned>(
+      page.request,
+      "GET",
+      `/api/plan-sessions/${session.id}`,
+    );
+    expect(after.exercises[0].targetSets).toBe(3);
+  });
+
+  test("en móvil las series caben en una línea, con scroll e indicador", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    // La sesión se queda `planned` (no se registra): `resetPlanned` limpia.
+    const date = mondayOf(weekOf(182 + testInfo.retry * 7));
+    await resetPlanned(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 20 }],
+      "Empuje 20 series",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await expect(
+      page.getByRole("checkbox", { name: "Press banca serie 1", exact: true }),
+    ).toBeVisible();
+
+    // Una sola línea: las 20 casillas comparten altura.
+    const tops = await page
+      .getByRole("checkbox")
+      .evaluateAll((els) =>
+        els.map((el) => Math.round(el.getBoundingClientRect().top)),
+      );
+    expect(tops).toHaveLength(20);
+    expect(new Set(tops).size).toBe(1);
+
+    // Ni la tarjeta ni la página se salen: lo que sobra se desplaza.
+    const strip = page.locator("[data-edge]");
+    const width = await strip.evaluate((el) => ({
+      content: el.scrollWidth,
+      visible: el.clientWidth,
+    }));
+    expect(width.content).toBeGreaterThan(width.visible);
+    // Se lleva su propia fila y un ancho útil (≈4 casillas de las 20).
+    expect(width.visible).toBeGreaterThan(200);
+    const buttonBox = await page
+      .getByRole("button", { name: "Series de Press banca", exact: true })
+      .boundingBox();
+    const stripBox = await strip.boundingBox();
+    if (!stripBox || !buttonBox) throw new Error("sin caja que medir");
+    expect(stripBox.y).toBeGreaterThanOrEqual(buttonBox.y + buttonBox.height);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+    // El indicador: al principio avisa por la derecha…
+    await expect(strip).toHaveAttribute("data-edge", "end");
+    // …y al llegar al final, por la izquierda.
+    await strip.evaluate((el) => el.scrollTo(el.scrollWidth, 0));
+    await expect(strip).toHaveAttribute("data-edge", "start");
+  });
+
   /** Lunes de la semana ISO (espejo de week-grid.tsx). */
   function mondayOf(week: string): string {
     const [year, w] = week.split("-W").map(Number);

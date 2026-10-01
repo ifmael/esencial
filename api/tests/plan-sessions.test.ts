@@ -148,14 +148,54 @@ describe("PUT /api/plan-sessions/:id", () => {
     });
   });
 
-  it("409 sobre una sesión ya registrada", async () => {
+  it("conserva el id de los items que siguen y borra los que ya no están", async () => {
+    const { bench, run } = await seed();
+    const created = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-10-10",
+        items: [
+          { exerciseId: bench, targetSets: 4 },
+          { exerciseId: run, targetDistanceKm: 5 },
+        ],
+      }),
+    )) as { id: number };
+    // Otra sesión después: su rowid queda por delante y delata un reinsert.
+    await post("/api/plan-sessions", {
+      date: "2026-10-11",
+      items: [{ exerciseId: run }],
+    });
+    const before = (await body(
+      await get(`/api/plan-sessions/${created.id}`),
+    )) as { exercises: Item[] };
+    const benchItem = before.exercises.find((e) => e.exerciseId === bench);
+
+    const res = await put(`/api/plan-sessions/${created.id}`, {
+      items: [{ exerciseId: bench, targetSets: 6 }],
+    });
+    expect(res.status).toBe(200);
+    const after = (await body(res)) as { exercises: Item[] };
+    // El registro del día cuelga de estos ids: reemplazarlos perdiendo la serie.
+    expect(after.exercises).toHaveLength(1);
+    expect(after.exercises[0]).toMatchObject({
+      id: benchItem?.id,
+      exerciseId: bench,
+      targetSets: 6,
+    });
+  });
+
+  it("200 sobre una sesión registrada si solo cambia el recuento de series", async () => {
     const { bench } = await seed();
     const created = (await body(
       await post("/api/plan-sessions", {
         date: "2026-10-13",
-        items: [{ exerciseId: bench }],
+        name: "Empuje A",
+        items: [{ exerciseId: bench, targetSets: 3, targetRepsMin: 8 }],
       }),
     )) as { id: number };
+    const item = await d1.get(
+      "SELECT id FROM plan_session_exercises WHERE plan_session_id=?",
+      created.id,
+    );
     await d1.run(
       "INSERT INTO workout_logs (plan_session_id, date, effort) VALUES (?, ?, 3)",
       created.id,
@@ -165,10 +205,73 @@ describe("PUT /api/plan-sessions/:id", () => {
       "UPDATE plan_sessions SET status='logged' WHERE id=?",
       created.id,
     );
+    await d1.run(
+      "INSERT INTO set_logs (workout_log_id, plan_session_exercise_id, set_index, reps) VALUES ((SELECT id FROM workout_logs WHERE plan_session_id=?), ?, 0, 8)",
+      created.id,
+      item?.id,
+    );
+
     const res = await put(`/api/plan-sessions/${created.id}`, {
-      items: [{ exerciseId: bench, targetSets: 5 }],
+      name: "Empuje A",
+      items: [{ exerciseId: bench, targetSets: 5, targetRepsMin: 8 }],
     });
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
+    const d = (await body(res)) as { exercises: Item[] };
+    expect(d.exercises[0]).toMatchObject({ id: item?.id, targetSets: 5 });
+    const keeps = await d1.get(
+      "SELECT plan_session_exercise_id FROM set_logs WHERE set_index=0",
+    );
+    expect(keeps?.plan_session_exercise_id).toBe(item?.id);
+  });
+
+  it("409 sobre una sesión registrada si cambia la lista o algo más que las series", async () => {
+    const { bench, run } = await seed();
+    const created = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-10-14",
+        name: "Empuje A",
+        items: [
+          { exerciseId: bench, targetSets: 3, targetRepsMin: 8 },
+          { exerciseId: run },
+        ],
+      }),
+    )) as { id: number };
+    await d1.run(
+      "INSERT INTO workout_logs (plan_session_id, date, effort) VALUES (?, ?, 3)",
+      created.id,
+      "2026-10-14",
+    );
+    await d1.run(
+      "UPDATE plan_sessions SET status='logged' WHERE id=?",
+      created.id,
+    );
+
+    const base = [
+      { exerciseId: bench, targetSets: 3, targetRepsMin: 8 },
+      { exerciseId: run },
+    ];
+    const cases: [string, { name?: string; items: unknown[] }][] = [
+      ["otro ejercicio", { items: [base[1], base[0]] }],
+      ["un ejercicio menos", { items: [base[0]] }],
+      [
+        "otro objetivo de reps",
+        {
+          items: [
+            { exerciseId: bench, targetSets: 3, targetRepsMin: 10 },
+            base[1],
+          ],
+        },
+      ],
+      ["otro nombre", { name: "Otra cosa", items: base }],
+    ];
+    for (const [what, payload] of cases) {
+      const res = await put(`/api/plan-sessions/${created.id}`, payload);
+      expect(res.status, what).toBe(409);
+    }
+    const after = (await body(
+      await get(`/api/plan-sessions/${created.id}`),
+    )) as { exercises: Item[] };
+    expect(after.exercises.map((e) => e.exerciseId)).toEqual([bench, run]);
   });
 
   it("404 si no existe", async () => {

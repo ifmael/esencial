@@ -107,6 +107,8 @@ function loggedPayload(
 type Mock = {
   posts: unknown[];
   puts: unknown[];
+  planPuts: unknown[];
+  calls: string[];
   fetchCount: () => number;
   urls: string[];
 };
@@ -130,6 +132,8 @@ function mockApi(opts: {
   let count = 0;
   const posts: unknown[] = [];
   const puts: unknown[] = [];
+  const planPuts: unknown[] = [];
+  const calls: string[] = [];
   const urls: string[] = [];
   const reply = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), {
@@ -144,8 +148,14 @@ function mockApi(opts: {
         return reply(200, { authenticated: true });
       count += 1;
       urls.push(String(url));
+      const method = init?.method ?? "GET";
+      if (method !== "GET") calls.push(`${method} ${url}`);
       if (init?.method === "PUT") {
         const b = JSON.parse(init.body ?? "{}");
+        if (/^\/api\/plan-sessions\/\d+$/.test(String(url))) {
+          planPuts.push(b);
+          return reply(200, SESSION_DETAIL);
+        }
         puts.push(b);
         return reply(200, loggedPayload(b.sets, b.effort, b.note, b.cardio));
       }
@@ -184,7 +194,7 @@ function mockApi(opts: {
       return reply(404, { error: "Not found" });
     }),
   );
-  return { posts, puts, urls, fetchCount: () => count };
+  return { posts, puts, planPuts, calls, urls, fetchCount: () => count };
 }
 
 /** El botón «Cerrar sesión» de la barra flotante (no el de salir del shell). */
@@ -802,43 +812,43 @@ describe("marcas de la sesión anterior con el mismo nombre", () => {
   });
 });
 
-describe("corregir una sesión registrada", () => {
-  const logged = loggedPayload(
-    [
-      {
-        planSessionExerciseId: SE_BENCH,
-        setIndex: 0,
-        weightKg: 60,
-        reps: 8,
-        done: true,
-      },
-      {
-        planSessionExerciseId: SE_BENCH,
-        setIndex: 1,
-        weightKg: 60,
-        reps: 6,
-        done: true,
-      },
-      {
-        planSessionExerciseId: SE_ROW,
-        setIndex: 0,
-        weightKg: null,
-        reps: 12,
-        done: true,
-      },
-    ],
-    3,
-    "bien",
-    [
-      {
-        planSessionExerciseId: SE_RUN,
-        distanceKm: 5,
-        durationMin: 30,
-        done: true,
-      },
-    ],
-  );
+const logged = loggedPayload(
+  [
+    {
+      planSessionExerciseId: SE_BENCH,
+      setIndex: 0,
+      weightKg: 60,
+      reps: 8,
+      done: true,
+    },
+    {
+      planSessionExerciseId: SE_BENCH,
+      setIndex: 1,
+      weightKg: 60,
+      reps: 6,
+      done: true,
+    },
+    {
+      planSessionExerciseId: SE_ROW,
+      setIndex: 0,
+      weightKg: null,
+      reps: 12,
+      done: true,
+    },
+  ],
+  3,
+  "bien",
+  [
+    {
+      planSessionExerciseId: SE_RUN,
+      distanceKm: 5,
+      durationMin: 30,
+      done: true,
+    },
+  ],
+);
 
+describe("corregir una sesión registrada", () => {
   it("Editar precarga el registro (series, sin peso, esfuerzo, nota) y Guardar hace PUT", async () => {
     const api = mockApi({
       sessions: LOGGED,
@@ -928,5 +938,135 @@ describe("corregir una sesión registrada", () => {
     await screen.findByText("Registrado");
     expect(api.fetchCount()).toBe(before);
     expect(api.puts.length).toBe(0);
+  });
+});
+
+describe("añadir y quitar series", () => {
+  const openBench = async () => {
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    return {
+      add: screen.getByRole("button", {
+        name: /añadir serie a press banca/i,
+      }),
+      remove: screen.getByRole("button", {
+        name: /quitar serie a press banca/i,
+      }) as HTMLButtonElement,
+    };
+  };
+
+  it("las series van en una sola tira (no sueltan la línea del encabezado)", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    await screen.findByRole("button", { name: /series de press banca/i });
+
+    const first = boxOf("press banca", 1);
+    const last = boxOf("press banca", 3);
+    const strip = first.closest("[data-edge]");
+    expect(strip).not.toBeNull();
+    expect(last.closest("[data-edge]")).toBe(strip);
+  });
+
+  it("el ➕ se apaga al llegar a 20 series", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    await openBench();
+    const addNow = () =>
+      screen.getByRole("button", {
+        name: /añadir serie a press banca/i,
+      }) as HTMLButtonElement;
+    // 3 por defecto; el 18.º sobra si el tope no corta.
+    for (let i = 0; i < 30 && !addNow().disabled; i++)
+      fireEvent.click(addNow());
+
+    expect(addNow().disabled).toBe(true);
+    expect(screen.queryByLabelText(/press banca serie 21$/i)).toBeNull();
+  });
+
+  it("el ➕ copia las marcas de la última serie y el ➖ quita la última (suelo 1)", async () => {
+    mockApi({ last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    const { add, remove } = await openBench();
+
+    fireEvent.click(add);
+    expect(weightOf("press banca", 4).value).toBe("57.5");
+    expect(repsOf("press banca", 4).value).toBe("8");
+    expect(boxOf("press banca", 4).checked).toBe(false);
+
+    fireEvent.click(remove);
+    fireEvent.click(remove);
+    fireEvent.click(remove);
+    expect(screen.queryByLabelText(/press banca serie 2$/i)).toBeNull();
+    const last = screen.getByRole("button", {
+      name: /quitar serie a press banca/i,
+    }) as HTMLButtonElement;
+    expect(last.disabled).toBe(true);
+  });
+
+  it("Guardar reescribe el plan con las series del borrador y después cierra la sesión", async () => {
+    const api = mockApi({});
+    renderAt("/sesion/2026-09-02");
+    const { add } = await openBench();
+    fireEvent.click(add);
+    fireEvent.click(add);
+    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    fireEvent.click(await primaryClose());
+
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    expect(api.planPuts).toEqual([
+      {
+        name: "Empuje A",
+        items: [
+          {
+            exerciseId: 21,
+            targetSets: 5,
+            targetRepsMin: 6,
+            targetRepsMax: 8,
+            targetDistanceKm: null,
+            targetDurationMin: null,
+          },
+          {
+            exerciseId: 22,
+            targetSets: 3,
+            targetRepsMin: null,
+            targetRepsMax: null,
+            targetDistanceKm: null,
+            targetDurationMin: null,
+          },
+          {
+            exerciseId: 23,
+            targetSets: null,
+            targetRepsMin: null,
+            targetRepsMax: null,
+            targetDistanceKm: 5,
+            targetDurationMin: 30,
+          },
+        ],
+      },
+    ]);
+    expect(api.calls).toEqual([
+      "PUT /api/plan-sessions/1",
+      "POST /api/workout-logs/2026-09-02",
+    ]);
+  });
+
+  it("corregir un registro reescribe el plan antes del PUT del registro", async () => {
+    const api = mockApi({ sessions: LOGGED, log: logged });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+    const { remove } = await openBench();
+    fireEvent.click(remove);
+    fireEvent.click(screen.getByRole("button", { name: /^guardar$/i }));
+
+    await waitFor(() => expect(api.puts.length).toBe(1));
+    const planPut = api.planPuts[0] as {
+      items: { exerciseId: number; targetSets: number }[];
+    };
+    expect(planPut.items[0]).toMatchObject({ exerciseId: 21, targetSets: 1 });
+    expect(api.calls).toEqual([
+      "PUT /api/plan-sessions/1",
+      "PUT /api/workout-logs/2026-09-02",
+    ]);
   });
 });

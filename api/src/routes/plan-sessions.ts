@@ -1,6 +1,6 @@
 // /api/plan-sessions — la sesión ES el día: nombre + ejercicios expandidos
 // (fuerza y/o cardio), sin duplicados. GET lista · POST crea · /:id GET/PUT/DELETE.
-// Una sesión `logged` es solo lectura (PUT/DELETE → 409).
+// Una sesión `logged` solo admite el recuento de series (PUT); DELETE → 409.
 import { Hono } from "hono";
 import {
   planSessionCreateSchema,
@@ -41,6 +41,33 @@ async function loadSession(
     id,
   );
   return head;
+}
+
+/** Fila de `plan_session_exercises` tal como la lee el PUT. */
+type CurrentItem = {
+  id: number;
+  exerciseId: number;
+  targetSets: number | null;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
+};
+
+/** Una sesión registrada solo admite cambiar el recuento de series: los mismos
+ * ejercicios en el mismo orden y el resto de objetivos intactos. */
+function onlySetCountsChange(current: CurrentItem[], items: Item[]): boolean {
+  if (current.length !== items.length) return false;
+  return current.every((cur, i) => {
+    const it = items[i];
+    return (
+      cur.exerciseId === it.exerciseId &&
+      cur.targetRepsMin === (it.targetRepsMin ?? null) &&
+      cur.targetRepsMax === (it.targetRepsMax ?? null) &&
+      cur.targetDistanceKm === (it.targetDistanceKm ?? null) &&
+      cur.targetDurationMin === (it.targetDurationMin ?? null)
+    );
+  });
 }
 
 /** Duplicados y ejercicios inexistentes son 400 en el campo `items`. */
@@ -145,25 +172,84 @@ export const planSessions = new Hono<{ Bindings: Env }>()
       const db = getDb(c.env);
       const session = await row(
         db,
-        "SELECT id, status FROM plan_sessions WHERE id = ?",
+        "SELECT id, name, status FROM plan_sessions WHERE id = ?",
         id,
       );
       if (!session) return fail("Not found", undefined, 404);
-      if (session.status === "logged")
-        return fail("Sesión ya registrada", undefined, 409);
       const input = c.get("validated");
       const problem = await itemsError(db, input.items);
       if (problem) return fail(problem, "items");
+      const current = (await rows(
+        db,
+        `SELECT id, exercise_id AS exerciseId, target_sets AS targetSets,
+                target_reps_min AS targetRepsMin, target_reps_max AS targetRepsMax,
+                target_distance_km AS targetDistanceKm, target_duration_min AS targetDurationMin
+         FROM plan_session_exercises WHERE plan_session_id = ?
+         ORDER BY position, id`,
+        id,
+      )) as unknown as CurrentItem[];
+
+      // Sesión registrada: solo el recuento de series. Los items no se recrean
+      // (las series del registro cuelgan de sus ids) ni cambia nada más.
+      if (session.status === "logged") {
+        if (
+          !onlySetCountsChange(current, input.items) ||
+          cleanName(input.name) !== (session.name ?? null)
+        )
+          return fail("Sesión ya registrada", undefined, 409);
+        await db.batch(
+          input.items.map((it) =>
+            db
+              .prepare(
+                "UPDATE plan_session_exercises SET target_sets = ? WHERE plan_session_id = ? AND exercise_id = ?",
+              )
+              .bind(it.targetSets ?? null, id, it.exerciseId),
+          ),
+        );
+        return json(await loadSession(db, id));
+      }
+
+      // Upsert: los items que siguen conservan su id —el registro del día cuelga
+      // de ellos— y los que ya no están se borran.
+      const kept = new Map(current.map((r) => [r.exerciseId, r.id]));
       await db.batch([
         db
           .prepare("UPDATE plan_sessions SET name = ? WHERE id = ?")
           .bind(cleanName(input.name), id),
-        db
-          .prepare(
-            "DELETE FROM plan_session_exercises WHERE plan_session_id = ?",
+        ...input.items.map((it, pos) => {
+          const targets = [
+            pos,
+            it.targetSets ?? null,
+            it.targetRepsMin ?? null,
+            it.targetRepsMax ?? null,
+            it.targetDistanceKm ?? null,
+            it.targetDurationMin ?? null,
+          ];
+          const existing = kept.get(it.exerciseId);
+          if (existing === undefined)
+            return db
+              .prepare(
+                `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              )
+              .bind(id, it.exerciseId, ...targets);
+          return db
+            .prepare(
+              `UPDATE plan_session_exercises
+               SET position = ?, target_sets = ?, target_reps_min = ?, target_reps_max = ?, target_distance_km = ?, target_duration_min = ?
+               WHERE id = ?`,
+            )
+            .bind(...targets, existing);
+        }),
+        ...current
+          .filter(
+            (r) => !input.items.some((i) => i.exerciseId === r.exerciseId),
           )
-          .bind(id),
-        ...itemStatements({ sql: "?", args: [id] }, input.items, db),
+          .map((r) =>
+            db
+              .prepare("DELETE FROM plan_session_exercises WHERE id = ?")
+              .bind(r.id),
+          ),
       ]);
       return json(await loadSession(db, id));
     }),

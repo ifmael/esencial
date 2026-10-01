@@ -1,6 +1,7 @@
 // E6 task 2.3: pure helpers for the workout-day screen.
 import { describe, expect, it } from "vitest";
 import {
+  addedSet,
   defaultSetCount,
   formatLast,
   formatPrevious,
@@ -22,6 +23,20 @@ describe("defaultSetCount", () => {
   it("por defecto 3 si falta", () => {
     expect(defaultSetCount(null)).toBe(3);
     expect(defaultSetCount(undefined)).toBe(3);
+  });
+});
+
+describe("addedSet", () => {
+  it("copia las marcas de la última serie", () => {
+    expect(
+      addedSet([
+        { weightKg: 60, reps: 8 },
+        { weightKg: 62.5, reps: 6 },
+      ]),
+    ).toEqual({ weightKg: 62.5, reps: 6 });
+  });
+  it("sin series sale vacía", () => {
+    expect(addedSet([])).toEqual({ weightKg: null, reps: null });
   });
 });
 

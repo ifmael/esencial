@@ -4,7 +4,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { recreatePayload, usePlanWeek } from "../src/lib/plan-week";
+import {
+  planItems,
+  recreatePayload,
+  type SessionExercise,
+  usePlanWeek,
+} from "../src/lib/plan-week";
 
 type FetchMock = Mock<
   (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -160,6 +165,72 @@ describe("usePlanWeek", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("planItems", () => {
+  const exercise = (
+    over: Partial<SessionExercise> & { id: number; position: number },
+  ): SessionExercise => ({
+    exerciseId: over.id - 100,
+    exerciseName: "X",
+    kind: "strength",
+    targetSets: 3,
+    targetRepsMin: 8,
+    targetRepsMax: 10,
+    targetDistanceKm: null,
+    targetDurationMin: null,
+    ...over,
+  });
+
+  it("sobreescribe las series del borrador y conserva el resto de objetivos", () => {
+    expect(
+      planItems(
+        [
+          exercise({ id: 101, position: 0 }),
+          exercise({
+            id: 102,
+            position: 1,
+            kind: "running",
+            targetSets: null,
+            targetRepsMin: null,
+            targetRepsMax: null,
+            targetDistanceKm: 5,
+            targetDurationMin: 30,
+          }),
+        ],
+        new Map([[101, 5]]),
+      ),
+    ).toEqual([
+      {
+        exerciseId: 1,
+        targetSets: 5,
+        targetRepsMin: 8,
+        targetRepsMax: 10,
+        targetDistanceKm: null,
+        targetDurationMin: null,
+      },
+      {
+        exerciseId: 2,
+        targetSets: null,
+        targetRepsMin: null,
+        targetRepsMax: null,
+        targetDistanceKm: 5,
+        targetDurationMin: 30,
+      },
+    ]);
+  });
+
+  it("respeta el orden recibido, no la posición de cada item", () => {
+    expect(
+      planItems(
+        [
+          exercise({ id: 101, position: 1 }),
+          exercise({ id: 102, position: 0 }),
+        ],
+        new Map(),
+      ).map((i) => i.exerciseId),
+    ).toEqual([1, 2]);
   });
 });
 

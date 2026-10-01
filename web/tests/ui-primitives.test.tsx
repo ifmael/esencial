@@ -12,9 +12,29 @@ import {
   Field,
   Input,
   SplitButton,
+  scrollEdge,
 } from "../src/components/ui";
 
 afterEach(cleanup);
+
+describe("scrollEdge", () => {
+  it("sin contenido fuera no hay indicador", () => {
+    expect(
+      scrollEdge({ scrollLeft: 0, scrollWidth: 300, clientWidth: 300 }),
+    ).toBe("none");
+    // Redondeos de subpíxel: 1 px de diferencia no es contenido fuera.
+    expect(
+      scrollEdge({ scrollLeft: 0, scrollWidth: 301, clientWidth: 300 }),
+    ).toBe("none");
+  });
+
+  it("marca el borde por el que queda contenido", () => {
+    const strip = { scrollWidth: 900, clientWidth: 300 };
+    expect(scrollEdge({ ...strip, scrollLeft: 0 })).toBe("end");
+    expect(scrollEdge({ ...strip, scrollLeft: 300 })).toBe("both");
+    expect(scrollEdge({ ...strip, scrollLeft: 600 })).toBe("start");
+  });
+});
 
 describe("Button", () => {
   it("es type=button por defecto (no envía formularios sin querer)", () => {
