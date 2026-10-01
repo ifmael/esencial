@@ -304,6 +304,69 @@ describe("GET /api/workout-logs", () => {
     });
   });
 
+  it("filtra por rango de fechas, con los dos extremos incluidos", async () => {
+    await reset();
+    for (const date of ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"])
+      await logDay(pushDay(date, "A", [{ weightKg: 50, reps: 8 }]));
+
+    const rango = await history("?from=2026-09-02&to=2026-09-03");
+    expect(rango.days.map((d) => d.date)).toEqual(["2026-09-03", "2026-09-02"]);
+    expect(rango.next).toBeNull();
+
+    const desde = await history("?from=2026-09-03");
+    expect(desde.days.map((d) => d.date)).toEqual(["2026-09-04", "2026-09-03"]);
+
+    const hasta = await history("?to=2026-09-02");
+    expect(hasta.days.map((d) => d.date)).toEqual(["2026-09-02", "2026-09-01"]);
+  });
+
+  it("pagina dentro del rango: `before` no se sale del `from`", async () => {
+    await reset();
+    for (const date of ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"])
+      await logDay(pushDay(date, "A", [{ weightKg: 50, reps: 8 }]));
+
+    const first = await history("?from=2026-09-02&limit=2");
+    expect(first.days.map((d) => d.date)).toEqual(["2026-09-04", "2026-09-03"]);
+    expect(first.next).toBe("2026-09-03");
+
+    const second = await history(
+      `?from=2026-09-02&limit=2&before=${first.next}`,
+    );
+    expect(second.days.map((d) => d.date)).toEqual(["2026-09-02"]);
+    expect(second.next).toBeNull();
+  });
+
+  it("rechaza from y to malformados, y el rango invertido", async () => {
+    const malFrom = await get("/api/workout-logs?from=ayer");
+    expect(malFrom.status).toBe(400);
+    expect(await malFrom.json()).toEqual({
+      error: "from must be YYYY-MM-DD",
+      field: "from",
+    });
+
+    const malTo = await get("/api/workout-logs?to=2026-09");
+    expect(malTo.status).toBe(400);
+    expect(await malTo.json()).toEqual({
+      error: "to must be YYYY-MM-DD",
+      field: "to",
+    });
+
+    const invertido = await get(
+      "/api/workout-logs?from=2026-09-05&to=2026-09-01",
+    );
+    expect(invertido.status).toBe(400);
+    expect(await invertido.json()).toEqual({
+      error: "to must not be before from",
+      field: "to",
+    });
+
+    // El mismo día en los dos extremos es un rango válido de un día.
+    await reset();
+    await logDay(pushDay("2026-09-01", "A", [{ weightKg: 50, reps: 8 }]));
+    const unDia = await history("?from=2026-09-01&to=2026-09-01");
+    expect(unDia.days.map((d) => d.date)).toEqual(["2026-09-01"]);
+  });
+
   it("resuelve la página con un número de consultas fijo", async () => {
     await reset();
     const queries = async (): Promise<number> => {
@@ -489,6 +552,21 @@ describe("GET /api/exercises/:id/history", () => {
     );
     expect(second.sessions.map((s) => s.date)).toEqual(["2026-09-01"]);
     expect(second.next).toBeNull();
+  });
+
+  it("filtra el historial del ejercicio por rango de fechas", async () => {
+    await reset();
+    for (const date of ["2026-09-01", "2026-09-02", "2026-09-03"])
+      await logDay(pushDay(date, "A", [{ weightKg: 50, reps: 8 }]));
+    const bench = await exerciseId("Press banca");
+
+    const rango = await exerciseHistory(
+      bench,
+      "?from=2026-09-02&to=2026-09-02",
+    );
+
+    expect(rango.sessions.map((s) => s.date)).toEqual(["2026-09-02"]);
+    expect(rango.next).toBeNull();
   });
 
   it("404 si el ejercicio no existe y 400 si el id o el limit son inválidos", async () => {

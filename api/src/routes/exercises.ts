@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import { type ExerciseInput, exerciseSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
-import { fail, guard, json, parseId, readCursor } from "../http";
+import { dateFilter, fail, guard, json, parseId, readCursor } from "../http";
 import { listExercises, loadExercise, row, rows } from "../repo";
 import { zBody } from "../validation";
 
@@ -206,15 +206,17 @@ export const exercises = new Hono<{ Bindings: Env }>()
       );
       if (!exercise) return fail("Not found", undefined, 404);
       const isCardio = String(exercise.kind) !== "strength";
+      // El rango pedido y el cursor son las mismas condiciones para las dos consultas.
+      const filter = dateFilter(cursor);
       const dates = await rows(
         db,
-        `${isCardio ? CARDIO_DATES : SET_DATES}${
-          cursor.before ? " AND wl.date < ?" : ""
-        }
+        `${isCardio ? CARDIO_DATES : SET_DATES}${filter.conditions
+          .map((condition) => ` AND ${condition}`)
+          .join("")}
          GROUP BY wl.date ORDER BY wl.date DESC LIMIT ?`,
-        ...(cursor.before
-          ? [id, cursor.before, cursor.limit + 1]
-          : [id, cursor.limit + 1]),
+        id,
+        ...filter.args,
+        cursor.limit + 1,
       );
       const page = dates.slice(0, cursor.limit);
       // Las marcas de la página: la lista de fechas acota la subconsulta, así que

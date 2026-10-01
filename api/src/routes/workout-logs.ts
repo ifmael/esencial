@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { type WorkoutLogInput, workoutLogSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
-import { fail, guard, json, readCursor } from "../http";
+import { dateFilter, fail, guard, json, readCursor } from "../http";
 import { row, rows } from "../repo";
 import { zBody } from "../validation";
 
@@ -170,13 +170,17 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const cursor = readCursor((key) => c.req.query(key));
       if (cursor instanceof Response) return cursor;
+      const filter = dateFilter(cursor);
       const found = await rows(
         getDb(c.env),
-        `${HISTORY_DAYS}${cursor.before ? " WHERE wl.date < ?" : ""}
+        `${HISTORY_DAYS}${
+          filter.conditions.length > 0
+            ? ` WHERE ${filter.conditions.join(" AND ")}`
+            : ""
+        }
          ORDER BY wl.date DESC LIMIT ?`,
-        ...(cursor.before
-          ? [cursor.before, cursor.limit + 1]
-          : [cursor.limit + 1]),
+        ...filter.args,
+        cursor.limit + 1,
       );
       const days = found.slice(0, cursor.limit).map((r) => ({
         date: String(r.date),
