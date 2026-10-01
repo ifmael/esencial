@@ -393,6 +393,7 @@ type ExerciseSession = {
 type ExerciseHistory = {
   exerciseId: number;
   kind: string;
+  best: ExerciseSession | null;
   sessions: ExerciseSession[];
   next: string | null;
 };
@@ -567,6 +568,95 @@ describe("GET /api/exercises/:id/history", () => {
 
     expect(rango.sessions.map((s) => s.date)).toEqual(["2026-09-02"]);
     expect(rango.next).toBeNull();
+  });
+
+  it("el «mejor» mira todo el histórico, no solo la página cargada", async () => {
+    await reset();
+    // El día más pesado es el MÁS VIEJO: cae fuera de la primera página.
+    await logDay(pushDay("2026-09-01", "A", [{ weightKg: 80, reps: 3 }]));
+    await logDay(pushDay("2026-09-02", "A", [{ weightKg: 60, reps: 8 }]));
+    await logDay(pushDay("2026-09-03", "A", [{ weightKg: 62.5, reps: 6 }]));
+    const bench = await exerciseId("Press banca");
+
+    const page = await exerciseHistory(bench, "?limit=1");
+
+    expect(page.sessions.map((s) => s.date)).toEqual(["2026-09-03"]);
+    expect(page.next).toBe("2026-09-03");
+    expect(page.best).toEqual({
+      date: "2026-09-01",
+      sessionName: "A",
+      sets: [{ setIndex: 0, weightKg: 80, reps: 3 }],
+      cardio: null,
+    });
+  });
+
+  it("sin kilos, el «mejor» son las repeticiones", async () => {
+    await reset();
+    await logDay({
+      date: "2026-09-01",
+      name: "A",
+      sets: [
+        {
+          exercise: "Dominadas",
+          index: 0,
+          weightKg: null,
+          reps: 9,
+          done: true,
+        },
+        {
+          exercise: "Dominadas",
+          index: 1,
+          weightKg: null,
+          reps: 5,
+          done: true,
+        },
+      ],
+    });
+
+    const page = await exerciseHistory(await exerciseId("Dominadas"));
+
+    expect(page.best?.sets).toEqual([{ setIndex: 0, weightKg: null, reps: 9 }]);
+  });
+
+  it("en cardio, el «mejor» es la distancia más larga", async () => {
+    await reset();
+    await logDay({
+      date: "2026-09-01",
+      name: "Cardio",
+      cardio: [
+        { exercise: "Running", distanceKm: 5, durationMin: 30, done: true },
+      ],
+    });
+    await logDay({
+      date: "2026-09-02",
+      name: "Cardio",
+      cardio: [
+        { exercise: "Running", distanceKm: 9, durationMin: 48, done: true },
+      ],
+    });
+
+    const page = await exerciseHistory(await exerciseId("Running"));
+
+    expect(page.best).toEqual({
+      date: "2026-09-02",
+      sessionName: "Cardio",
+      sets: [],
+      cardio: { distanceKm: 9, durationMin: 48 },
+    });
+  });
+
+  it("el «mejor» respeta el rango pedido, y sin marcas es null", async () => {
+    await reset();
+    await logDay(pushDay("2026-09-01", "A", [{ weightKg: 80, reps: 3 }]));
+    await logDay(pushDay("2026-09-02", "A", [{ weightKg: 60, reps: 8 }]));
+    const bench = await exerciseId("Press banca");
+
+    const rango = await exerciseHistory(bench, "?from=2026-09-02");
+    expect(rango.best?.sets).toEqual([{ setIndex: 0, weightKg: 60, reps: 8 }]);
+
+    const vacio = await exerciseHistory(bench, "?from=2027-01-01");
+    expect(vacio.sessions).toEqual([]);
+    expect(vacio.best).toBeNull();
   });
 
   it("404 si el ejercicio no existe y 400 si el id o el limit son inválidos", async () => {

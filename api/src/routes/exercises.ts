@@ -4,13 +4,24 @@ import { Hono } from "hono";
 import { type ExerciseInput, exerciseSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
 import { dateFilter, fail, guard, json, parseId, readCursor } from "../http";
-import { listExercises, loadExercise, row, rows } from "../repo";
+import { listExercises, loadExercise, type Row, row, rows } from "../repo";
 import { zBody } from "../validation";
 
 /** Serie marcada de un ejercicio (el `done` ya lo garantiza la consulta). */
 type Mark = { setIndex: number; weightKg: number | null; reps: number };
 /** Marca de cardio hecha. */
 type CardioMark = { distanceKm: number | null; durationMin: number | null };
+
+const markOf = (r: Row): Mark => ({
+  setIndex: Number(r.setIndex),
+  weightKg: r.weightKg === null ? null : Number(r.weightKg),
+  reps: Number(r.reps),
+});
+
+const cardioMarkOf = (r: Row): CardioMark => ({
+  distanceKm: r.distanceKm === null ? null : Number(r.distanceKm),
+  durationMin: r.durationMin === null ? null : Number(r.durationMin),
+});
 
 /** Días con series marcadas del ejercicio (una fila por fecha). */
 const SET_DATES = `SELECT wl.date AS date, MAX(ps.name) AS sessionName
@@ -35,6 +46,25 @@ FROM set_logs sl
 JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = sl.workout_log_id
 WHERE pse.exercise_id = ? AND sl.done = 1`;
+
+/** Las mejores series KILOS primero (y a igualdad, reps) y, sin kilos, las
+ *  que más repiten: la fila es la del día que las consiguió. */
+const SET_BEST = `SELECT wl.date AS date,
+       (SELECT name FROM plan_sessions WHERE id = wl.plan_session_id) AS sessionName,
+       sl.set_index AS setIndex, sl.weight_kg AS weightKg, sl.reps AS reps
+FROM set_logs sl
+JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = sl.workout_log_id
+WHERE pse.exercise_id = ? AND sl.done = 1`;
+
+/** La mejor marca de cardio: la distancia más larga (y a igualdad, el tiempo). */
+const CARDIO_BEST = `SELECT wl.date AS date,
+       (SELECT name FROM plan_sessions WHERE id = wl.plan_session_id) AS sessionName,
+       cl.distance_km AS distanceKm, cl.duration_min AS durationMin
+FROM cardio_logs cl
+JOIN plan_session_exercises pse ON pse.id = cl.plan_session_exercise_id
+JOIN workout_logs wl ON wl.id = cl.workout_log_id
+WHERE pse.exercise_id = ? AND cl.done = 1`;
 
 /** Marcas de cardio del ejercicio. */
 const CARDIO_MARKS = `SELECT wl.date AS date, cl.distance_km AS distanceKm,
@@ -236,20 +266,8 @@ export const exercises = new Hono<{ Bindings: Env }>()
       const cardioByDate = new Map<string, CardioMark>();
       for (const m of marks) {
         const date = String(m.date);
-        if (isCardio)
-          cardioByDate.set(date, {
-            distanceKm: m.distanceKm === null ? null : Number(m.distanceKm),
-            durationMin: m.durationMin === null ? null : Number(m.durationMin),
-          });
-        else
-          setsByDate.set(date, [
-            ...(setsByDate.get(date) ?? []),
-            {
-              setIndex: Number(m.setIndex),
-              weightKg: m.weightKg === null ? null : Number(m.weightKg),
-              reps: Number(m.reps),
-            },
-          ]);
+        if (isCardio) cardioByDate.set(date, cardioMarkOf(m));
+        else setsByDate.set(date, [...(setsByDate.get(date) ?? []), markOf(m)]);
       }
       const sessions = page.map((d) => {
         const date = String(d.date);
@@ -260,9 +278,35 @@ export const exercises = new Hono<{ Bindings: Env }>()
           cardio: cardioByDate.get(date) ?? null,
         };
       });
+      // El «mejor» del ejercicio entero (con el rango pedido si lo hay), no el de
+      // la página: una consulta más, ajena al número de filas.
+      const bestRow = await row(
+        db,
+        `${isCardio ? CARDIO_BEST : SET_BEST}${filter.conditions
+          .map((condition) => ` AND ${condition}`)
+          .join("")}
+         ORDER BY ${
+           isCardio
+             ? "(cl.distance_km IS NULL), cl.distance_km DESC, cl.duration_min DESC"
+             : "(sl.weight_kg IS NULL), sl.weight_kg DESC, sl.reps DESC"
+}, wl.date DESC
+         LIMIT 1`,
+        id,
+        ...filter.args,
+      );
+      const best = bestRow
+        ? {
+            date: String(bestRow.date),
+            sessionName:
+              bestRow.sessionName === null ? null : String(bestRow.sessionName),
+            sets: isCardio ? [] : [markOf(bestRow)],
+            cardio: isCardio ? cardioMarkOf(bestRow) : null,
+          }
+        : null;
       return json({
         exerciseId: id,
         kind: String(exercise.kind),
+        best,
         sessions,
         next:
           dates.length > cursor.limit
