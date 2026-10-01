@@ -625,6 +625,51 @@
     inset: -8px 0;
   }
 
+  /* --- Tira con scroll (`ScrollStrip`) ---------------------------------- */
+  /* Una sola línea que nunca envuelve: encoge y desplaza. Cuando queda
+     contenido fuera, el borde correspondiente se desvanece — es el indicador
+     de que hay más de lo que cabe; la barra no se pinta. */
+  .scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+  .scroll-x[data-edge="end"] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 28px),
+      transparent
+    );
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .scroll-x[data-edge="start"] {
+    -webkit-mask-image: linear-gradient(
+      to left,
+      #000 calc(100% - 28px),
+      transparent
+    );
+    mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+  }
+  .scroll-x[data-edge="both"] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent
+    );
+  }
+
   /* --- Campos: outlined con etiqueta flotante --------------------------- */
   /* Elegido outlined (no filled) para toda la app: sobre superficies tonales
      un campo relleno se funde con la tarjeta. La etiqueta flota cuando hay

@@ -42,14 +42,14 @@ decisiones en `REDESIGN.md`). Tres capas, con un solo dueño cada una:
    (`--color-*`, `--text-*`, `--radius-*`, `--shadow-*`: `initial`), así que
    `text-sm` o `rounded-lg` **no generan CSS**.
 3. `@layer components` — la piel de las piezas (`.btn-*`, `.card-*`, `.input`,
-   `.field`, `.chip`, `.fab`, `.connected`, `.checkbox`, `.switch`, `.badge-*`,
-   `.alert-*`, `.dialog`, `.sheet`, `.menu`, `.toolbar`, `.snackbar`…).
+   `.field`, `.chip`, `.fab`, `.connected`, `.checkbox`, `.switch`, `.scroll-x`,
+   `.badge-*`, `.alert-*`, `.dialog`, `.sheet`, `.menu`, `.toolbar`, `.snackbar`…).
 
 Las pantallas consumen **las primitivas**:
 - `web/src/components/ui.tsx`: `Button`, `SplitButton`, `ConnectedGroup` y
   `ConnectedItem`, `Fab`, `Chip`, `Card` (elevated, filled, outlined, tonal),
   `Field`, `Input`, `Textarea`, `Select`, `SearchBar`, `Checkbox`, `Switch`,
-  `Badge`, `Alert`, `Kbd`.
+  `Badge`, `Alert`, `Kbd`, `ScrollStrip`.
 - `expressive.tsx`: `Shape`, `Loader`, `WavyProgress`, `WavyRing`, `CountUp`,
   `RewardSeal`, `EmptyState`, `Monogram`.
 - `overlay.tsx`: `Dialog`, `Sheet`, `OverlayHeader`, `useSnackbar`, `useTooltip`.
@@ -266,12 +266,35 @@ es largo, crece en altura (no se recorta, porque es el `h1`). Lo cubre
   columna nueva: `set_logs.weight_kg` ya admite `null`. Arranca activado si lo
   último registrado de ese ejercicio no llevaba kilos pero sí repeticiones (o,
   al corregir, si todas sus series registradas van así: `isNoWeight`).
+- **Añadir y quitar series** (➕/➖; `addedSet`, `MIN_SETS` 1, `MAX_SETS` 20 en
+  `lib/workout.ts`): el ➕ añade una serie con las marcas de la última y el ➖
+  quita la última; los botones se apagan en 1 y en 20. Al «Guardar», el día del
+  plan sigue al borrador: `PUT /api/plan-sessions/:id` reescribe el
+  `targetSets` de cada item **antes** del POST/PUT del registro, conservando el
+  resto de objetivos y el id de los items que siguen (upsert: un reinsert
+  perdería las series, que cuelgan de `plan_session_exercises.id`).
+- **Las casillas de la tarjeta plegada van en una tira de una sola línea**
+  (`ScrollStrip`, piel `.scroll-x`): las series nunca envuelven el encabezado.
+  En móvil la tira se lleva su propia fila a ancho completo; cuando no caben
+  todas, el borde por el que queda contenido se desvanece (el indicador) y se
+  desplaza en horizontal. Medido a 390 px con 20 series: ~5 casillas a la vista,
+  ni la tarjeta ni la página se salen de ancho. Lo cubren
+  `ui-primitives.test.tsx` (el indicador) y `strength.spec.ts` (el layout).
 - **Marcas de la sesión anterior**: la última sesión `logged` con **el mismo
   `name` no nulo** y fecha **anterior a la del día** (`previousSession`; una
   sesión sin nombre nunca empareja). Sus series se muestran bajo el ejercicio
   («sáb, 26/09: 60×10 · 60×8»), emparejadas por `exerciseId` (lo devuelve
   `serialize` en `/api/workout-logs`), y sustituyen a «última: X×Y». Son solo
   informativas: la precarga sigue saliendo de `/last`.
+- **Valor de la serie homóloga, con copia**: en cada fila de serie de la tarjeta
+  desplegada, y solo ahí, se ve el valor de **esa misma serie** (por índice
+  estricto: sin homóloga no hay valor ni control) y el propio control la copia a
+  la serie actual: repeticiones siempre y kilos solo si la anterior los trae.
+  Copiar **nunca marca** la serie (`done` y `touched` quedan a `false`, así que
+  ni el conmutador «Sin peso» la re-marca después) y **nunca** conmuta «Sin
+  peso». El emparejamiento y el efecto son puros: `previousMarks` y `copiedMarks`
+  en `lib/workout.ts`. La tarjeta plegada no cambia (sigue con su tira de
+  casillas y la línea resumen), y la vista registrada no lo muestra.
 - `GET /api/exercises/:id/last?before=YYYY-MM-DD` limita el histórico a lo
   anterior a esa fecha. El borrador siempre lo pide con la fecha del día, así que
   registrar o corregir un día pasado no precarga marcas de días posteriores.
@@ -281,7 +304,8 @@ es largo, crece en altura (no se recorta, porque es el `h1`). Lo cubre
   reemplaza esfuerzo, nota, `set_logs` y `cardio_logs` (misma validación de
   pertenencia y de tipo que el POST, 404 si no hay registro). «Cancelar» vuelve a
   lo registrado sin llamar a la API. Los ejercicios de una sesión registrada
-  siguen sin poder cambiarse (`PUT`/`DELETE` de `/plan-sessions` → 409).
+  siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
+  lista también (el único `PUT` admitido es el recuento de series, ver arriba).
 
 ### Editor de recetas (crear y editar)
 

@@ -107,6 +107,8 @@ function loggedPayload(
 type Mock = {
   posts: unknown[];
   puts: unknown[];
+  planPuts: unknown[];
+  calls: string[];
   fetchCount: () => number;
   urls: string[];
 };
@@ -130,6 +132,8 @@ function mockApi(opts: {
   let count = 0;
   const posts: unknown[] = [];
   const puts: unknown[] = [];
+  const planPuts: unknown[] = [];
+  const calls: string[] = [];
   const urls: string[] = [];
   const reply = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), {
@@ -144,8 +148,14 @@ function mockApi(opts: {
         return reply(200, { authenticated: true });
       count += 1;
       urls.push(String(url));
+      const method = init?.method ?? "GET";
+      if (method !== "GET") calls.push(`${method} ${url}`);
       if (init?.method === "PUT") {
         const b = JSON.parse(init.body ?? "{}");
+        if (/^\/api\/plan-sessions\/\d+$/.test(String(url))) {
+          planPuts.push(b);
+          return reply(200, SESSION_DETAIL);
+        }
         puts.push(b);
         return reply(200, loggedPayload(b.sets, b.effort, b.note, b.cardio));
       }
@@ -184,7 +194,7 @@ function mockApi(opts: {
       return reply(404, { error: "Not found" });
     }),
   );
-  return { posts, puts, urls, fetchCount: () => count };
+  return { posts, puts, planPuts, calls, urls, fetchCount: () => count };
 }
 
 /** El botón «Cerrar sesión» de la barra flotante (no el de salir del shell). */
@@ -802,43 +812,169 @@ describe("marcas de la sesión anterior con el mismo nombre", () => {
   });
 });
 
-describe("corregir una sesión registrada", () => {
-  const logged = loggedPayload(
-    [
-      {
+describe("copiar la serie homóloga de la sesión anterior", () => {
+  /** Registro previo del mismo nombre con las marcas [kilos, reps] por serie. */
+  const prevPayload = (sets: [number | null, number][], date: string) => ({
+    ...loggedPayload(
+      sets.map(([weightKg, reps], setIndex) => ({
         planSessionExerciseId: SE_BENCH,
-        setIndex: 0,
-        weightKg: 60,
-        reps: 8,
+        setIndex,
+        weightKg,
+        reps,
         done: true,
-      },
-      {
-        planSessionExerciseId: SE_BENCH,
-        setIndex: 1,
-        weightKg: 60,
-        reps: 6,
-        done: true,
-      },
-      {
-        planSessionExerciseId: SE_ROW,
-        setIndex: 0,
-        weightKg: null,
-        reps: 12,
-        done: true,
-      },
-    ],
-    3,
-    "bien",
-    [
-      {
-        planSessionExerciseId: SE_RUN,
-        distanceKm: 5,
-        durationMin: 30,
-        done: true,
-      },
-    ],
-  );
+      })),
+    ),
+    date,
+  });
 
+  const prevSessions = [
+    { id: 8, date: "2026-08-28", name: "Empuje A", status: "logged" },
+    { id: 1, date: "2026-09-02", name: "Empuje A", status: "planned" },
+  ];
+
+  const expandBench = async () => {
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    await screen.findByLabelText(/^peso \(kg\) · press banca serie 1$/i);
+  };
+
+  const chip = (n: number, value: string) =>
+    screen.getByRole("button", {
+      name: new RegExp(
+        `^copiar ${value} de la sesión anterior a press banca serie ${n}$`,
+        "i",
+      ),
+    });
+
+  it("muestra el valor de cada serie homóloga y solo donde la hay", async () => {
+    mockApi({
+      sessions: prevSessions,
+      logs: {
+        "2026-08-28": prevPayload(
+          [
+            [60, 10],
+            [55, 8],
+          ],
+          "2026-08-28",
+        ),
+      },
+    });
+    renderAt("/sesion/2026-09-02");
+    await expandBench();
+    expect(chip(1, "60×10")).toBeDefined();
+    expect(chip(2, "55×8")).toBeDefined();
+    // el borrador tiene 3 series y la anterior solo 2: la tercera no copia nada
+    expect(
+      screen.queryByRole("button", {
+        name: /de la sesión anterior a press banca serie 3/i,
+      }),
+    ).toBeNull();
+  });
+
+  it("copiar rellena reps y kilos sin marcar la serie, y así viaja al registro", async () => {
+    const api = mockApi({
+      sessions: prevSessions,
+      // /last distinto: lo copiado es la serie homóloga, no «última».
+      last: { 21: { weightKg: 40, reps: 6, date: "2026-08-29" } },
+      logs: {
+        "2026-08-28": prevPayload(
+          [
+            [60, 10],
+            [55, 8],
+          ],
+          "2026-08-28",
+        ),
+      },
+    });
+    renderAt("/sesion/2026-09-02");
+    await expandBench();
+    expect(boxOf("press banca", 1).checked).toBe(false);
+
+    fireEvent.click(chip(1, "60×10"));
+    await waitFor(() => expect(weightOf("press banca", 1).value).toBe("60"));
+    expect(repsOf("press banca", 1).value).toBe("10");
+    expect(boxOf("press banca", 1).checked).toBe(false); // copiar no marca
+    // solo esa serie: la 2 conserva la precarga de /last
+    expect(weightOf("press banca", 2).value).toBe("40");
+    expect(repsOf("press banca", 2).value).toBe("6");
+
+    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    const close = await primaryClose();
+    await waitFor(() => expect(close.disabled).toBe(false));
+    fireEvent.click(close);
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    const sets = (api.posts[0] as { sets: SetItem[] }).sets.filter(
+      (s) => s.planSessionExerciseId === SE_BENCH,
+    );
+    expect(sets[0]).toMatchObject({
+      setIndex: 0,
+      weightKg: 60,
+      reps: 10,
+      done: false,
+    });
+    expect(sets[1]).toMatchObject({ setIndex: 1, weightKg: 40, reps: 6 });
+  });
+
+  it("origen sin kilos: copia solo las reps y no conmuta «Sin peso»", async () => {
+    mockApi({
+      sessions: prevSessions,
+      last: { 21: { weightKg: 40, reps: 6, date: "2026-08-29" } },
+      logs: { "2026-08-28": prevPayload([[null, 12]], "2026-08-28") },
+    });
+    renderAt("/sesion/2026-09-02");
+    await expandBench();
+    const sw = () =>
+      screen.getByRole("switch", {
+        name: /sin peso · press banca/i,
+      }) as HTMLInputElement;
+    expect(sw().checked).toBe(false);
+
+    fireEvent.click(chip(1, "12 reps"));
+    await waitFor(() => expect(repsOf("press banca", 1).value).toBe("12"));
+    expect(weightOf("press banca", 1).value).toBe("40"); // kilos intactos
+    expect(boxOf("press banca", 1).checked).toBe(false);
+    expect(sw().checked).toBe(false);
+  });
+});
+
+const logged = loggedPayload(
+  [
+    {
+      planSessionExerciseId: SE_BENCH,
+      setIndex: 0,
+      weightKg: 60,
+      reps: 8,
+      done: true,
+    },
+    {
+      planSessionExerciseId: SE_BENCH,
+      setIndex: 1,
+      weightKg: 60,
+      reps: 6,
+      done: true,
+    },
+    {
+      planSessionExerciseId: SE_ROW,
+      setIndex: 0,
+      weightKg: null,
+      reps: 12,
+      done: true,
+    },
+  ],
+  3,
+  "bien",
+  [
+    {
+      planSessionExerciseId: SE_RUN,
+      distanceKm: 5,
+      durationMin: 30,
+      done: true,
+    },
+  ],
+);
+
+describe("corregir una sesión registrada", () => {
   it("Editar precarga el registro (series, sin peso, esfuerzo, nota) y Guardar hace PUT", async () => {
     const api = mockApi({
       sessions: LOGGED,
@@ -928,5 +1064,135 @@ describe("corregir una sesión registrada", () => {
     await screen.findByText("Registrado");
     expect(api.fetchCount()).toBe(before);
     expect(api.puts.length).toBe(0);
+  });
+});
+
+describe("añadir y quitar series", () => {
+  const openBench = async () => {
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    return {
+      add: screen.getByRole("button", {
+        name: /añadir serie a press banca/i,
+      }),
+      remove: screen.getByRole("button", {
+        name: /quitar serie a press banca/i,
+      }) as HTMLButtonElement,
+    };
+  };
+
+  it("las series van en una sola tira (no sueltan la línea del encabezado)", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    await screen.findByRole("button", { name: /series de press banca/i });
+
+    const first = boxOf("press banca", 1);
+    const last = boxOf("press banca", 3);
+    const strip = first.closest("[data-edge]");
+    expect(strip).not.toBeNull();
+    expect(last.closest("[data-edge]")).toBe(strip);
+  });
+
+  it("el ➕ se apaga al llegar a 20 series", async () => {
+    mockApi({});
+    renderAt("/sesion/2026-09-02");
+    await openBench();
+    const addNow = () =>
+      screen.getByRole("button", {
+        name: /añadir serie a press banca/i,
+      }) as HTMLButtonElement;
+    // 3 por defecto; el 18.º sobra si el tope no corta.
+    for (let i = 0; i < 30 && !addNow().disabled; i++)
+      fireEvent.click(addNow());
+
+    expect(addNow().disabled).toBe(true);
+    expect(screen.queryByLabelText(/press banca serie 21$/i)).toBeNull();
+  });
+
+  it("el ➕ copia las marcas de la última serie y el ➖ quita la última (suelo 1)", async () => {
+    mockApi({ last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    const { add, remove } = await openBench();
+
+    fireEvent.click(add);
+    expect(weightOf("press banca", 4).value).toBe("57.5");
+    expect(repsOf("press banca", 4).value).toBe("8");
+    expect(boxOf("press banca", 4).checked).toBe(false);
+
+    fireEvent.click(remove);
+    fireEvent.click(remove);
+    fireEvent.click(remove);
+    expect(screen.queryByLabelText(/press banca serie 2$/i)).toBeNull();
+    const last = screen.getByRole("button", {
+      name: /quitar serie a press banca/i,
+    }) as HTMLButtonElement;
+    expect(last.disabled).toBe(true);
+  });
+
+  it("Guardar reescribe el plan con las series del borrador y después cierra la sesión", async () => {
+    const api = mockApi({});
+    renderAt("/sesion/2026-09-02");
+    const { add } = await openBench();
+    fireEvent.click(add);
+    fireEvent.click(add);
+    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    fireEvent.click(await primaryClose());
+
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    expect(api.planPuts).toEqual([
+      {
+        name: "Empuje A",
+        items: [
+          {
+            exerciseId: 21,
+            targetSets: 5,
+            targetRepsMin: 6,
+            targetRepsMax: 8,
+            targetDistanceKm: null,
+            targetDurationMin: null,
+          },
+          {
+            exerciseId: 22,
+            targetSets: 3,
+            targetRepsMin: null,
+            targetRepsMax: null,
+            targetDistanceKm: null,
+            targetDurationMin: null,
+          },
+          {
+            exerciseId: 23,
+            targetSets: null,
+            targetRepsMin: null,
+            targetRepsMax: null,
+            targetDistanceKm: 5,
+            targetDurationMin: 30,
+          },
+        ],
+      },
+    ]);
+    expect(api.calls).toEqual([
+      "PUT /api/plan-sessions/1",
+      "POST /api/workout-logs/2026-09-02",
+    ]);
+  });
+
+  it("corregir un registro reescribe el plan antes del PUT del registro", async () => {
+    const api = mockApi({ sessions: LOGGED, log: logged });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+    const { remove } = await openBench();
+    fireEvent.click(remove);
+    fireEvent.click(screen.getByRole("button", { name: /^guardar$/i }));
+
+    await waitFor(() => expect(api.puts.length).toBe(1));
+    const planPut = api.planPuts[0] as {
+      items: { exerciseId: number; targetSets: number }[];
+    };
+    expect(planPut.items[0]).toMatchObject({ exerciseId: 21, targetSets: 1 });
+    expect(api.calls).toEqual([
+      "PUT /api/plan-sessions/1",
+      "PUT /api/workout-logs/2026-09-02",
+    ]);
   });
 });

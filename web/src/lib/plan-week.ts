@@ -46,11 +46,17 @@ export type SessionPayload = {
   items: SessionItem[];
 };
 
-/** Items del wire (PUT/POST) a partir de los ejercicios del día, en su orden. */
-function itemsOf(exercises: SessionExercise[]): SessionItem[] {
+/** Items del día para el PUT del plan desde el registro: la fuerza viaja con las
+ * series que tiene el borrador (`setCounts`, por id de item) y el resto de
+ * objetivos se conserva tal cual. Respeta el orden del array —el arrastre del
+ * calendario reordena la lista, no la `position` de cada item. */
+export function planItems(
+  exercises: readonly SessionExercise[],
+  setCounts: ReadonlyMap<number, number>,
+): SessionItem[] {
   return exercises.map((e) => ({
     exerciseId: e.exerciseId,
-    targetSets: e.targetSets,
+    targetSets: setCounts.get(e.id) ?? e.targetSets,
     targetRepsMin: e.targetRepsMin,
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
@@ -65,7 +71,7 @@ export function recreatePayload(
   return {
     date: session.date,
     name: session.name,
-    items: itemsOf(session.exercises),
+    items: planItems(session.exercises, new Map()),
   };
 }
 
@@ -138,7 +144,7 @@ export function usePlanWeek(isoWeek: string) {
       try {
         await apiSend(`/api/plan-sessions/${session.id}`, "PUT", {
           name: session.name,
-          items: itemsOf(exercises),
+          items: planItems(exercises, new Map()),
         });
         await load();
         return true;

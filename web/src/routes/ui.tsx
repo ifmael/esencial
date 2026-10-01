@@ -34,6 +34,7 @@ import {
   Field,
   Input,
   Kbd,
+  ScrollStrip,
   Select,
   SplitButton,
   Switch,
@@ -346,6 +347,21 @@ export function UiPage() {
             <Switch aria-label="Interruptor" defaultChecked />
             Interruptor
           </span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-label-l text-on-surface-variant">
+            Tira con scroll: una sola línea que no envuelve; el borde
+            desvanecido avisa de que hay más
+          </span>
+          <ScrollStrip className="flex items-center gap-1 rounded-l bg-surface-container-high p-1">
+            {Array.from({ length: 12 }, (_, i) => (
+              <Checkbox
+                key={i}
+                className="shrink-0"
+                aria-label={`Serie de ejemplo ${i + 1}`}
+              />
+            ))}
+          </ScrollStrip>
         </div>
       </Block>
 

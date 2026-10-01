@@ -8,6 +8,7 @@ import {
   type ReactNode,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -418,6 +419,66 @@ export function Switch({
       className={cx("switch", className)}
       {...rest}
     />
+  );
+}
+
+export type ScrollEdge = "none" | "start" | "end" | "both";
+
+/** Qué borde de una tira horizontal deja contenido fuera: el indicador que dice
+ * que hay más de lo que cabe. `both` = por los dos lados. */
+export function scrollEdge({
+  scrollLeft,
+  scrollWidth,
+  clientWidth,
+}: {
+  scrollLeft: number;
+  scrollWidth: number;
+  clientWidth: number;
+}): ScrollEdge {
+  // 1 px de holgura: los anchos llegan con subpíxeles.
+  if (scrollWidth - clientWidth <= 1) return "none";
+  if (scrollLeft <= 1) return "end";
+  return scrollLeft >= scrollWidth - clientWidth - 1 ? "start" : "both";
+}
+
+/** Tira de una sola línea con scroll horizontal: **nunca** envuelve, encoge y
+ * desplaza, y el borde por el que queda contenido se desvanece (`.scroll-x`).
+ * Es el indicador de que hay más piezas de las que caben. */
+export function ScrollStrip({
+  className,
+  children,
+  ...rest
+}: ComponentProps<"div">) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState<ScrollEdge>("none");
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () =>
+      setEdge((prev) => {
+        const next = scrollEdge(el);
+        return prev === next ? prev : next;
+      });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    // jsdom no trae ResizeObserver; el indicador es solo piel, no se cae sin él.
+    const ro =
+      typeof ResizeObserver === "function" ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, []);
+  return (
+    <div
+      ref={ref}
+      data-edge={edge}
+      className={cx("scroll-x", className)}
+      {...rest}
+    >
+      {children}
+    </div>
   );
 }
 

@@ -16,7 +16,17 @@ export function formatLast(
     : `última: ${last.weightKg}×${last.reps}`;
 }
 
-type Marks = { weightKg: number | null; reps: number | null };
+export type Marks = { weightKg: number | null; reps: number | null };
+
+/** Series por ejercicio en el registro: suelo 1 (ahí se apaga el ➖) y techo 20. */
+export const MIN_SETS = 1;
+export const MAX_SETS = 20;
+
+/** Serie nueva del ➕: copia las marcas de la última y nace sin marcar. */
+export function addedSet(sets: readonly Marks[]): Marks {
+  const last = sets[sets.length - 1];
+  return { weightKg: last?.weightKg ?? null, reps: last?.reps ?? null };
+}
 
 /** Serie con sus marcas completas: kilos y reps, o solo reps si va sin peso. */
 export function isSetFilled(set: Marks, noWeight: boolean): boolean {
@@ -61,6 +71,44 @@ export function formatPrevious(
   const marks = sets.filter((s) => s.reps !== null || s.weightKg !== null);
   if (marks.length === 0) return null;
   return `${SHORT_DATE.format(parseDateEs(date))}: ${marks.map(formatSetText).join(" · ")}`;
+}
+
+/** Marcas de una serie de la sesión igual: siempre con repeticiones (las series
+ * sin ellas no se ofrecen) y kilos solo si ese día los hubo. */
+export type HomologMarks = { weightKg: number | null; reps: number };
+
+/** Series de la sesión igual indexadas por su `setIndex`: la homóloga de cada
+ * serie del borrador. `null` donde no hay homóloga o no tiene reps que copiar. */
+export function previousMarks(
+  sets: readonly {
+    setIndex: number;
+    weightKg: number | null;
+    reps: number | null;
+  }[],
+): (HomologMarks | null)[] {
+  const size = sets.reduce((max, s) => Math.max(max, s.setIndex + 1), 0);
+  const out: (HomologMarks | null)[] = Array.from({ length: size }, () => null);
+  for (const s of sets)
+    if (s.reps !== null)
+      out[s.setIndex] = { weightKg: s.weightKg, reps: s.reps };
+  return out;
+}
+
+/** Marca copiada de la serie homóloga: las reps siempre y los kilos solo si la
+ * igual los trae (con «sin peso» no se escriben). Copiar **nunca** marca la
+ * serie: queda desmarcada y sin `touched`, así que completarla sigue siendo cosa
+ * del usuario — ni el conmutador «Sin peso» la re-marca después. */
+export function copiedMarks<
+  T extends Marks & { done: boolean; touched: boolean },
+>(target: T, src: HomologMarks, noWeight: boolean): T {
+  return {
+    ...target,
+    reps: src.reps,
+    weightKg:
+      noWeight || src.weightKg === null ? target.weightKg : src.weightKg,
+    done: false,
+    touched: false,
+  };
 }
 
 export function noteOrNull(note: string): string | null {

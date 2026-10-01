@@ -1,6 +1,8 @@
 // E6 task 2.3: pure helpers for the workout-day screen.
 import { describe, expect, it } from "vitest";
 import {
+  addedSet,
+  copiedMarks,
   defaultSetCount,
   formatLast,
   formatPrevious,
@@ -10,6 +12,7 @@ import {
   isValidDateStr,
   noteOrNull,
   parseDateEs,
+  previousMarks,
   previousSession,
   setsProgress,
   weekProgress,
@@ -22,6 +25,20 @@ describe("defaultSetCount", () => {
   it("por defecto 3 si falta", () => {
     expect(defaultSetCount(null)).toBe(3);
     expect(defaultSetCount(undefined)).toBe(3);
+  });
+});
+
+describe("addedSet", () => {
+  it("copia las marcas de la última serie", () => {
+    expect(
+      addedSet([
+        { weightKg: 60, reps: 8 },
+        { weightKg: 62.5, reps: 6 },
+      ]),
+    ).toEqual({ weightKg: 62.5, reps: 6 });
+  });
+  it("sin series sale vacía", () => {
+    expect(addedSet([])).toEqual({ weightKg: null, reps: null });
   });
 });
 
@@ -114,6 +131,53 @@ describe("formatPrevious", () => {
     expect(
       formatPrevious("2026-09-26", [{ weightKg: null, reps: null }]),
     ).toBeNull();
+  });
+});
+
+describe("previousMarks", () => {
+  it("indexa por setIndex: null donde no hay serie homóloga", () => {
+    expect(
+      previousMarks([
+        { setIndex: 0, weightKg: 60, reps: 10 },
+        { setIndex: 2, weightKg: 55, reps: 8 },
+      ]),
+    ).toEqual([{ weightKg: 60, reps: 10 }, null, { weightKg: 55, reps: 8 }]);
+  });
+  it("una serie sin reps no ofrece valor", () => {
+    expect(previousMarks([{ setIndex: 0, weightKg: 60, reps: null }])).toEqual([
+      null,
+    ]);
+  });
+  it("sin series previas no hay nada que copiar", () => {
+    expect(previousMarks([])).toEqual([]);
+  });
+});
+
+describe("copiedMarks", () => {
+  const target = { weightKg: 40, reps: 6, done: true, touched: true };
+  it("copia reps y kilos y deja la serie desmarcada y sin editar", () => {
+    expect(copiedMarks(target, { weightKg: 60, reps: 10 }, false)).toEqual({
+      weightKg: 60,
+      reps: 10,
+      done: false,
+      touched: false,
+    });
+  });
+  it("origen sin kilos: solo las reps, sin tocar los kilos puestos", () => {
+    expect(copiedMarks(target, { weightKg: null, reps: 12 }, false)).toEqual({
+      weightKg: 40,
+      reps: 12,
+      done: false,
+      touched: false,
+    });
+  });
+  it("con «sin peso» no escribe kilos", () => {
+    expect(copiedMarks(target, { weightKg: 60, reps: 12 }, true)).toEqual({
+      weightKg: 40,
+      reps: 12,
+      done: false,
+      touched: false,
+    });
   });
 });
 

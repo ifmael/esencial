@@ -23,6 +23,7 @@ import {
   BikeIcon,
   CheckIcon,
   ChevronDownIcon,
+  CopyIcon,
   EditIcon,
   RunIcon,
 } from "../components/icons";
@@ -36,25 +37,36 @@ import {
   cx,
   Field,
   Input,
+  ScrollStrip,
   Switch,
   Textarea,
 } from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
-import type { PlanSession, SessionExercise } from "../lib/plan-week";
+import {
+  type PlanSession,
+  planItems,
+  type SessionExercise,
+} from "../lib/plan-week";
 import { isSessionComplete } from "../lib/reward";
 import type { ShapeName } from "../lib/shapes";
 import { useCreateMorph } from "../lib/view-transition";
 import {
+  addedSet,
+  copiedMarks,
   defaultSetCount,
   formatLast,
   formatPrevious,
   formatSetText,
+  type HomologMarks,
   isNoWeight,
   isSetFilled,
   isValidDateStr,
+  MAX_SETS,
+  MIN_SETS,
   noteOrNull,
   numOrNull,
   parseDateEs,
+  previousMarks,
   previousSession,
   setsProgress,
 } from "../lib/workout";
@@ -107,6 +119,8 @@ type DraftExercise = {
   last: LastValue | null;
   /** Marcas de la sesión anterior con el mismo nombre («vie, 26/09: 60×10 · …»). */
   previous: string | null;
+  /** Esa misma sesión, serie a serie: la homóloga de cada serie del borrador. */
+  prevSets: (HomologMarks | null)[];
   /** Sin peso: se oculta el campo de kilos, bastan las reps y viaja weightKg null. */
   noWeight: boolean;
   sets: DraftSet[];
@@ -190,6 +204,7 @@ async function buildDraft(
           se,
           last,
           previous: prev && formatPrevious(prev.date, prevSets),
+          prevSets: previousMarks(prevSets),
           noWeight:
             logged.length > 0
               ? isNoWeight(logged)
@@ -352,6 +367,14 @@ export function useWorkoutDay(date: string) {
       done: !s.done && isSetFilled(s, ex.noWeight),
     }));
 
+  /** Copia la serie homóloga de la sesión anterior: no marca la serie (ver
+   * `copiedMarks`) y sin homóloga no toca nada. */
+  const copyPrevious = (seId: number, setIdx: number) =>
+    mutateSet(seId, setIdx, (s, ex) => {
+      const src = ex.prevSets[setIdx] ?? null;
+      return src ? copiedMarks(s, src, ex.noWeight) : s;
+    });
+
   /** Cambiar «sin peso» cambia qué es una serie completa: recalcula las editadas. */
   const toggleNoWeight = (seId: number) =>
     patchDraft((v) => ({
@@ -368,6 +391,31 @@ export function useWorkoutDay(date: string) {
           ),
         };
       }),
+    }));
+
+  /** ➕/➖: el número de series del borrador manda; al guardar viaja al plan. */
+  const addSet = (seId: number) =>
+    patchDraft((v) => ({
+      exercises: v.exercises.map((ex) =>
+        ex.se.id !== seId || ex.sets.length >= MAX_SETS
+          ? ex
+          : {
+              ...ex,
+              sets: [
+                ...ex.sets,
+                { ...addedSet(ex.sets), done: false, touched: false },
+              ],
+            },
+      ),
+    }));
+
+  const removeSet = (seId: number) =>
+    patchDraft((v) => ({
+      exercises: v.exercises.map((ex) =>
+        ex.se.id !== seId || ex.sets.length <= MIN_SETS
+          ? ex
+          : { ...ex, sets: ex.sets.slice(0, -1) },
+      ),
     }));
 
   const completeExercise = (seId: number) =>
@@ -442,6 +490,26 @@ export function useWorkoutDay(date: string) {
             })),
         };
         try {
+          // El día del plan sigue al borrador: la fuerza viaja con sus series
+          // (los items que siguen conservan su id, los del registro cuelgan de él).
+          const setCounts = new Map(
+            v.exercises.map((ex) => [ex.se.id, ex.sets.length]),
+          );
+          if (
+            v.exercises.some(
+              (ex) => ex.sets.length !== (ex.se.targetSets ?? null),
+            )
+          )
+            await apiSend(`/api/plan-sessions/${v.session.id}`, "PUT", {
+              name: v.session.name,
+              items: planItems(
+                [
+                  ...v.exercises.map((ex) => ex.se),
+                  ...v.cardio.map((c) => c.se),
+                ].sort((a, b) => a.position - b.position),
+                setCounts,
+              ),
+            });
           const log = await apiSend<LoggedDay>(
             `/api/workout-logs/${date}`,
             v.editing ? "PUT" : "POST",
@@ -480,7 +548,10 @@ export function useWorkoutDay(date: string) {
     setDraftValue,
     stepValue,
     toggleDone,
+    copyPrevious,
     toggleNoWeight,
+    addSet,
+    removeSet,
     completeExercise,
     setCardioValue,
     toggleCardioDone,
@@ -964,8 +1035,14 @@ function SesionView() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="flex items-center gap-2 pr-2 text-label-l">
+                {/* En móvil, «Sin peso» y «Registrar series» caen juntos a una
+                    línea propia: van centrados, porque el resto de la tarjeta
+                    (la marca, el nombre y la tira de casillas) empieza en el
+                    margen izquierdo y el par quedaba pegado al borde derecho.
+                    Desde `sm` la fila lleva también la tira y va al final, como
+                    el resto de cabeceras M3. */}
+                <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-end">
+                  <span className="flex shrink-0 items-center gap-2 pr-2 text-label-l">
                     <Switch
                       aria-label={`Sin peso · ${ex.se.exerciseName}`}
                       checked={ex.noWeight}
@@ -973,21 +1050,29 @@ function SesionView() {
                     />
                     Sin peso
                   </span>
-                  {!open &&
-                    ex.sets.map((s, i) => (
-                      <Checkbox
-                        key={i}
-                        aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
-                        checked={s.done}
-                        disabled={!s.done && !isSetFilled(s, ex.noWeight)}
-                        onChange={() => day.toggleDone(ex.se.id, i)}
-                      />
-                    ))}
+                  {!open && (
+                    // Una sola línea: en móvil se lleva la suya (ancho completo)
+                    // y a partir de `sm` solo cae a otra si no cabe. El borde
+                    // desvanecido avisa de que hay más series.
+                    <ScrollStrip className="order-last flex w-full min-w-0 items-center gap-1 sm:order-none sm:w-auto">
+                      {ex.sets.map((s, i) => (
+                        <Checkbox
+                          key={i}
+                          className="shrink-0"
+                          aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
+                          checked={s.done}
+                          disabled={!s.done && !isSetFilled(s, ex.noWeight)}
+                          onChange={() => day.toggleDone(ex.se.id, i)}
+                        />
+                      ))}
+                    </ScrollStrip>
+                  )}
                   <Button
                     aria-label={`Series de ${ex.se.exerciseName}`}
                     aria-expanded={open}
                     variant="tonal"
                     size="sm"
+                    className="shrink-0"
                     onClick={() => day.toggleExpand(ex.se.id)}
                   >
                     {open ? "Ocultar" : "Registrar series"}
@@ -1003,68 +1088,109 @@ function SesionView() {
                 </div>
               </div>
               {open && (
-                <ul className="stagger mt-3 flex flex-col gap-2">
-                  {ex.sets.map((s, i) => {
-                    const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
-                    return (
-                      <li
-                        key={i}
-                        style={{ ["--i" as string]: i }}
-                        className={cx(
-                          "flex flex-col gap-2 rounded-l p-2 transition-colors motion-effects sm:flex-row sm:items-end",
-                          s.done
-                            ? "bg-surface-container-lowest"
-                            : "bg-surface-container-high",
-                        )}
-                      >
-                        <div className="flex items-center gap-1">
-                          <Checkbox
-                            aria-label={ctx}
-                            checked={s.done}
-                            disabled={!s.done && !isSetFilled(s, ex.noWeight)}
-                            onChange={() => day.toggleDone(ex.se.id, i)}
-                          />
-                          <span className="w-14 text-label-l text-on-surface-variant">
-                            Serie {i + 1}
-                          </span>
-                        </div>
-                        <div
+                <>
+                  <ul className="stagger mt-3 flex flex-col gap-2">
+                    {ex.sets.map((s, i) => {
+                      const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
+                      // La homóloga de la sesión anterior: solo si la hubo.
+                      const prev = ex.prevSets[i] ?? null;
+                      return (
+                        <li
+                          key={i}
+                          style={{ ["--i" as string]: i }}
                           className={cx(
-                            "grid flex-1 gap-3",
-                            ex.noWeight ? "grid-cols-1" : "grid-cols-2",
+                            "flex flex-col gap-2 rounded-l p-2 transition-colors motion-effects sm:flex-row sm:items-end",
+                            s.done
+                              ? "bg-surface-container-lowest"
+                              : "bg-surface-container-high",
                           )}
                         >
-                          {!ex.noWeight && (
+                          <div className="flex items-center gap-1">
+                            <Checkbox
+                              aria-label={ctx}
+                              checked={s.done}
+                              disabled={!s.done && !isSetFilled(s, ex.noWeight)}
+                              onChange={() => day.toggleDone(ex.se.id, i)}
+                            />
+                            <span className="w-14 text-label-l text-on-surface-variant">
+                              Serie {i + 1}
+                            </span>
+                            {prev && (
+                              // El valor de la serie homóloga y, a la vez, el
+                              // botón que la copia (reps y kilos, sin marcar).
+                              <Button
+                                variant="text"
+                                size="md"
+                                className="tabular shrink-0"
+                                aria-label={`Copiar ${formatSetText(prev)} de la sesión anterior a ${ctx}`}
+                                onClick={() => day.copyPrevious(ex.se.id, i)}
+                              >
+                                <CopyIcon width={18} height={18} />
+                                {formatSetText(prev)}
+                              </Button>
+                            )}
+                          </div>
+                          <div
+                            className={cx(
+                              "grid flex-1 gap-3",
+                              ex.noWeight ? "grid-cols-1" : "grid-cols-2",
+                            )}
+                          >
+                            {!ex.noWeight && (
+                              <Stepper
+                                caption="Peso (kg)"
+                                context={ctx}
+                                value={s.weightKg}
+                                step={2.5}
+                                onValue={(val) =>
+                                  day.setDraftValue(
+                                    ex.se.id,
+                                    i,
+                                    "weightKg",
+                                    val,
+                                  )
+                                }
+                                onStep={(d) =>
+                                  day.stepValue(ex.se.id, i, "weightKg", d)
+                                }
+                              />
+                            )}
                             <Stepper
-                              caption="Peso (kg)"
+                              caption="Reps"
                               context={ctx}
-                              value={s.weightKg}
-                              step={2.5}
+                              value={s.reps}
+                              step={1}
                               onValue={(val) =>
-                                day.setDraftValue(ex.se.id, i, "weightKg", val)
+                                day.setDraftValue(ex.se.id, i, "reps", val)
                               }
                               onStep={(d) =>
-                                day.stepValue(ex.se.id, i, "weightKg", d)
+                                day.stepValue(ex.se.id, i, "reps", d)
                               }
                             />
-                          )}
-                          <Stepper
-                            caption="Reps"
-                            context={ctx}
-                            value={s.reps}
-                            step={1}
-                            onValue={(val) =>
-                              day.setDraftValue(ex.se.id, i, "reps", val)
-                            }
-                            onStep={(d) =>
-                              day.stepValue(ex.se.id, i, "reps", d)
-                            }
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="tonal"
+                      aria-label={`Quitar serie a ${ex.se.exerciseName}`}
+                      disabled={ex.sets.length <= MIN_SETS}
+                      onClick={() => day.removeSet(ex.se.id)}
+                    >
+                      − Quitar serie
+                    </Button>
+                    <Button
+                      variant="tonal"
+                      aria-label={`Añadir serie a ${ex.se.exerciseName}`}
+                      disabled={ex.sets.length >= MAX_SETS}
+                      onClick={() => day.addSet(ex.se.id)}
+                    >
+                      + Añadir serie
+                    </Button>
+                  </div>
+                </>
               )}
             </Card>
           );
