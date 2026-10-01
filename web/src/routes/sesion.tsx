@@ -1035,7 +1035,13 @@ function SesionView() {
                     )}
                   </div>
                 </div>
-                <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-1 sm:w-auto sm:flex-1">
+                {/* En móvil, «Sin peso» y «Registrar series» caen juntos a una
+                    línea propia: van centrados, porque el resto de la tarjeta
+                    (la marca, el nombre y la tira de casillas) empieza en el
+                    margen izquierdo y el par quedaba pegado al borde derecho.
+                    Desde `sm` la fila lleva también la tira y va al final, como
+                    el resto de cabeceras M3. */}
+                <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-end">
                   <span className="flex shrink-0 items-center gap-2 pr-2 text-label-l">
                     <Switch
                       aria-label={`Sin peso · ${ex.se.exerciseName}`}
