@@ -5,11 +5,25 @@
 import { Hono } from "hono";
 import { type WorkoutLogInput, workoutLogSchema } from "../api-validation";
 import { type Env, getDb } from "../db";
-import { fail, guard, json } from "../http";
+import { fail, guard, json, readCursor } from "../http";
 import { row, rows } from "../repo";
 import { zBody } from "../validation";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Índice del histórico: un día registrado por fila, con lo hecho (series y
+ *  cardio marcados) contado en la misma consulta. Las subconsultas mantienen el
+ *  número de consultas constante, como las listas. */
+const HISTORY_DAYS = `SELECT wl.date AS date, ps.name AS sessionName,
+       wl.effort AS effort, wl.note AS note,
+       (SELECT COUNT(DISTINCT sl.plan_session_exercise_id) FROM set_logs sl
+         WHERE sl.workout_log_id = wl.id AND sl.done = 1) AS exercises,
+       (SELECT COUNT(*) FROM set_logs sl
+         WHERE sl.workout_log_id = wl.id AND sl.done = 1) AS sets,
+       (SELECT COUNT(*) FROM cardio_logs cl
+         WHERE cl.workout_log_id = wl.id AND cl.done = 1) AS cardio
+FROM workout_logs wl
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id`;
 
 async function sessionOn(db: D1Database, date: string) {
   return row(
@@ -150,6 +164,36 @@ async function serialize(
 }
 
 export const workoutLogs = new Hono<{ Bindings: Env }>()
+  // Índice del histórico: los días registrados, del más reciente al más antiguo,
+  // paginados con `?before=&limit=` (el detalle sigue en /:date).
+  .get("/", (c) =>
+    guard(async () => {
+      const cursor = readCursor((key) => c.req.query(key));
+      if (cursor instanceof Response) return cursor;
+      const found = await rows(
+        getDb(c.env),
+        `${HISTORY_DAYS}${cursor.before ? " WHERE wl.date < ?" : ""}
+         ORDER BY wl.date DESC LIMIT ?`,
+        ...(cursor.before
+          ? [cursor.before, cursor.limit + 1]
+          : [cursor.limit + 1]),
+      );
+      const days = found.slice(0, cursor.limit).map((r) => ({
+        date: String(r.date),
+        sessionName: r.sessionName === null ? null : String(r.sessionName),
+        effort: Number(r.effort),
+        note: r.note === null ? null : String(r.note),
+        exercises: Number(r.exercises),
+        sets: Number(r.sets),
+        cardio: Number(r.cardio),
+      }));
+      // Una fila de más = hay página siguiente; el cursor es su última fecha.
+      return json({
+        days,
+        next: found.length > cursor.limit ? days[days.length - 1].date : null,
+      });
+    }),
+  )
   .get("/:date", (c) =>
     guard(async () => {
       const date = c.req.param("date");

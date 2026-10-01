@@ -69,6 +69,27 @@ export function parseId(raw: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+const DATE_STR = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Página de los índices del histórico: 20 filas por defecto, hasta 60.
+ *  `before` es exclusivo (la última fecha ya vista). */
+export const HISTORY_PAGE = 20;
+export const HISTORY_MAX = 60;
+export type Cursor = { before: string | null; limit: number };
+
+/** `?before=YYYY-MM-DD&limit=1-60` → cursor, o la respuesta 400 que lo explica. */
+export function readCursor(
+  query: (key: string) => string | undefined,
+): Cursor | Response {
+  const before = query("before");
+  if (before !== undefined && !DATE_STR.test(before))
+    return fail("before must be YYYY-MM-DD", "before");
+  const raw = query("limit") ?? String(HISTORY_PAGE);
+  if (!/^\d+$/.test(raw) || Number(raw) < 1 || Number(raw) > HISTORY_MAX)
+    return fail(`limit must be 1-${HISTORY_MAX}`, "limit");
+  return { before: before ?? null, limit: Number(raw) };
+}
+
 /** Wrap a handler body so thrown D1 errors become safe responses (E1 guard). */
 export async function guard(fn: () => Promise<Response>): Promise<Response> {
   try {
