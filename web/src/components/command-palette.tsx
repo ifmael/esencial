@@ -99,6 +99,13 @@ const STATIC: Command[] = [
     href: "/plantillas",
   },
   {
+    id: "p-historial",
+    group: "Pantallas",
+    label: "Historial",
+    href: "/historial",
+    keywords: ["registrado", "sesiones", "progreso", "antes"],
+  },
+  {
     id: "p-ajustes",
     group: "Pantallas",
     label: "Ajustes",

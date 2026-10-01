@@ -53,6 +53,7 @@ const NAV: NavSection[] = [
     children: [
       { href: "/ejercicios", label: "Ejercicios" },
       { href: "/plantillas", label: "Plantillas" },
+      { href: "/historial", label: "Historial" },
     ],
   },
   {

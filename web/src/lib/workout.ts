@@ -63,6 +63,12 @@ const SHORT_DATE = new Intl.DateTimeFormat("es", {
   month: "2-digit",
 });
 
+/** «sáb, 26/09» — la fecha corta que comparten el historial y las series de la
+ *  sesión igual. */
+export function formatShortDate(date: string): string {
+  return SHORT_DATE.format(parseDateEs(date));
+}
+
 /** "sáb, 26/09: 60×10 · 55×8" — las series sin marcas no aparecen. */
 export function formatPrevious(
   date: string,
@@ -70,7 +76,7 @@ export function formatPrevious(
 ): string | null {
   const marks = sets.filter((s) => s.reps !== null || s.weightKg !== null);
   if (marks.length === 0) return null;
-  return `${SHORT_DATE.format(parseDateEs(date))}: ${marks.map(formatSetText).join(" · ")}`;
+  return `${formatShortDate(date)}: ${marks.map(formatSetText).join(" · ")}`;
 }
 
 /** Marcas de una serie de la sesión igual: siempre con repeticiones (las series

@@ -64,6 +64,7 @@ function GuardedShell() {
 
 import { AjustesPage } from "./routes/ajustes";
 import { EjercicioDetailPage, EjerciciosPage } from "./routes/ejercicios";
+import { HistorialPage } from "./routes/historial";
 import { PlantillaEditorPage, PlantillasPage } from "./routes/plantillas";
 import { RecetaEditorPage } from "./routes/receta-editor";
 import { RecetarioDetallePage, RecetarioPage } from "./routes/recetario";
@@ -92,6 +93,7 @@ const routes = createRoutesFromElements(
       <Route path="/plantillas/:id/editar" element={<PlantillaEditorPage />} />
 
       <Route path="/sesion/:date" element={<SesionPage />} />
+      <Route path="/historial" element={<HistorialPage />} />
 
       <Route path="/ajustes" element={<AjustesPage />} />
       {/* Referencia del sistema de diseño: se llega desde Ajustes. */}

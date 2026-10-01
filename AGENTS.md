@@ -245,6 +245,12 @@ catálogo»), tipo + grupos en `label-m` con el icono del tipo en línea, títul
 es largo, crece en altura (no se recorta, porque es el `h1`). Lo cubre
 `e2e/tests/exercise-detail.spec.ts`.
 
+La columna de datos lleva `min-w-0`: sin él, la fila del historial (fecha fija +
+marcas + nombre de sesión, los dos últimos con `truncate`) forzaba la pista de la
+rejilla a lo ancho de su contenido —~418 px con un nombre largo— y la página
+entera se salía 50 px por la derecha en móvil. Lo cubre
+`e2e/tests/history.spec.ts`, que mide que la tarjeta no se salga de sí misma.
+
 ### Registro de una sesión (`/sesion/:date`)
 
 `web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.
@@ -306,6 +312,61 @@ es largo, crece en altura (no se recorta, porque es el `h1`). Lo cubre
   lo registrado sin llamar a la API. Los ejercicios de una sesión registrada
   siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
   lista también (el único `PUT` admitido es el recuento de series, ver arriba).
+
+### Historial (`/historial` y la ficha del ejercicio)
+
+`HistorialPage` (`web/src/routes/historial.tsx`) es hija de **Deporte** en el
+raíl (`{ href: "/historial", label: "Historial" }`; `sectionOf` ya lo resuelve a
+Deporte, así que no hay token de color nuevo) y también está en ⌘K, porque la
+barra inferior de móvil solo lleva las tres secciones.
+
+Lista los **días registrados**, del más reciente al más antiguo, agrupados por
+mes (`groupByMonth`), con lo hecho ese día —«2 ejercicios · 6 series · 1
+cardio»—, el esfuerzo y la nota. Cada fila es un `Link` a `/sesion/:date` (la
+vista registrada, que ya existía): la pantalla no tiene detalle propio.
+
+**Lo hecho es lo marcado**: los recuentos salen de `set_logs.done = 1` y
+`cardio_logs.done = 1`, no de las filas guardadas — el borrador guarda una fila
+por serie del plan con las reps precargadas, así que contarlas daría por hecho
+lo que el usuario no marcó. Un día sin ninguna marca dice «Sin marcas». (El
+resumen de `/api/day` y la celda del calendario sí cuentan filas del log: no dan
+el mismo número que el historial.)
+
+Pagina con cursor (`?before=&limit=`: 20 por página, 60 de techo) y un «Cargar
+más»; `next` solo viene cuando queda página (se piden `limit + 1` filas y la de
+más se descarta). El hook es `useHistoryPage` (`web/src/lib/history.ts`), que
+comparte con la ficha del ejercicio: la URL sale de `pageUrl` (`limit` primero,
+`before` después — lo atan los tests) y cada lista lleva una **generación**: una
+página que llega después de una recarga se descarta, así que no pega items
+viejos encima ni pisa el cursor nuevo (ni deja el «Ver más» deshabilitado).
+
+En la ficha, `ExerciseHistory` (`web/src/routes/ejercicios.tsx`) es una tarjeta
+bajo los datos del ejercicio: las series marcadas de cada día (o el cardio
+hecho, con su distancia y su tiempo), del más reciente al más antiguo, con la
+**mejor serie** de lo cargado (`bestMark`: más kilos y, a igualdad, más reps) y
+un `Link` al día registrado. «Ver más» pagina igual. Es de solo lectura: el
+histórico se escribe cerrando sesiones.
+
+Los dos endpoints:
+
+- `GET /api/workout-logs?before=&limit=` → `{ days, next }`, con
+  `{ date, sessionName, effort, note, exercises, sets, cardio }` por día; el
+  detalle del día sigue en `GET /api/workout-logs/:date`.
+- `GET /api/exercises/:id/history?before=&limit=` → `{ exerciseId, kind,
+  sessions, next }`; cada sesión lleva `sets` (fuerza) o `cardio`
+  (distancia/tiempo), y `null` en el que no aplica. Sirve también para los
+  ejercicios de cardio.
+- Los dos leen el cursor con `readCursor` (`api/src/http.ts`, que responde 400
+  `{field:'before'|'limit'}`) y resuelven la página con un número **fijo** de
+  consultas: subconsultas correlacionadas y un `IN` con las fechas de la página
+  (≤ 61 parámetros, muy por debajo de los 100 de D1). Lo ata
+  `api/tests/workout-history.test.ts`.
+
+Lo cubren `api/tests/workout-history.test.ts` (los dos endpoints y las
+consultas), `web/tests/historial.test.tsx` y
+`web/tests/ejercicio-historial.test.tsx` (las dos superficies, con la
+paginación y el vacío) y `e2e/tests/history.spec.ts` (el índice, la ficha y el
+ancho en móvil).
 
 ### Editor de recetas (crear y editar)
 
