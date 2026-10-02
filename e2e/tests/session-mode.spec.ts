@@ -165,10 +165,10 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(
       mode.getByRole("heading", { name: "Press banca" }),
     ).toBeVisible();
-    await expect(mode.getByText("1 / 2")).toBeVisible();
-    // El progreso va en el aro del encabezado: ejercicio N de M.
+    await expect(mode.getByText("0 / 2")).toBeVisible();
+    // El aro del encabezado cuenta ejercicios hechos: empieza en 0.
     await expect(
-      mode.getByRole("progressbar", { name: "Ejercicio 1 de 2" }),
+      mode.getByRole("progressbar", { name: "0 de 2 ejercicios hechos" }),
     ).toBeVisible();
 
     // Serie intermedia: pausa entre series con barra y cuenta atrás, que se
@@ -183,7 +183,7 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(
       mode.getByRole("progressbar", { name: /pausa entre series/i }),
     ).toBeHidden({ timeout: 5000 });
-    await expect(mode.getByText("1 / 2")).toBeVisible();
+    await expect(mode.getByText("0 / 2")).toBeVisible();
 
     // Última serie: pausa al terminar y, al agotarse, el siguiente ejercicio
     // queda activo.
@@ -193,7 +193,7 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
         name: "Pausa al terminar Press banca",
       }),
     ).toBeVisible();
-    await expect(mode.getByText("2 / 2")).toBeVisible({ timeout: 6000 });
+    await expect(mode.getByText("1 / 2")).toBeVisible({ timeout: 6000 });
     await expect(
       mode.getByRole("heading", { name: "Remo con barra" }),
     ).toBeVisible();

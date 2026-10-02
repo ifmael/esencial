@@ -314,6 +314,7 @@ export function WavyRing({
   max,
   label,
   className = "size-28",
+  waveOnly,
   children,
 }: {
   value: number;
@@ -321,6 +322,9 @@ export function WavyRing({
   label: string;
   /** Tamaño por clases (`size-24 lg:size-28`): así puede cambiar por breakpoint. */
   className?: string;
+  /** Solo el arco que avanza: sin el círculo de fondo (para el modo sesión,
+   *  donde solo se quiere ver lo hecho). */
+  waveOnly?: boolean;
   children?: ReactNode;
 }) {
   const now = Math.max(0, Math.min(max, value));
@@ -357,14 +361,16 @@ export function WavyRing({
         className="absolute inset-0 size-full"
         aria-hidden="true"
       >
-        <circle
-          cx={c}
-          cy={c}
-          r={r}
-          fill="none"
-          stroke="var(--color-accent-container)"
-          strokeWidth={6}
-        />
+        {!waveOnly && (
+          <circle
+            cx={c}
+            cy={c}
+            r={r}
+            fill="none"
+            stroke="var(--color-accent-container)"
+            strokeWidth={6}
+          />
+        )}
         <path
           d={d}
           fill="none"

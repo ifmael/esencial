@@ -78,7 +78,7 @@ const SESSION_DETAIL = {
       targetDistanceKm: 5,
       targetDurationMin: 30,
       restSecs: null,
-      restAfterSecs: null,
+      restAfterSecs: 120,
     },
   ],
 };
@@ -135,6 +135,8 @@ function mockApi(opts: {
   logs?: Record<string, unknown>; // otros días registrados (sesión anterior)
   lastFails?: boolean;
   postReply?: { status: number; body: unknown };
+  /** Detalle alternativo del día (GET /api/plan-sessions/:id). */
+  detail?: unknown;
 }): Mock {
   let count = 0;
   const posts: unknown[] = [];
@@ -187,7 +189,7 @@ function mockApi(opts: {
           ],
         );
       if (/^\/api\/plan-sessions\/\d+$/.test(url))
-        return reply(200, SESSION_DETAIL);
+        return reply(200, opts.detail ?? SESSION_DETAIL);
       const last = /^\/api\/exercises\/(\d+)\/last(\?.*)?$/.exec(url);
       if (last) {
         if (opts.lastFails) return reply(500, { error: "boom" });
@@ -1179,7 +1181,7 @@ describe("añadir y quitar series", () => {
             targetDistanceKm: 5,
             targetDurationMin: 30,
             restSecs: null,
-            restAfterSecs: null,
+            restAfterSecs: 120,
           },
         ],
       },
@@ -1252,10 +1254,12 @@ describe("modo interactivo", () => {
   it("«Empezar» abre el modo con el primer ejercicio; el aspa pide confirmación", async () => {
     const mode = await enterMode();
     expect(within(mode).getByText("Press banca")).toBeDefined();
-    expect(within(mode).getByText("1 / 3")).toBeDefined();
-    // El progreso va en el aro del encabezado: ejercicio N de M.
+    expect(within(mode).getByText("0 / 3")).toBeDefined();
+    // El aro del encabezado cuenta ejercicios hechos: empieza en 0.
     expect(
-      within(mode).getByRole("progressbar", { name: "Ejercicio 1 de 3" }),
+      within(mode).getByRole("progressbar", {
+        name: "0 de 3 ejercicios hechos",
+      }),
     ).toBeDefined();
 
     // El aspa no sale a la primera: pregunta; «Cancelar» deja el modo abierto.
@@ -1305,7 +1309,7 @@ describe("modo interactivo", () => {
       ).toBeNull(),
     );
     expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
-    expect(within(mode).getByText("1 / 3")).toBeDefined();
+    expect(within(mode).getByText("0 / 3")).toBeDefined();
   });
 
   it("la última serie arranca la pausa al terminar y deja activo el siguiente", async () => {
@@ -1321,14 +1325,15 @@ describe("modo interactivo", () => {
     expect(within(mode).getByText("2:00")).toBeDefined();
     const real = Date.now;
     vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
-    await waitFor(() => expect(within(mode).getByText("2 / 3")).toBeDefined());
-    expect(within(mode).getByText("Remo con barra")).toBeDefined();
+    await waitFor(() =>
+      expect(within(mode).getByText("Remo con barra")).toBeDefined(),
+    );
   });
 
   it("sin descansos programados no arranca pausa ni suena", async () => {
     const mode = await enterMode({ last: { 21: benchLast, 22: rowLast } });
     fireEvent.click(within(mode).getByRole("button", { name: /^siguiente$/i }));
-    expect(within(mode).getByText("2 / 3")).toBeDefined();
+    expect(within(mode).getByText("Remo con barra")).toBeDefined();
     const before = audio.oscillators.length;
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
@@ -1456,7 +1461,7 @@ describe("modo interactivo", () => {
           name: `Remo con barra serie ${n}`,
         }),
       );
-    expect(within(mode).getByText("3 / 3")).toBeDefined();
+    expect(within(mode).getByText("2 / 3")).toBeDefined();
     // El cardio cierra la sesión: marcarlo no arranca cuenta atrás.
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Running hecho" }),
@@ -1464,6 +1469,7 @@ describe("modo interactivo", () => {
     expect(
       within(mode).queryByRole("progressbar", { name: /pausa/i }),
     ).toBeNull();
+    expect(within(mode).getByText("3 / 3")).toBeDefined();
     // Sesión completa: aparece el esfuerzo; sin él, «Terminar» no cierra.
     expect(
       within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
@@ -1480,5 +1486,66 @@ describe("modo interactivo", () => {
     expect(screen.queryByRole("dialog", { name: /modo sesión/i })).toBeNull();
     // Ya en el registro (solo lectura): está el «Editar» de la vista logged.
     await screen.findByRole("button", { name: /^editar$/i });
+  });
+
+  it("terminar el último ejercicio corta la pausa que corría y no arranca cuenta atrás", async () => {
+    // Sesión con el cardio en medio y Remo (fuerza) al final, con descansos.
+    const strengthLast = {
+      ...SESSION_DETAIL,
+      exercises: [
+        { ...SESSION_DETAIL.exercises[0], position: 0 },
+        { ...SESSION_DETAIL.exercises[2], position: 1 },
+        {
+          ...SESSION_DETAIL.exercises[1],
+          position: 2,
+          restSecs: 90,
+          restAfterSecs: 120,
+        },
+      ],
+    };
+    const mode = await enterMode({
+      detail: strengthLast,
+      last: { 21: benchLast, 22: rowLast },
+    });
+    // Press banca completa: la pausa de fin se salta para seguir.
+    for (const n of [1, 2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", { name: `Press banca serie ${n}` }),
+      );
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    // El cardio del medio: se marca y su pausa también se salta.
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Running hecho" }),
+    );
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    // En Remo (el último), marcar una serie corre su pausa…
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
+    );
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de remo con barra/i,
+      }),
+    ).toBeDefined();
+    // …y al terminarlo se corta sin pitido: ya no hay nada que descansar.
+    for (const n of [2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", {
+          name: `Remo con barra serie ${n}`,
+        }),
+      );
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(
+      false,
+    );
+    expect(
+      audio.oscillators.some((o) => o.frequency.value === 60 && o.stopped),
+    ).toBe(true);
+    expect(within(mode).getByText("3 / 3")).toBeDefined();
+    expect(
+      within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
+    ).toBeDefined();
   });
 });

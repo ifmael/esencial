@@ -320,7 +320,9 @@ que abre el **modo sesión** (`components/session-mode.tsx`): una capa
 `fixed inset-0` que sustituye la página — `role="dialog"`, y el aspa (o Escape)
 piden **confirmación** antes de salir («¿Salir del modo sesión?»), sin tocar el
 borrador. El encabezado lleva a la izquierda el **aro de progreso**
-(`WavyRing` con «Ejercicio N de M» dentro) y a la derecha el aspa. Un ejercicio
+(`WavyRing` con `waveOnly`: solo el arco que avanza, sin círculo de fondo) con
+«N / M» dentro — **empieza en 0** y sube al registrar cada ejercicio entero — y
+a la derecha el aspa. Un ejercicio
 a la vez en el orden del día: nombre, objetivo, «Sin peso» y **sus series
 editables** (los mismos `Stepper` —compartidos con el borrador— y la casilla; se
 marca al quedar completa y la pausa arranca al quedar hecha, la marques a mano o
@@ -343,7 +345,8 @@ escribiendo sus marcas).
   activo. Un ejercicio sin descansos se comporta como la página normal: ni barra
   ni pitido (el modo lo dice: «Sin descansos programados»; «Sin pausa entre
   series» si solo falta la de entre series). La **última serie del último
-  ejercicio no arranca nada**: la sesión ya se acabó. «Descanso» la arranca a
+  ejercicio no arranca nada y corta la pausa que estuviera corriendo** (sin
+  pitido): la sesión ya se acabó. «Descanso» la arranca a
   mano, «Saltar» la corta (sin pitido) y
   «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.

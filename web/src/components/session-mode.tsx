@@ -154,8 +154,14 @@ export function SessionMode({
       );
       if (idx === -1) return;
       if (idx === sets.length - 1) {
-        // La última serie del último ejercicio no arranca nada: ya se acabó.
-        if (last) return;
+        // La última serie del último ejercicio no arranca nada: se acabó. Y la
+        // pausa que estuviera corriendo ya no pinta nada: se corta sin pitido.
+        if (last) {
+          finished.current = true;
+          stopPauseAudio();
+          setPause(null);
+          return;
+        }
         if (item.restAfterSecs !== null)
           startPause(item.restAfterSecs, "after");
         else advance();
@@ -166,7 +172,12 @@ export function SessionMode({
     }
     if (item.done === true) {
       // Igual con el cardio: si es el último, marcar no arranca cuenta atrás.
-      if (last) return;
+      if (last) {
+        finished.current = true;
+        stopPauseAudio();
+        setPause(null);
+        return;
+      }
       if (item.restAfterSecs !== null) startPause(item.restAfterSecs, "after");
       else advance();
     }
@@ -218,6 +229,11 @@ export function SessionMode({
   );
   // El esfuerzo (y con él «Terminar») solo tienen sentido con todo hecho.
   const complete = total > 0 && done === total;
+  // Ejercicios completos (todas sus series hechas, o el cardio hecho): el aro
+  // empieza en 0 y sube al registrar cada uno.
+  const doneItems = items.filter((it) =>
+    it.sets ? it.sets.every((s) => s.done) : it.done === true,
+  ).length;
 
   return (
     <section
@@ -229,15 +245,16 @@ export function SessionMode({
       <header className="relative flex items-center gap-3 p-4">
         <WavyRing
           className="size-14"
-          value={active + 1}
+          waveOnly
+          value={doneItems}
           max={items.length}
-          label={`Ejercicio ${active + 1} de ${items.length}`}
+          label={`${doneItems} de ${items.length} ejercicios hechos`}
         >
           <span
             aria-hidden="true"
             className="tabular text-label-l text-on-surface"
           >
-            {active + 1} / {items.length}
+            {doneItems} / {items.length}
           </span>
         </WavyRing>
         <span className="flex-1" />
