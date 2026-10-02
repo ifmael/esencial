@@ -166,6 +166,10 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
       mode.getByRole("heading", { name: "Press banca" }),
     ).toBeVisible();
     await expect(mode.getByText("1 / 2")).toBeVisible();
+    // La barra de progreso de la sesión: series hechas sobre el total.
+    await expect(
+      mode.getByRole("progressbar", { name: "0 de 3 series hechas" }),
+    ).toBeVisible();
 
     // Serie intermedia: pausa entre series con barra y cuenta atrás, que se
     // agota sola y deja el mismo ejercicio activo.
@@ -175,8 +179,13 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
         name: "Pausa entre series de Press banca",
       }),
     ).toBeVisible();
+    await expect(
+      mode.getByRole("progressbar", { name: "1 de 3 series hechas" }),
+    ).toBeVisible();
     await expect(mode.getByText(/^\d:\d\d$/)).toBeVisible();
-    await expect(mode.getByRole("progressbar")).toBeHidden({ timeout: 5000 });
+    await expect(
+      mode.getByRole("progressbar", { name: /pausa entre series/i }),
+    ).toBeHidden({ timeout: 5000 });
     await expect(mode.getByText("1 / 2")).toBeVisible();
 
     // Última serie: pausa al terminar y, al agotarse, el siguiente ejercicio
@@ -230,13 +239,78 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await page.goto(`/sesion/${date}`);
     await page.getByRole("button", { name: "Empezar", exact: true }).click();
     const mode = page.getByRole("dialog", { name: "Modo sesión" });
-    await expect(mode.getByText("Sin descanso programado")).toBeVisible();
+    await expect(mode.getByText("Sin descansos programados")).toBeVisible();
+    await expect(
+      mode.getByRole("progressbar", { name: "0 de 1 series hechas" }),
+    ).toBeVisible();
     await expect(
       mode.getByRole("button", { name: "Descanso", exact: true }),
     ).toBeDisabled();
 
     await mode.getByRole("checkbox", { name: "Press banca serie 1" }).check();
-    await expect(mode.getByRole("progressbar")).toHaveCount(0);
+    await expect(mode.getByRole("progressbar", { name: /pausa/i })).toHaveCount(
+      0,
+    );
     await expect(mode.getByText("1 / 1")).toBeVisible();
+  });
+
+  test("los descansos se programan en el editor del día y el modo los usa", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const past = mondayFrom(280 + testInfo.retry * 14);
+    const date = mondayFrom(287 + testInfo.retry * 14);
+    await resetPlanned(page.request, past);
+    await resetPlanned(page.request, date);
+    await logPast(
+      page.request,
+      past,
+      [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 8 }],
+      [
+        {
+          exerciseId: press.id,
+          sets: [
+            { weightKg: 60, reps: 8 },
+            { weightKg: 60, reps: 8 },
+          ],
+        },
+      ],
+    );
+    const session = await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 8 }],
+      "Editor",
+    );
+
+    // El flujo del usuario: abrir el día en el planificador, escribir los
+    // descansos y guardar.
+    await page.goto(`/plan-fuerza?week=${isoWeekOf(date)}`);
+    await page
+      .getByRole("button", { name: `Editar sesión del ${date}` })
+      .click();
+    await page.getByLabel(/^press banca descanso entre series$/i).fill("2");
+    await page.getByLabel(/^press banca descanso al terminar$/i).fill("3");
+    await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+    // Persistidos en la API…
+    const detail = await apiRequest<{
+      exercises: { restSecs: number | null; restAfterSecs: number | null }[];
+    }>(page.request, "GET", `/api/plan-sessions/${session.id}`);
+    expect(detail.exercises[0]).toMatchObject({
+      restSecs: 2,
+      restAfterSecs: 3,
+    });
+
+    // …y el modo los usa.
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await mode.getByRole("checkbox", { name: "Press banca serie 1" }).check();
+    await expect(
+      mode.getByRole("progressbar", {
+        name: "Pausa entre series de Press banca",
+      }),
+    ).toBeVisible();
   });
 });

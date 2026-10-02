@@ -15,9 +15,8 @@ import {
 import { pushEscape } from "../lib/escape-stack";
 import { type ExerciseKind, KIND_LABELS } from "../lib/exercises";
 import { beep, startPauseAudio, stopPauseAudio } from "../lib/rest-audio";
-import type { ShapeName } from "../lib/shapes";
 import { useWakeLock } from "../lib/wake-lock";
-import { Shape, useReducedMotion, WavyProgress } from "./expressive";
+import { WavyProgress } from "./expressive";
 import { CloseIcon } from "./icons";
 import { Button, Checkbox, ScrollStrip } from "./ui";
 
@@ -39,45 +38,10 @@ export type ModeItem = {
 
 type Pause = { kind: "sets" | "after"; durationMs: number; endsAt: number };
 
-const BACKDROP_SHAPES: ShapeName[] = [
-  "cookie-12",
-  "flower",
-  "soft-diamond",
-  "sunny",
-];
-const BACKDROP_MS = 4000;
-
 /** mm:ss del reloj de la pausa. */
 function formatCountdown(ms: number): string {
   const total = Math.ceil(ms / 1000);
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
-}
-
-/** Fondo abstracto: una forma M3E grande que se transforma despacio; con
- *  `prefers-reduced-motion` se queda quieta. */
-function ModeBackdrop() {
-  const reduced = useReducedMotion();
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (reduced) return;
-    const id = setInterval(
-      () => setI((n) => (n + 1) % BACKDROP_SHAPES.length),
-      BACKDROP_MS,
-    );
-    return () => clearInterval(id);
-  }, [reduced]);
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden"
-    >
-      <Shape
-        name={BACKDROP_SHAPES[i]}
-        size={480}
-        className="text-accent-container opacity-30"
-      />
-    </div>
-  );
 }
 
 export function SessionMode({
@@ -195,6 +159,19 @@ export function SessionMode({
   };
 
   const remainingMs = pause ? Math.max(0, pause.endsAt - now) : 0;
+  // Progreso de la sesión: series hechas sobre el total, la misma cuenta que la
+  // barra de acciones del borrador (cada cardio cuenta como una).
+  const total = items.reduce((n, it) => n + (it.sets?.length ?? 1), 0);
+  const done = items.reduce(
+    (n, it) =>
+      n +
+      (it.sets
+        ? it.sets.filter((s) => s.done).length
+        : it.done === true
+          ? 1
+          : 0),
+    0,
+  );
 
   return (
     <section
@@ -203,7 +180,6 @@ export function SessionMode({
       aria-label="Modo sesión"
       className="fixed inset-0 z-50 flex flex-col bg-surface text-on-surface"
     >
-      <ModeBackdrop />
       <header className="relative flex items-center gap-3 p-4">
         <Button
           variant="text"
@@ -222,6 +198,15 @@ export function SessionMode({
           </span>
         </span>
       </header>
+
+      <div className="relative px-6 pt-1">
+        <WavyProgress
+          className="w-full"
+          value={done}
+          max={total}
+          label={`${done} de ${total} series hechas`}
+        />
+      </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-6 pb-2 text-center">
         <p className="section-label text-accent">{KIND_LABELS[item.kind]}</p>
@@ -250,7 +235,9 @@ export function SessionMode({
             )}
             {item.restSecs === null && (
               <p className="text-body-s text-on-surface-variant">
-                Sin descanso programado
+                {item.restAfterSecs === null
+                  ? "Sin descansos programados"
+                  : "Sin pausa entre series"}
               </p>
             )}
           </>

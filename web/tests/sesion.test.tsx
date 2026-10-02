@@ -1242,6 +1242,10 @@ describe("modo interactivo", () => {
     const mode = await enterMode();
     expect(within(mode).getByText("Press banca")).toBeDefined();
     expect(within(mode).getByText("1 / 3")).toBeDefined();
+    // La barra de progreso de la sesión: series hechas sobre el total.
+    expect(
+      within(mode).getByRole("progressbar", { name: "0 de 7 series hechas" }),
+    ).toBeDefined();
     fireEvent.click(
       within(mode).getByRole("button", { name: /salir del modo/i }),
     );
@@ -1260,6 +1264,9 @@ describe("modo interactivo", () => {
       }),
     ).toBeDefined();
     expect(within(mode).getByText("1:30")).toBeDefined();
+    expect(
+      within(mode).getByRole("progressbar", { name: "1 de 7 series hechas" }),
+    ).toBeDefined();
     // Keep-alive: la pestaña «suena» mientras corre la pausa.
     expect(
       audio.oscillators.some(
@@ -1271,7 +1278,11 @@ describe("modo interactivo", () => {
     const real = Date.now;
     vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
     await waitFor(() =>
-      expect(within(mode).queryByRole("progressbar")).toBeNull(),
+      expect(
+        within(mode).queryByRole("progressbar", {
+          name: /pausa entre series/i,
+        }),
+      ).toBeNull(),
     );
     expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
     expect(within(mode).getByText("1 / 3")).toBeDefined();
@@ -1302,17 +1313,26 @@ describe("modo interactivo", () => {
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
     );
-    expect(within(mode).queryByRole("progressbar")).toBeNull();
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(within(mode).getByText("Sin descansos programados")).toBeDefined();
     expect(audio.oscillators.length).toBe(before);
   });
 
   it("«Descanso» la arranca a mano y «Saltar» la corta sin pitido", async () => {
     const mode = await enterMode();
     fireEvent.click(within(mode).getByRole("button", { name: /^descanso$/i }));
-    expect(within(mode).getByRole("progressbar")).toBeDefined();
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
     expect(within(mode).getByText("1:30")).toBeDefined();
     fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
-    expect(within(mode).queryByRole("progressbar")).toBeNull();
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
     expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(
       false,
     );
@@ -1326,7 +1346,11 @@ describe("modo interactivo", () => {
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
     );
-    expect(within(mode).getByRole("progressbar")).toBeDefined();
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
 
     const real = Date.now;
     vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
@@ -1335,13 +1359,17 @@ describe("modo interactivo", () => {
       configurable: true,
     });
     fireEvent(document, new Event("visibilitychange"));
-    expect(within(mode).getByRole("progressbar")).toBeDefined(); // oculta: nada cambia
+    expect(
+      within(mode).getByRole("progressbar", { name: /pausa/i }), // oculta: nada cambia
+    ).toBeDefined();
     Object.defineProperty(document, "visibilityState", {
       value: "visible",
       configurable: true,
     });
     fireEvent(document, new Event("visibilitychange"));
-    expect(within(mode).queryByRole("progressbar")).toBeNull();
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
     expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
     Reflect.deleteProperty(document, "visibilityState");
   });

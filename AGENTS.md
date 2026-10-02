@@ -320,9 +320,8 @@ que abre el **modo sesión** (`components/session-mode.tsx`): una capa
 `fixed inset-0` que sustituye la página — `role="dialog"`, y Escape o «Salir» lo
 cierran sin tocar el borrador. Un ejercicio a la vez en el orden del día: nombre,
 objetivo y la tira de series de siempre (las casillas marcan `done` con las
-mismas reglas); de fondo, una forma M3E grande que se transforma cada 4 s
-(quieta con `prefers-reduced-motion`: `useReducedMotion` se exporta de
-`expressive.tsx`).
+mismas reglas); bajo la cabecera, la **barra de progreso de la sesión**
+(`WavyProgress`: series hechas sobre el total; cada cardio cuenta como una).
 
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
   `rest_after_secs` (al terminar el ejercicio); columnas nulables en
@@ -338,7 +337,9 @@ mismas reglas); de fondo, una forma M3E grande que se transforma cada 4 s
 - **Pausas**: marcar una serie arranca la «entre series»; la **última** arranca
   la «al terminar» y, al agotarse o saltarla, el siguiente ejercicio queda
   activo. Un ejercicio sin descansos se comporta como la página normal: ni barra
-  ni pitido. «Descanso» la arranca a mano, «Saltar» la corta (sin pitido) y
+  ni pitido (el modo lo dice: «Sin descansos programados»; «Sin pausa entre
+  series» si solo falta la de entre series). «Descanso» la arranca a mano,
+  «Saltar» la corta (sin pitido) y
   «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
 - **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al

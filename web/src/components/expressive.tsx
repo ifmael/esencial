@@ -150,9 +150,7 @@ const LOADER_SEQUENCE: ShapeName[] = [
   "flower",
 ];
 
-/** ¿El usuario pide menos movimiento? (Lo usan el propio indicador y el modo
- *  sesión para no animar el fondo). */
-export function useReducedMotion(): boolean {
+function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
     () =>
       typeof matchMedia === "function" &&
