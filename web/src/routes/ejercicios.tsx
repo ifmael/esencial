@@ -1,6 +1,6 @@
 // /ejercicios + /ejercicios/:id — catálogo del banco de ejercicios (E4).
 // Diseño D4: "Ver técnica" acepta cualquier URL; los enlaces de YouTube se empotran (E8).
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { flushSync } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router";
 import { Body3D } from "../components/body-3d/body-3d";
@@ -71,6 +71,7 @@ import {
   progressPoints,
   useExerciseHistory,
 } from "../lib/history";
+import { useIsDesktop } from "../lib/media";
 import type { ShapeName } from "../lib/shapes";
 import {
   type Template,
@@ -131,20 +132,69 @@ const ROLE_SWATCH: Record<RegionRole, string> = {
   stabilizer: "bg-muscle-stabilizer",
 };
 
+/** Grupos del ejercicio y sus músculos por grado. Van en la tarjeta de datos en
+ *  móvil y en la cabecera de la del modelo en escritorio, donde el dibujo y lo
+ *  que pinta se leen de un tirón. */
+function MuscleGroups({
+  tags,
+  regions,
+}: {
+  tags: string[];
+  regions: ExerciseRegion[];
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <span className="section-label">Grupos</span>
+        <TagChips tags={tags} tone="accent" />
+      </div>
+      {(Object.keys(ROLE_LABELS) as RegionRole[]).map((role) => {
+        const mine = regions.filter((r) => r.role === role);
+        if (mine.length === 0) return null;
+        return (
+          <div key={role} className="flex flex-col gap-2">
+            <span id={`ex-role-${role}`} className="section-label">
+              {ROLE_LABELS[role]}
+            </span>
+            <ul
+              className="flex flex-wrap gap-1"
+              aria-labelledby={`ex-role-${role}`}
+            >
+              {mine.map((r) => (
+                <li key={r.region}>
+                  <Badge>{regionLabel(r.region)}</Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Los músculos de un ejercicio en 3D, con el dibujo SVG de las dos vistas de
  *  respaldo y la leyenda de los grados que aparecen. */
 function MusclesFigure({
   regions,
   height,
+  header,
 }: {
   regions: ExerciseRegion[];
   height: string;
+  /** Lo que va sobre el dibujo, dentro de la misma tarjeta. */
+  header?: ReactNode;
 }) {
   const roles = (Object.keys(ROLE_LABELS) as RegionRole[]).filter((k) =>
     regions.some((r) => r.role === k),
   );
   return (
     <div className="flex flex-col gap-3 rounded-xl bg-surface-container-low p-4">
+      {/* Cabecera de la tarjeta: separada del dibujo por una línea, para que se
+          lea como lo que explica el modelo y no como parte de él. */}
+      {header && (
+        <div className="border-b border-outline-variant pb-4">{header}</div>
+      )}
       <Body3D
         regions={regions}
         view={bestView(regions)}
@@ -1020,6 +1070,7 @@ export function EjercicioDetailPage() {
   const templates = useTemplates();
 
   const [editing, setEditing] = useState(false);
+  const desktop = useIsDesktop();
 
   const exercise = exercises.find((e) => String(e.id) === id);
 
@@ -1051,6 +1102,11 @@ export function EjercicioDetailPage() {
 
   const KindIcon = KIND_ICON[exercise.kind];
   const embedId = exercise.techniqueUrl && ytEmbedId(exercise.techniqueUrl);
+  const showModel = exercise.regions.length > 0;
+  // En escritorio los grupos van en la cabecera de la tarjeta del modelo: el
+  // dibujo y lo que pinta se leen de un tirón. Sin dibujo (un ejercicio sin
+  // músculos) se quedan en la tarjeta de datos, a cualquier ancho.
+  const groupsWithModel = desktop && showModel;
 
   // Editar usa la misma página que crear: el detalle cede el sitio.
   if (editing)
@@ -1114,10 +1170,18 @@ export function EjercicioDetailPage() {
           se apila y el dibujo va primero. */}
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4 lg:order-2">
-          {exercise.regions.length > 0 && (
+          {showModel && (
             <MusclesFigure
               regions={exercise.regions}
               height="h-96 lg:h-[60vh]"
+              header={
+                groupsWithModel ? (
+                  <MuscleGroups
+                    tags={exercise.tags}
+                    regions={exercise.regions}
+                  />
+                ) : undefined
+              }
             />
           )}
           <AddToTemplate exercise={exercise} state={templates} />
@@ -1125,33 +1189,9 @@ export function EjercicioDetailPage() {
 
         <div className="flex min-w-0 flex-col gap-4">
           <Card className="flex flex-col gap-6 rounded-xl">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <span className="section-label">Grupos</span>
-                <TagChips tags={exercise.tags} tone="accent" />
-              </div>
-              {(Object.keys(ROLE_LABELS) as RegionRole[]).map((role) => {
-                const mine = exercise.regions.filter((r) => r.role === role);
-                if (mine.length === 0) return null;
-                return (
-                  <div key={role} className="flex flex-col gap-2">
-                    <span id={`ex-role-${role}`} className="section-label">
-                      {ROLE_LABELS[role]}
-                    </span>
-                    <ul
-                      className="flex flex-wrap gap-1"
-                      aria-labelledby={`ex-role-${role}`}
-                    >
-                      {mine.map((r) => (
-                        <li key={r.region}>
-                          <Badge>{regionLabel(r.region)}</Badge>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
+            {!groupsWithModel && (
+              <MuscleGroups tags={exercise.tags} regions={exercise.regions} />
+            )}
             {exercise.description && (
               <p className="text-body-l">{exercise.description}</p>
             )}

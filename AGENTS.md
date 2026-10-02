@@ -251,6 +251,21 @@ rejilla a lo ancho de su contenido —~418 px con un nombre largo— y la págin
 entera se salía 50 px por la derecha en móvil. Lo cubre
 `e2e/tests/history.spec.ts`, que mide que la tarjeta no se salga de sí misma.
 
+**Los grupos y los músculos por grado van en la cabecera de la tarjeta del
+modelo en escritorio** (`MuscleGroups`, mismo bloque que en móvil): ahí el
+dibujo, su leyenda y lo que pinta se leen de un tirón, separados por una línea
+(`border-b border-outline-variant`). En móvil se quedan con el texto del
+ejercicio, en la tarjeta de datos (el dibujo va arriba y sin hueco): el bloque
+se pinta en un sitio o en el otro, nunca dos veces (los `id` de los `ul` y sus
+`aria-labelledby` chocarían). El corte es el `lg` de Tailwind (64rem), el mismo
+que el de la rejilla de dos columnas: `useIsDesktop` (`web/src/lib/media.ts`)
+lee `matchMedia` en el primer render —la SPA no tiene SSR—, así que no hay
+salto de layout, y al estrechar la ventana el bloque vuelve sin recargar. Sin
+`matchMedia` (jsdom) dice que no, así que las pruebas unitarias ven el layout de
+móvil y las de escritorio simulan la consulta. Lo cubren
+`web/tests/ejercicios.test.tsx`, `web/tests/hooks.test.tsx` y
+`e2e/tests/exercise-detail.spec.ts` (los dos anchos, con el cambio en vivo).
+
 ### Registro de una sesión (`/sesion/:date`)
 
 `web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.

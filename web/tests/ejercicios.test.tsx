@@ -97,6 +97,24 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
+/** Escritorio como lo ve el navegador: el corte `lg` de Tailwind (64rem)
+ *  responde que sí. Sin `matchMedia` (jsdom) la app se queda en el de móvil. */
+function stubDesktop() {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(min-width: 64rem)",
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
+/** La tarjeta del modelo 3D: la que lleva la leyenda de los grados. */
+function modelCard(): HTMLElement {
+  return screen
+    .getByRole("list", { name: "Leyenda" })
+    .closest(".bg-surface-container-low") as HTMLElement;
+}
+
 beforeEach(() => {
   api = mockApi({ templates: [tplA()], exercises: [press, remo, peso] });
 });
@@ -331,6 +349,41 @@ describe("detail", () => {
       within(secondary).getByText("Tríceps (cabeza lateral)"),
     ).toBeDefined();
     expect(screen.queryByRole("list", { name: "Estabilizador" })).toBeNull();
+  });
+
+  it("en escritorio los grupos y los músculos viajan a la cabecera del modelo 3D", async () => {
+    stubDesktop();
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    const model = modelCard();
+    expect(within(model).getByText("Grupos")).toBeDefined();
+    expect(within(model).getByText("pecho")).toBeDefined();
+    expect(
+      within(model).getByRole("list", { name: "Secundario" }),
+    ).toBeDefined();
+    // Una sola copia: la tarjeta de datos ya no los lleva.
+    expect(screen.getAllByRole("list", { name: "Secundario" })).toHaveLength(1);
+  });
+
+  it("en móvil los grupos se quedan en la tarjeta de datos, fuera del modelo", async () => {
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    expect(modelCard().contains(screen.getByText("Grupos"))).toBe(false);
+    expect(screen.getByRole("list", { name: "Secundario" })).toBeDefined();
+  });
+
+  it("sin músculos no hay dibujo: los grupos se quedan en la tarjeta de datos también en escritorio", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      templates: [],
+      exercises: [{ ...press, regions: [] }],
+    });
+    stubDesktop();
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    expect(screen.queryByRole("list", { name: "Leyenda" })).toBeNull();
+    expect(screen.getByText("Grupos")).toBeDefined();
+    expect(screen.getByText("pecho")).toBeDefined();
   });
 
   it("editar conserva el grado de cada músculo y lo manda en el PUT", async () => {
