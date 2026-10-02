@@ -317,14 +317,14 @@ entera se salía 50 px por la derecha en móvil. Lo cubre
 
 `/sesion/:date` tiene un botón «Empezar» (tonal, a lo ancho, bajo la cabecera)
 que abre el **modo sesión** (`components/session-mode.tsx`): una capa
-`fixed inset-0` que sustituye la página — `role="dialog"`, y Escape o «Salir» lo
-cierran sin tocar el borrador. Un ejercicio a la vez en el orden del día: nombre,
-objetivo y **sus series editables** (los mismos `Stepper` —compartidos con el
-borrador—, la casilla y «Sin peso»; la casilla se puede marcar cuando la serie
-está completa y la pausa arranca al quedar hecha, la marques a mano o
-escribiendo sus marcas); bajo la cabecera, la **barra de progreso de la sesión**
-(`WavyProgress` con `waveOnly`: solo la ola que avanza, sin pista recta ni fondo;
-series hechas sobre el total, cada cardio cuenta como una).
+`fixed inset-0` que sustituye la página — `role="dialog"`, y el aspa (o Escape)
+piden **confirmación** antes de salir («¿Salir del modo sesión?»), sin tocar el
+borrador. El encabezado lleva a la izquierda el **aro de progreso**
+(`WavyRing` con «Ejercicio N de M» dentro) y a la derecha el aspa. Un ejercicio
+a la vez en el orden del día: nombre, objetivo, «Sin peso» y **sus series
+editables** (los mismos `Stepper` —compartidos con el borrador— y la casilla; se
+marca al quedar completa y la pausa arranca al quedar hecha, la marques a mano o
+escribiendo sus marcas).
 
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
   `rest_after_secs` (al terminar el ejercicio); columnas nulables en
@@ -342,8 +342,9 @@ series hechas sobre el total, cada cardio cuenta como una).
   la «al terminar» y, al agotarse o saltarla, el siguiente ejercicio queda
   activo. Un ejercicio sin descansos se comporta como la página normal: ni barra
   ni pitido (el modo lo dice: «Sin descansos programados»; «Sin pausa entre
-  series» si solo falta la de entre series). «Descanso» la arranca a mano,
-  «Saltar» la corta (sin pitido) y
+  series» si solo falta la de entre series). La **última serie del último
+  ejercicio no arranca nada**: la sesión ya se acabó. «Descanso» la arranca a
+  mano, «Saltar» la corta (sin pitido) y
   «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
 - **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al
@@ -353,9 +354,9 @@ series hechas sobre el total, cada cardio cuenta como una).
   suena tarde o al volver (resincronización por `endsAt`), nunca dos veces.
 - **Wake Lock** (`lib/wake-lock.ts`): pantalla encendida mientras el modo está
   visible; el navegador la suelta al ocultar la pestaña y se re-pide al volver.
-- **«Terminar»** es el «Guardar» de la sesión (el pie del modo lleva el selector
-  de esfuerzo porque cerrar exige esfuerzo). Salir sin terminar deja el borrador
-  intacto.
+- Al **completar la sesión** (todas las series y cardios marcados) aparecen el
+  selector de esfuerzo en el pie y «Terminar», que es el «Guardar» de la sesión.
+  Salir sin terminar deja el borrador intacto.
 
 Lo cubren `api/tests/templates.test.ts` y `plan-sessions.test.ts` (ida y vuelta
 de los descansos; en una sesión registrada no cambian → 409),

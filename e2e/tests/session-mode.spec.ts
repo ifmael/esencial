@@ -166,9 +166,9 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
       mode.getByRole("heading", { name: "Press banca" }),
     ).toBeVisible();
     await expect(mode.getByText("1 / 2")).toBeVisible();
-    // La barra de progreso de la sesión: series hechas sobre el total.
+    // El progreso va en el aro del encabezado: ejercicio N de M.
     await expect(
-      mode.getByRole("progressbar", { name: "0 de 3 series hechas" }),
+      mode.getByRole("progressbar", { name: "Ejercicio 1 de 2" }),
     ).toBeVisible();
 
     // Serie intermedia: pausa entre series con barra y cuenta atrás, que se
@@ -178,9 +178,6 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
       mode.getByRole("progressbar", {
         name: "Pausa entre series de Press banca",
       }),
-    ).toBeVisible();
-    await expect(
-      mode.getByRole("progressbar", { name: "1 de 3 series hechas" }),
     ).toBeVisible();
     await expect(mode.getByText(/^\d:\d\d$/)).toBeVisible();
     await expect(
@@ -206,8 +203,12 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
 
-    // «Salir» vuelve al borrador sin tocar nada.
+    // «Salir» pregunta antes; al confirmar vuelve al borrador sin tocar nada.
     await mode.getByRole("button", { name: "Salir del modo sesión" }).click();
+    await page
+      .getByRole("dialog", { name: "¿Salir del modo sesión?" })
+      .getByRole("button", { name: "Salir", exact: true })
+      .click();
     await expect(
       page.getByRole("dialog", { name: "Modo sesión" }),
     ).toBeHidden();
@@ -240,9 +241,6 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await page.getByRole("button", { name: "Empezar", exact: true }).click();
     const mode = page.getByRole("dialog", { name: "Modo sesión" });
     await expect(mode.getByText("Sin descansos programados")).toBeVisible();
-    await expect(
-      mode.getByRole("progressbar", { name: "0 de 1 series hechas" }),
-    ).toBeVisible();
     await expect(
       mode.getByRole("button", { name: "Descanso", exact: true }),
     ).toBeDisabled();

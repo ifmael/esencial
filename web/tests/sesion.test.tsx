@@ -1238,17 +1238,40 @@ describe("modo interactivo", () => {
     return await screen.findByRole("dialog", { name: /modo sesión/i });
   }
 
-  it("«Empezar» abre el modo con el primer ejercicio; «Salir» vuelve al borrador", async () => {
-    const mode = await enterMode();
-    expect(within(mode).getByText("Press banca")).toBeDefined();
-    expect(within(mode).getByText("1 / 3")).toBeDefined();
-    // La barra de progreso de la sesión: series hechas sobre el total.
-    expect(
-      within(mode).getByRole("progressbar", { name: "0 de 7 series hechas" }),
-    ).toBeDefined();
+  /** El aspa pregunta antes de salir: aquí se confirma. */
+  function exitMode(mode: HTMLElement) {
     fireEvent.click(
       within(mode).getByRole("button", { name: /salir del modo/i }),
     );
+    const confirm = screen.getByRole("dialog", {
+      name: /¿salir del modo sesión\?/i,
+    });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Salir" }));
+  }
+
+  it("«Empezar» abre el modo con el primer ejercicio; el aspa pide confirmación", async () => {
+    const mode = await enterMode();
+    expect(within(mode).getByText("Press banca")).toBeDefined();
+    expect(within(mode).getByText("1 / 3")).toBeDefined();
+    // El progreso va en el aro del encabezado: ejercicio N de M.
+    expect(
+      within(mode).getByRole("progressbar", { name: "Ejercicio 1 de 3" }),
+    ).toBeDefined();
+
+    // El aspa no sale a la primera: pregunta; «Cancelar» deja el modo abierto.
+    fireEvent.click(
+      within(mode).getByRole("button", { name: /salir del modo/i }),
+    );
+    const confirm = screen.getByRole("dialog", {
+      name: /¿salir del modo sesión\?/i,
+    });
+    fireEvent.click(
+      within(confirm).getByRole("button", { name: /^cancelar$/i }),
+    );
+    expect(screen.getByRole("dialog", { name: /modo sesión/i })).toBeDefined();
+
+    // «Salir» sí: vuelve al borrador.
+    exitMode(mode);
     expect(screen.queryByRole("dialog", { name: /modo sesión/i })).toBeNull();
     expect(screen.getByText("Esfuerzo percibido")).toBeDefined();
   });
@@ -1264,9 +1287,6 @@ describe("modo interactivo", () => {
       }),
     ).toBeDefined();
     expect(within(mode).getByText("1:30")).toBeDefined();
-    expect(
-      within(mode).getByRole("progressbar", { name: "1 de 7 series hechas" }),
-    ).toBeDefined();
     // Keep-alive: la pestaña «suena» mientras corre la pausa.
     expect(
       audio.oscillators.some(
@@ -1383,9 +1403,7 @@ describe("modo interactivo", () => {
     });
     const mode = await enterMode();
     await waitFor(() => expect(request).toHaveBeenCalledWith("screen"));
-    fireEvent.click(
-      within(mode).getByRole("button", { name: /salir del modo/i }),
-    );
+    exitMode(mode);
     await waitFor(() => expect(release).toHaveBeenCalled());
     Reflect.deleteProperty(navigator, "wakeLock");
   });
@@ -1413,17 +1431,43 @@ describe("modo interactivo", () => {
     ).toBeDefined();
 
     // Las marcas van al borrador subyacente: al salir, la serie queda hecha.
-    fireEvent.click(
-      within(mode).getByRole("button", { name: /salir del modo/i }),
-    );
+    exitMode(mode);
     expect(boxOf("press banca", 1)).toHaveProperty("checked", true);
   });
 
-  it("«Terminar» cierra la sesión como «Guardar» y sale del modo", async () => {
-    const api = mockApi({});
+  it("completar la sesión muestra el esfuerzo; la última marca no arranca cuenta atrás", async () => {
+    const api = mockApi({ last: { 21: benchLast, 22: rowLast } });
     renderAt("/sesion/2026-09-02");
     fireEvent.click(await screen.findByRole("button", { name: /^empezar$/i }));
     const mode = await screen.findByRole("dialog", { name: /modo sesión/i });
+    // Mientras queda faena, el esfuerzo no aparece.
+    expect(
+      within(mode).queryByRole("radiogroup", { name: /esfuerzo percibido/i }),
+    ).toBeNull();
+    for (const n of [1, 2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", { name: `Press banca serie ${n}` }),
+      );
+    // La pausa de fin de ejercicio se salta para pasar al siguiente.
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    for (const n of [1, 2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", {
+          name: `Remo con barra serie ${n}`,
+        }),
+      );
+    expect(within(mode).getByText("3 / 3")).toBeDefined();
+    // El cardio cierra la sesión: marcarlo no arranca cuenta atrás.
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Running hecho" }),
+    );
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    // Sesión completa: aparece el esfuerzo; sin él, «Terminar» no cierra.
+    expect(
+      within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
+    ).toBeDefined();
     const terminar = within(mode).getByRole("button", {
       name: /^terminar$/i,
     });

@@ -16,8 +16,9 @@ import { pushEscape } from "../lib/escape-stack";
 import { type ExerciseKind, KIND_LABELS } from "../lib/exercises";
 import { beep, startPauseAudio, stopPauseAudio } from "../lib/rest-audio";
 import { useWakeLock } from "../lib/wake-lock";
-import { WavyProgress } from "./expressive";
+import { WavyProgress, WavyRing } from "./expressive";
 import { CloseIcon } from "./icons";
+import { Dialog } from "./overlay";
 import { Stepper } from "./stepper";
 import { Button, Checkbox, cx, Switch } from "./ui";
 
@@ -95,12 +96,16 @@ export function SessionMode({
   const [active, setActive] = useState(0);
   const [pause, setPause] = useState<Pause | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // Salir pregunta antes (puede ser un despiste con el móvil en la mano).
+  const [confirmingExit, setConfirmingExit] = useState(false);
   // Un cierre de pausa solo dispara una vez (el tic y el regreso pueden
   // coincidir); saltarla lo marca para que no pite después.
   const finished = useRef(false);
 
+  const askExit = useCallback(() => setConfirmingExit(true), []);
+
   useWakeLock(true);
-  useEffect(() => pushEscape(onExit), [onExit]);
+  useEffect(() => pushEscape(askExit), [askExit]);
   // Al desmontar (salir o terminar) no queda sonando nada.
   useEffect(() => stopPauseAudio, []);
 
@@ -149,6 +154,8 @@ export function SessionMode({
       );
       if (idx === -1) return;
       if (idx === sets.length - 1) {
+        // La última serie del último ejercicio no arranca nada: ya se acabó.
+        if (last) return;
         if (item.restAfterSecs !== null)
           startPause(item.restAfterSecs, "after");
         else advance();
@@ -158,10 +165,12 @@ export function SessionMode({
       return;
     }
     if (item.done === true) {
+      // Igual con el cardio: si es el último, marcar no arranca cuenta atrás.
+      if (last) return;
       if (item.restAfterSecs !== null) startPause(item.restAfterSecs, "after");
       else advance();
     }
-  }, [item, advance, startPause]);
+  }, [item, last, advance, startPause]);
 
   // El reloj de la pausa: tics para la cuenta atrás y, al llegar a `endsAt`,
   // el pitido. Al volver a la pestaña se resincroniza de inmediato — si el
@@ -207,6 +216,8 @@ export function SessionMode({
           : 0),
     0,
   );
+  // El esfuerzo (y con él «Terminar») solo tienen sentido con todo hecho.
+  const complete = total > 0 && done === total;
 
   return (
     <section
@@ -216,33 +227,29 @@ export function SessionMode({
       className="fixed inset-0 z-50 flex flex-col bg-surface text-on-surface"
     >
       <header className="relative flex items-center gap-3 p-4">
+        <WavyRing
+          className="size-14"
+          value={active + 1}
+          max={items.length}
+          label={`Ejercicio ${active + 1} de ${items.length}`}
+        >
+          <span
+            aria-hidden="true"
+            className="tabular text-label-l text-on-surface"
+          >
+            {active + 1} / {items.length}
+          </span>
+        </WavyRing>
+        <span className="flex-1" />
         <Button
           variant="text"
           size="icon"
           aria-label="Salir del modo sesión"
-          onClick={onExit}
+          onClick={askExit}
         >
           <CloseIcon />
         </Button>
-        <span className="flex-1 text-label-l text-on-surface-variant">
-          <span aria-hidden="true" className="tabular">
-            {active + 1} / {items.length}
-          </span>
-          <span className="sr-only">
-            Ejercicio {active + 1} de {items.length}
-          </span>
-        </span>
       </header>
-
-      <div className="relative px-6 pt-1">
-        <WavyProgress
-          className="w-full"
-          waveOnly
-          value={done}
-          max={total}
-          label={`${done} de ${total} series hechas`}
-        />
-      </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-6 pb-2 text-center">
         <p className="section-label text-accent">{KIND_LABELS[item.kind]}</p>
@@ -361,7 +368,7 @@ export function SessionMode({
       </div>
 
       <footer className="relative flex flex-col gap-3 p-4 pb-6">
-        {finishControl}
+        {complete && finishControl}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="tonal"
@@ -386,6 +393,26 @@ export function SessionMode({
           </Button>
         </div>
       </footer>
+
+      {confirmingExit && (
+        <Dialog
+          label="¿Salir del modo sesión?"
+          onClose={() => setConfirmingExit(false)}
+          mobile="center"
+          className="max-w-sm gap-4 p-6"
+        >
+          <h2 className="text-headline-s text-e">¿Salir del modo sesión?</h2>
+          <p className="text-body-l text-on-surface-variant">
+            El borrador no se pierde: puedes seguir registrando desde la página.
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="text" onClick={() => setConfirmingExit(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={onExit}>Salir</Button>
+          </div>
+        </Dialog>
+      )}
     </section>
   );
 }
