@@ -910,6 +910,32 @@ describe("editor del día (sesión) en modal", () => {
     ).toBe(true);
   });
 
+  it("un ejercicio suelto entra con series (3 en fuerza; el cardio, sin series)", async () => {
+    const { dialog } = await openFirstDay();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^Espalda \(1\)/ }),
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remo" }));
+    // La fila nace con un recuento explícito, no con el campo vacío.
+    const series = screen.getByLabelText(/^remo series$/i) as HTMLInputElement;
+    expect(series.value).toBe("3");
+    // El cardio no tiene series: sus campos son distancia y tiempo.
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^cardio \(1\)/ }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^Running · Running/ }),
+    );
+    expect(screen.queryByLabelText(/^running series$/i)).toBeNull();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(1));
+    const body = mutations()[0].body as unknown as {
+      items: { targetSets: number | null }[];
+    };
+    expect(body.items.map((i) => i.targetSets)).toEqual([3, null]);
+  });
+
   it("ejercicio suelto repetido queda deshabilitado en el selector", async () => {
     const { dialog } = await openFirstDay();
     fireEvent.click(

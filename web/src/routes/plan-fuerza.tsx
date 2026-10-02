@@ -76,7 +76,7 @@ import {
 import { intAt, numAt } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 import { runViewTransition } from "../lib/view-transition";
-import { weekProgress } from "../lib/workout";
+import { DEFAULT_SETS, weekProgress } from "../lib/workout";
 
 // --- Editor del día (sesión) ------------------------------------------------
 
@@ -121,7 +121,7 @@ function expandTemplate(
       exerciseId: e.exerciseId,
       exerciseName: e.exerciseName,
       kind: e.kind,
-      targetSets: e.kind === "strength" ? (e.targetSets ?? 3) : null,
+      targetSets: e.kind === "strength" ? (e.targetSets ?? DEFAULT_SETS) : null,
       targetRepsMin: e.targetRepsMin,
       targetRepsMax: e.targetRepsMax,
       targetDistanceKm: e.targetDistanceKm,
@@ -512,7 +512,7 @@ function SessionEditor({
         exerciseId: e.id,
         exerciseName: e.name,
         kind: e.kind,
-        targetSets: null,
+        targetSets: e.kind === "strength" ? DEFAULT_SETS : null,
         targetRepsMin: null,
         targetRepsMax: null,
         targetDistanceKm: null,

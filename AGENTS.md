@@ -200,6 +200,20 @@ en `text-body-s`. **No lleva `.stagger`**: dnd-kit mide las filas al empezar a
 arrastrar, y una fila a mitad de su animación de entrada está desplazada. Con muchas filas el mínimo manda y el desborde sigue quedando
 dentro del calendario (lo cubre `calendar-layout.spec.ts`).
 
+**Un ejercicio de fuerza añadido a un día o a una plantilla nace con 3 series**
+(`DEFAULT_SETS`, `web/src/lib/workout.ts`): es el mismo recuento que la expansión
+de una plantilla (`targetSets ?? DEFAULT_SETS`), el borrador del registro
+(`defaultSetCount`) y el ➕/➖ de `/sesion/:date`, así que la celda y la tarjeta
+siempre tienen su «N series» que enseñar y el plan no guarda un recuento nulo. El
+cardio entra sin series. Antes nacía con el campo vacío y `targetSets` nulo en las
+tres entradas (día `plan-fuerza.tsx`, editor de plantillas `plantillas.tsx` y el
+«Añadir a plantilla» de la ficha `ejercicios.tsx`, cuya copia lo decía). Un
+recuento guardado, aunque sea nulo (una fila antigua o un campo «Series» vaciado
+a mano), no se reescribe al hidratar el borrador: lo cambian ese campo del día y
+el ➕/➖ del registro al guardar. Lo cubren
+`web/tests/plan-fuerza.test.tsx`, `web/tests/plantillas.test.tsx` y
+`web/tests/ejercicios.test.tsx`.
+
 Cada fila lleva su propia **✕ para desprogramar ese ejercicio** sin abrir el
 modal: la fila se convierte en su confirmación en línea (nombre truncado +
 **Sí/No**, con el nombre completo en el `aria-label`) y, al confirmar, el día se

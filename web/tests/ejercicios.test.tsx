@@ -452,8 +452,12 @@ describe("detail", () => {
     );
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/templates/1");
-    const body = put.body as { exercises: { exerciseId: number }[] };
+    const body = put.body as {
+      exercises: { exerciseId: number; targetSets: number | null }[];
+    };
     expect(body.exercises.map((e) => e.exerciseId)).toEqual([7, 8, 9]);
+    // El añadido entra con el recuento por defecto, no en blanco.
+    expect(body.exercises[2].targetSets).toBe(3);
     await screen.findByText(/añadido/i);
     expect(window.location.pathname).toBe("/ejercicios/9");
   });

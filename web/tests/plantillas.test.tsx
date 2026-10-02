@@ -287,7 +287,7 @@ describe("template editor", () => {
     expect(payloadAt(0).exercises).toEqual([
       {
         exerciseId: 9,
-        targetSets: null,
+        targetSets: 3,
         targetRepsMin: null,
         targetRepsMax: null,
         targetDistanceKm: null,

@@ -83,7 +83,7 @@ import {
   runViewTransition,
   useCreateMorph,
 } from "../lib/view-transition";
-import { formatShortDate } from "../lib/workout";
+import { DEFAULT_SETS, formatShortDate } from "../lib/workout";
 
 const errorMessage = (e: unknown): string =>
   e instanceof Error ? e.message : "Error inesperado";
@@ -850,7 +850,7 @@ function AddToTemplate({
           })),
           {
             exerciseId: exercise.id,
-            targetSets: null,
+            targetSets: exercise.kind === "strength" ? DEFAULT_SETS : null,
             targetRepsMin: null,
             targetRepsMax: null,
             targetDistanceKm: null,
@@ -879,7 +879,7 @@ function AddToTemplate({
         <div className="flex flex-col">
           <h2 className="text-title-m text-e">Plantillas</h2>
           <p className="text-body-s text-on-surface-variant">
-            Se añade al final, sin series fijadas.
+            Se añade al final, con {DEFAULT_SETS} series si es de fuerza.
           </p>
         </div>
       </div>
