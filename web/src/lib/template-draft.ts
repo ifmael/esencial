@@ -121,6 +121,10 @@ export const intAt = (raw: string): number | null =>
 export const restAt = (raw: string): number | null =>
   raw === "" ? null : Math.min(3600, Math.max(1, Math.trunc(Number(raw) || 1)));
 
+/** Descanso por defecto de los editores (segundos): los campos nacen con este
+ *  valor (y se guarda tal cual); vaciarlos deja el ejercicio sin descanso. */
+export const DEFAULT_REST_SECS = 120;
+
 /** "" o valores no finitos/negativos → null; el resto, número tal cual. */
 export function numAt(raw: string): number | null {
   if (raw.trim() === "") return null;

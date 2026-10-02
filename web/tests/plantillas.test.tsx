@@ -298,8 +298,8 @@ describe("template editor", () => {
         targetRepsMax: null,
         targetDistanceKm: null,
         targetDurationMin: null,
-        restSecs: null,
-        restAfterSecs: null,
+        restSecs: 120,
+        restAfterSecs: 120,
       },
     ]);
     await screen.findByText("D — Movilidad");
@@ -334,7 +334,7 @@ describe("template editor", () => {
         targetDistanceKm: 12,
         targetDurationMin: 55,
         restSecs: null,
-        restAfterSecs: null,
+        restAfterSecs: 120,
       },
     ]);
   });
@@ -490,10 +490,14 @@ describe("template editor", () => {
       restSecs: 75,
       restAfterSecs: 180,
     });
-    // El resto de filas viajan sin descansos programados.
+    // Las filas sin descanso guardado nacen con el 120 por defecto (y así se
+    // guarda): vaciar el campo es lo que las deja sin descanso.
+    expect(
+      screen.getAllByLabelText("Descanso entre series (s)")[1],
+    ).toHaveProperty("value", "120");
     expect(payloadAt(0).exercises[1]).toMatchObject({
-      restSecs: null,
-      restAfterSecs: null,
+      restSecs: 120,
+      restAfterSecs: 120,
     });
   });
 

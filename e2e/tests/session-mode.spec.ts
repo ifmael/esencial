@@ -170,6 +170,12 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(
       mode.getByRole("progressbar", { name: "0 de 3 series hechas" }),
     ).toBeVisible();
+    // La pista ondula ya desde el principio (la ola se mece sin progreso).
+    await expect(
+      mode
+        .getByRole("progressbar", { name: "0 de 3 series hechas" })
+        .locator(".wavy-track"),
+    ).toHaveCount(2);
 
     // Serie intermedia: pausa entre series con barra y cuenta atrás, que se
     // agota sola y deja el mismo ejercicio activo.
@@ -292,6 +298,9 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await page.getByLabel(/^press banca descanso entre series$/i).fill("2");
     await page.getByLabel(/^press banca descanso al terminar$/i).fill("3");
     await page.getByRole("button", { name: "Guardar", exact: true }).click();
+    // El editor se cierra cuando el PUT termina: espera a que cierre para leer
+    // el detalle (leerlo antes es leer un guardado a medias).
+    await expect(page.getByRole("dialog")).toBeHidden();
 
     // Persistidos en la API…
     const detail = await apiRequest<{

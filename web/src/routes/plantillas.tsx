@@ -77,6 +77,7 @@ import {
 import {
   addEntry,
   buildTemplatePayload,
+  DEFAULT_REST_SECS,
   type Draft,
   type DraftEntry,
   intAt,
@@ -104,8 +105,10 @@ const toDraft = (t: Template): Draft => ({
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
-    restSecs: e.restSecs,
-    restAfterSecs: e.restAfterSecs,
+    // 120 s por defecto (lo que ve el borrador es lo que se guarda): vaciar el
+    // campo es lo que deja el ejercicio sin descanso programado.
+    restSecs: e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null),
+    restAfterSecs: e.restAfterSecs ?? DEFAULT_REST_SECS,
   })),
 });
 
@@ -547,8 +550,8 @@ function TemplateEditor({
         targetRepsMax: null,
         targetDistanceKm: null,
         targetDurationMin: null,
-        restSecs: null,
-        restAfterSecs: null,
+        restSecs: e.kind === "strength" ? DEFAULT_REST_SECS : null,
+        restAfterSecs: DEFAULT_REST_SECS,
       }),
     );
 

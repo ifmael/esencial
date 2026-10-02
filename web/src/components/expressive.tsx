@@ -226,23 +226,29 @@ function wavePath(
 }
 
 /** Progreso ondulado lineal (M3E): la parte hecha ondula, la pendiente es
- * una pista recta. `label` nombra la barra para el lector. */
+ * una pista recta. Con `wavyTrack`, la pista también ondula (la barra está
+ * viva aunque no haya progreso). `label` nombra la barra para el lector. */
 export function WavyProgress({
   value,
   max,
   label,
   className,
+  wavyTrack,
 }: {
   value: number;
   max: number;
   label: string;
   className?: string;
+  /** La pista ondula también (para barras que se miran de cerca, como el modo
+   *  sesión): sin progreso, la ola sigue meciéndose en vez de ser una línea. */
+  wavyTrack?: boolean;
 }) {
   const now = Math.max(0, Math.min(max, value));
   const pct = max > 0 ? (now / max) * 100 : 0;
   const W = 240;
   const H = 12;
   const wavelength = 24;
+  const wave = wavePath(W + wavelength, 2.5, wavelength, H / 2);
   return (
     <div
       role="progressbar"
@@ -261,16 +267,30 @@ export function WavyProgress({
         className="absolute inset-0 h-full w-full"
         aria-hidden="true"
       >
-        {/* Pista pendiente: recta y a la derecha, con un hueco de 4 px. */}
-        <line
-          x1={0}
-          x2={W}
-          y1={H / 2}
-          y2={H / 2}
-          stroke="var(--color-accent-container)"
-          strokeWidth={4}
-          strokeLinecap="round"
-        />
+        {wavyTrack ? (
+          // La pista, ondulada y a la deriva: el mismo trazo que la parte hecha,
+          // en el tono del contenedor.
+          <path
+            className="wavy-track"
+            style={{ ["--wave-length" as string]: `-${wavelength}px` }}
+            d={wave}
+            fill="none"
+            stroke="var(--color-accent-container)"
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+        ) : (
+          // Pista pendiente: recta y a la derecha, con un hueco de 4 px.
+          <line
+            x1={0}
+            x2={W}
+            y1={H / 2}
+            y2={H / 2}
+            stroke="var(--color-accent-container)"
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+        )}
         <clipPath id={`wavy-${label.replace(/\W/g, "")}`}>
           <rect x={0} y={0} width={(W * pct) / 100} height={H} />
         </clipPath>
@@ -286,7 +306,7 @@ export function WavyProgress({
           <path
             className="wavy-track"
             style={{ ["--wave-length" as string]: `-${wavelength}px` }}
-            d={wavePath(W + wavelength, 2.5, wavelength, H / 2)}
+            d={wave}
             fill="none"
             stroke="currentColor"
             strokeWidth={4}

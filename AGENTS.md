@@ -321,7 +321,9 @@ que abre el **modo sesión** (`components/session-mode.tsx`): una capa
 cierran sin tocar el borrador. Un ejercicio a la vez en el orden del día: nombre,
 objetivo y la tira de series de siempre (las casillas marcan `done` con las
 mismas reglas); bajo la cabecera, la **barra de progreso de la sesión**
-(`WavyProgress`: series hechas sobre el total; cada cardio cuenta como una).
+(`WavyProgress` con `wavyTrack`: la pista también ondula, así la barra está viva
+aunque no haya progreso; series hechas sobre el total, cada cardio cuenta como
+una).
 
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
   `rest_after_secs` (al terminar el ejercicio); columnas nulables en
@@ -329,8 +331,9 @@ mismas reglas); bajo la cabecera, la **barra de progreso de la sesión**
   que el bootstrap de tests aplica). Se programan en el editor del día y en el
   editor de plantillas; al planificar, el día **copia** lo que la plantilla tenía
   en ese momento y editar la plantilla después no toca los días ya planificados.
-  Los campos nacen vacíos (placeholder 120/120; `restAt` recorta 1..3600, espejo
-  del rango que valida la API). En cardio solo se programa «al terminar». En una
+  Los campos nacen con **120 s** (editable; vaciarlos es lo que deja el
+  ejercicio sin descanso; `restAt` recorta 1..3600, espejo del rango que valida
+  la API). En cardio solo se programa «al terminar». En una
   base de dev anterior hay que aplicar la migración (`pnpm db:migrate:local`);
   sin ella, leer o guardar ejercicios del plan responde **500** (no tal
   columna).

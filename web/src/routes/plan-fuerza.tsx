@@ -73,7 +73,7 @@ import {
   type SessionPayload,
   usePlanWeek,
 } from "../lib/plan-week";
-import { intAt, numAt, restAt } from "../lib/template-draft";
+import { DEFAULT_REST_SECS, intAt, numAt, restAt } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 import { runViewTransition } from "../lib/view-transition";
 import { weekProgress } from "../lib/workout";
@@ -99,8 +99,10 @@ function rowsFrom(session: PlanSession | null): DayRow[] {
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
-    restSecs: e.restSecs,
-    restAfterSecs: e.restAfterSecs,
+    // 120 s por defecto (lo que ve el borrador es lo que se guarda): vaciar el
+    // campo es lo que deja el ejercicio sin descanso programado.
+    restSecs: e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null),
+    restAfterSecs: e.restAfterSecs ?? DEFAULT_REST_SECS,
   }));
 }
 
@@ -554,8 +556,8 @@ function SessionEditor({
         targetRepsMax: null,
         targetDistanceKm: null,
         targetDurationMin: null,
-        restSecs: null,
-        restAfterSecs: null,
+        restSecs: e.kind === "strength" ? DEFAULT_REST_SECS : null,
+        restAfterSecs: DEFAULT_REST_SECS,
       },
     ]);
   };

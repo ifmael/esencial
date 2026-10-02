@@ -202,6 +202,7 @@ export function SessionMode({
       <div className="relative px-6 pt-1">
         <WavyProgress
           className="w-full"
+          wavyTrack
           value={done}
           max={total}
           label={`${done} de ${total} series hechas`}
