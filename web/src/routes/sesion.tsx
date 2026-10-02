@@ -710,7 +710,7 @@ function EffortDots({
             </span>
             <span
               className={cx(
-                "text-center text-label-s",
+                "hyphens-auto break-words text-center text-label-s",
                 chosen ? "text-e text-on-surface" : "text-on-surface-variant",
               )}
             >
@@ -987,8 +987,8 @@ function SesionView() {
         canFinish={v.effort !== null}
         saving={v.pending}
         finishControl={
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-label-l text-on-surface-variant">
+          <div className="flex flex-col gap-2">
+            <p className="text-center text-label-l text-on-surface-variant">
               Esfuerzo percibido
             </p>
             <EffortDots effort={v.effort} onSelect={day.setEffort} />
