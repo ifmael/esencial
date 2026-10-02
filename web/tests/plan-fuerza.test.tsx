@@ -12,6 +12,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
 import type { Exercise } from "../src/lib/exercises";
+import type { SessionPayload } from "../src/lib/plan-week";
 import type { TemplatePayload } from "../src/lib/template-draft";
 import type { Template } from "../src/lib/templates";
 import { type MockApi, mockApi } from "./api-mock";
@@ -63,6 +64,8 @@ const tplA = (): Template => ({
       targetRepsMax: 8,
       targetDistanceKm: null,
       targetDurationMin: null,
+      restSecs: 90,
+      restAfterSecs: 150,
       exerciseName: "Press banca",
       kind: "strength",
     },
@@ -75,6 +78,8 @@ const tplA = (): Template => ({
       targetRepsMax: null,
       targetDistanceKm: null,
       targetDurationMin: null,
+      restSecs: null,
+      restAfterSecs: null,
       exerciseName: "Remo",
       kind: "strength",
     },
@@ -87,6 +92,8 @@ const tplA = (): Template => ({
       targetRepsMax: null,
       targetDistanceKm: 10,
       targetDurationMin: 45,
+      restSecs: null,
+      restAfterSecs: null,
       exerciseName: "Running",
       kind: "running",
     },
@@ -266,6 +273,8 @@ describe("plan screen", () => {
               targetRepsMax: 8,
               targetDistanceKm: null,
               targetDurationMin: null,
+              restSecs: null,
+              restAfterSecs: null,
             },
             {
               id: 52,
@@ -278,6 +287,8 @@ describe("plan screen", () => {
               targetRepsMax: 10,
               targetDistanceKm: null,
               targetDurationMin: null,
+              restSecs: null,
+              restAfterSecs: null,
             },
           ],
         },
@@ -323,6 +334,8 @@ describe("plan screen", () => {
               targetRepsMax: 8,
               targetDistanceKm: null,
               targetDurationMin: null,
+              restSecs: null,
+              restAfterSecs: null,
             },
             {
               // Cardio en la misma celda: la ✕ es de la fila, no del tipo.
@@ -336,6 +349,8 @@ describe("plan screen", () => {
               targetRepsMax: null,
               targetDistanceKm: 10,
               targetDurationMin: 45,
+              restSecs: null,
+              restAfterSecs: null,
             },
           ],
         },
@@ -417,6 +432,8 @@ describe("plan screen", () => {
               targetRepsMax: 8,
               targetDistanceKm: null,
               targetDurationMin: null,
+              restSecs: null,
+              restAfterSecs: null,
             },
           ],
         },
@@ -471,6 +488,8 @@ describe("plan screen", () => {
               targetRepsMax: 8,
               targetDistanceKm: null,
               targetDurationMin: null,
+              restSecs: null,
+              restAfterSecs: null,
             },
           ],
         },
@@ -530,6 +549,8 @@ describe("plan screen", () => {
     targetRepsMax: 8,
     targetDistanceKm: null,
     targetDurationMin: null,
+    restSecs: null,
+    restAfterSecs: null,
   });
 
   it("desprogramar un ejercicio avisa y «Deshacer» vuelve a guardar los items anteriores", async () => {
@@ -576,6 +597,8 @@ describe("plan screen", () => {
         targetRepsMax: 8,
         targetDistanceKm: null,
         targetDurationMin: null,
+        restSecs: null,
+        restAfterSecs: null,
       })),
     });
     const list = screen.getByRole("list", {
@@ -631,6 +654,8 @@ describe("plan screen", () => {
         targetRepsMax: 8,
         targetDistanceKm: null,
         targetDurationMin: null,
+        restSecs: null,
+        restAfterSecs: null,
       })),
     });
     // La recarga devuelve el día con su desglose.
@@ -713,6 +738,8 @@ describe("editor del día (sesión) en modal", () => {
           targetRepsMax: 8,
           targetDistanceKm: null,
           targetDurationMin: null,
+          restSecs: 90,
+          restAfterSecs: 150,
         },
         {
           exerciseId: 8,
@@ -721,6 +748,8 @@ describe("editor del día (sesión) en modal", () => {
           targetRepsMax: null,
           targetDistanceKm: null,
           targetDurationMin: null,
+          restSecs: null,
+          restAfterSecs: null,
         },
         {
           exerciseId: 10,
@@ -729,6 +758,8 @@ describe("editor del día (sesión) en modal", () => {
           targetRepsMax: null,
           targetDistanceKm: 10,
           targetDurationMin: 45,
+          restSecs: null,
+          restAfterSecs: null,
         },
       ],
     });
@@ -743,6 +774,63 @@ describe("editor del día (sesión) en modal", () => {
     });
     expect(within(dayList).getByText("Press banca")).toBeDefined();
     expect(within(dayList).getByText("Running")).toBeDefined();
+  });
+
+  it("el editor del día programa los descansos (placeholder 120) y viajan en el POST", async () => {
+    const { dialog } = await openFirstDay();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^Pecho \(1\)/ }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Press banca" }),
+    );
+    const series = screen.getByLabelText(
+      /^press banca descanso entre series$/i,
+    );
+    expect(series).toHaveProperty("placeholder", "120");
+    fireEvent.change(series, { target: { value: "60" } });
+    fireEvent.change(
+      screen.getByLabelText(/^press banca descanso al terminar$/i),
+      { target: { value: "240" } },
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(1));
+    // Frontera una vez: el body del mock llega como Record<string, unknown>.
+    const post = mutations().find((c) => c.method === "POST")!;
+    const payload = post.body as unknown as SessionPayload;
+    expect(payload.items[0]).toMatchObject({
+      restSecs: 60,
+      restAfterSecs: 240,
+    });
+  });
+
+  it("la plantilla copia sus descansos al planificar; editar la plantilla no toca el día", async () => {
+    const { dialog } = await openFirstDay();
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(1));
+    expect(api.state.sessions[0].exercises[0]).toMatchObject({
+      restSecs: 90,
+      restAfterSecs: 150,
+    });
+    // La plantilla cambia después (PUT): el día ya planificado conserva lo suyo.
+    await fetch("/api/templates/1", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "A — Empuje",
+        exercises: [
+          { exerciseId: 7, targetSets: 3, restSecs: 45, restAfterSecs: 45 },
+          { exerciseId: 8 },
+          { exerciseId: 10 },
+        ],
+      }),
+    });
+    expect(api.state.templates[0].exercises[0].restSecs).toBe(45);
+    expect(api.state.sessions[0].exercises[0]).toMatchObject({
+      restSecs: 90,
+      restAfterSecs: 150,
+    });
   });
 
   it("elegir plantilla avisa en el propio modal y la marca como añadida", async () => {
@@ -792,6 +880,8 @@ describe("editor del día (sesión) en modal", () => {
               targetRepsMax: 8,
               targetDistanceKm: null,
               targetDurationMin: null,
+              restSecs: null,
+              restAfterSecs: null,
             },
           ],
         },
@@ -862,6 +952,8 @@ describe("editor del día (sesión) en modal", () => {
               targetRepsMax: 8,
               targetDistanceKm: null,
               targetDurationMin: null,
+              restSecs: null,
+              restAfterSecs: null,
             },
           ],
         },

@@ -8,6 +8,7 @@ import {
   moveItem,
   nextCopyName,
   removeEntry,
+  restAt,
   setTargets,
 } from "../src/lib/template-draft";
 
@@ -21,6 +22,8 @@ const ex = (id: number, name: string): DraftEntry => ({
   targetRepsMax: null,
   targetDistanceKm: null,
   targetDurationMin: null,
+  restSecs: null,
+  restAfterSecs: null,
 });
 
 const cardio = (id: number, name: string): DraftEntry => ({
@@ -87,6 +90,18 @@ describe("draft reducer", () => {
     expect(c.entries[0].targetDurationMin).toBe(45);
     expect(c.entries[0].targetSets).toBeNull();
   });
+
+  it("descansos: setTargets los guarda y el payload los envía", () => {
+    const d = setTargets(draft(ex(1, "Press")), "e1", {
+      restSecs: 90,
+      restAfterSecs: 150,
+    });
+    expect(d.entries[0]).toMatchObject({ restSecs: 90, restAfterSecs: 150 });
+    expect(buildTemplatePayload(d).exercises[0]).toMatchObject({
+      restSecs: 90,
+      restAfterSecs: 150,
+    });
+  });
 });
 
 describe("buildTemplatePayload", () => {
@@ -110,6 +125,8 @@ describe("buildTemplatePayload", () => {
           targetRepsMax: 12,
           targetDistanceKm: null,
           targetDurationMin: null,
+          restSecs: null,
+          restAfterSecs: null,
         },
         {
           exerciseId: 9,
@@ -118,6 +135,8 @@ describe("buildTemplatePayload", () => {
           targetRepsMax: null,
           targetDistanceKm: null,
           targetDurationMin: null,
+          restSecs: null,
+          restAfterSecs: null,
         },
         {
           exerciseId: 10,
@@ -126,9 +145,20 @@ describe("buildTemplatePayload", () => {
           targetRepsMax: null,
           targetDistanceKm: 10,
           targetDurationMin: null,
+          restSecs: null,
+          restAfterSecs: null,
         },
       ],
     });
+  });
+});
+
+describe("restAt", () => {
+  it("vacío → null; el resto se recorta al rango 1..3600", () => {
+    expect(restAt("")).toBeNull();
+    expect(restAt("0")).toBe(1);
+    expect(restAt("90")).toBe(90);
+    expect(restAt("99999")).toBe(3600);
   });
 });
 

@@ -14,6 +14,9 @@ export type TemplateExerciseRow = {
   targetRepsMax: number | null;
   targetDistanceKm: number | null;
   targetDurationMin: number | null;
+  /** Descansos programados (segundos): entre series y al terminar el ejercicio. */
+  restSecs: number | null;
+  restAfterSecs: number | null;
   exerciseName: string;
   kind: ExerciseKind;
 };

@@ -15,6 +15,8 @@ type Entry = {
   targetRepsMax?: number | null;
   targetDistanceKm?: number | null;
   targetDurationMin?: number | null;
+  restSecs?: number | null;
+  restAfterSecs?: number | null;
 };
 
 /** Un ejercicio no puede repetirse dentro de la plantilla (mismo criterio que el día). */
@@ -32,8 +34,8 @@ function entriesForNewTemplate(name: string, entries: Entry[], db: D1Database) {
   return entries.map((e, pos) =>
     db
       .prepare(
-        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min)
-         VALUES ((SELECT id FROM session_templates WHERE name = ?), ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
+         VALUES ((SELECT id FROM session_templates WHERE name = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         name,
@@ -44,6 +46,8 @@ function entriesForNewTemplate(name: string, entries: Entry[], db: D1Database) {
         e.targetRepsMax ?? null,
         e.targetDistanceKm ?? null,
         e.targetDurationMin ?? null,
+        e.restSecs ?? null,
+        e.restAfterSecs ?? null,
       ),
   );
 }
@@ -56,8 +60,8 @@ function entriesForTemplate(
   return entries.map((e, pos) =>
     db
       .prepare(
-        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         templateId,
@@ -68,6 +72,8 @@ function entriesForTemplate(
         e.targetRepsMax ?? null,
         e.targetDistanceKm ?? null,
         e.targetDurationMin ?? null,
+        e.restSecs ?? null,
+        e.restAfterSecs ?? null,
       ),
   );
 }

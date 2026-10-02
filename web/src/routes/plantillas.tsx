@@ -85,6 +85,7 @@ import {
   nextCopyName,
   numAt,
   removeEntry,
+  restAt,
   setTargets,
   type Targets,
 } from "../lib/template-draft";
@@ -103,6 +104,8 @@ const toDraft = (t: Template): Draft => ({
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
+    restSecs: e.restSecs,
+    restAfterSecs: e.restAfterSecs,
   })),
 });
 
@@ -368,7 +371,7 @@ function EntryRow({
     label: string,
     value: number | null,
     patch: (raw: string) => Partial<Targets>,
-    extra?: { min?: number; step?: string },
+    extra?: { min?: number; step?: string; placeholder?: string },
   ) => (
     <label className="flex flex-col gap-1 text-label-m text-on-surface-variant">
       {label}
@@ -377,6 +380,7 @@ function EntryRow({
         type="number"
         min={extra?.min ?? 1}
         step={extra?.step}
+        placeholder={extra?.placeholder}
         value={value ?? ""}
         onChange={(e) => onPatch(entry.key, patch(e.target.value))}
       />
@@ -429,6 +433,18 @@ function EntryRow({
             {target("Reps máx", entry.targetRepsMax, (v) => ({
               targetRepsMax: intAt(v),
             }))}
+            {target(
+              "Descanso entre series (s)",
+              entry.restSecs,
+              (v) => ({ restSecs: restAt(v) }),
+              { placeholder: "120" },
+            )}
+            {target(
+              "Descanso al terminar (s)",
+              entry.restAfterSecs,
+              (v) => ({ restAfterSecs: restAt(v) }),
+              { placeholder: "120" },
+            )}
           </>
         ) : (
           <>
@@ -443,6 +459,12 @@ function EntryRow({
               entry.targetDurationMin,
               (v) => ({ targetDurationMin: intAt(v) }),
               { min: 0 },
+            )}
+            {target(
+              "Descanso al terminar (s)",
+              entry.restAfterSecs,
+              (v) => ({ restAfterSecs: restAt(v) }),
+              { placeholder: "120" },
             )}
           </>
         )}
@@ -525,6 +547,8 @@ function TemplateEditor({
         targetRepsMax: null,
         targetDistanceKm: null,
         targetDurationMin: null,
+        restSecs: null,
+        restAfterSecs: null,
       }),
     );
 

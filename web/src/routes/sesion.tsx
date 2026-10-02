@@ -25,8 +25,10 @@ import {
   ChevronDownIcon,
   CopyIcon,
   EditIcon,
+  PlayIcon,
   RunIcon,
 } from "../components/icons";
+import { type ModeItem, SessionMode } from "../components/session-mode";
 import {
   Alert,
   Badge,
@@ -42,6 +44,7 @@ import {
   Textarea,
 } from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
+import { targetSummary } from "../lib/exercises";
 import {
   type PlanSession,
   planItems,
@@ -248,6 +251,43 @@ const loadError = (err: unknown): View => ({
   kind: "error",
   message: err instanceof ApiError ? err.error : "No se pudo cargar el día",
 });
+
+/** Elementos del modo interactivo: el borrador en el orden del día — fuerza
+ *  con su tira de series, cardio con su «Hecho» — para ir uno a uno. */
+function modeItems(v: Draft): ModeItem[] {
+  const rows = [
+    ...v.exercises.map((ex) => ({
+      position: ex.se.position,
+      item: {
+        id: ex.se.id,
+        name: ex.se.exerciseName,
+        kind: ex.se.kind,
+        objective: targetSummary(ex.se),
+        sets: ex.sets.map((s) => ({
+          done: s.done,
+          filled: isSetFilled(s, ex.noWeight),
+        })),
+        done: null,
+        restSecs: ex.se.restSecs ?? null,
+        restAfterSecs: ex.se.restAfterSecs ?? null,
+      },
+    })),
+    ...v.cardio.map((c) => ({
+      position: c.se.position,
+      item: {
+        id: c.se.id,
+        name: c.se.exerciseName,
+        kind: c.se.kind,
+        objective: targetSummary(c.se),
+        sets: null,
+        done: c.done,
+        restSecs: null,
+        restAfterSecs: c.se.restAfterSecs ?? null,
+      },
+    })),
+  ];
+  return rows.sort((a, b) => a.position - b.position).map((r) => r.item);
+}
 
 // --- Hook: orchestrates reads + the close POST / edit PUT --------------------
 
@@ -798,6 +838,9 @@ function SesionView() {
   const { date = "" } = useParams<{ date: string }>();
   const day = useWorkoutDay(date);
   const { view } = day;
+  const [mode, setMode] = useState(false);
+  // Identidad estable: el modo la usa como dependencia del efecto de Escape.
+  const exitMode = useCallback(() => setMode(false), []);
 
   if (view.kind === "invalid")
     return (
@@ -973,6 +1016,33 @@ function SesionView() {
 
   // state A — editable draft
   const v = view;
+
+  // Modo interactivo: ocupa la pantalla y sustituye la página; el borrador
+  // sigue debajo, intacto («Salir» vuelve a él y «Terminar» es «Guardar»).
+  if (mode)
+    return (
+      <SessionMode
+        items={modeItems(v)}
+        onToggleSet={(id, index) => day.toggleDone(id, index)}
+        onToggleCardio={(id) => day.toggleCardioDone(id)}
+        onExit={exitMode}
+        onFinish={() => {
+          setMode(false);
+          day.close();
+        }}
+        canFinish={v.effort !== null}
+        saving={v.pending}
+        finishControl={
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-label-l text-on-surface-variant">
+              Esfuerzo percibido
+            </p>
+            <EffortDots effort={v.effort} onSelect={day.setEffort} />
+          </div>
+        }
+      />
+    );
+
   const progress = setsProgress(
     v.exercises.flatMap((ex) => ex.sets),
     v.cardio,
@@ -998,6 +1068,14 @@ function SesionView() {
         </Alert>
       )}
       {v.submitError && <Alert className="mb-3">{v.submitError}</Alert>}
+      <Button
+        variant="tonal"
+        className="mb-3 w-full"
+        onClick={() => setMode(true)}
+      >
+        <PlayIcon />
+        Empezar
+      </Button>
       <div className="stagger flex flex-col gap-3">
         {v.exercises.map((ex, idx) => {
           const open = !!day.expanded[ex.se.id];

@@ -313,6 +313,49 @@ entera se salía 50 px por la derecha en móvil. Lo cubre
   siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
   lista también (el único `PUT` admitido es el recuento de series, ver arriba).
 
+### Modo interactivo de sesión y descansos (0018)
+
+`/sesion/:date` tiene un botón «Empezar» (tonal, a lo ancho, bajo la cabecera)
+que abre el **modo sesión** (`components/session-mode.tsx`): una capa
+`fixed inset-0` que sustituye la página — `role="dialog"`, y Escape o «Salir» lo
+cierran sin tocar el borrador. Un ejercicio a la vez en el orden del día: nombre,
+objetivo y la tira de series de siempre (las casillas marcan `done` con las
+mismas reglas); de fondo, una forma M3E grande que se transforma cada 4 s
+(quieta con `prefers-reduced-motion`: `useReducedMotion` se exporta de
+`expressive.tsx`).
+
+- **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
+  `rest_after_secs` (al terminar el ejercicio); columnas nulables en
+  `template_exercises` y `plan_session_exercises` (migración aditiva **0018**,
+  que el bootstrap de tests aplica). Se programan en el editor del día y en el
+  editor de plantillas; al planificar, el día **copia** lo que la plantilla tenía
+  en ese momento y editar la plantilla después no toca los días ya planificados.
+  Los campos nacen vacíos (placeholder 120/120; `restAt` recorta 1..3600, espejo
+  del rango que valida la API). En cardio solo se programa «al terminar».
+- **Pausas**: marcar una serie arranca la «entre series»; la **última** arranca
+  la «al terminar» y, al agotarse o saltarla, el siguiente ejercicio queda
+  activo. Un ejercicio sin descansos se comporta como la página normal: ni barra
+  ni pitido. «Descanso» la arranca a mano, «Saltar» la corta (sin pitido) y
+  «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
+  por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
+- **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al
+  terminar; mientras corre una pausa suena un keep-alive casi inaudible (60 Hz,
+  gain 0.0008) que mantiene la pestaña «sonando» para que el navegador no la
+  congele en segundo plano. Best effort: si la suspende o ralentiza, el pitido
+  suena tarde o al volver (resincronización por `endsAt`), nunca dos veces.
+- **Wake Lock** (`lib/wake-lock.ts`): pantalla encendida mientras el modo está
+  visible; el navegador la suelta al ocultar la pestaña y se re-pide al volver.
+- **«Terminar»** es el «Guardar» de la sesión (el pie del modo lleva el selector
+  de esfuerzo porque cerrar exige esfuerzo). Salir sin terminar deja el borrador
+  intacto.
+
+Lo cubren `api/tests/templates.test.ts` y `plan-sessions.test.ts` (ida y vuelta
+de los descansos; en una sesión registrada no cambian → 409),
+`web/tests/template-draft.test.ts`, `plantillas.test.tsx` y
+`plan-fuerza.test.tsx` (campos y copia al planificar), `web/tests/sesion.test.tsx`
+(el modo entero, con el doble de Web Audio de `web/tests/audio-fake.ts`),
+`web/tests/rest-audio.test.ts` y `e2e/tests/session-mode.spec.ts` (móvil, 390 px).
+
 ### Historial (`/historial` y la ficha del ejercicio)
 
 `HistorialPage` (`web/src/routes/historial.tsx`) es hija de **Deporte** en el
@@ -658,9 +701,9 @@ es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
 cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
 nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
-histórico de planificación, justo después del deploy; **0013–0015 van antes del
-merge a `main`**, porque el merge publica la API que ya lee
-`exercise_regions.role` — ver `DEPLOY.md` §4).
+histórico de planificación, justo después del deploy; **0013–0015 y 0018 van
+antes del merge a `main`**, porque el merge publica la API que ya lee
+`exercise_regions.role` y los descansos — ver `DEPLOY.md` §4).
 
 ### 2. wrangler pide confirmación y cuelga en no-TTY
 

@@ -83,6 +83,58 @@ describe("/api/templates", () => {
     expect(exs[0].kind).toBe("strength");
   });
 
+  it("guarda los descansos por ejercicio y los devuelve (null si no)", async () => {
+    const res = await post("/api/templates", {
+      name: "Z — Descansos",
+      exercises: [
+        {
+          exerciseId: benchId,
+          targetSets: 4,
+          restSecs: 90,
+          restAfterSecs: 150,
+        },
+        { exerciseId: squatId, targetSets: 3 },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const created = await body(res);
+    const exs = created.exercises as {
+      exerciseId: number;
+      restSecs: number | null;
+      restAfterSecs: number | null;
+    }[];
+    expect(exs[0]).toMatchObject({ restSecs: 90, restAfterSecs: 150 });
+    expect(exs[1]).toMatchObject({ restSecs: null, restAfterSecs: null });
+
+    const got = (await body(
+      await get(`/api/templates/${Number(created.id)}`),
+    )) as { exercises: typeof exs };
+    expect(got.exercises.map((e) => e.restSecs)).toEqual([90, null]);
+    expect(got.exercises.map((e) => e.restAfterSecs)).toEqual([150, null]);
+
+    const updated = (await body(
+      await put(`/api/templates/${Number(created.id)}`, {
+        name: "Z — Descansos",
+        exercises: [
+          { exerciseId: benchId, restSecs: 120, restAfterSecs: 120 },
+          { exerciseId: squatId },
+        ],
+      }),
+    )) as { exercises: typeof exs };
+    expect(updated.exercises.map((e) => e.restSecs)).toEqual([120, null]);
+    expect(updated.exercises.map((e) => e.restAfterSecs)).toEqual([120, null]);
+  });
+
+  it("400 con un descanso fuera de rango (field exercises.0.restSecs)", async () => {
+    const res = await post("/api/templates", {
+      name: "Z — Inválida",
+      exercises: [{ exerciseId: benchId, restSecs: 0 }],
+    });
+    expect(res.status).toBe(400);
+    const b = (await body(res)) as { field?: string };
+    expect(b.field).toBe("exercises.0.restSecs");
+  });
+
   it("GET list ordered by name", async () => {
     const created = await body(
       await post("/api/templates", payload("C — Tirón")),

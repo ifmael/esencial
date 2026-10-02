@@ -354,3 +354,81 @@ describe("DELETE /api/plan-sessions/:id", () => {
     expect(count?.count).toBe(0);
   });
 });
+
+describe("descansos por ejercicio", () => {
+  it("POST los guarda y GET los devuelve (null si no)", async () => {
+    const { bench, run } = await seed();
+    const created = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-11-02",
+        items: [
+          {
+            exerciseId: bench,
+            targetSets: 3,
+            restSecs: 90,
+            restAfterSecs: 180,
+          },
+          { exerciseId: run, targetDistanceKm: 5 },
+        ],
+      }),
+    )) as { id: number };
+    const d = (await body(await get(`/api/plan-sessions/${created.id}`))) as {
+      exercises: Item[];
+    };
+    expect(d.exercises[0]).toMatchObject({ restSecs: 90, restAfterSecs: 180 });
+    expect(d.exercises[1]).toMatchObject({
+      restSecs: null,
+      restAfterSecs: null,
+    });
+  });
+
+  it("el PUT los reemplaza como el resto de objetivos", async () => {
+    const { bench } = await seed();
+    const created = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-11-03",
+        items: [{ exerciseId: bench, restSecs: 60 }],
+      }),
+    )) as { id: number };
+    const res = await put(`/api/plan-sessions/${created.id}`, {
+      items: [{ exerciseId: bench, targetSets: 5 }],
+    });
+    expect(res.status).toBe(200);
+    const d = (await body(res)) as { exercises: Item[] };
+    expect(d.exercises[0]).toMatchObject({ targetSets: 5, restSecs: null });
+  });
+
+  it("400 con un descanso fuera de rango (field items.0.restAfterSecs)", async () => {
+    const { bench } = await seed();
+    const res = await post("/api/plan-sessions", {
+      date: "2026-11-04",
+      items: [{ exerciseId: bench, restAfterSecs: 99999 }],
+    });
+    expect(res.status).toBe(400);
+    const b = (await body(res)) as { field?: string };
+    expect(b.field).toBe("items.0.restAfterSecs");
+  });
+
+  it("en una sesión registrada los descansos no cambian (409)", async () => {
+    const { bench } = await seed();
+    const created = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-11-05",
+        items: [{ exerciseId: bench, targetSets: 3, restSecs: 90 }],
+      }),
+    )) as { id: number };
+    await d1.run(
+      "INSERT INTO workout_logs (plan_session_id, date, effort) VALUES (?, ?, 3)",
+      created.id,
+      "2026-11-05",
+    );
+    await d1.run(
+      "UPDATE plan_sessions SET status='logged' WHERE id=?",
+      created.id,
+    );
+    const res = await put(`/api/plan-sessions/${created.id}`, {
+      items: [{ exerciseId: bench, targetSets: 3, restSecs: 120 }],
+    });
+    expect(res.status).toBe(409);
+  });
+});
