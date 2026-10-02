@@ -331,7 +331,10 @@ mismas reglas); de fondo, una forma M3E grande que se transforma cada 4 s
   editor de plantillas; al planificar, el día **copia** lo que la plantilla tenía
   en ese momento y editar la plantilla después no toca los días ya planificados.
   Los campos nacen vacíos (placeholder 120/120; `restAt` recorta 1..3600, espejo
-  del rango que valida la API). En cardio solo se programa «al terminar».
+  del rango que valida la API). En cardio solo se programa «al terminar». En una
+  base de dev anterior hay que aplicar la migración (`pnpm db:migrate:local`);
+  sin ella, leer o guardar ejercicios del plan responde **500** (no tal
+  columna).
 - **Pausas**: marcar una serie arranca la «entre series»; la **última** arranca
   la «al terminar» y, al agotarse o saltarla, el siguiente ejercicio queda
   activo. Un ejercicio sin descansos se comporta como la página normal: ni barra
