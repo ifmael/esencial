@@ -774,6 +774,17 @@ navegador trata los dos nombres como sitios distintos y la cookie de sesión
 queda en `/login` sin error visible. Se arregla con un origen canónico en vez de
 duplicar `WEB_ORIGIN` (CORS) y `API_ORIGIN` (CSP) para los dos nombres.
 
+Para probar desde el móvil (misma Wi‑Fi), `ESENCIAL_HOST=<ip> pnpm dev` (p. ej.
+`ESENCIAL_HOST=192.168.1.100 pnpm dev`): `api/scripts/dev.ts` pasa esa IP a los
+dos servidores —`--ip` (bind) y los orígenes de la corrida, es decir
+`WEB_ORIGIN`, `API_ORIGIN` y `VITE_API_URL`—, así que se entra (móvil y
+escritorio) por `http://<ip>:8787`, el origen canónico de esa corrida; la cookie
+viaja igual porque los dos Workers comparten host. Sin `ESENCIAL_HOST` todo
+sigue en `127.0.0.1`, y no conviene mezclar los dos hosts en la misma corrida
+(la cookie es por host). El cortafuegos de macOS pedirá permitir conexiones
+entrantes la primera vez. Con Tailscale, `ESENCIAL_HOST=<ip-tailscale>` hace lo
+mismo fuera de casa.
+
 ### 5. `pnpm deploy` no ejecuta el script de deploy
 
 `pnpm deploy` es un comando **interno** de pnpm (despliegue de paquetes en un
