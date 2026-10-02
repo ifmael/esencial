@@ -319,11 +319,12 @@ entera se salía 50 px por la derecha en móvil. Lo cubre
 que abre el **modo sesión** (`components/session-mode.tsx`): una capa
 `fixed inset-0` que sustituye la página — `role="dialog"`, y Escape o «Salir» lo
 cierran sin tocar el borrador. Un ejercicio a la vez en el orden del día: nombre,
-objetivo y la tira de series de siempre (las casillas marcan `done` con las
-mismas reglas); bajo la cabecera, la **barra de progreso de la sesión**
-(`WavyProgress` con `wavyTrack`: la pista también ondula, así la barra está viva
-aunque no haya progreso; series hechas sobre el total, cada cardio cuenta como
-una).
+objetivo y **sus series editables** (los mismos `Stepper` —compartidos con el
+borrador—, la casilla y «Sin peso»; la casilla se puede marcar cuando la serie
+está completa y la pausa arranca al quedar hecha, la marques a mano o
+escribiendo sus marcas); bajo la cabecera, la **barra de progreso de la sesión**
+(`WavyProgress` con `waveOnly`: solo la ola que avanza, sin pista recta ni fondo;
+series hechas sobre el total, cada cardio cuenta como una).
 
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
   `rest_after_secs` (al terminar el ejercicio); columnas nulables en

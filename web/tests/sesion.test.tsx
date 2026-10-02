@@ -1390,6 +1390,35 @@ describe("modo interactivo", () => {
     Reflect.deleteProperty(navigator, "wakeLock");
   });
 
+  it("dentro del modo se registran las marcas de las series y la pausa arranca al completarlas", async () => {
+    const mode = await enterMode();
+    // Sin histórico, la serie nace incompleta y la casilla no se puede marcar.
+    expect(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toHaveProperty("disabled", true);
+    const reps = within(mode).getByLabelText(/^reps · press banca serie 1$/i);
+    fireEvent.change(reps, { target: { value: "8" } });
+    fireEvent.change(
+      within(mode).getByLabelText(/^peso \(kg\) · press banca serie 1$/i),
+      { target: { value: "60" } },
+    );
+    // Completarla la marca sola y arranca la pausa entre series (90 s).
+    expect(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toHaveProperty("checked", true);
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
+
+    // Las marcas van al borrador subyacente: al salir, la serie queda hecha.
+    fireEvent.click(
+      within(mode).getByRole("button", { name: /salir del modo/i }),
+    );
+    expect(boxOf("press banca", 1)).toHaveProperty("checked", true);
+  });
+
   it("«Terminar» cierra la sesión como «Guardar» y sale del modo", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");

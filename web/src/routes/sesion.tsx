@@ -29,6 +29,7 @@ import {
   RunIcon,
 } from "../components/icons";
 import { type ModeItem, SessionMode } from "../components/session-mode";
+import { Stepper } from "../components/stepper";
 import {
   Alert,
   Badge,
@@ -38,7 +39,6 @@ import {
   Checkbox,
   cx,
   Field,
-  Input,
   ScrollStrip,
   Switch,
   Textarea,
@@ -253,7 +253,7 @@ const loadError = (err: unknown): View => ({
 });
 
 /** Elementos del modo interactivo: el borrador en el orden del día — fuerza
- *  con su tira de series, cardio con su «Hecho» — para ir uno a uno. */
+ *  con sus series y marcas, cardio con su «Hecho» — para ir uno a uno. */
 function modeItems(v: Draft): ModeItem[] {
   const rows = [
     ...v.exercises.map((ex) => ({
@@ -264,10 +264,13 @@ function modeItems(v: Draft): ModeItem[] {
         kind: ex.se.kind,
         objective: targetSummary(ex.se),
         sets: ex.sets.map((s) => ({
+          weightKg: s.weightKg,
+          reps: s.reps,
           done: s.done,
           filled: isSetFilled(s, ex.noWeight),
         })),
         done: null,
+        noWeight: ex.noWeight,
         restSecs: ex.se.restSecs ?? null,
         restAfterSecs: ex.se.restAfterSecs ?? null,
       },
@@ -281,6 +284,7 @@ function modeItems(v: Draft): ModeItem[] {
         objective: targetSummary(c.se),
         sets: null,
         done: c.done,
+        noWeight: false,
         restSecs: null,
         restAfterSecs: c.se.restAfterSecs ?? null,
       },
@@ -659,63 +663,6 @@ function Header({
   );
 }
 
-/** Contador con −/+ y su nombre visible delante («Peso (kg)  −  55  +»). El
- * `context` («Press banca serie 1») completa el nombre accesible del campo y de
- * los dos botones, para que el lector de pantalla distinga un campo de otro. */
-function Stepper({
-  caption,
-  context,
-  value,
-  step,
-  onValue,
-  onStep,
-}: {
-  caption: string;
-  context: string;
-  value: number | null;
-  step: number;
-  onValue: (v: string) => void;
-  onStep: (d: number) => void;
-}) {
-  const label = `${caption} · ${context}`;
-  return (
-    <div className="flex min-w-0 flex-col gap-1">
-      {/* Sin `<label>`: el primer control etiquetable sería el botón «−». */}
-      <span className="px-1 text-label-m text-on-surface-variant">
-        {caption}
-      </span>
-      <div className="flex items-center gap-1">
-        <Button
-          aria-label={`Reducir ${label}`}
-          variant="tonal"
-          size="icon"
-          className="text-title-l"
-          onClick={() => onStep(-step)}
-        >
-          −
-        </Button>
-        <Input
-          type="number"
-          inputMode="decimal"
-          aria-label={label}
-          className="tabular min-w-0 flex-1 px-0 text-center text-title-m"
-          value={value === null ? "" : String(value)}
-          onChange={(e) => onValue(e.target.value)}
-        />
-        <Button
-          aria-label={`Aumentar ${label}`}
-          variant="tonal"
-          size="icon"
-          className="text-title-l"
-          onClick={() => onStep(step)}
-        >
-          +
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 /** Esfuerzo percibido: cinco formas que ganan lóbulos al llenarse (de círculo
  * a sol). Con `onSelect` es un grupo de radios; sin él, solo lectura. */
 function EffortDots({
@@ -1024,6 +971,13 @@ function SesionView() {
       <SessionMode
         items={modeItems(v)}
         onToggleSet={(id, index) => day.toggleDone(id, index)}
+        onSetValue={(id, index, field, raw) =>
+          day.setDraftValue(id, index, field, raw)
+        }
+        onStep={(id, index, field, delta) =>
+          day.stepValue(id, index, field, delta)
+        }
+        onToggleNoWeight={(id) => day.toggleNoWeight(id)}
         onToggleCardio={(id) => day.toggleCardioDone(id)}
         onExit={exitMode}
         onFinish={() => {

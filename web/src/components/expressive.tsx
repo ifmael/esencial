@@ -226,22 +226,22 @@ function wavePath(
 }
 
 /** Progreso ondulado lineal (M3E): la parte hecha ondula, la pendiente es
- * una pista recta. Con `wavyTrack`, la pista también ondula (la barra está
- * viva aunque no haya progreso). `label` nombra la barra para el lector. */
+ * una pista recta. Con `waveOnly` no hay pista ni fondo: solo la ola que
+ * avanza. `label` nombra la barra para el lector. */
 export function WavyProgress({
   value,
   max,
   label,
   className,
-  wavyTrack,
+  waveOnly,
 }: {
   value: number;
   max: number;
   label: string;
   className?: string;
-  /** La pista ondula también (para barras que se miran de cerca, como el modo
-   *  sesión): sin progreso, la ola sigue meciéndose en vez de ser una línea. */
-  wavyTrack?: boolean;
+  /** Solo la ola que avanza: sin pista recta ni banda de fondo (para el modo
+   *  sesión, donde solo se quiere ver lo hecho). */
+  waveOnly?: boolean;
 }) {
   const now = Math.max(0, Math.min(max, value));
   const pct = max > 0 ? (now / max) * 100 : 0;
@@ -267,19 +267,7 @@ export function WavyProgress({
         className="absolute inset-0 h-full w-full"
         aria-hidden="true"
       >
-        {wavyTrack ? (
-          // La pista, ondulada y a la deriva: el mismo trazo que la parte hecha,
-          // en el tono del contenedor.
-          <path
-            className="wavy-track"
-            style={{ ["--wave-length" as string]: `-${wavelength}px` }}
-            d={wave}
-            fill="none"
-            stroke="var(--color-accent-container)"
-            strokeWidth={4}
-            strokeLinecap="round"
-          />
-        ) : (
+        {!waveOnly && (
           // Pista pendiente: recta y a la derecha, con un hueco de 4 px.
           <line
             x1={0}
@@ -295,14 +283,16 @@ export function WavyProgress({
           <rect x={0} y={0} width={(W * pct) / 100} height={H} />
         </clipPath>
         <g clipPath={`url(#wavy-${label.replace(/\W/g, "")})`}>
-          <rect
-            x={0}
-            y={0}
-            width={(W * pct) / 100}
-            height={H}
-            fill="var(--color-surface-container-high)"
-            className="transition-[width] motion-spatial-slow"
-          />
+          {!waveOnly && (
+            <rect
+              x={0}
+              y={0}
+              width={(W * pct) / 100}
+              height={H}
+              fill="var(--color-surface-container-high)"
+              className="transition-[width] motion-spatial-slow"
+            />
+          )}
           <path
             className="wavy-track"
             style={{ ["--wave-length" as string]: `-${wavelength}px` }}

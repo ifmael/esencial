@@ -170,12 +170,6 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(
       mode.getByRole("progressbar", { name: "0 de 3 series hechas" }),
     ).toBeVisible();
-    // La pista ondula ya desde el principio (la ola se mece sin progreso).
-    await expect(
-      mode
-        .getByRole("progressbar", { name: "0 de 3 series hechas" })
-        .locator(".wavy-track"),
-    ).toHaveCount(2);
 
     // Serie intermedia: pausa entre series con barra y cuenta atrás, que se
     // agota sola y deja el mismo ejercicio activo.

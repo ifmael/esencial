@@ -1,10 +1,10 @@
-// Modo interactivo de sesión (gimnasio): un ejercicio a la vez, pausas con
-// barra y cuenta atrás (automáticas al marcar una serie, o a mano) y la tira
-// de series de siempre. Reemplaza la página mientras está abierto; el borrador
-// sigue debajo: «Salir» vuelve a él sin tocar nada y «Terminar» hace lo de
-// «Guardar» (lo cierra el padre). Los descansos son por ejercicio y
-// opcionales: sin ellos el ejercicio se comporta como la página normal (sin
-// pausa ni pitido).
+// Modo interactivo de sesión (gimnasio): un ejercicio a la vez, con sus series
+// para registrar ahí mismo (las mismas marcas y reglas que el borrador), pausas
+// con barra y cuenta atrás (arrancan al quedar hecha una serie, o a mano) y
+// pitido. Reemplaza la página mientras está abierto; el borrador sigue debajo:
+// «Salir» vuelve a él sin tocar nada y «Terminar» hace lo de «Guardar» (lo
+// cierra el padre). Los descansos son por ejercicio y opcionales: sin ellos el
+// ejercicio se comporta como la página normal (sin pausa ni pitido).
 import {
   type ReactNode,
   useCallback,
@@ -18,18 +18,29 @@ import { beep, startPauseAudio, stopPauseAudio } from "../lib/rest-audio";
 import { useWakeLock } from "../lib/wake-lock";
 import { WavyProgress } from "./expressive";
 import { CloseIcon } from "./icons";
-import { Button, Checkbox, ScrollStrip } from "./ui";
+import { Stepper } from "./stepper";
+import { Button, Checkbox, cx, Switch } from "./ui";
 
-/** Un ejercicio del modo: fuerza con su tira de series, o cardio con «Hecho». */
+/** Un ejercicio del modo: fuerza con sus series, o cardio con «Hecho». */
 export type ModeItem = {
   id: number;
   name: string;
   kind: ExerciseKind;
   /** «3 series» / «5 km · 30 min» (targetSummary). */
   objective: string | null;
-  /** Series (fuerza) o null (cardio, con `done`). */
-  sets: { done: boolean; filled: boolean }[] | null;
+  /** Series (fuerza) con sus marcas, o null (cardio, con `done`). */
+  sets:
+    | {
+        weightKg: number | null;
+        reps: number | null;
+        done: boolean;
+        /** Marcas completas: la casilla se puede marcar (mismas reglas que el borrador). */
+        filled: boolean;
+      }[]
+    | null;
   done: boolean | null;
+  /** Sin peso: se ocultan los kilos y bastan las reps. */
+  noWeight: boolean;
   /** Pausa entre series y al terminar el ejercicio, en segundos; null = sin
    *  descanso programado. */
   restSecs: number | null;
@@ -47,6 +58,9 @@ function formatCountdown(ms: number): string {
 export function SessionMode({
   items,
   onToggleSet,
+  onSetValue,
+  onStep,
+  onToggleNoWeight,
   onToggleCardio,
   onExit,
   onFinish,
@@ -56,6 +70,19 @@ export function SessionMode({
 }: {
   items: ModeItem[];
   onToggleSet: (id: number, index: number) => void;
+  onSetValue: (
+    id: number,
+    index: number,
+    field: "weightKg" | "reps",
+    raw: string,
+  ) => void;
+  onStep: (
+    id: number,
+    index: number,
+    field: "weightKg" | "reps",
+    delta: number,
+  ) => void;
+  onToggleNoWeight: (id: number) => void;
   onToggleCardio: (id: number) => void;
   onExit: () => void;
   /** = «Guardar» de la sesión (lo ejecuta el padre). */
@@ -85,6 +112,14 @@ export function SessionMode({
     [items.length],
   );
 
+  const startPause = useCallback((seconds: number, kind: Pause["kind"]) => {
+    finished.current = false;
+    startPauseAudio();
+    const durationMs = seconds * 1000;
+    setPause({ kind, durationMs, endsAt: Date.now() + durationMs });
+    setNow(Date.now());
+  }, []);
+
   const finishPause = useCallback(
     (kind: Pause["kind"]) => {
       if (finished.current) return;
@@ -96,6 +131,37 @@ export function SessionMode({
     },
     [advance],
   );
+
+  // Pausa al marcar: una serie (o el cardio) que pasa a hecha arranca la pausa
+  // que toca — la marques con la casilla o escribiendo sus marcas. Se compara
+  // contra el render anterior; el primer render y el cambio de ejercicio no
+  // cuentan.
+  const prevDone = useRef<{ id: number; sets: boolean[] | null } | null>(null);
+  useEffect(() => {
+    const sets = item.sets?.map((s) => s.done) ?? null;
+    const prev = prevDone.current;
+    prevDone.current = { id: item.id, sets };
+    if (!prev || prev.id !== item.id) return;
+    if (sets) {
+      const idx = sets.reduce(
+        (acc, d, i) => (d && !(prev.sets?.[i] ?? false) ? i : acc),
+        -1,
+      );
+      if (idx === -1) return;
+      if (idx === sets.length - 1) {
+        if (item.restAfterSecs !== null)
+          startPause(item.restAfterSecs, "after");
+        else advance();
+      } else if (item.restSecs !== null) {
+        startPause(item.restSecs, "sets");
+      }
+      return;
+    }
+    if (item.done === true) {
+      if (item.restAfterSecs !== null) startPause(item.restAfterSecs, "after");
+      else advance();
+    }
+  }, [item, advance, startPause]);
 
   // El reloj de la pausa: tics para la cuenta atrás y, al llegar a `endsAt`,
   // el pitido. Al volver a la pestaña se resincroniza de inmediato — si el
@@ -118,14 +184,6 @@ export function SessionMode({
     };
   }, [pause, finishPause]);
 
-  const startPause = (seconds: number, kind: Pause["kind"]) => {
-    finished.current = false;
-    startPauseAudio();
-    const durationMs = seconds * 1000;
-    setPause({ kind, durationMs, endsAt: Date.now() + durationMs });
-    setNow(Date.now());
-  };
-
   const skipPause = () => {
     if (!pause) return;
     finished.current = true; // saltar no pita
@@ -133,29 +191,6 @@ export function SessionMode({
     const { kind } = pause;
     setPause(null);
     if (kind === "after") advance();
-  };
-
-  const toggleSet = (index: number) => {
-    if (!item.sets) return;
-    const willDo = !item.sets[index].done;
-    onToggleSet(item.id, index);
-    if (!willDo) return;
-    const isLast = index === item.sets.length - 1;
-    if (isLast) {
-      if (item.restAfterSecs !== null) startPause(item.restAfterSecs, "after");
-      else advance();
-    } else if (item.restSecs !== null) {
-      startPause(item.restSecs, "sets");
-    }
-  };
-
-  const toggleCardio = () => {
-    if (item.done === null) return;
-    const willDo = !item.done;
-    onToggleCardio(item.id);
-    if (!willDo) return;
-    if (item.restAfterSecs !== null) startPause(item.restAfterSecs, "after");
-    else advance();
   };
 
   const remainingMs = pause ? Math.max(0, pause.endsAt - now) : 0;
@@ -202,7 +237,7 @@ export function SessionMode({
       <div className="relative px-6 pt-1">
         <WavyProgress
           className="w-full"
-          wavyTrack
+          waveOnly
           value={done}
           max={total}
           label={`${done} de ${total} series hechas`}
@@ -218,22 +253,69 @@ export function SessionMode({
           </p>
         )}
 
-        {item.sets && (
-          <>
-            {item.sets.length > 0 && (
-              <ScrollStrip className="flex w-full items-center justify-center gap-2">
-                {item.sets.map((s, i) => (
-                  <Checkbox
-                    key={i}
-                    className="shrink-0"
-                    aria-label={`${item.name} serie ${i + 1}`}
-                    checked={s.done}
-                    disabled={!s.done && !s.filled}
-                    onChange={() => toggleSet(i)}
-                  />
-                ))}
-              </ScrollStrip>
-            )}
+        {item.sets !== null && (
+          <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
+            <Switch
+              aria-label={`Sin peso · ${item.name}`}
+              checked={item.noWeight}
+              onChange={() => onToggleNoWeight(item.id)}
+            />
+            Sin peso
+          </div>
+        )}
+
+        {item.sets !== null && (
+          <div className="flex w-full max-w-sm flex-col items-center gap-2">
+            <ul className="flex w-full flex-col gap-2 text-left">
+              {item.sets.map((s, i) => (
+                <li
+                  key={i}
+                  className={cx(
+                    "flex flex-col gap-2 rounded-l p-2",
+                    s.done
+                      ? "bg-surface-container-lowest"
+                      : "bg-surface-container-high",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      aria-label={`${item.name} serie ${i + 1}`}
+                      checked={s.done}
+                      disabled={!s.done && !s.filled}
+                      onChange={() => onToggleSet(item.id, i)}
+                    />
+                    <span className="text-label-l text-on-surface-variant">
+                      Serie {i + 1}
+                    </span>
+                  </div>
+                  <div
+                    className={cx(
+                      "grid gap-3",
+                      item.noWeight ? "grid-cols-1" : "grid-cols-2",
+                    )}
+                  >
+                    {!item.noWeight && (
+                      <Stepper
+                        caption="Peso (kg)"
+                        context={`${item.name} serie ${i + 1}`}
+                        value={s.weightKg}
+                        step={2.5}
+                        onValue={(v) => onSetValue(item.id, i, "weightKg", v)}
+                        onStep={(d) => onStep(item.id, i, "weightKg", d)}
+                      />
+                    )}
+                    <Stepper
+                      caption="Reps"
+                      context={`${item.name} serie ${i + 1}`}
+                      value={s.reps}
+                      step={1}
+                      onValue={(v) => onSetValue(item.id, i, "reps", v)}
+                      onStep={(d) => onStep(item.id, i, "reps", d)}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
             {item.restSecs === null && (
               <p className="text-body-s text-on-surface-variant">
                 {item.restAfterSecs === null
@@ -241,7 +323,7 @@ export function SessionMode({
                   : "Sin pausa entre series"}
               </p>
             )}
-          </>
+          </div>
         )}
 
         {item.done !== null && (
@@ -249,7 +331,7 @@ export function SessionMode({
             <Checkbox
               aria-label={`${item.name} hecho`}
               checked={item.done}
-              onChange={toggleCardio}
+              onChange={() => onToggleCardio(item.id)}
             />
             Hecho
           </div>
@@ -259,6 +341,7 @@ export function SessionMode({
           <div className="flex w-full max-w-sm flex-col items-center gap-2">
             <WavyProgress
               className="w-full"
+              waveOnly
               value={pause.durationMs - remainingMs}
               max={pause.durationMs}
               label={
