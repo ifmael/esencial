@@ -63,7 +63,7 @@ test.describe("CATÁLOGO — español canónico y alias", () => {
     expect(list.some((e) => e.name === "Farmer carry")).toBe(false);
 
     await page.goto("/ejercicios");
-    const search = page.getByPlaceholder("Buscar por nombre o tag");
+    const search = page.getByPlaceholder("Buscar por nombre, alias o tag");
 
     // El nombre español y el alias inglés llegan al mismo ejercicio.
     await search.fill("paseo del granjero");
@@ -103,7 +103,9 @@ test.describe("CATÁLOGO — ejercicios de Barra Libre", () => {
 
     await page.goto("/ejercicios");
     // Se encuentra por su alias inglés, no solo por el nombre.
-    await page.getByPlaceholder("Buscar por nombre o tag").fill("power clean");
+    await page
+      .getByPlaceholder("Buscar por nombre, alias o tag")
+      .fill("power clean");
     const card = page.getByRole("link", { name: /^Cargada(?! y)/ });
     await expect(card).toBeVisible();
 

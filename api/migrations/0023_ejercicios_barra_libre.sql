@@ -1,4 +1,4 @@
--- 0022: ejercicios de «Barra Libre» que faltaban en el catálogo.
+-- 0023: ejercicios de «Barra Libre» que faltaban en el catálogo.
 --
 -- Fuente: «Barra Libre + Fitness Revolucionario» (243 pp.). Solo traen
 -- ejercicios el capítulo 2.3 «Los movimientos» (pp. 60-98), las tablas de
@@ -7,7 +7,7 @@
 -- era una fila nueva o un alias de uno existente (ver AGENTS.md):
 --
 --  - Alias, por ser el mismo movimiento con otra denominación: «Roll-out con
---    barra» → Rueda abdominal (ya en 0021) y «Rodillas a pecho» → Elevación de
+--    barra» → Rueda abdominal (ya en 0022) y «Rodillas a pecho» → Elevación de
 --    piernas colgado.
 --  - Fila nueva, por cambiar el movimiento (implemento, posición de carga o
 --    unilateralidad): las 17 de abajo. «Squat en rack con kettlebell» entra como

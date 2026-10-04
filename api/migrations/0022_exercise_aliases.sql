@@ -1,4 +1,4 @@
--- 0021: alias de búsqueda (aditivo) + nombres españoles canónicos.
+-- 0022: alias de búsqueda (aditivo) + nombres españoles canónicos.
 --
 -- El catálogo nació mezclando idiomas («Farmer carry», «Face pull», «Hip
 -- thrust»…) y la búsqueda solo casaba el nombre en un idioma. Aquí se fija el

@@ -804,7 +804,7 @@ export function EjerciciosPage() {
       )}
       <SearchBar
         aria-label="Buscar ejercicios"
-        placeholder="Buscar por nombre o tag"
+        placeholder="Buscar por nombre, alias o tag"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
