@@ -28,6 +28,27 @@ test.describe("DETALLE DE EJERCICIO", () => {
     await expect.poll(height).toBeLessThan(100);
   });
 
+  test("los grupos van en la cabecera del modelo 3D en escritorio y con el texto en móvil", async ({
+    page,
+  }) => {
+    const press = await seededExercise(page.request, "Press banca");
+    // La tarjeta del modelo es la que lleva la leyenda de los grados.
+    const card = page
+      .locator("div.bg-surface-container-low")
+      .filter({ has: page.getByRole("list", { name: "Leyenda" }) });
+    const groups = card.getByText("Grupos", { exact: true });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/ejercicios/${press.id}`);
+    await expect(groups).toBeVisible();
+    await expect(card.getByRole("list", { name: "Principal" })).toBeVisible();
+
+    // Al estrechar, el bloque vuelve a la tarjeta de datos sin recargar.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(groups).toHaveCount(0);
+    await expect(page.getByText("Grupos", { exact: true })).toBeVisible();
+  });
+
   test("al estrechar la ventana el visor encoge con ella, sin desplazar la página", async ({
     page,
   }) => {

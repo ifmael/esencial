@@ -1,9 +1,13 @@
 // Pure helpers for the workout-day screen (E6 task 2.3). No React, no fetch.
 import type { ShapeName } from "./shapes";
 
-/** `targetSets ?? 3`: the client owns set-row count (design D2). */
+/** Series con las que nace un ejercicio de fuerza sin recuento propio: al
+ *  añadirlo a una sesión (o al expandir una plantilla) y al abrir su registro. */
+export const DEFAULT_SETS = 3;
+
+/** `targetSets ?? DEFAULT_SETS`: the client owns set-row count (design D2). */
 export function defaultSetCount(targetSets?: number | null): number {
-  return targetSets ?? 3;
+  return targetSets ?? DEFAULT_SETS;
 }
 
 /** "última: 57.5×8" (o "última: 10 reps" sin peso); null when there is nothing

@@ -90,6 +90,7 @@ import {
 } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 import { morphFrom, useCreateMorph } from "../lib/view-transition";
+import { DEFAULT_SETS } from "../lib/workout";
 
 const toDraft = (t: Template): Draft => ({
   name: t.name,
@@ -520,7 +521,7 @@ function TemplateEditor({
         exerciseId: e.id,
         exerciseName: e.name,
         kind: e.kind,
-        targetSets: null,
+        targetSets: e.kind === "strength" ? DEFAULT_SETS : null,
         targetRepsMin: null,
         targetRepsMax: null,
         targetDistanceKm: null,

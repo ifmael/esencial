@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useExercises } from "../src/lib/exercises";
+import { useIsDesktop } from "../src/lib/media";
 import { useTemplates } from "../src/lib/templates";
 
 type FetchMock = Mock<
@@ -152,5 +153,33 @@ describe("useTemplates", () => {
       "/api/templates/3",
       expect.objectContaining({ method: "DELETE" }),
     );
+  });
+});
+
+describe("useIsDesktop", () => {
+  it("sigue al navegador al cambiar el ancho y suelta el listener al desmontar", () => {
+    // `matchMedia` de mentira: la consulta responde lo que diga `mq.matches` y
+    // avisa a quien escuche, como el navegador al redimensionar.
+    const listeners = new Set<() => void>();
+    const mq = {
+      matches: false,
+      media: "(min-width: 64rem)",
+      addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+      removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
+    };
+    vi.stubGlobal("matchMedia", () => mq);
+
+    const { result, unmount } = renderHook(() => useIsDesktop());
+    expect(result.current).toBe(false);
+
+    mq.matches = true;
+    act(() => {
+      for (const fn of listeners) fn();
+    });
+    expect(result.current).toBe(true);
+
+    // Un listener que sobrevive al desmontaje se queda pegado a la ventana.
+    unmount();
+    expect(listeners.size).toBe(0);
   });
 });

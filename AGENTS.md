@@ -200,6 +200,20 @@ en `text-body-s`. **No lleva `.stagger`**: dnd-kit mide las filas al empezar a
 arrastrar, y una fila a mitad de su animación de entrada está desplazada. Con muchas filas el mínimo manda y el desborde sigue quedando
 dentro del calendario (lo cubre `calendar-layout.spec.ts`).
 
+**Un ejercicio de fuerza añadido a un día o a una plantilla nace con 3 series**
+(`DEFAULT_SETS`, `web/src/lib/workout.ts`): es el mismo recuento que la expansión
+de una plantilla (`targetSets ?? DEFAULT_SETS`), el borrador del registro
+(`defaultSetCount`) y el ➕/➖ de `/sesion/:date`, así que la celda y la tarjeta
+siempre tienen su «N series» que enseñar y el plan no guarda un recuento nulo. El
+cardio entra sin series. Antes nacía con el campo vacío y `targetSets` nulo en las
+tres entradas (día `plan-fuerza.tsx`, editor de plantillas `plantillas.tsx` y el
+«Añadir a plantilla» de la ficha `ejercicios.tsx`, cuya copia lo decía). Un
+recuento guardado, aunque sea nulo (una fila antigua o un campo «Series» vaciado
+a mano), no se reescribe al hidratar el borrador: lo cambian ese campo del día y
+el ➕/➖ del registro al guardar. Lo cubren
+`web/tests/plan-fuerza.test.tsx`, `web/tests/plantillas.test.tsx` y
+`web/tests/ejercicios.test.tsx`.
+
 Cada fila lleva su propia **✕ para desprogramar ese ejercicio** sin abrir el
 modal: la fila se convierte en su confirmación en línea (nombre truncado +
 **Sí/No**, con el nombre completo en el `aria-label`) y, al confirmar, el día se
@@ -250,6 +264,21 @@ marcas + nombre de sesión, los dos últimos con `truncate`) forzaba la pista de
 rejilla a lo ancho de su contenido —~418 px con un nombre largo— y la página
 entera se salía 50 px por la derecha en móvil. Lo cubre
 `e2e/tests/history.spec.ts`, que mide que la tarjeta no se salga de sí misma.
+
+**Los grupos y los músculos por grado van en la cabecera de la tarjeta del
+modelo en escritorio** (`MuscleGroups`, mismo bloque que en móvil): ahí el
+dibujo, su leyenda y lo que pinta se leen de un tirón, separados por una línea
+(`border-b border-outline-variant`). En móvil se quedan con el texto del
+ejercicio, en la tarjeta de datos (el dibujo va arriba y sin hueco): el bloque
+se pinta en un sitio o en el otro, nunca dos veces (los `id` de los `ul` y sus
+`aria-labelledby` chocarían). El corte es el `lg` de Tailwind (64rem), el mismo
+que el de la rejilla de dos columnas: `useIsDesktop` (`web/src/lib/media.ts`)
+lee `matchMedia` en el primer render —la SPA no tiene SSR—, así que no hay
+salto de layout, y al estrechar la ventana el bloque vuelve sin recargar. Sin
+`matchMedia` (jsdom) dice que no, así que las pruebas unitarias ven el layout de
+móvil y las de escritorio simulan la consulta. Lo cubren
+`web/tests/ejercicios.test.tsx`, `web/tests/hooks.test.tsx` y
+`e2e/tests/exercise-detail.spec.ts` (los dos anchos, con el cambio en vivo).
 
 ### Registro de una sesión (`/sesion/:date`)
 
