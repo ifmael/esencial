@@ -21,6 +21,8 @@ export type User = {
   id: number;
   email: string;
   role: "admin" | "member";
+  /** Nombre de perfil (0021): NULL mientras la persona no lo ponga. */
+  name: string | null;
   family_id: number;
 };
 
