@@ -8,7 +8,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { apiRequest, apiUrl, seededExercise } from "./helpers";
+import { apiRequest, apiUrl, seededExercise, uniqueName } from "./helpers";
 
 type ItemPayload = {
   exerciseId: number;
@@ -691,5 +691,157 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
         name: "Pausa al terminar Press banca",
       }),
     ).toBeVisible();
+  });
+
+  test("«A continuación» bajo la lista cuando solo queda la última serie (móvil)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const run = await apiRequest<{ id: number; name: string }>(
+      page.request,
+      "POST",
+      "/api/exercises",
+      { name: uniqueName("Cinta"), tags: ["cardio"], kind: "running" },
+    );
+    const past = mondayFrom(378 + testInfo.retry * 14);
+    const date = mondayFrom(385 + testInfo.retry * 14);
+    const cardioDate = mondayFrom(399 + testInfo.retry * 14);
+    await resetPlanned(page.request, past);
+    await resetPlanned(page.request, date);
+    await resetPlanned(page.request, cardioDate);
+    // Marcas previas: en el modo no hay campos donde escribir, así que la serie
+    // solo se puede marcar si llega completa desde `/last`.
+    await logPast(
+      page.request,
+      past,
+      [
+        { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 1, targetRepsMin: 10 },
+      ],
+      [
+        {
+          exerciseId: press.id,
+          sets: [
+            { weightKg: 60, reps: 8 },
+            { weightKg: 60, reps: 8 },
+            { weightKg: 60, reps: 8 },
+          ],
+        },
+        { exerciseId: remo.id, sets: [{ weightKg: 40, reps: 10 }] },
+      ],
+    );
+    await createSession(
+      page.request,
+      date,
+      [
+        {
+          exerciseId: press.id,
+          targetSets: 3,
+          targetRepsMin: 8,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+        {
+          exerciseId: remo.id,
+          targetSets: 1,
+          targetRepsMin: 10,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+      ],
+      "A continuación",
+    );
+    // Segunda sesión: un ejercicio de una sola serie y, detrás, cardio.
+    await createSession(
+      page.request,
+      cardioDate,
+      [
+        { exerciseId: press.id, targetSets: 1, targetRepsMin: 8 },
+        { exerciseId: run.id, targetDistanceKm: 5, targetDurationMin: 30 },
+      ],
+      "A continuación cardio",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await expect(
+      mode.getByRole("heading", { name: "Press banca" }),
+    ).toBeVisible();
+    const upNext = mode.getByText(/^A continuación: /);
+    const lastOne = mode.getByText("Último ejercicio");
+
+    // Con tres series por delante todavía no hay nada que anunciar: queda más
+    // de una serie.
+    await expect(upNext).toHaveCount(0);
+    await expect(lastOne).toHaveCount(0);
+
+    await mode.getByRole("checkbox", { name: "Press banca serie 1" }).check();
+    await expect(
+      mode.getByRole("progressbar", {
+        name: "Pausa entre series de Press banca",
+      }),
+    ).toBeVisible();
+    await expect(upNext).toHaveCount(0);
+    await mode.getByRole("button", { name: "Saltar" }).click();
+
+    // Al quedar solo la última serie aparece, con el siguiente por orden, bajo
+    // la lista.
+    await mode.getByRole("checkbox", { name: "Press banca serie 2" }).check();
+    await expect(
+      mode.getByRole("progressbar", {
+        name: "Pausa entre series de Press banca",
+      }),
+    ).toBeVisible();
+    await expect(upNext).toBeVisible();
+    await expect(upNext).toContainText("Remo con barra");
+    const list = await mode.locator("ul").boundingBox();
+    const line = await upNext.boundingBox();
+    expect(line?.y ?? 0).toBeGreaterThanOrEqual(
+      (list?.y ?? 0) + (list?.height ?? 0),
+    );
+    await mode.getByRole("button", { name: "Saltar" }).click();
+
+    // Y sigue a la vista en la pausa de fin de ejercicio.
+    await mode.getByRole("checkbox", { name: "Press banca serie 3" }).check();
+    await expect(
+      mode.getByRole("progressbar", { name: "Pausa al terminar Press banca" }),
+    ).toBeVisible();
+    await expect(upNext).toBeVisible();
+
+    // El siguiente es el último de la sesión: en vez del nombre, el aviso de
+    // que no queda ninguno detrás.
+    await mode.getByRole("button", { name: "Saltar" }).click();
+    await expect(
+      mode.getByRole("heading", { name: "Remo con barra" }),
+    ).toBeVisible();
+    await expect(upNext).toHaveCount(0);
+    await expect(lastOne).toBeVisible();
+
+    // Con una sola serie la condición ya se cumple al abrir el ejercicio, así
+    // que el aviso sale desde el principio.
+    await page.goto(`/sesion/${cardioDate}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    await expect(
+      mode.getByRole("heading", { name: "Press banca" }),
+    ).toBeVisible();
+    await expect(upNext).toBeVisible();
+    await expect(upNext).toContainText(run.name);
+
+    // El cardio solo cuenta cuando está hecho; al marcarlo (es el último) el
+    // aviso pasa a ser el de último ejercicio.
+    await mode.getByRole("button", { name: "Siguiente", exact: true }).click();
+    await expect(mode.getByRole("heading", { name: run.name })).toBeVisible();
+    await expect(upNext).toHaveCount(0);
+    await expect(lastOne).toHaveCount(0);
+    await mode.getByRole("checkbox", { name: `${run.name} hecho` }).check();
+    await expect(lastOne).toBeVisible();
+
+    // Nada se sale de la pantalla en móvil.
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
   });
 });

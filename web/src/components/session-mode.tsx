@@ -234,6 +234,14 @@ export function SessionMode({
   const doneItems = items.filter((it) =>
     it.sets ? it.sets.every((s) => s.done) : it.done === true,
   ).length;
+  // «A continuación»: cuando al ejercicio activo solo le queda su última serie
+  // (fuerza —hecha la última también, que es lo que pasa durante la pausa de
+  // fin) o ya está hecho (cardio). El siguiente es el de al lado en el orden del
+  // día, esté hecho o no.
+  const nextItem = items[active + 1] ?? null;
+  const nearlyDone = item.sets
+    ? item.sets.length > 0 && item.sets.slice(0, -1).every((s) => s.done)
+    : item.done === true;
 
   return (
     <section
@@ -375,6 +383,22 @@ export function SessionMode({
               />
               Hecho
             </div>
+          )}
+
+          {/* Bajo la lista: el nombre del siguiente ejercicio del día, o el
+              aviso de que no queda ninguno. Va antes de la pausa para seguir a
+              la vista durante la de fin de ejercicio. */}
+          {nearlyDone && (
+            <p className="text-body-m text-on-surface-variant">
+              {nextItem ? (
+                <>
+                  A continuación:{" "}
+                  <span className="text-e">{nextItem.name}</span>
+                </>
+              ) : (
+                "Último ejercicio"
+              )}
+            </p>
           )}
 
           {pause && (

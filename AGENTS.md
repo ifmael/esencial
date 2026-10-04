@@ -407,6 +407,14 @@ posición del nombre y los dos huecos del centrado (no una clase).
   mano, «Saltar» la corta (sin pitido) y
   «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
+- **«A continuación: …»**: bajo la lista de series (o del «Hecho» del cardio), el
+  nombre del siguiente ejercicio **por orden** —el de al lado en el día, no el
+  siguiente pendiente— cuando al ejercicio activo solo le queda su última serie
+  (marcada la última también, que es lo que pasa mientras corre la pausa de fin
+  de ejercicio) o el cardio está hecho; si no queda ninguno detrás, dice
+  «Último ejercicio». Un ejercicio de una sola serie lo anuncia desde que se
+  abre. Va antes del bloque de la pausa, así que sigue a la vista durante la de
+  fin. Lo cubre `e2e/tests/session-mode.spec.ts`.
 - **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al
   terminar; mientras corre una pausa suena un keep-alive casi inaudible (60 Hz,
   gain 0.0008) que mantiene la pestaña «sonando» para que el navegador no la
