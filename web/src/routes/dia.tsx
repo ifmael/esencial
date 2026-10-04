@@ -45,6 +45,7 @@ import {
   useDay,
 } from "../lib/day";
 import { KIND_LABELS } from "../lib/exercises";
+import { useMe } from "../lib/family";
 
 export function formatDateEs(date: Date): string {
   return new Intl.DateTimeFormat("es-ES", {
@@ -64,11 +65,14 @@ export function DayHeader({
   date,
   onChange,
   progress,
+  name,
 }: {
   date: Date;
   onChange: (d: Date) => void;
   /** Pasos del día (`dayProgress`); sin datos aún, no se pinta el anillo. */
   progress?: { done: number; total: number };
+  /** Nombre de perfil para el saludo; `null` mientras no lo ponga. */
+  name?: string | null;
 }) {
   const isToday = toISODate(date) === toISODate(new Date());
   return (
@@ -116,6 +120,14 @@ export function DayHeader({
           </div>
         )}
       </div>
+
+      {/* Bienvenida: solo el día en curso (el cliente decide «hoy»). Sin
+       * nombre puesto saluda igual, sin él. */}
+      {isToday && (
+        <p className="relative text-body-l text-on-surface-variant">
+          {`Hola${name ? ` ${name}` : ""}, estos son los planes que tienes para HOY`}
+        </p>
+      )}
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
         <ConnectedGroup label="Cambiar de día" className="w-full lg:w-auto">
@@ -606,12 +618,14 @@ export function DiaPage() {
   const [date, setDate] = useState(() => new Date());
   const iso = toISODate(date);
   const { data, loading, error, reload } = useDay(iso);
+  const me = useMe();
   return (
     <>
       <DayHeader
         date={date}
         onChange={setDate}
         progress={data ? dayProgress(data) : undefined}
+        name={me.data?.name ?? null}
       />
       {loading ? (
         <Skeleton />

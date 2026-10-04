@@ -21,7 +21,7 @@ test.describe("DÍA empty states", () => {
     await expect(page.getByLabel("Escribe algo sobre hoy")).toBeVisible();
   });
 
-  test("móvil: cabecera de una fila — sin título visible, sin progreso y fecha protagonista", async ({
+  test("móvil: cabecera compacta — sin título visible, sin progreso y fecha protagonista", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -54,7 +54,13 @@ test.describe("DÍA empty states", () => {
     await expect
       .poll(async () => (await width(date))! / (await width(row))!)
       .toBeGreaterThan(0.4);
-    await expect.poll(() => height(header)).toBeLessThan(100);
+    // El saludo añade una línea (el día es hoy) encima de la fila de controles:
+    // la cabecera sigue siendo compacta, pero ya no mide una sola fila. Medido
+    // a 390 px sin nombre (el admin de e2e no tiene): 148 px.
+    await expect(
+      header.getByText(/estos son los planes que tienes para HOY/),
+    ).toBeVisible();
+    await expect.poll(() => height(header)).toBeLessThan(200);
 
     // Escritorio conserva título, anillo de 96 px y enlaces.
     await page.setViewportSize({ width: 1280, height: 800 });

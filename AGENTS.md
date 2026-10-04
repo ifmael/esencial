@@ -251,15 +251,21 @@ entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
 
 ### Cabecera del día (`/`)
 
-`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila**
-(~88 px): el `h1` pasa a `sr-only` (sigue siendo el único título y los tests lo
-buscan), sin flor, sin progreso (ni anillo ni barra: decisión del usuario) y sin
-los enlaces a los planes (ya están en la barra inferior). «Hoy» lleva
+`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila de
+controles** (~88 px, ~148 con el saludo a 390 px): el `h1` pasa a `sr-only`
+(sigue siendo el único título y los tests lo buscan), sin flor, sin progreso (ni
+anillo ni barra: decisión del usuario) y sin los enlaces a los planes (ya están
+en la barra inferior). «Hoy» lleva
 `aria-pressed={isToday}`: sin título, es lo que dice que el día elegido es hoy
 (también en escritorio, donde se pinta como píldora en `--accent`). La fecha lleva
 `grow-10` porque `.connected > *` hace crecer a todas las piezas por igual, y su
 `onClick` llama a `showPicker()` para abrir el calendario al pulsar en cualquier
-punto, no solo en el icono. Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
+punto, no solo en el icono. **Saludo**: sobre la fila, y solo cuando el día
+elegido es hoy (`isToday`), «Hola … , estos son los planes que tienes para HOY»
+con el `name` del perfil (`useMe`; sin nombre puesto saluda sin él). Es una línea
+más en la cabecera también en móvil (decisión del usuario), así que el tope del
+e2e móvil es < 200 px y no < 100. Lo cubren `day-page.test.tsx` y
+`auth-dia.spec.ts`.
 
 ### Cabecera del detalle de ejercicio (`/ejercicios/:id`)
 
