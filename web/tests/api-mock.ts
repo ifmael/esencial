@@ -3,6 +3,7 @@
 // and the v2 session model (la sesión es el día con items sin duplicados).
 import { vi } from "vitest";
 import type { Exercise } from "../src/lib/exercises";
+import type { FamilyUser } from "../src/lib/family";
 import type { Template } from "../src/lib/templates";
 
 export type Call = {
@@ -38,6 +39,10 @@ export type Seed = {
   templates?: Template[];
   exercises?: Exercise[];
   sessions?: PlanSessionRow[];
+  /** Quién soy en estos tests (por defecto, un admin con familia 1). */
+  me?: FamilyUser;
+  /** Todas las cuentas de la familia falsa (por defecto, solo yo). */
+  users?: FamilyUser[];
 };
 
 export type MockApi = {
@@ -45,6 +50,8 @@ export type MockApi = {
     templates: Template[];
     exercises: Exercise[];
     sessions: PlanSessionRow[];
+    me: FamilyUser;
+    users: FamilyUser[];
   };
   calls: Call[];
   hang: boolean;
@@ -71,11 +78,21 @@ type RawItem = {
 };
 
 export function mockApi(seed: Seed = {}): MockApi {
+  const me: FamilyUser = structuredClone(
+    seed.me ?? {
+      id: 1,
+      email: "admin@esencial.test",
+      role: "admin",
+      familyId: 1,
+    },
+  );
   const api: MockApi = {
     state: {
       templates: structuredClone(seed.templates ?? []),
       exercises: structuredClone(seed.exercises ?? []),
       sessions: structuredClone(seed.sessions ?? []),
+      me,
+      users: structuredClone(seed.users ?? [me]),
     },
     calls: [],
     hang: false,
@@ -129,6 +146,53 @@ export function mockApi(seed: Seed = {}): MockApi {
     if (url.startsWith("/api/auth/status"))
       return json({ authenticated: true });
     if (api.hang) return new Promise<Response>(() => {}); // pending forever
+
+    // Familia: /api/me, /api/users y el alta/baja de miembros (solo admin).
+    if (url === "/api/me" && method === "GET") return json(api.state.me);
+
+    if (url === "/api/users" && method === "GET") {
+      if (api.state.me.role !== "admin")
+        return err("Forbidden", undefined, 403);
+      return json(
+        [...api.state.users].sort((a, b) =>
+          a.email.toLowerCase() < b.email.toLowerCase() ? -1 : 1,
+        ),
+      );
+    }
+
+    const fMatch = /^\/api\/families\/(\d+)\/members(?:\/(\d+))?$/.exec(url);
+    if (fMatch) {
+      if (api.state.me.role !== "admin")
+        return err("Forbidden", undefined, 403);
+      const familyId = Number(fMatch[1]);
+      const userId = fMatch[2] ? Number(fMatch[2]) : null;
+      if (method === "POST") {
+        const email = String(body?.email ?? "")
+          .trim()
+          .toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+          return err("Invalid email", "email");
+        const user = api.state.users.find(
+          (u) => u.email.toLowerCase() === email,
+        );
+        if (!user) return err("Not found", undefined, 404);
+        if (user.familyId === familyId)
+          return err("Already a member", undefined, 409);
+        user.familyId = familyId;
+        return json(user);
+      }
+      if (method === "DELETE" && userId !== null) {
+        const user = api.state.users.find(
+          (u) => u.id === userId && u.familyId === familyId,
+        );
+        if (!user) return err("Not found", undefined, 404);
+        if (userId === api.state.me.id)
+          return err("You cannot remove yourself from your family", "userId");
+        // Familia nueva y vacía: un id negativo que no colisiona con ninguna.
+        user.familyId = -user.id;
+        return new Response(null, { status: 204 });
+      }
+    }
 
     const sMatch = /^\/api\/plan-sessions(?:\/(\d+))?$/.exec(url);
     const tMatch = /^\/api\/templates(?:\/(\d+))?$/.exec(url);

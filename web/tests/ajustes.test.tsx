@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
+import type { FamilyUser } from "../src/lib/family";
 import { mockApi } from "./api-mock";
 
 function renderAt(path: string) {
@@ -19,6 +20,26 @@ function renderAt(path: string) {
 
 const themeGroup = async () =>
   within(await screen.findByRole("group", { name: "Tema" }));
+
+// Cuentas de la familia falsa: yo (admin), Ana conmigo y Bea en otra familia.
+const ADMIN: FamilyUser = {
+  id: 1,
+  email: "admin@esencial.test",
+  role: "admin",
+  familyId: 1,
+};
+const ANA: FamilyUser = {
+  id: 2,
+  email: "ana@example.com",
+  role: "member",
+  familyId: 1,
+};
+const BEA: FamilyUser = {
+  id: 3,
+  email: "bea@example.com",
+  role: "member",
+  familyId: 2,
+};
 
 describe("Ajustes", () => {
   beforeEach(() => {
@@ -92,5 +113,163 @@ describe("Ajustes", () => {
     fireEvent.click(screen.getAllByRole("link", { name: "Ajustes" })[0]);
     await waitFor(() => expect(window.location.pathname).toBe("/ajustes"));
     expect(screen.getByRole("heading", { name: "Ajustes" })).toBeDefined();
+  });
+});
+
+describe("Familia en Ajustes", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    delete document.documentElement.dataset.theme;
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const adminView = async () => {
+    renderAt("/ajustes");
+    // El encabezado sale antes que los datos: espera a la lista cargada.
+    await screen.findByRole("list", { name: "Mi familia" });
+  };
+
+  const addEmail = (value: string) =>
+    fireEvent.change(screen.getByRole("textbox", { name: "Email" }), {
+      target: { value },
+    });
+
+  it("un member no ve la tarjeta", async () => {
+    const api = mockApi({ me: ANA, users: [ADMIN, ANA] });
+    renderAt("/ajustes");
+    await themeGroup();
+    await waitFor(() =>
+      expect(api.calls.some((c) => c.url === "/api/me")).toBe(true),
+    );
+    expect(screen.queryByRole("heading", { name: "Familia" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Añadir a mi familia" }),
+    ).toBeNull();
+    // La tarjeta ni siquiera pide la lista (el member recibe 403).
+    expect(api.calls.some((c) => c.url === "/api/users")).toBe(false);
+  });
+
+  it("un admin la ve, con su familia, los de fuera y sin quitarse a sí mismo", async () => {
+    mockApi({ me: ADMIN, users: [ADMIN, ANA, BEA] });
+    await adminView();
+
+    const family = within(screen.getByRole("list", { name: "Mi familia" }));
+    const outside = within(
+      screen.getByRole("list", { name: "Fuera de mi familia" }),
+    );
+    expect(family.getByText("admin@esencial.test")).toBeDefined();
+    expect(family.getByText("ana@example.com")).toBeDefined();
+    expect(family.getByText("Tú")).toBeDefined();
+    expect(family.getByText("Administrador")).toBeDefined();
+    expect(family.getAllByText("Miembro")).toHaveLength(1);
+    expect(outside.getByText("bea@example.com")).toBeDefined();
+
+    // Quitar solo se ofrece a los miembros de mi familia, nunca a mí.
+    expect(
+      family.getByRole("button", {
+        name: "Quitar a ana@example.com de mi familia",
+      }),
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("button", {
+        name: "Quitar a admin@esencial.test de mi familia",
+      }),
+    ).toBeNull();
+    expect(outside.queryByRole("button", { name: /^Quitar/ })).toBeNull();
+  });
+
+  it("añadir llama al endpoint con mi familyId y refresca la lista", async () => {
+    const api = mockApi({ me: ADMIN, users: [ADMIN, ANA, BEA] });
+    await adminView();
+    expect(
+      within(
+        screen.getByRole("list", { name: "Fuera de mi familia" }),
+      ).getByText("bea@example.com"),
+    ).toBeDefined();
+
+    addEmail("bea@example.com");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Añadir a mi familia" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        api.calls.find(
+          (c) => c.method === "POST" && c.url === "/api/families/1/members",
+        )?.body,
+      ).toEqual({ email: "bea@example.com" }),
+    );
+    const family = within(
+      await screen.findByRole("list", { name: "Mi familia" }),
+    );
+    await waitFor(() =>
+      expect(family.queryByText("bea@example.com")).not.toBeNull(),
+    );
+    expect(
+      screen.queryByRole("list", { name: "Fuera de mi familia" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("textbox", { name: "Email" }).getAttribute("value"),
+    ).toBe("");
+  });
+
+  it("el 409 de la API se enseña tal cual", async () => {
+    mockApi({ me: ADMIN, users: [ADMIN, ANA] });
+    await adminView();
+    addEmail("ana@example.com");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Añadir a mi familia" }),
+    );
+    expect(await screen.findByText("Already a member")).toBeDefined();
+  });
+
+  it("el 404 de usuario inexistente se enseña tal cual", async () => {
+    mockApi({ me: ADMIN, users: [ADMIN, ANA] });
+    await adminView();
+    addEmail("nadie@example.com");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Añadir a mi familia" }),
+    );
+    expect(await screen.findByText("Not found")).toBeDefined();
+  });
+
+  it("el 400 de email inválido se marca en el campo", async () => {
+    mockApi({ me: ADMIN, users: [ADMIN, ANA] });
+    await adminView();
+    addEmail("no-es-un-email");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Añadir a mi familia" }),
+    );
+    const input = screen.getByRole("textbox", { name: "Email" });
+    await waitFor(() =>
+      expect(input.getAttribute("aria-invalid")).toBe("true"),
+    );
+    expect(screen.getByText("Invalid email")).toBeDefined();
+  });
+
+  it("quitar llama al endpoint y refresca la lista", async () => {
+    const api = mockApi({ me: ADMIN, users: [ADMIN, ANA] });
+    await adminView();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Quitar a ana@example.com de mi familia",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        api.calls.find(
+          (c) => c.method === "DELETE" && c.url === "/api/families/1/members/2",
+        ),
+      ).toBeDefined(),
+    );
+    const outside = within(
+      await screen.findByRole("list", { name: "Fuera de mi familia" }),
+    );
+    await waitFor(() =>
+      expect(outside.queryByText("ana@example.com")).not.toBeNull(),
+    );
   });
 });
