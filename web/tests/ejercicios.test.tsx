@@ -131,10 +131,8 @@ afterEach(() => {
 describe("catalog", () => {
   it("lists cards with name + tag chips in API order", async () => {
     renderAt("/ejercicios");
-    // The E7 guard (probe /api/auth/status) adds an async tick before the
-    // catalog mounts; wait for the cards, not just the heading.
-    // Wait for the first card's content (the E7 guard adds an async tick
-    // before the catalog mounts; the heading alone is the loading state).
+    // El catálogo se monta cuando llega su fetch: espera a las tarjetas, no solo
+    // al encabezado (que es el estado de carga).
     await screen.findByText("Press banca");
     const all = screen.getAllByRole("link");
     const cards = all.filter((a) =>

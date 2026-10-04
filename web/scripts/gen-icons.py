@@ -7,7 +7,7 @@ import json, re, urllib.request, pathlib
 ICONS = {
     "CalendarIcon": "today", "DumbbellIcon": "fitness_center", "UtensilsIcon": "restaurant",
     "ChevronDownIcon": "expand_more", "ChevronLeftIcon": "chevron_left", "ChevronRightIcon": "chevron_right",
-    "LogoutIcon": "logout", "CloudIcon": "cloud", "CheckIcon": "check", "LeafIcon": "eco",
+    "CloudIcon": "cloud", "CheckIcon": "check", "LeafIcon": "eco",
     "SwatchIcon": "palette", "GripIcon": "drag_indicator", "HomeIcon": "home", "BookIcon": "menu_book",
     "ListIcon": "lists", "LightIcon": "light_mode", "DarkIcon": "dark_mode", "ContrastIcon": "contrast",
     "CloseIcon": "close", "AddIcon": "add", "SearchIcon": "search", "UndoIcon": "undo",

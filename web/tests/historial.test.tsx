@@ -33,15 +33,13 @@ const day = (over: Partial<HistoryDay> = {}): HistoryDay => ({
 
 type Page = { days: HistoryDay[]; next: string | null };
 
-/** Stub de fetch: la sonda de sesión del guard + el índice por cursor. Las
- *  páginas se eligen por la URL pedida (o por una función que la mira). */
+/** Stub de fetch: el índice por cursor. Las páginas se eligen por la URL pedida
+ *  (o por una función que la mira). */
 function stubHistory(
   pages: Record<string, Page> | ((url: string) => Response | Page),
 ) {
   const mock = vi.fn(async (url: string) => {
     const path = String(url);
-    if (path.includes("/api/auth/status"))
-      return Response.json({ authenticated: true });
     if (typeof pages === "function") {
       const answer = pages(path);
       return answer instanceof Response ? answer : Response.json(answer);

@@ -3,11 +3,8 @@ import { API_BASE, apiRequest, apiUrl, uniqueName } from "./helpers";
 
 // EDGE (journey 4): week navigation in /plan-recetas, debounced autosave of
 // Hoy notes (flushed when leaving the field/date), visible rendering of API
-// 400/409 {error, field} envelopes, and deep-link redirect through
-// /login?next=... back to the destination.
+// 400/409 {error, field} envelopes, and deep links into the SPA.
 test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   test("week navigation changes the shown week and reloads its plan", async ({
     page,
   }) => {
@@ -195,19 +192,10 @@ test.describe("EDGE — week nav, autosave, envelope errors, deep link", () => {
     await expect(page.getByRole("alert")).toContainText(/No se pudo|week/);
   });
 
-  test("deep link /plan-recetas without session → /login?next=... → lands back on /plan-recetas", async ({
+  test("deep link /plan-recetas carga la semana directamente", async ({
     page,
   }) => {
-    // Unauthenticated project: clear storageState for this test only.
-    await page.context().clearCookies();
-
     await page.goto("/plan-recetas");
-    await expect(page).toHaveURL(/\/login\?next=%2Fplan-recetas$/);
-
-    await page.getByLabel("Contraseña").fill("hola");
-    await page.getByRole("button", { name: "Entrar" }).click();
-
-    await page.waitForURL(/\/plan-recetas$/);
     await expect(
       page.getByRole("heading", { name: /^\d{4}-W\d{2}$/ }),
     ).toBeVisible();

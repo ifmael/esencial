@@ -2,8 +2,6 @@ import { expect, test } from "@playwright/test";
 import { seededExercise } from "./helpers";
 
 test.describe("DETALLE DE EJERCICIO", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   test("cabecera compacta de una fila con volver, título y editar (móvil y escritorio)", async ({
     page,
   }) => {

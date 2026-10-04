@@ -1,58 +1,28 @@
-// SPA router (react-router 7, data mode). Shell wraps guarded routes.
-// E7: on startup the app asks /api/auth/status; unauthenticated visitors are
-// sent to /login?next=<path>. UX defense-in-depth — the server 401 gate stays
-// authoritative (spec: Client-side session guard).
+// SPA router (react-router 7, data mode). Shell wraps the app routes.
+// La identidad la prueba Cloudflare Access en el borde; aquí no hay sesión que
+// comprobar en el cliente: un fallo de sesión se resuelve recargando (ver
+// lib/api.ts).
 //
 // Data mode (`createBrowserRouter` + `RouterProvider`) y no `<BrowserRouter>`:
 // solo el router de datos envuelve la navegación en `startViewTransition`
 // cuando un `<Link viewTransition>` o `navigate(…, { viewTransition })` lo
 // pide. Las rutas son las mismas, declaradas como JSX.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
-  Navigate,
   Outlet,
   Route,
   RouterProvider,
   ScrollRestoration,
-  useLocation,
 } from "react-router";
 import { Shell } from "./components/shell";
-import { apiFetchRaw } from "./lib/api";
 import { DiaPage } from "./routes/dia";
-import { LoginPage } from "./routes/login";
 import { PlanFuerzaPage } from "./routes/plan-fuerza";
 import { PlanRecetasPage } from "./routes/plan-recetas";
 
-/** Layout route: one status check for the whole session, then Shell + page. */
-function GuardedShell() {
-  const { pathname, search } = useLocation();
-  const [authed, setAuthed] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    apiFetchRaw("/api/auth/status")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(
-        (d: { authenticated?: boolean } | null) =>
-          alive && setAuthed(d?.authenticated === true),
-      )
-      // network error: treat as unauthenticated; the server gate is the backstop.
-      .catch(() => alive && setAuthed(false));
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  if (authed === null) return null; // checking: render nothing, avoid login flash
-  if (!authed)
-    return (
-      <Navigate
-        to={`/login?next=${encodeURIComponent(pathname + search)}`}
-        replace
-      />
-    );
+/** Layout route: Shell + página + restauración de scroll. */
+function AppShell() {
   return (
     <Shell>
       <Outlet />
@@ -74,8 +44,7 @@ import { UiPage } from "./routes/ui";
 
 const routes = createRoutesFromElements(
   <>
-    <Route path="/login" element={<LoginPage />} />
-    <Route element={<GuardedShell />}>
+    <Route element={<AppShell />}>
       <Route path="/" element={<DiaPage />} />
       <Route path="/plan-recetas" element={<PlanRecetasPage />} />
       <Route path="/plan-fuerza" element={<PlanFuerzaPage />} />

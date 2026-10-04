@@ -233,12 +233,6 @@ describe("página de plantillas", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        // Guard probe must succeed so the page mounts; only /api/templates fails.
-        if (String(url).includes("/api/auth/status"))
-          return new Response(JSON.stringify({ authenticated: true }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          });
         if (fail && String(url).includes("/api/templates")) {
           fail = false;
           throw new TypeError("Network error");

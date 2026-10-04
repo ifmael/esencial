@@ -1,32 +1,16 @@
-// E7 task 3: the auth gate contract over every pre-E7 route, page redirects,
-// and security headers. Uses a fresh login per file via /api/auth/login.
+// E7 task 3: el contrato del gate de identidad sobre cada ruta, el 404 JSON de
+// la API y las cabeceras de seguridad. La identidad la prueba Cloudflare Access
+// en el borde; aquí se fija con el seam de dev (X-Dev-Email + DEV_AUTH=1), que
+// es el mismo que usan el resto de tests y el e2e.
 
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createSessionToken, SESSION_COOKIE } from "../src/auth";
 import app from "../src/index";
-import { anonGet, freshDb, get, post } from "./helpers";
+import { anonGet, del, freshDb, get, post } from "./helpers";
 
-let cookie = "";
+const ADMIN = "admin@esencial.test";
 
-beforeAll(async () => {
-  await freshDb();
-  const res = await post("/api/auth/login", { password: "test-password-123" });
-  expect(res.status).toBe(200);
-  cookie = (res.headers.get("set-cookie") ?? "").split(";")[0];
-  expect(cookie).toContain(SESSION_COOKIE);
-});
-
-async function authedFetch(
-  path: string,
-  init: RequestInit = {},
-): Promise<Response> {
-  return await app.request(
-    `http://localhost${path}`,
-    { ...init, headers: { ...init.headers, cookie } },
-    env,
-  );
-}
+beforeAll(freshDb);
 
 // Every pre-E7 endpoint (the "13 routes" contract enumerates each one).
 const ROUTES: Array<[string, string, unknown?]> = [
@@ -71,15 +55,36 @@ const PROTECTED = ROUTES.filter(
   ([m, p]) => !(m === "GET" && p === "/api/health"),
 );
 
-describe("auth gate on /api/*", () => {
-  for (const [method, path] of PROTECTED) {
-    it(`${method} ${path} without cookie → 401 { error: "Unauthorized" }`, async () => {
+const jsonBody = (method: string, body: unknown): string | undefined =>
+  method === "GET" || method === "DELETE"
+    ? undefined
+    : JSON.stringify(body ?? {});
+
+async function requestAs(
+  path: string,
+  method: string,
+  body: unknown,
+): Promise<Response> {
+  return await app.request(
+    `http://localhost${path}`,
+    {
+      method,
+      headers: { "content-type": "application/json", "X-Dev-Email": ADMIN },
+      body: jsonBody(method, body),
+    },
+    env,
+  );
+}
+
+describe("gate de identidad en /api/*", () => {
+  for (const [method, path, body] of PROTECTED) {
+    it(`${method} ${path} sin identidad → 401 { error: "Unauthorized" }`, async () => {
       const res = await app.request(
         `http://localhost${path}`,
         {
           method,
           headers: { "content-type": "application/json" },
-          body: method === "GET" || method === "DELETE" ? undefined : "{}",
+          body: jsonBody(method, body),
         },
         env,
       );
@@ -88,7 +93,19 @@ describe("auth gate on /api/*", () => {
     });
   }
 
-  it("gate runs before 404: unknown /api path without cookie → 401", async () => {
+  for (const [method, path, body] of PROTECTED) {
+    it(`${method} ${path} con la identidad de dev pasa el gate (no 401)`, async () => {
+      const res = await requestAs(path, method, body);
+      expect(res.status).not.toBe(401);
+    });
+  }
+
+  it("GET /api/recipes con la identidad de dev → 200", async () => {
+    const res = await get("/api/recipes");
+    expect(res.status).toBe(200);
+  });
+
+  it("gate runs before 404: unknown /api path without identity → 401", async () => {
     const res = await anonGet("/api/does-not-exist");
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: "Unauthorized" });
@@ -100,75 +117,29 @@ describe("auth gate on /api/*", () => {
     expect(await res.json()).toEqual({ ok: true });
   });
 
-  it("authenticated behavior unchanged: recipes CRUD round-trips with cookie", async () => {
-    const create = await authedFetch("/api/recipes", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "Gazpacho",
-        ingredients: [{ food: "tomate", quantity: 4, unit: "ud" }],
-      }),
+  it("authenticated behavior unchanged: recipes CRUD round-trips with the dev header", async () => {
+    const create = await post("/api/recipes", {
+      name: "Gazpacho",
+      ingredients: [{ food: "tomate", quantity: 4, unit: "ud" }],
     });
     expect(create.status).toBe(201);
     const created = (await create.json()) as { id: number; name: string };
     expect(created.name).toBe("Gazpacho");
 
-    const list = await authedFetch("/api/recipes");
+    const list = await get("/api/recipes");
     expect(list.status).toBe(200);
     const rows = (await list.json()) as unknown[];
     expect(rows.some((r) => (r as { id: number }).id === created.id)).toBe(
       true,
     );
 
-    const del = await authedFetch(`/api/recipes/${created.id}`, {
-      method: "DELETE",
-    });
-    expect(del.status).toBe(204);
-  });
-
-  it("tampered cookie (one edited byte) → 401 on protected route", async () => {
-    const i = cookie.indexOf(".") + 1;
-    const tampered =
-      cookie.slice(0, i) +
-      (cookie[i] === "1" ? "2" : "1") +
-      cookie.slice(i + 1);
-    const res = await app.request(
-      "http://localhost/api/recipes",
-      { headers: { cookie: tampered } },
-      env,
-    );
-    expect(res.status).toBe(401);
-  });
-
-  it("una cookie válida entre duplicados del mismo nombre pasa el gate", async () => {
-    const stale = `${SESSION_COOKIE}=1790000000.firma-invalida`;
-    const res = await app.request(
-      "http://localhost/api/recipes",
-      { headers: { cookie: `${stale}; ${cookie}` } },
-      env,
-    );
-    expect(res.status).toBe(200);
-  });
-
-  it("expired-but-well-signed cookie → 401", async () => {
-    // Sign a token with the test secret expiring in the past, via the same
-    // secret the test Worker uses.
-    const token = await createSessionToken(
-      env.AUTH_SECRET as string,
-      Math.floor(Date.now() / 1000) - 5,
-    );
-    const res = await app.request(
-      "http://localhost/api/recipes",
-      { headers: { cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` } },
-      env,
-    );
-    expect(res.status).toBe(401);
+    const removed = await del(`/api/recipes/${created.id}`);
+    expect(removed.status).toBe(204);
   });
 });
 
 describe("rutas fuera de /api/* (B')", () => {
-  // El guard del HTML (302 → /login) vive en el Worker del frontal y se prueba
-  // en web/tests/worker-guard.test.ts; aquí solo queda el 404 JSON de la API.
+  // El Worker del frontal sirve el SPA; aquí solo queda el 404 JSON de la API.
   it("una ruta del SPA ya no la sirve la API: 404 JSON", async () => {
     const res = await app.request(
       "http://localhost/plan-recetas",
@@ -179,8 +150,8 @@ describe("rutas fuera de /api/* (B')", () => {
     expect(await res.json()).toEqual({ error: "Not found" });
   });
 
-  it("api paths still get JSON 404 WITH session", async () => {
-    const res = await authedFetch("/api/nada");
+  it("api paths still get JSON 404 WITH identity", async () => {
+    const res = await get("/api/nada");
     expect(res.status).toBe(404);
     const payload = await res.json();
     expect(
@@ -193,12 +164,9 @@ describe("rutas fuera de /api/* (B')", () => {
 });
 
 describe("security headers on every response", () => {
-  const cases: Array<
-    [string, RequestInit, () => Promise<Response> | Response]
-  > = [
+  const cases: Array<[string, () => Promise<Response> | Response]> = [
     [
       "404 fuera de /api",
-      {},
       () =>
         app.request(
           "http://localhost/plan-recetas",
@@ -206,15 +174,11 @@ describe("security headers on every response", () => {
           env,
         ),
     ],
-    ["401 gate", {}, () => get("/api/recipes")],
-    ["authed api", {}, () => authedFetch("/api/recipes")],
-    [
-      "login failure",
-      {},
-      () => post("/api/auth/login", { password: `nope-${Math.random()}` }),
-    ],
+    ["401 gate", () => anonGet("/api/recipes")],
+    ["authed api", () => get("/api/recipes")],
+    ["health abierto", () => get("/api/health")],
   ];
-  for (const [label, , make] of cases) {
+  for (const [label, make] of cases) {
     it(`${label}: CSP + nosniff + referrer`, async () => {
       const res = await make();
       const csp = res.headers.get("content-security-policy") ?? "";

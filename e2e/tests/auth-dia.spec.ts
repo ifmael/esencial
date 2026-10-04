@@ -1,43 +1,8 @@
+// DÍA — estados vacíos de la pantalla de inicio. La identidad la pone la
+// config (X-Dev-Email): ya no hay login propio que probar.
 import { expect, test } from "@playwright/test";
 
-test.describe("AUTH-DIA", () => {
-  // Unauthenticated project: explicitly clear storageState.
-  test.use({ storageState: { cookies: [], origins: [] } });
-
-  test("wrong password shows visible error and stays on /login", async ({
-    page,
-  }) => {
-    await page.goto("/login");
-    await page.getByLabel("Contraseña").fill("no-es-la-clave");
-    await page.getByRole("button", { name: "Entrar" }).click();
-
-    await expect(page.getByRole("alert")).toContainText(
-      "Contraseña incorrecta",
-    );
-    expect(new URL(page.url()).pathname).toBe("/login");
-  });
-
-  test("correct password enters the app and session survives reload", async ({
-    page,
-    baseURL,
-  }) => {
-    await page.goto("/login");
-    await page.getByLabel("Contraseña").fill("hola");
-    await page.getByRole("button", { name: "Entrar" }).click();
-
-    await page.waitForURL("/");
-    // Session survives reload
-    await page.reload();
-    await page.waitForURL("/");
-    await expect(
-      page.getByRole("heading", { name: /Hoy|RECETA/ }).first(),
-    ).toBeVisible();
-  });
-});
-
-test.describe("DÍA empty states (authenticated)", () => {
-  test.use({ storageState: ".auth/state.json" });
-
+test.describe("DÍA empty states", () => {
   test("/ renders RECETA, FUERZA and NOTAS cards with empty-state content", async ({
     page,
   }) => {

@@ -8,12 +8,9 @@ export const API_BASE = `http://127.0.0.1:${process.env.E2E_API_PORT ?? "8790"}`
 /** URL absoluta de la API para las peticiones que no pasan por los helpers. */
 export const apiUrl = (path: string) => `${API_BASE}${path}`;
 
-/** POST /api/auth/login with dev password; returns raw response. */
-export function login(request: APIRequestContext, password: string) {
-  return request.post(apiUrl("/api/auth/login"), { data: { password } });
-}
-
-/** Authenticated API request helper (cookies live in request context). Parses the JSON body. */
+/** Authenticated API request helper: el contexto `request` hereda los
+ *  extraHTTPHeaders del config (X-Dev-Email con el admin), así que va ya
+ *  identificado. Parses the JSON body. */
 export async function apiRequest<T = unknown>(
   request: APIRequestContext,
   method: string,

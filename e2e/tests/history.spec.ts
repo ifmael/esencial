@@ -5,8 +5,6 @@
 import { type APIRequestContext, expect, test } from "@playwright/test";
 import { apiRequest, uniqueName } from "./helpers";
 
-test.use({ storageState: ".auth/state.json" });
-
 /** Fecha propia de la prueba (nadie más escribe en 2020): un día distinto por
  *  test y por reintento, que reencontraría el día ya registrado. */
 const dateFor = (test: number, retry: number): string =>

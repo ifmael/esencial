@@ -21,23 +21,22 @@ const API = `http://127.0.0.1:${API_PORT}`;
 // no requiere tocar nada de aquí. `< /dev/null` evita el prompt (Y/n) de wrangler
 // cuando corre en TTY (AGENTS.md, problema conocido 2).
 const API_SERVER =
-  "ESENCIAL_DEV_PASSWORD=hola pnpm predev && " +
   "rm -rf e2e/.state && " +
   "npx wrangler d1 migrations apply esencial --local -c api/wrangler.toml --persist-to e2e/.state < /dev/null && " +
   // --var WEB_ORIGIN: el [vars] de api/wrangler.toml es el origen de producción;
   // en e2e el navegador viene de http://127.0.0.1:8788 y sin esto la API no le
-  // daría permiso CORS (el login fallaría).
+  // daría permiso CORS.
   // --var DEV_AUTH + ADMIN_EMAIL (multi-usuario): aquí no hay Access delante, así
-  // que una petición sin cabecera X-Dev-Email cae en la cookie de sesión del SPA
-  // y esa cookie es el admin (ADMIN_EMAIL). Con X-Dev-Email y DEV_AUTH=1 los
-  // tests pueden actuar como varios usuarios (aislamiento, familia).
+  // que TODAS las peticiones llevan la cabecera X-Dev-Email (el
+  // `use.extraHTTPHeaders` de abajo, con la cuenta admin) y DEV_AUTH=1 hace que
+  // el Worker la honre; ADMIN_EMAIL designa admin a esa cuenta. Los specs que
+  // actúan como otro usuario abren su propio contexto con su X-Dev-Email.
   `npx wrangler dev -c api/wrangler.toml --port ${API_PORT} --var WEB_ORIGIN:${BASE} --var DEV_AUTH:1 --var ADMIN_EMAIL:admin@esencial.test --persist-to e2e/.state`;
 
 // El Worker del frontal no toca D1: se le da su propio estado local para que el
 // `rm -rf e2e/.state` del arranque de la API no le pise la caché a mitad de
 // arranque. `--var API_ORIGIN` sustituye el valor de producción del wrangler.toml.
 const WEB_SERVER =
-  "ESENCIAL_DEV_PASSWORD=hola pnpm predev && " +
   `VITE_API_URL=${API} pnpm build && ` +
   `npx wrangler dev --port ${WEB_PORT} --var API_ORIGIN:${API} --persist-to e2e/.state-web`;
 
@@ -45,11 +44,15 @@ export default defineConfig({
   testDir: "./tests",
   retries: 2,
   // Un servidor y una base por corrida: en paralelo los archivos comparten
-  // estado (p. ej. auth-dia afirma que hoy está vacío y recipes planifica la
-  // semana actual, que es hoy cuando la corrida cae en lunes).
+  // estado (p. ej. recipes planifica la semana actual, que es hoy cuando la
+  // corrida cae en lunes).
   workers: 1,
   use: {
     baseURL: BASE,
+    // La identidad de dev va en TODAS las peticiones del navegador y del
+    // contexto `request` (admin@esencial.test): la API la honra con DEV_AUTH=1,
+    // así que no hay sesión propia que guardar ni proyecto `setup` que la cree.
+    extraHTTPHeaders: { "X-Dev-Email": "admin@esencial.test" },
     launchOptions: {
       // Brave en local; en CI, el chromium que instala Playwright.
       executablePath: existsSync(BRAVE) ? BRAVE : undefined,
@@ -75,22 +78,11 @@ export default defineConfig({
     {
       command: WEB_SERVER,
       cwd: "..",
-      url: `${BASE}/login`,
+      url: `${BASE}/`,
       // tsc + vite build antes de arrancar.
       timeout: 180_000,
       reuseExistingServer: false,
     },
   ],
-  projects: [
-    { name: "setup", testMatch: /setup\.ts/, use: devices["Desktop Chrome"] },
-    {
-      name: "authed",
-      testIgnore: /setup\.ts/,
-      use: {
-        ...devices["Desktop Chrome"],
-        storageState: ".auth/state.json",
-      },
-      dependencies: ["setup"],
-    },
-  ],
+  projects: [{ name: "app", use: devices["Desktop Chrome"] }],
 });

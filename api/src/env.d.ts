@@ -3,8 +3,6 @@
 declare namespace Cloudflare {
   interface Env {
     DB: D1Database;
-    AUTH_SECRET?: string;
-    PASSWORD_HASH?: string;
     DEV_AUTH?: string;
     ADMIN_EMAIL?: string;
   }

@@ -4,10 +4,7 @@ import { apiRequest } from "./helpers";
 // El calendario semanal es el protagonista de /plan-fuerza y /plan-recetas: en
 // escritorio la página ocupa la ventana entera (sin scroll de página, con un
 // hueco reservado abajo) y en móvil los enlaces de la sección quedan como fila
-// fina sobre el calendario. El proyecto `authed` ya inyecta la sesión; se repite
-// por claridad.
-test.use({ storageState: ".auth/state.json" });
-
+// fina sobre el calendario.
 const ROUTES = ["/plan-fuerza", "/plan-recetas"] as const;
 
 /** Lunes de la semana que cae a `daysAhead` días de hoy, con su etiqueta ISO
@@ -157,13 +154,9 @@ test.describe("CALENDARIO — alto de ventana", () => {
         ).toBeVisible();
         await expect(rail.getByText(name, { exact: true })).toBeVisible();
       }
-      // Búsqueda, Ajustes (tema y catálogo) y «Cerrar sesión»,
-      // solo con icono.
+      // Búsqueda y Ajustes (tema y catálogo), solo con icono.
       await expect(rail.getByRole("button", { name: /Buscar/ })).toBeVisible();
       await expect(rail.getByRole("link", { name: "Ajustes" })).toBeVisible();
-      await expect(
-        rail.getByRole("button", { name: "Cerrar sesión" }),
-      ).toBeVisible();
       // Sin desplegables de sección: el submenú está sobre el calendario. (El
       // menú FAB de crear sí es un desplegable.)
       await expect(rail.locator("button[aria-controls^='nav-']")).toHaveCount(

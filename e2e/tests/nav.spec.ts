@@ -2,10 +2,8 @@ import { expect, test } from "@playwright/test";
 import { apiRequest, uniqueName } from "./helpers";
 
 // Menú lateral: 3 secciones (Hoy, Deporte, Nutrición), submenús colapsables y
-// navegación. El proyecto `authed` ya inyecta la sesión; se repite por claridad.
+// navegación.
 test.describe("MENÚ — secciones colapsables", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   test("colapsa/expande los submenús y navega a sus páginas", async ({
     page,
   }) => {

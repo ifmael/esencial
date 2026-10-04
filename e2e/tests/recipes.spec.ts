@@ -2,8 +2,6 @@ import { expect, test } from "@playwright/test";
 import { apiRequest, uniqueName } from "./helpers";
 
 test.describe("RECIPES — loop end to end", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   test("edit recipe from the detail page: page (not modal), saves and persists", async ({
     page,
   }) => {

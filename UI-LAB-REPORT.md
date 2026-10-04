@@ -174,18 +174,17 @@ Ahora es `{ exact: true }`, que es lo que el test quería decir desde el princip
 # 0. deps
 pnpm install
 
-# 1. secretos de dev + base local (nace con 91 ejercicios y NADA más)
-ESENCIAL_DEV_PASSWORD=hola pnpm predev
+# 1. base local (nace con 91 ejercicios y NADA más)
 pnpm db:migrate:local < /dev/null
 
 # 2. los dos Workers: frontal 8787, API 8789
-ESENCIAL_DEV_PASSWORD=hola pnpm dev
+pnpm dev
 ```
 
-Abre <http://127.0.0.1:8787> y entra con la contraseña `hola`.
+Abre <http://127.0.0.1:8787> (en dev la identidad la simula `[access.dev]`).
 **Sin datos solo verás los estados vacíos** (que es un estado que merece la pena
 mirar). Para ver la pantalla llena, pega esto en la consola del navegador con la
-app abierta y la sesión iniciada:
+app abierta:
 
 > Nota: los dos workers se quedan **levantados** en 8787 (frontal) y 8789 (API)
 > para comparar esta variante con la otra sin volver a arrancar nada.

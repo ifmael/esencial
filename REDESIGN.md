@@ -9,10 +9,10 @@ y el lint del repo.
 
 ## Cómo verlo
 
-1. `ESENCIAL_DEV_PASSWORD=hola pnpm predev`, `pnpm db:migrate:local`.
+1. `pnpm db:migrate:local`.
 2. API: `npx wrangler dev -c api/wrangler.toml --port 8862 --persist-to .wrangler/state --var WEB_ORIGIN:http://127.0.0.1:8861`.
 3. Web: `VITE_API_URL=http://127.0.0.1:8862 pnpm build && npx wrangler dev --port 8861 --var API_ORIGIN:http://127.0.0.1:8862`.
-4. Abre `http://127.0.0.1:8861` con la clave `hola`. `/ui` enseña todas las piezas.
+4. Abre `http://127.0.0.1:8861` (en dev la identidad la simula `[access.dev]`). `/ui` enseña todas las piezas.
 
 ## Piezas estrella y cómo verlas
 

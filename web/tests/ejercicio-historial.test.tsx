@@ -48,8 +48,6 @@ type Page = {
 function stubHistory(page: Page, extra: Record<string, unknown> = {}) {
   const mock = vi.fn(async (url: string) => {
     const path = String(url);
-    if (path.includes("/api/auth/status"))
-      return Response.json({ authenticated: true });
     if (path.startsWith("/api/exercises/7/history")) return Response.json(page);
     const found = extra[path];
     if (found !== undefined) return Response.json(found);
@@ -187,8 +185,6 @@ describe("historial del ejercicio", () => {
   it("«Ver más» pide la página siguiente con before y acumula las sesiones", async () => {
     const mock = vi.fn(async (url: string) => {
       const path = String(url);
-      if (path.includes("/api/auth/status"))
-        return Response.json({ authenticated: true });
       if (path === "/api/exercises") return Response.json([press]);
       if (path === "/api/templates") return Response.json([]);
       if (path === "/api/exercises/7/history?limit=20")

@@ -9,7 +9,6 @@
 // - Búsqueda ⌘K (search view M3), acceso a Ajustes (tema y catálogo) y snackbar global.
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { apiFetchRaw } from "../lib/api";
 import { toISODate } from "../lib/day";
 import { pushEscape } from "../lib/escape-stack";
 import { followSystem, readTheme } from "../lib/theme";
@@ -25,7 +24,6 @@ import {
   HomeIcon,
   LeafIcon,
   ListIcon,
-  LogoutIcon,
   SearchIcon,
   SettingsIcon,
   UtensilsIcon,
@@ -271,7 +269,6 @@ function FabMenu({
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [menuPref, setMenuPref] = useState(readMenuPref);
   const calendarRoute = CALENDAR_ROUTES[pathname] === true;
@@ -282,11 +279,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const section = sectionOf(pathname);
 
   useEffect(() => followSystem(readTheme), []);
-
-  const logout = async () => {
-    await apiFetchRaw("/api/auth/logout", { method: "POST" });
-    navigate("/login");
-  };
 
   const toggleMenu = () => {
     const next = collapsed ? "expanded" : "collapsed";
@@ -490,15 +482,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 >
                   <SettingsIcon filled={isActive(pathname, "/ajustes")} />
                 </Link>
-                <button
-                  type="button"
-                  aria-label="Cerrar sesión"
-                  title="Cerrar sesión"
-                  onClick={logout}
-                  className="state grid size-12 place-items-center rounded-full text-on-surface-variant"
-                >
-                  <LogoutIcon />
-                </button>
               </>
             ) : (
               <>
@@ -522,14 +505,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   <SettingsIcon filled={isActive(pathname, "/ajustes")} />
                   Ajustes
                 </Link>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className={drawerRow(false)}
-                >
-                  <LogoutIcon />
-                  Cerrar sesión
-                </button>
               </>
             )}
           </div>
@@ -651,16 +626,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </span>
               <span className="text-label-m font-medium">Ajustes</span>
             </Link>
-            <button
-              type="button"
-              onClick={logout}
-              className="flex flex-1 flex-col items-center justify-center gap-1 text-on-surface-variant"
-            >
-              <span className="state grid h-8 w-8 place-items-center rounded-full">
-                <LogoutIcon />
-              </span>
-              <span className="text-label-m font-medium">Salir</span>
-            </button>
           </div>
         </nav>
 

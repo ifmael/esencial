@@ -1,5 +1,5 @@
 // UI tests: shell navigation (3 secciones, submenús colapsables, active state)
-// + Día empty states. The mock API answers /api/auth/status as authenticated.
+// + Día empty states.
 
 import {
   cleanup,
@@ -59,7 +59,7 @@ describe("Shell", () => {
 
   it("muestra las 3 secciones y los submenús arrancan colapsados", async () => {
     renderAt("/");
-    // E7 guard: the shell appears once /api/auth/status resolves.
+    // El armazón se pinta al montar el router.
     await waitFor(() =>
       expect(screen.getAllByText("Deporte").length).toBeGreaterThan(0),
     );
@@ -125,10 +125,7 @@ describe("Shell", () => {
       expect(aside.textContent).toContain(name);
     }
     expect(aside.querySelector('a[aria-label="Deporte"]')).toBeNull();
-    // Búsqueda, Ajustes y salir van solo con icono, como en cualquier ruta.
-    expect(
-      aside.querySelector('button[aria-label="Cerrar sesión"]'),
-    ).not.toBeNull();
+    // Búsqueda y Ajustes van solo con icono, como en cualquier ruta.
     expect(aside.querySelector('a[aria-label="Ajustes"]')).not.toBeNull();
     // Sin desplegables de sección: en el raíl no caben y su submenú ya está
     // sobre la rejilla. (El menú FAB de crear sí es un desplegable.)
@@ -159,7 +156,6 @@ describe("Shell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Ocultar menú" }));
     expect(aside().textContent).not.toContain("Ajustes");
-    expect(aside().textContent).not.toContain("Cerrar sesión");
 
     // Remontar equivale a recargar: la preferencia del usuario se restaura.
     cleanup();
@@ -389,8 +385,6 @@ describe("Día (E5)", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (String(url).includes("/api/auth/status"))
-          return Response.json({ authenticated: true });
         return Response.json({
           ...empty,
           date: String(url).slice("/api/day/".length),

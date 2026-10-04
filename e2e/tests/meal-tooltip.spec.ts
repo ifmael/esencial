@@ -3,7 +3,6 @@ import { apiRequest, apiUrl, uniqueName } from "./helpers";
 
 // El nombre de una comida se recorta en la columna de /plan-recetas: al dejar el
 // cursor encima aparece un tooltip con el nombre completo, y se va al salir.
-test.use({ storageState: ".auth/state.json" });
 
 /** Semana ISO a 133 días de hoy: ningún otro spec planifica comidas tan lejos
  *  (un PUT de la semana reemplaza todos sus huecos). */

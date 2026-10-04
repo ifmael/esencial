@@ -96,8 +96,6 @@ function mondayOf(week: string): string {
 }
 
 test.describe("MODO SESIÓN — modo interactivo de registro", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   // Fechas lejos de las que usan otros tests (máx. offset 210 + reintentos) y
   // con su propio registro previo: el GET /last del borrador siempre los ve.
   const dayFrom = (offsetDays: number) => {

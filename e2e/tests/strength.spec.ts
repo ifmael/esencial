@@ -68,8 +68,6 @@ async function settle(page: Page) {
 }
 
 test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   // Base fija, no aleatoria: la base de e2e nace de las migraciones en cada
   // corrida, así que no hay residuo de intentos anteriores. Cada test que
   // escribe una sesión se queda con su PROPIA semana ISO (offsets múltiplos de

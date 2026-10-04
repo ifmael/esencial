@@ -1,14 +1,13 @@
 // E7 middlewares (design D4): security headers on every response, CORS para el
 // origen de la web y el 401 gate en /api/*. Orden en la raíz de la app:
-// securityHeaders → cors → authGuard. El guard del HTML (302 → /login) vive en
-// el Worker del frontal (B', dos despliegues).
+// securityHeaders → cors → identifyUser. La identidad la prueba Cloudflare
+// Access en el borde; sin un email autenticado no hay usuario y el gate corta.
 
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
-import { readSession } from "./auth";
 import type { AppContext, Env, User } from "./db";
 import { json } from "./http";
-import { DEV_EMAIL_HEADER, normalizeEmail, requestIdentity } from "./identity";
+import { DEV_EMAIL_HEADER, requestIdentity } from "./identity";
 import { ensureUser } from "./repo";
 
 const CSP =
@@ -58,8 +57,7 @@ function withCors(headers: Headers, origin: string, devAuth: boolean): void {
 /**
  * B' (dos despliegues): la web y la API son Workers con orígenes distintos, así
  * que la API autoriza los orígenes de la web declarados en WEB_ORIGIN y acepta
- * credenciales (la cookie de sesión viaja en la petición cross-origin).
- * El preflight se contesta antes del gate de sesión: no lleva cookie.
+ * credenciales. El preflight se contesta antes del gate de identidad.
  */
 export const cors = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   const origin = allowedOrigin(c);
@@ -73,41 +71,24 @@ export const cors = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   if (origin) withCors(c.res.headers, origin, devAuth);
 });
 
-/** ¿Trae cookie de sesión válida? Es el puente del SPA mientras siga con su
- *  propio /login; sin `AUTH_SECRET` falla cerrado (no hay cookie verificable). */
-async function hasValidSession(c: Context<AppContext>): Promise<boolean> {
-  const secret = c.env.AUTH_SECRET;
-  if (!secret) return false;
-  // El header entero: el navegador puede mandar varias cookies del mismo
-  // nombre (una vieja del host y la compartida del dominio) y basta con que
-  // una sea válida.
-  return (await readSession(secret, c.req.header("cookie"))) !== null;
-}
-
-/** Usuario de la petición, o null. La identidad la prueba Access en el borde;
- *  mientras el frontal siga con su login, una cookie de sesión válida vale como
- *  el usuario legacy —el admin, que es el único de una instalación de uno—. Ese
- *  puente desaparece en cuanto el SPA borre /login y su guard. */
+/** Usuario de la petición, o null si no hay identidad fiable. La prueba
+ *  Cloudflare Access en el borde; sin email autenticado no hay usuario y la
+ *  cuenta se autoprovisiona en la primera petición. */
 async function requestUser(c: Context<AppContext>): Promise<User | null> {
   const email = await requestIdentity(c);
-  if (email) return await ensureUser(c.env.DB, email, c.env.ADMIN_EMAIL);
-  if (!(await hasValidSession(c))) return null;
-  const admin = normalizeEmail(c.env.ADMIN_EMAIL);
-  return admin ? await ensureUser(c.env.DB, admin, admin) : null;
+  if (!email) return null;
+  return await ensureUser(c.env.DB, email, c.env.ADMIN_EMAIL);
 }
 
 /**
- * Gate on /api/*: fija el usuario de la petición o corta con 401. Siguen
- * abiertos los endpoints de sesión (son su propio ciclo de vida) y GET
- * /api/health (sonda de deploy). La primera petición de un email autenticado
- * autoprovisiona su cuenta.
+ * Gate on /api/*: fija el usuario de la petición o corta con 401. Sigue
+ * abierto GET /api/health (sonda de deploy). La primera petición de un email
+ * autenticado autoprovisiona su cuenta.
  */
 export const identifyUser = createMiddleware<AppContext>(async (c, next) => {
   const { pathname } = new URL(c.req.url);
-  const method = c.req.method;
   if (!pathname.startsWith("/api/")) return next();
-  if (method === "GET" && pathname === "/api/health") return next();
-  if (pathname.startsWith("/api/auth/")) return next();
+  if (c.req.method === "GET" && pathname === "/api/health") return next();
   const user = await requestUser(c);
   if (!user) return json({ error: "Unauthorized" }, 401);
   c.set("user", user);

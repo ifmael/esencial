@@ -1,13 +1,10 @@
 // Multi-usuario de verdad, en el navegador: dos personas de la misma familia
-// comparten menú y recetas, y el vecino no ve nada de eso. El navegador se
-// identifica con X-Dev-Email (que e2e honra con DEV_AUTH=1 y el mismo seam que
-// usa vitest), así que se puede actuar como varios usuarios en la misma corrida
-// sin tocar la cookie de sesión.
+// comparten menú y recetas, y el vecino no ve nada de eso. Todas las peticiones
+// se identifican con X-Dev-Email (que e2e honra con DEV_AUTH=1 y el mismo seam
+// que usa vitest): el contexto `request` y el navegador llevan la del config
+// (admin) y cada contexto de vecino abre el suyo con su propia cabecera.
 import { expect, test } from "@playwright/test";
-import { apiRequest, apiUrl, login, uniqueName } from "./helpers";
-
-/** El estado de sesión del proyecto `authed`: la cookie del admin. */
-const STATE = ".auth/state.json";
+import { apiRequest, apiUrl, uniqueName } from "./helpers";
 
 /** Semana ISO de hoy: el calendario de comidas abre en la actual. */
 function currentIsoWeek(): string {
@@ -31,8 +28,7 @@ test("la familia comparte menú y recetas; el vecino no ve nada", async ({
   const vecina = `vecina-${suffix}@example.com`;
   const vecino = `vecino-${suffix}@example.com`;
 
-  // El contexto de peticiones es el admin de la instalación (cookie de sesión).
-  expect((await login(request, "hola")).status()).toBe(200);
+  // El contexto `request` es el admin de la instalación (X-Dev-Email del config).
   const yo = await apiRequest<{ familyId: number }>(request, "GET", "/api/me");
 
   // Los dos vecinos tienen que existir (autoprovisión) antes de poder meterlos.
@@ -60,12 +56,10 @@ test("la familia comparte menú y recetas; el vecino no ve nada", async ({
   });
 
   const ctxVecina = await browser.newContext({
-    storageState: STATE,
     extraHTTPHeaders: { "X-Dev-Email": vecina },
   });
   const pageVecina = await ctxVecina.newPage();
   const ctxVecino = await browser.newContext({
-    storageState: STATE,
     extraHTTPHeaders: { "X-Dev-Email": vecino },
   });
   const pageVecino = await ctxVecino.newPage();

@@ -13,8 +13,6 @@ function rowOrder(list: Locator) {
 }
 
 test.describe("PLANTILLAS — crear y editar en una página con URL", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   test("crear: página con URL, selector embebido, reordenar y guardar", async ({
     page,
   }) => {

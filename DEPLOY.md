@@ -1,6 +1,6 @@
 # Deploy — Esencial a Cloudflare (cuenta del usuario)
 
-**Dos Workers** (B'): `esencial` (frontal: assets + guard del HTML) y
+**Dos Workers** (B'): `esencial` (frontal: assets del SPA) y
 `esencial-api` (API: Hono + D1 + R2). Requisito: Node 24. Todo desde la raíz del
 repo.
 
@@ -72,34 +72,13 @@ En local, la config de la API vive en `api/`, así que los scripts llevan
 `--persist-to .wrangler/state`: la base de desarrollo sigue en la raíz y no en
 `api/.wrangler/state`.
 
-## 5. Secretos (una vez, y al rotar la contraseña)
+## 5. Acceso (sin secretos)
 
-**Los dos Workers necesitan `AUTH_SECRET`** (firma/valida la cookie de sesión:
-el frontal la comprueba en el guard, la API en cada `/api/*`). **Solo la API
-necesita `PASSWORD_HASH`.**
-
-```bash
-# Clave de firma de sesión: el MISMO valor en los dos Workers. Genérala UNA vez
-# y úsala en los dos comandos (o reutiliza la que ya tenías en `esencial`:
-# dos valores distintos = el frontal y la API no coincidirían y no podrías
-# entrar).
-S=$(openssl rand -base64 24)
-printf '%s' "$S" | npx wrangler secret put AUTH_SECRET -c api/wrangler.toml
-printf '%s' "$S" | npx wrangler secret put AUTH_SECRET            # frontal
-
-# Digest PBKDF2 de TU contraseña real (solo la API lo usa):
-node --disable-warning=ExperimentalWarning api/scripts/hash-password.ts 'tu-clave' \
-  | npx wrangler secret put PASSWORD_HASH -c api/wrangler.toml
-```
-
-Rotar `AUTH_SECRET` invalida todas las sesiones (basta volver a entrar). El
-valor actual de `esencial` no se puede leer desde el panel: o reutilizas el que
-guardaste, o rotas los dos a la vez. Nunca pongas valores distintos.
-
-Local: `pnpm dev` / `pnpm e2e` generan **dos** `.dev.vars` con el mismo contenido
-(`.dev.vars` en la raíz para el frontal y `api/.dev.vars` para la API) — wrangler
-los busca junto a cada fichero de configuración. Si falta uno, ese Worker no ve
-los secretos: login **500** y todo lo protegido 401.
+La identidad la prueba **Cloudflare Access** en el borde y la API solo lee el
+email ya autenticado (`ctx.access`). Los Workers ya no guardan `AUTH_SECRET` ni
+`PASSWORD_HASH`, así que no hay nada que crear ni rotar aquí. En dev lo simula
+`[access.dev]` de `api/wrangler.toml`; en e2e/vitest, la cabecera `X-Dev-Email`
+con `DEV_AUTH=1`.
 
 ## 6. Deploy
 
@@ -131,35 +110,35 @@ Deploy manual (publica los dos, la API primero):
 pnpm run deploy    # build del SPA con la URL de la API + deploy de la API y del frontal
 ```
 
-Orden del corte (importa): los secretos de la API, luego la API, y solo entonces
-el frontal. El deploy del frontal **reemplaza** el Worker `esencial` (pasa de
-monolito a solo-frontal): si se publica antes de que la API esté arriba con sus
-secretos, el login de producción se rompe hasta completar el paso de la API. La
-URL que usas a diario no cambia: sigue siendo la del frontal.
+Orden del corte (importa): primero la API y solo entonces el frontal. El deploy
+del frontal **reemplaza** el Worker `esencial` (pasa de monolito a solo-frontal):
+si se publica antes de que la API esté arriba, la app se queda sin backend hasta
+completar el paso de la API. La URL que usas a diario no cambia: sigue siendo la
+del frontal.
 
 El primer deploy crea los Workers y publica:
 
-- Frontal (SPA + guard): https://esencial.nutrirutina.workers.dev
+- Frontal (SPA): https://esencial.nutrirutina.workers.dev
 - API: https://esencial-api.nutrirutina.workers.dev
 
 ## 7. Verificación post-deploy (2 min)
 
-1. `curl -i https://esencial.<sub>.workers.dev/plan-recetas` sin sesión →
-   **302** a `/login?next=%2Fplan-recetas`.
+1. `curl -i https://esencial.<sub>.workers.dev/plan-recetas` → **200** con el
+   HTML del SPA (deep link servido por el frontal).
 2. `curl https://esencial-api.<sub>.workers.dev/api/health` → **200** `{ ok: true }`.
-3. `curl -i .../api/recipes` sin cookie → **401** `{ "error": "Unauthorized" }`.
+3. `curl -i .../api/recipes` sin identidad → **401** `{ "error": "Unauthorized" }`
+   (si Access protege el Worker, el borde responde antes).
 4. Preflight desde el origen del frontal:
    `curl -i -X OPTIONS .../api/recipes -H 'Origin: https://esencial.<sub>.workers.dev'
    -H 'Access-Control-Request-Method: POST'` → **204** con
    `Access-Control-Allow-Origin` y `Access-Control-Allow-Credentials: true`.
-5. Abre la URL del frontal en el navegador → `/login` → entra con tu contraseña →
-   el DÍA carga (consola sin errores de CSP/CORS).
+5. Abre la URL del frontal en el navegador → Access te autentica → el DÍA carga
+   (consola sin errores de CSP/CORS).
 6. Una foto de receta y un vídeo de YouTube embebido siguen viéndose.
-7. "Cerrar sesión" → vuelve a `/login`; `curl` con la cookie vieja → 401.
 
 ## Rollback
 
 `npx wrangler rollback` (frontal) o `npx wrangler rollback -c api/wrangler.toml`
 (API) revierten ese Worker a su versión anterior por separado (la BD no se toca).
-Los secretos quedan inertes: la versión previa no los lee. Para cerrar el acceso
-sin deploy: rota `AUTH_SECRET` — todas las cookies emitidas dejan de verificar.
+Para cerrar el acceso sin deploy, quita la aplicación de Cloudflare Access (o
+bloquea el origen).

@@ -152,9 +152,6 @@ function mockApi(opts: {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
-      // E7 guard probe: answer without counting it as app traffic.
-      if (String(url).includes("/api/auth/status"))
-        return reply(200, { authenticated: true });
       count += 1;
       urls.push(String(url));
       const method = init?.method ?? "GET";
@@ -206,7 +203,7 @@ function mockApi(opts: {
   return { posts, puts, planPuts, calls, urls, fetchCount: () => count };
 }
 
-/** El botón «Cerrar sesión» de la barra flotante (no el de salir del shell). */
+/** El botón «Cerrar sesión» de la barra flotante de la sesión. */
 function primaryClose(): Promise<HTMLButtonElement> {
   return waitFor(
     () =>

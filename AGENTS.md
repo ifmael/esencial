@@ -114,8 +114,8 @@ Escala vigente — todo lo demás sale de aquí:
   etiqueta del campo enfocado y la selección de texto usan `--accent` (color de
   sección); `AA_PAIRS` exige primary, secondary y tertiary ≥ 4,5 sobre
   `surface` y `surface-container-high`.
-- **Colores fijos a propósito** (no siguen la sección): la marca (logo del raíl,
-  login), las insignias de estado (`Badge` `done` = primary, `pending` =
+- **Colores fijos a propósito** (no siguen la sección): la marca (logo del raíl),
+  las insignias de estado (`Badge` `done` = primary, `pending` =
   tertiary: significan «hecho»/«pendiente» en cualquier pantalla), la tarjeta de
   fuerza registrada y el sello de recompensa (verde de Deporte también en Hoy),
   la paleta de comandos y el catálogo `/ui`.
@@ -151,8 +151,8 @@ calendario lo plegaban solas y al pulsar Deporte o Nutrición en el cajón este 
 cerraba bajo el cursor (bug; lo cubren `shell.test.tsx` y `nav.spec.ts`).
 
 **Plegado, el raíl M3E es el mismo en todas las rutas**: 96 px (`w-24`) con la
-etiqueta bajo cada sección, menú FAB, y búsqueda, Ajustes y «Cerrar sesión» solo
-con icono; expandido mide 288 px. Antes, en el calendario, el raíl se quedaba en 80 px
+etiqueta bajo cada sección, menú FAB, y búsqueda y Ajustes solo con icono;
+expandido mide 288 px. Antes, en el calendario, el raíl se quedaba en 80 px
 sin etiquetas y la barra cambiaba al pasar de Hoy a Deporte; se unificó a costa de
 unos 16 px de rejilla. En las rutas de calendario el raíl no lleva desplegables de
 sección: el submenú de la sección va como **grupo de botones conectados sobre el
@@ -691,7 +691,7 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
 
 | Worker | Config | Qué sirve | URL |
 | --- | --- | --- | --- |
-| `esencial` (frontal) | `wrangler.toml` (raíz), `main = web/worker/index.ts` | assets de `web/dist` + guard del HTML (302 → `/login`) | `https://esencial.nutrirutina.workers.dev` |
+| `esencial` (frontal) | `wrangler.toml` (raíz), `main = web/worker/index.ts` | assets de `web/dist` + cabeceras de seguridad | `https://esencial.nutrirutina.workers.dev` |
 | `esencial-api` | `api/wrangler.toml` | las rutas `/api/*` (Hono), D1 y R2; sin assets | `https://esencial-api.nutrirutina.workers.dev` |
 
 - El navegador llama a **los dos**: la SPA usa la URL absoluta de la API
@@ -699,10 +699,11 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
   `credentials: "include"`, y la API
   autoriza ese origen con CORS (`WEB_ORIGIN`). El frontal autoriza el origen de
   la API en su CSP (`API_ORIGIN`): los dos valores tienen que cuadrar.
-- La cookie de sesión se emite desde la API, y en `workers.dev` lleva
-  `Domain=<cuenta>.workers.dev` para que el Worker del frontal también la vea
-  (fuera de `workers.dev` —dev/e2e en 127.0.0.1— se queda host-only; las cookies
-  ignoran el puerto, así que en local se comparte igual).
+- La identidad la prueba **Cloudflare Access** en el borde: la API solo lee el
+  email ya autenticado (`ctx.access`). En dev lo simula `[access.dev]` de
+  `api/wrangler.toml` y en e2e/vitest la cabecera `X-Dev-Email` con `DEV_AUTH=1`.
+  No hay login propio ni cookie de sesión; un fallo de sesión en el SPA se
+  resuelve recargando (`web/src/lib/api.ts`, una vez por pestaña y sesión).
 - En dev/e2e esos dos orígenes se sobreescriben con `--var` (ver los scripts
   `dev:api` / `dev:web` y `e2e/playwright.config.ts`).
 - Publicación: **un build de Workers Builds por Worker** (ver `DEPLOY.md` §6).
@@ -772,30 +773,12 @@ vídeo).
 con "This content is blocked. Contact the site owner to fix the issue.").
 
 Ambos están rotos a la vez con las versiones más estrictas; con B' esas
-cabeceras las pone el Worker del frontal y sus tests viven en
-`web/tests/worker-guard.test.ts` (la API solo responde JSON).
+cabeceras las ponen los dos Workers (el frontal en el HTML, la API en el JSON),
+y las comprueba cada lado: `web/tests/worker.test.ts` (frontal) y
+`api/tests/auth-gate.test.ts` (API). Son los únicos tests que protegen esto, así
+que no se borran a la ligera.
 
-### 4. `.dev.vars` en local — DOS ficheros (uno por Worker)
-
-wrangler resuelve `.dev.vars` **junto al fichero de configuración**, no en el
-cwd. Con dos Workers hacen falta dos copias del mismo contenido:
-
-- `.dev.vars` (raíz, junto a `wrangler.toml`) — la usa el Worker del frontal.
-- `api/.dev.vars` — la usa el Worker de la API (`api/wrangler.toml`).
-
-Si falta la copia, ese Worker no ve `AUTH_SECRET`/`PASSWORD_HASH`: el login
-responde **500** (`fail closed`) y todo lo protegido 401.
-
-- Los dos son gitignored y los escribe el **mismo** script:
-  `api/scripts/ensure-dev-vars.ts` (auto-generado por `pnpm dev` / `pnpm e2e`).
-- La clave de desarrollo se lee de `**ESENCIAL_DEV_PASSWORD**`; si no está, se
-  genera una aleatoria y se imprime al arrancar. Ninguna clave vive en git.
-- Cómo fijarla: `ESENCIAL_DEV_PASSWORD='miclave' pnpm dev`.
-- Ojo: la config de **tests** de la API vive en `api/tests/wrangler.test.toml`
-  a propósito — si estuviera en `api/`, el `.dev.vars` de dev pisaría sus `[vars]`
-  y los 202 tests fallarían (login con la clave de dev, cookie de test).
-
-### 4b. Se arrancan DOS servidores en local
+### 4. Se arrancan DOS servidores en local
 
 `pnpm dev` levanta los dos Workers (script `api/scripts/dev.ts`): frontal en
 **8787** y API en **8789**; la SPA se construye contra `http://127.0.0.1:8789`.
@@ -808,22 +791,18 @@ vacía). Igual en `pnpm db:migrate:local`: la base de desarrollo sigue siendo la
 de siempre, `.wrangler/state` en la raíz.
 
 El origen de dev es **`http://127.0.0.1:8787` y nada más**: el Worker del frontal
-redirige `localhost:8787` a `127.0.0.1:8787` conservando ruta y query. El
-navegador trata los dos nombres como sitios distintos y la cookie de sesión
-(`SameSite=Lax`, emitida en `127.0.0.1`) no viaja de uno al otro, así que con
-`localhost` el login parece ignorarse: la petición responde 200 y la app se
-queda en `/login` sin error visible. Se arregla con un origen canónico en vez de
-duplicar `WEB_ORIGIN` (CORS) y `API_ORIGIN` (CSP) para los dos nombres.
+redirige `localhost:8787` a `127.0.0.1:8787` conservando ruta y query. Se fija un
+origen canónico en vez de duplicar `WEB_ORIGIN` (CORS) y `API_ORIGIN` (CSP) para
+los dos nombres.
 
 Para probar desde el móvil (misma Wi‑Fi), `ESENCIAL_HOST=<ip> pnpm dev` (p. ej.
 `ESENCIAL_HOST=192.168.1.100 pnpm dev`): `api/scripts/dev.ts` pasa esa IP a los
 dos servidores —`--ip` (bind) y los orígenes de la corrida, es decir
 `WEB_ORIGIN`, `API_ORIGIN` y `VITE_API_URL`—, así que se entra (móvil y
-escritorio) por `http://<ip>:8787`, el origen canónico de esa corrida; la cookie
-viaja igual porque los dos Workers comparten host. Sin `ESENCIAL_HOST` todo
-sigue en `127.0.0.1`, y no conviene mezclar los dos hosts en la misma corrida
-(la cookie es por host). El cortafuegos de macOS pedirá permitir conexiones
-entrantes la primera vez. Con Tailscale, `ESENCIAL_HOST=<ip-tailscale>` hace lo
+escritorio) por `http://<ip>:8787`, el origen canónico de esa corrida. Sin
+`ESENCIAL_HOST` todo sigue en `127.0.0.1`, y no conviene mezclar los dos hosts
+en la misma corrida (los orígenes de CORS/CSP son por host). El cortafuegos de
+macOS pedirá permitir conexiones entrantes la primera vez. Con Tailscale, `ESENCIAL_HOST=<ip-tailscale>` hace lo
 mismo fuera de casa.
 
 ### 5. `pnpm deploy` no ejecuta el script de deploy
@@ -859,16 +838,6 @@ Nota relacionada: `api/scripts/dev.ts` arranca y para los dos servidores juntos,
 así que matar a mano cualquiera de los dos (por ejemplo el que ocupa 8787)
 termina el `pnpm dev` entero con el código de salida del hijo.
 
-### 7. El guard del frontal no puede hacer fetch a la API sin `global_fetch_strictly_public`
-
-El guard del HTML pregunta la sesión con `fetch(API_ORIGIN + "/api/auth/status")`.
-Los dos Workers viven en el mismo `<cuenta>.workers.dev`, y Cloudflare bloquea
-ese fetch (error **1042**) salvo con el flag `global_fetch_strictly_public`
-(`wrangler.toml` de la raíz). Sin él, el guard lo toma como «sin sesión» y
-**cada recarga manda a `/login`**, aunque navegar dentro del SPA funcione (ahí el
-navegador llama a la API directo). En local y en e2e no se reproduce
-(`127.0.0.1`, otro puerto): no hay test que lo pille, no quites el flag.
-
 ## Tests e2e — base de datos propia
 
 `pnpm e2e` **NUNCA** toca la base de desarrollo (`.wrangler/state`). El
@@ -876,14 +845,19 @@ navegador llama a la API directo). En local y en e2e no se reproduce
 (`e2e/playwright.config.ts`), con `reuseExistingServer: false` (así un
 `pnpm dev` en marcha no se adopta):
 
-1. API en **8790**: `ESENCIAL_DEV_PASSWORD=hola pnpm predev` → `rm -rf e2e/.state`
- → `wrangler d1 migrations apply esencial --local -c api/wrangler.toml
- --persist-to e2e/.state < /dev/null` → `wrangler dev -c api/wrangler.toml
- --port 8790 --var WEB_ORIGIN:http://127.0.0.1:8788 --persist-to e2e/.state`.
-2. Frontal en **8788**: `pnpm predev` → `VITE_API_URL=http://127.0.0.1:8790 pnpm
- build` → `wrangler dev --port 8788 --var API_ORIGIN:http://127.0.0.1:8790
- --persist-to e2e/.state-web` (su propio dir de estado: el frontal no toca D1 y
- el `rm -rf e2e/.state` de la API no debe pisarle la caché).
+1. API en **8790**: `rm -rf e2e/.state` → `wrangler d1 migrations apply esencial
+ --local -c api/wrangler.toml --persist-to e2e/.state < /dev/null` → `wrangler
+ dev -c api/wrangler.toml --port 8790 --var WEB_ORIGIN:http://127.0.0.1:8788
+ --var DEV_AUTH:1 --var ADMIN_EMAIL:admin@esencial.test --persist-to e2e/.state`.
+2. Frontal en **8788**: `VITE_API_URL=http://127.0.0.1:8790 pnpm build` →
+ `wrangler dev --port 8788 --var API_ORIGIN:http://127.0.0.1:8790 --persist-to
+ e2e/.state-web` (su propio dir de estado: el frontal no toca D1 y el `rm -rf
+ e2e/.state` de la API no debe pisarle la caché).
+
+La identidad de dev va en `use.extraHTTPHeaders` (`X-Dev-Email` con
+`admin@esencial.test`): todas las peticiones del navegador y del contexto
+`request` van como el admin, y los specs que actúan como otro usuario abren su
+propio contexto con su cabecera. No hay proyecto `setup` ni `storageState`.
 
 Los `--var` son imprescindibles: sin ellos los Workers usarían los orígenes de
 **producción** (los del `wrangler.toml`) y el navegador cruzaría a la API
@@ -944,12 +918,11 @@ participación: no se tocan.
 ## Fotos de recetas (R2)
 
 - Upload: `POST /api/uploads` (multipart `file`, png/jpeg/webp ≤ 5 MB) → `200 {photo_path}`
-con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras authGuard, `Cache-Control: immutable`.
+con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras el gate de identidad, `Cache-Control: immutable`.
 - Binding R2 `PHOTOS` → bucket `**esencial-photos**` (`api/wrangler.toml` y `api/tests/wrangler.test.toml`);
 `photo_path` se valida fail-closed (regex + `PHOTOS.head`) en `POST/PUT /api/recipes`.
 - El render usa `photoSrc()` (`web/src/lib/api.ts`): la key pelada + prefijo
 `/api/uploads/`, y delante la URL de la API (`VITE_API_URL`).
-- e2e y login dev usan la password `hola` (`ESENCIAL_DEV_PASSWORD=hola pnpm dev`).
 
 ## Carga de las listas (recetas y ejercicios)
 

@@ -39,17 +39,12 @@ describe("/recetario book", () => {
     const pending = new Promise<Response>((res) => (resolve = res));
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (url: string) => {
-        if (String(url).includes("/api/auth/status"))
-          return new Response(JSON.stringify({ authenticated: true }), {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          });
+      vi.fn(async () => {
         return pending;
       }),
     );
     renderAt("/recetario");
-    // Guard probe resolves first, then the book shows loading while /api/recipes pend.
+    // La lista de recetas queda pendiente y el recetario enseña la carga.
     await screen.findByText("Cargando recetario…");
 
     resolve(new Response(JSON.stringify(three), { status: 200 }));

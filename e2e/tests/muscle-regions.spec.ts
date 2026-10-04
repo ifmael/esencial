@@ -76,8 +76,6 @@ async function skipWithoutGPU(page: Page) {
 /** Sub-regiones musculares: el modelo filtra por el músculo concreto y las
  *  fichas de grupo devuelven todas las sub-regiones de ese grupo. */
 test.describe("SUB-REGIONES — el mapa filtra fino", () => {
-  test.use({ storageState: ".auth/state.json" });
-
   test("el modelo 3D filtra por el músculo que se pulsa, también los fabricados", async ({
     page,
   }) => {

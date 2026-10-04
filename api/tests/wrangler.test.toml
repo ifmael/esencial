@@ -14,12 +14,7 @@ database_id = "test-local"
 [[r2_buckets]]
 binding = "PHOTOS"
 bucket_name = "esencial-photos"
-# E7: test credentials (NEVER real ones). PASSWORD_HASH is the PBKDF2 digest of
-# "test-password-123" produced by src/auth.ts (rotate both together if the
-# test password changes). AUTH_SECRET is a fixed 32-char signing key.
 [vars]
-AUTH_SECRET = "test-auth-secret-32-bytes-long-xx"
-PASSWORD_HASH = "pbkdf2$210000$w96YZTwA8VV+FIucnHHGeQ==$uxU0SzCOX6HKPgMKm1TgAtFlwpKIZkP5004JDJhFRQM="
 # B': origen del Worker de la web en tests (contrato fijado en tests/cors.test.ts).
 WEB_ORIGIN = "http://127.0.0.1:8788"
 # Multi-usuario: seam de identidad solo-para-dev. Con DEV_AUTH="1" se honra la

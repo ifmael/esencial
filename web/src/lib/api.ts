@@ -16,24 +16,62 @@ export class ApiError extends Error {
 const CACHE_MS = 5 * 60_000;
 const cache = new Map<string, { at: number; value: Promise<unknown> }>();
 
+/** Marca de «ya recargué por sesión caducada» en esta pestaña. */
+const SESSION_RELOAD_KEY = "esencial.session-reload";
+
 /** Vacía la caché de lecturas (la llama cada escritura; los tests, entre casos). */
 export const clearApiCache = () => cache.clear();
 
-/** fetch a la API con la cookie de sesión incluida: en cross-origin el
- *  navegador no la manda si no se pide (credentials: include). La URL sale de
+/** fetch a la API con credenciales: en cross-origin el navegador no manda la
+ *  cookie de sesión si no se pide (credentials: include). La URL sale de
  *  VITE_API_URL (B': la API es otro Worker) y se lee en cada llamada para poder
  *  sustituirla en tests; sin ella quedan rutas relativas. Sin envoltorio JSON,
  *  para llamadas que gestionan la respuesta a mano. Toda escritura vacía la
- *  caché al terminar, también lo que se pidió mientras tanto. */
+ *  caché al terminar, también lo que se pidió mientras tanto.
+ *
+ *  Los fallos de sesión se resuelven recargando: con Cloudflare Access delante
+ *  una sesión caducada no da 401 —el borde responde 302 al login, el navegador
+ *  sigue el redirect y la petición cross-origin acaba en error de red—, así que
+ *  se recarga tanto con un 401 como si el fetch revienta. El freno de
+ *  sessionStorage (una recarga por pestaña y sesión) evita el bucle cuando el
+ *  fallo es permanente (sin permiso, servidor caído), y se limpia en cuanto una
+ *  llamada vuelve a responder para que una caducidad futura sí recargue. */
 export const apiFetchRaw = (
   path: string,
   init?: RequestInit,
 ): Promise<Response> => {
+  const reloadOnce = () => {
+    try {
+      if (sessionStorage.getItem(SESSION_RELOAD_KEY)) return;
+      sessionStorage.setItem(SESSION_RELOAD_KEY, "1");
+    } catch {
+      // Sin sessionStorage (p. ej. modo privado): mejor recargar una vez.
+    }
+    location.reload();
+  };
+  const write = (init?.method ?? "GET").toUpperCase() !== "GET";
   const res = fetch(`${import.meta.env.VITE_API_URL ?? ""}${path}`, {
     credentials: "include",
     ...init,
-  });
-  const write = (init?.method ?? "GET").toUpperCase() !== "GET";
+  })
+    .then((response) => {
+      // 401 = sesión no válida; cualquier otra respuesta = el servidor atendió
+      // y la identidad vale, así que la marca de recarga se limpia.
+      if (response.status === 401) {
+        reloadOnce();
+      } else {
+        try {
+          sessionStorage.removeItem(SESSION_RELOAD_KEY);
+        } catch {
+          /* sin sessionStorage */
+        }
+      }
+      return response;
+    })
+    .catch((error) => {
+      reloadOnce();
+      throw error;
+    });
   return write ? res.finally(clearApiCache) : res;
 };
 
