@@ -24,7 +24,13 @@ function accessCtx(email: string | null): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-type Me = { id: number; email: string; role: string; familyId: number };
+type Me = {
+  id: number;
+  email: string;
+  role: string;
+  familyId: number;
+  access: boolean;
+};
 
 /** Cuerpo de /api/me: el `json()` de un Response llega sin tipo. */
 async function meOf(res: Response): Promise<Me> {
@@ -102,6 +108,7 @@ describe("GET /api/me", () => {
       email: "pepe@example.com",
       role: "admin",
       familyId: expect.any(Number),
+      access: false,
     });
     expect(await d1.get("SELECT COUNT(*) AS n FROM families")).toEqual({
       n: 1,
@@ -135,7 +142,10 @@ describe("GET /api/me", () => {
   test("lee la identidad de Access cuando el seam de dev está apagado", async () => {
     const res = await app.request(ME, {}, noDev, accessCtx("pepe@example.com"));
     expect(res.status).toBe(200);
-    expect((await meOf(res)).email).toBe("pepe@example.com");
+    const yo = await meOf(res);
+    expect(yo.email).toBe("pepe@example.com");
+    // Con Access delante, /api/me lo dice: hay una sesión que cerrar.
+    expect(yo.access).toBe(true);
   });
 
   test("Access sin identidad es 401 y no provisiona nada", async () => {

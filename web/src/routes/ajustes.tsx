@@ -247,6 +247,29 @@ export function AjustesPage() {
 
       {me.data?.role === "admin" ? <FamilyCard me={me.data} /> : null}
 
+      {/* Cerrar sesión es cosa de Access: se enseña solo cuando Access está
+          delante (en local no hay sesión que cerrar). Es un enlace normal, no
+          del router: esa ruta la atiende Cloudflare antes que el Worker, y desde
+          el dominio de la app borra la cookie al instante. */}
+      {me.data?.access ? (
+        <Card className="flex flex-col gap-stack">
+          <h2 className="text-title-m">Sesión</h2>
+          <a
+            href="/cdn-cgi/access/logout"
+            onPointerDown={ripple}
+            className="state list-row min-h-12 rounded-m px-3 text-on-surface"
+          >
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-body-l">Cerrar sesión</span>
+              <span className="text-body-m text-on-surface-variant">
+                Te saca de Cloudflare Access en este navegador
+              </span>
+            </span>
+            <ChevronRightIcon className="text-on-surface-variant" />
+          </a>
+        </Card>
+      ) : null}
+
       <Card className="flex flex-col gap-stack">
         <h2 className="text-title-m">Desarrollo</h2>
         <Link

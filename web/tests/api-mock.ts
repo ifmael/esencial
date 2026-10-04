@@ -41,6 +41,9 @@ export type Seed = {
   sessions?: PlanSessionRow[];
   /** Quién soy en estos tests (por defecto, un admin con familia 1). */
   me?: FamilyUser;
+  /** Si la petición viene de Cloudflare Access (`/api/me`). Por defecto sí:
+   *  en local no hay Access, y esto es lo que enseña «Cerrar sesión». */
+  access?: boolean;
   /** Todas las cuentas de la familia falsa (por defecto, solo yo). */
   users?: FamilyUser[];
 };
@@ -50,7 +53,7 @@ export type MockApi = {
     templates: Template[];
     exercises: Exercise[];
     sessions: PlanSessionRow[];
-    me: FamilyUser;
+    me: FamilyUser & { access: boolean };
     users: FamilyUser[];
   };
   calls: Call[];
@@ -78,14 +81,17 @@ type RawItem = {
 };
 
 export function mockApi(seed: Seed = {}): MockApi {
-  const me: FamilyUser = structuredClone(
-    seed.me ?? {
-      id: 1,
-      email: "admin@esencial.test",
-      role: "admin",
-      familyId: 1,
-    },
-  );
+  const me = {
+    ...structuredClone(
+      seed.me ?? {
+        id: 1,
+        email: "admin@esencial.test",
+        role: "admin" as const,
+        familyId: 1,
+      },
+    ),
+    access: seed.access ?? true,
+  };
   const api: MockApi = {
     state: {
       templates: structuredClone(seed.templates ?? []),

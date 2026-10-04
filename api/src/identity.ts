@@ -47,20 +47,24 @@ export async function identityEmail(
   return normalizeEmail((await access.getIdentity())?.email);
 }
 
+/** `ctx.access` si el Worker lo tiene, es decir si quien autenticó la petición
+ *  fue Cloudflare Access. En los tests no hay ExecutionContext y `c.executionCtx`
+ *  lanza, así que la lectura va protegida. */
+export function accessContext(c: Context<AppContext>): unknown {
+  try {
+    return (c.executionCtx as { access?: unknown } | undefined)?.access;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Email de una petición Hono, leyendo la identidad del ExecutionContext. En
- *  los tests no hay ExecutionContext (Hono pone uno por defecto, sin `access`),
- *  y `c.executionCtx` lanza si no lo hay. */
+ *  los tests no hay ExecutionContext (Hono pone uno por defecto, sin `access`). */
 export async function requestIdentity(
   c: Context<AppContext>,
 ): Promise<string | null> {
-  let access: unknown;
-  try {
-    access = (c.executionCtx as { access?: unknown } | undefined)?.access;
-  } catch {
-    access = undefined;
-  }
   return identityEmail({
-    access,
+    access: accessContext(c),
     devAuth: c.env.DEV_AUTH,
     devEmail: c.req.header(DEV_EMAIL_HEADER),
   });

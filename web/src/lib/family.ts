@@ -16,7 +16,11 @@ export type FamilyUser = {
   familyId: number;
 };
 
-export type Me = FamilyUser;
+export type Me = FamilyUser & {
+  /** Si quien autenticó la petición fue Cloudflare Access: solo entonces hay
+   *  una sesión que cerrar (en local no la hay). */
+  access: boolean;
+};
 
 /** Lectura con estado, igual que el resto de hooks de la casa. */
 export type Resource<T> = {

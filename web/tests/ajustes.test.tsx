@@ -272,4 +272,21 @@ describe("Familia en Ajustes", () => {
       expect(outside.queryByText("ana@example.com")).not.toBeNull(),
     );
   });
+
+  // Cerrar sesión es de Cloudflare Access: el enlace va a la ruta que atiende
+  // Cloudflare (no a la app), y solo se enseña cuando Access está delante.
+  it("con Access delante ofrece cerrar sesión, en la ruta de Cloudflare", async () => {
+    mockApi({ access: true });
+    await adminView();
+
+    const salir = await screen.findByRole("link", { name: /Cerrar sesión/ });
+    expect(salir.getAttribute("href")).toBe("/cdn-cgi/access/logout");
+  });
+
+  it("en local, sin Access, no ofrece cerrar sesión", async () => {
+    mockApi({ access: false });
+    await adminView();
+
+    expect(screen.queryByRole("link", { name: /Cerrar sesión/ })).toBeNull();
+  });
 });
