@@ -56,6 +56,7 @@ describe("useExercises", () => {
     const created = await result.current.createExercise({
       name: "Remo",
       tags: ["espalda"],
+      aliases: [],
     });
     expect(created).toEqual({ id: 2 });
     expect(fetchMock).toHaveBeenCalledWith(
@@ -78,7 +79,7 @@ describe("useExercises", () => {
     const { result } = renderHook(() => useExercises());
     await waitFor(() => expect(result.current.pending).toBe(false));
     await expect(
-      result.current.createExercise({ name: "x", tags: ["t"] }),
+      result.current.createExercise({ name: "x", tags: ["t"], aliases: [] }),
     ).rejects.toMatchObject({
       message: "Already exists",
       field: "name",
@@ -90,7 +91,11 @@ describe("useExercises", () => {
     const fetchMock = mockFetch(() => jsonResponse({ id: 1 }));
     const { result } = renderHook(() => useExercises());
     await waitFor(() => expect(result.current.pending).toBe(false));
-    await result.current.updateExercise(1, { name: "y", tags: ["t"] });
+    await result.current.updateExercise(1, {
+      name: "y",
+      tags: ["t"],
+      aliases: [],
+    });
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/exercises/1",
       expect.objectContaining({ method: "PUT" }),

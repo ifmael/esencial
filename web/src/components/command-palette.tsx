@@ -22,6 +22,7 @@ import {
   rankCommands,
 } from "../lib/command-palette";
 import { toISODate } from "../lib/day";
+import { type Exercise, exerciseSearchTerms } from "../lib/exercises";
 import { applyTheme, nextTheme, THEME_NAME, useTheme } from "../lib/theme";
 import {
   AddIcon,
@@ -150,8 +151,19 @@ function useSearchables(): Command[] {
         as("Recetas", (id) => `/recetario/${id}`),
         () => [],
       ),
-      apiGetCached<Named[]>("/api/exercises").then(
-        as("Ejercicios", (id) => `/ejercicios/${id}`),
+      apiGetCached<Exercise[]>("/api/exercises").then(
+        // El nombre va en `label`; los alias y los grupos, en `keywords`, para
+        // que la búsqueda difusa de la paleta case los tres (el término sale del
+        // mismo helper que usan las listas).
+        (list) =>
+          list.map<Command>((e) => ({
+            id: `Ejercicios-${e.id}`,
+            group: "Ejercicios",
+            label: e.name,
+            href: `/ejercicios/${e.id}`,
+            keywords: exerciseSearchTerms(e),
+            searchOnly: true,
+          })),
         () => [],
       ),
       apiGet<Named[]>("/api/templates").then(

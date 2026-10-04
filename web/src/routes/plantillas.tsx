@@ -71,6 +71,7 @@ import { pushEscape } from "../lib/escape-stack";
 import {
   type Exercise,
   KIND_LABELS,
+  matchesExercise,
   targetSummary,
   useExercises,
 } from "../lib/exercises";
@@ -146,24 +147,19 @@ function ExercisePicker({
     group ?? MUSCLE_REGIONS.find((r) => r.id === region)?.group ?? null;
 
   const q = search.trim().toLowerCase();
-  const picks = exercises.filter((e) => {
-    // Dos niveles excluyentes: la sub-región es lo fino y el grupo padre es lo
-    // ancho. Como toda sub-región cuelga de un grupo que el ejercicio tiene
-    // como tag, filtrar por el grupo devuelve también sus sub-regiones.
-    if (region !== null && !e.regions.some((r) => r.region === region))
-      return false;
-    if (group !== null && !e.tags.includes(group)) return false;
-    if (
-      q &&
-      !(
-        e.name.toLowerCase().includes(q) ||
-        e.tags.some((t) => t.toLowerCase().includes(q)) ||
-        e.regions.some((r) => regionLabel(r.region).toLowerCase().includes(q))
-      )
-    )
-      return false;
-    return true;
-  });
+  const picks = exercises.filter(
+    (e) =>
+      // Dos niveles excluyentes: la sub-región es lo fino y el grupo padre es
+      // lo ancho. Como toda sub-región cuelga de un grupo que el ejercicio
+      // tiene como tag, filtrar por el grupo devuelve también sus sub-regiones.
+      (region === null || e.regions.some((r) => r.region === region)) &&
+      (group === null || e.tags.includes(group)) &&
+      matchesExercise(
+        e,
+        search,
+        e.regions.map((r) => regionLabel(r.region)),
+      ),
+  );
   const inDraftIds = new Set(draftEntries.map((en) => en.exerciseId));
   const filter = region
     ? regionLabel(region)

@@ -763,11 +763,24 @@ cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
   nombre de perfil que la persona edita en Ajustes con `PATCH /api/me`). Al
   admitir vacíos sobre las filas que ya existen, se puede aplicar antes del
   merge sin romper al código desplegado (es justo lo contrario de `0020`).
+- `0022_exercise_aliases.sql` es **aditiva**: crea `exercise_aliases` (en
+`schema.sql` y en `TABLES`), renombra a español 12 ejercicios del catálogo y
+siembra los 160 alias de búsqueda de los 91. **No va al bootstrap** (es siembra,
+como 0010); la cubre `api/tests/exercise-aliases-migration.test.ts`, que la
+aplica sobre un catálogo mínimo. El renombrado va **después** de
+0006/0007/0008/0010/0011/0013/0015 (que referencian los nombres viejos) y no se
+reescriben migraciones pasadas. Sin `;` en los comentarios (el test la parte por
+ellos). Los alias se resuelven con un `JOIN`/`SELECT` por nombre, así que un
+catálogo recortado no la rompe.
+- `0023_ejercicios_barra_libre.sql` es **sembrado**: 17 ejercicios de «Barra
+Libre» con sus tags, sub-regiones (con grado) y alias. Tampoco va al bootstrap;
+la cubre `api/tests/barra-libre-migration.test.ts`.
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
 nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
-histórico de planificación, justo después del deploy; **0013–0015 y 0018 van
-antes del merge a `main`**, porque el merge publica la API que ya lee
-`exercise_regions.role` y los descansos — ver `DEPLOY.md` §4).
+histórico de planificación, justo después del deploy; **0013–0015, 0018 y
+0022–0023 van antes del merge a `main`**, porque el merge publica la API que ya
+lee `exercise_regions.role`, los descansos y `exercise_aliases` — ver
+`DEPLOY.md` §4).
 
   **Ojo con el orden cuando el cambio no es de ida y vuelta.** Aplicar la
 migración antes del merge solo es seguro si es **aditiva** (una columna nueva
@@ -946,6 +959,44 @@ participación (cabeza larga del tríceps en los presses por encima de la cabeza
 isquios en el hip thrust, `traps-mid` en los encogimientos), no errores de
 participación: no se tocan.
 
+### Nombres, alias y búsqueda (0022–0023)
+
+El nombre canónico es **español**. Se conservan los términos ya universales en un
+gimnasio español («curl», «press», «pullover», «crunch», «crossover»), los
+nombres propios («Press Arnold», «Curl en banco Scott», «Remo con barra
+Pendlay») y **`Hip thrust`**, que se conoce por ese nombre (su alias es la
+traducción, «empuje de cadera»). `0022_exercise_aliases.sql` renombra los 12 que
+estaban en inglés (Face pull → Tirón a la cara, Pistol squat → Sentadilla a una
+pierna, Farmer carry → Paseo del granjero…) y siembra `exercise_aliases` —el
+nombre inglés y los sinónimos, en minúsculas— para los 91.
+
+`Exercise` (web) y el payload de `/api/exercises` (lista y ficha) llevan
+`aliases: string[]`. La búsqueda casa **nombre + alias + tags**: el helper puro
+`matchesExercise(e, q, extra?)` (`web/src/lib/exercises.ts`, pliega mayúsculas y
+tildes) lo aplican el catálogo, el selector de plantilla y el del día; la paleta
+⌘K indexa `exerciseSearchTerms(e)` como `keywords` (su ranking es difuso, por eso
+no usa el booleano). El editor edita los alias como fichas y la ficha los enseña
+en «También conocido como». En la API, `aliases` se valida en `exerciseSchema`
+(vacío o repetido sin mirar mayúsculas/espacios → 400 `{field:'aliases'}`) y se
+guarda como los tags/regions. Lo cubren `api/tests/exercises.test.ts`,
+`web/tests/exercise-search.test.ts`, `web/tests/ejercicios.test.tsx` y
+`web/tests/command-palette-ui.test.tsx`.
+
+`0023_ejercicios_barra_libre.sql` añade los **17 ejercicios de «Barra Libre»** que
+faltaban (Cargada, Press jabalina, Peso muerto unilateral, Curl a una mano/
+invertido con barra, Burpee, Thruster, Swing/Arrancada con kettlebell, Remo alto,
+Cargada y press, Remo renegado/invertido, Dominada con toalla, Sit-up con barra,
+Flexiones con palmada y Sentadilla en rack con kettlebell) desde el libro *Barra
+Libre* (Fitness Revolucionario; solo traen ejercicios el cap. 2.3, pp. 60-98, las
+tablas de sesiones, pp. 163-210, y el Anexo 1, pp. 221-227). Criterio de
+equivalencia: **mismo movimiento y músculo → alias** («Roll-out con barra» →
+`Rueda abdominal`, «Rodillas a pecho» → `Elevación de piernas colgado`); **otro
+movimiento** (implemento, posición de carga o unilateralidad) **→ fila nueva** —
+por eso «Squat en rack con kettlebell» es fila propia y no la sentadilla goblet—.
+Fuera de alcance: «Saltos de cuerda», que es cardio (`kind` no lo admite). Lo
+cubre `e2e/tests/catalog.spec.ts` (el alias busca, el nuevo aparece, filtra por
+músculo y se añade a un día del plan).
+
 ## Fotos de recetas (R2)
 
 - Upload: `POST /api/uploads` (multipart `file`, png/jpeg/webp ≤ 5 MB) → `200 {photo_path}`
@@ -963,7 +1014,8 @@ con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras el gate de id
   eran 5 consultas por receta (501 en total) y 3 por ejercicio (274). En local:
   recetas de ~180 ms a ~12 ms y ejercicios de ~90 ms a ~5 ms, con JSON idéntico
   byte a byte. `api/tests/lists.test.ts` exige que el número de consultas no
-  crezca con las filas.
+  crezca con las filas. `queryExercises` hidrata un hijo fijo más desde `0022`:
+  tags, sub-regiones y **alias**.
 - **La lista no liga un parámetro por fila**: D1 admite como máximo 100 por
   consulta, así que un `IN (?,…)` con cada id rompería desde la receta 101 (y la
   D1 local podría no avisar). Los hijos se filtran con una subconsulta

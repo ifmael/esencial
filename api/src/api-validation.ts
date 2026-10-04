@@ -65,6 +65,10 @@ export const exerciseSchema = z
       .optional()
       .nullable(),
     tags: z.array(z.string().min(1)).min(1, "At least one tag is required"),
+    // Alias de búsqueda del catálogo: el nombre inglés (si se conoce por él) y
+    // los sinónimos usuales. La búsqueda pliega mayúsculas y tildes, así que se
+    // guardan tal cual, pero no valen vacíos ni repetidos.
+    aliases: z.array(z.string()).optional().default([]),
     // Sub-regiones del mapa anatómico con su grado (opcionales: un ejercicio
     // puede quedarse en el nivel del grupo).
     regions: z
@@ -76,6 +80,22 @@ export const exerciseSchema = z
     kind: z.enum(KINDS).default("strength"),
   })
   .superRefine((v, ctx) => {
+    // Alias: sin vacíos y sin repetidos (misma clave que la búsqueda: en
+    // minúsculas y sin espacios sobrantes, para que «Bench Press» y «bench
+    // press» no sean dos alias distintos).
+    const seenAlias = new Set<string>();
+    for (const alias of v.aliases) {
+      const key = alias.trim().toLowerCase();
+      const message = !key
+        ? "each alias must be non-empty"
+        : seenAlias.has(key)
+          ? `alias ${key} is repeated`
+          : null;
+      seenAlias.add(key);
+      if (!message) continue;
+      ctx.addIssue({ code: "custom", path: ["aliases"], message });
+      return;
+    }
     // Fail closed: la sub-región tiene que existir y colgar de un grupo que el
     // ejercicio ya tenga como tag, o filtrar por el grupo padre dejaría de
     // encontrarlo (los dos niveles se contradirían).

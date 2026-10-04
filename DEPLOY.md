@@ -68,6 +68,14 @@ solo añade una tabla y dos columnas con valor por defecto, y 0017 rellena datos
 que la API vieja ignora (la lista de ingredientes cambia, pero sigue siendo
 texto, cantidad y unidad).
 
+**0022–0023 (alias de búsqueda y ejercicios de Barra Libre) también van ANTES
+del merge.** `0022` crea `exercise_aliases` y la API nueva la lee en cada
+`GET /api/exercises` (lista, ficha y selector): sin la tabla, 500.
+Además renombra a español 12 ejercicios y siembra los alias de los 91. `0023`
+añade los 17 ejercicios de Barra Libre con sus grupos, sub-regiones y alias.
+Las dos son aditivas (la API vieja no consulta la tabla y la fila nueva es un
+ejercicio más), así que la ventana entre aplicarlas y el deploy no rompe nada.
+
 En local, la config de la API vive en `api/`, así que los scripts llevan
 `--persist-to .wrangler/state`: la base de desarrollo sigue en la raíz y no en
 `api/.wrangler/state`.

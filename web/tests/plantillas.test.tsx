@@ -35,6 +35,7 @@ const press: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pecho"],
+  aliases: ["bench press"],
   regions: [{ region: "chest-lower", role: "primary" }],
   kind: "strength",
 };
@@ -46,6 +47,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
+  aliases: [],
   regions: [{ region: "lats-mid", role: "primary" }],
   kind: "strength",
 };
@@ -57,6 +59,7 @@ const sent: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
+  aliases: [],
   regions: [{ region: "quads", role: "primary" }],
   kind: "strength",
 };
@@ -68,6 +71,7 @@ const run: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["cardio"],
+  aliases: [],
   regions: [],
   kind: "running",
 };

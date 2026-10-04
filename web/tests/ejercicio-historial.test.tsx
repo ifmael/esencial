@@ -26,6 +26,7 @@ const press: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pecho"],
+  aliases: [],
   regions: [],
   kind: "strength",
 };

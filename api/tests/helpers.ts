@@ -59,6 +59,7 @@ const TABLES = [
   "session_templates",
   "exercise_regions",
   "exercise_tags",
+  "exercise_aliases",
   "exercises",
   "recipe_ingredients",
   "foods",

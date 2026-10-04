@@ -1,6 +1,6 @@
 // E1 parity: exercises CRUD + tags; ?tag= filter (unknown tag → [] not error).
 import { beforeAll, describe, expect, it } from "vitest";
-import { del, devGet, devSend, freshDb, get, post, put } from "./helpers";
+import { d1, del, devGet, devSend, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -167,6 +167,88 @@ describe("/api/exercises", () => {
     });
     expect(res.status).toBe(400);
     expect((await body(res)).field).toBe("kind");
+  });
+});
+
+describe("alias de búsqueda", () => {
+  it("sin alias salen vacíos", async () => {
+    const id = await makePressBanca();
+    const got = await body(await get(`/api/exercises/${id}`));
+    expect(got.aliases).toEqual([]);
+  });
+
+  it("ida y vuelta: se crean, se leen ordenados y salen en la lista", async () => {
+    const res = await post("/api/exercises", {
+      name: "Paseo del granjero",
+      tags: ["antebrazo"],
+      aliases: ["farmer carry", "farmer's walk", "paseo de granjero"],
+    });
+    expect(res.status).toBe(201);
+    const created = (await body(res)) as { id: number; aliases: string[] };
+    expect(created.aliases).toEqual([
+      "farmer carry",
+      "farmer's walk",
+      "paseo de granjero",
+    ]);
+    const got = await body(await get(`/api/exercises/${created.id}`));
+    expect(got.aliases).toEqual(created.aliases);
+    const list = (await (await get("/api/exercises")).json()) as {
+      aliases: string[];
+    }[];
+    expect(list[0].aliases).toEqual(created.aliases);
+  });
+
+  it("PUT reemplaza los alias", async () => {
+    const id = await makePressBanca();
+    await post("/api/exercises", {
+      name: "Otro",
+      tags: ["pecho"],
+      aliases: ["viejo"],
+    });
+    const res = await put(`/api/exercises/${id}`, {
+      name: "Press banca",
+      tags: ["pecho"],
+      aliases: ["bench press", "press de banca"],
+    });
+    expect(res.status).toBe(200);
+    const got = await body(await get(`/api/exercises/${id}`));
+    expect(got.aliases).toEqual(["bench press", "press de banca"]);
+  });
+
+  it("400 con un alias vacío", async () => {
+    const res = await post("/api/exercises", {
+      name: "Alias malo",
+      tags: ["pecho"],
+      aliases: ["ok", "   "],
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("aliases");
+  });
+
+  it("400 con un alias repetido (sin mirar mayúsculas ni espacios)", async () => {
+    const res = await post("/api/exercises", {
+      name: "Alias repes",
+      tags: ["pecho"],
+      aliases: ["Bench Press", "bench press"],
+    });
+    expect(res.status).toBe(400);
+    expect((await body(res)).field).toBe("aliases");
+  });
+
+  it("DELETE se lleva sus alias", async () => {
+    const res = await post("/api/exercises", {
+      name: "Con alias",
+      tags: ["pecho"],
+      aliases: ["uno"],
+    });
+    const created = (await body(res)) as { id: number };
+    expect((await del(`/api/exercises/${created.id}`)).status).toBe(204);
+    expect(
+      await d1.get(
+        "SELECT COUNT(*) AS n FROM exercise_aliases WHERE exercise_id = ?",
+        created.id,
+      ),
+    ).toEqual({ n: 0 });
   });
 });
 

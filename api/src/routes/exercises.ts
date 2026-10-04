@@ -105,6 +105,20 @@ function regionStatements(
   );
 }
 
+function aliasStatements(
+  name: string,
+  aliases: ExerciseInput["aliases"],
+  db: D1Database,
+): D1PreparedStatement[] {
+  return [...new Set(aliases)].map((a) =>
+    db
+      .prepare(
+        `INSERT INTO exercise_aliases (exercise_id, alias) VALUES ((SELECT id FROM exercises WHERE name = ?), ?)`,
+      )
+      .bind(name, a),
+  );
+}
+
 export const exercises = new Hono<AppContext>()
   .get("/", (c) =>
     guard(async () => {
@@ -134,6 +148,7 @@ export const exercises = new Hono<AppContext>()
           ),
         ...tagStatements(name, input.tags, db),
         ...regionStatements(name, input.regions, db),
+        ...aliasStatements(name, input.aliases, db),
       ]);
       return json(
         await loadExercise(db, Number(results[0].meta.last_row_id)),
@@ -183,6 +198,8 @@ export const exercises = new Hono<AppContext>()
         ...tagStatements(name, input.tags, db),
         db.prepare("DELETE FROM exercise_regions WHERE exercise_id=?").bind(id),
         ...regionStatements(name, input.regions, db),
+        db.prepare("DELETE FROM exercise_aliases WHERE exercise_id=?").bind(id),
+        ...aliasStatements(name, input.aliases, db),
       ]);
       return json(await loadExercise(db, id));
     }),

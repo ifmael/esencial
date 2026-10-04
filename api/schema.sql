@@ -77,6 +77,15 @@ CREATE TABLE IF NOT EXISTS exercise_tags (
   PRIMARY KEY (exercise_id, tag)
 );
 
+-- Nombres por los que se busca un ejercicio además del suyo (0021): su nombre
+-- inglés y los sinónimos usuales, en minúsculas. La búsqueda casa nombre + alias
+-- + tags; la UI solo lo enseña en la ficha («También conocido como»).
+CREATE TABLE IF NOT EXISTS exercise_aliases (
+  exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+  alias       TEXT NOT NULL,
+  PRIMARY KEY (exercise_id, alias)
+);
+
 -- Segundo nivel de la taxonomía muscular: la región del mapa anatómico que
 -- trabaja el ejercicio, más fina que su grupo (`exercise_tags`), con su grado
 -- de implicación (principal, secundario o estabilizador; 0014).

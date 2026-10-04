@@ -22,7 +22,9 @@ function stubApi() {
         return Response.json([{ id: 4, name: "Crema de calabaza" }]);
       if (url.includes("/api/recipes")) return Response.json([]);
       if (url.includes("/api/exercises"))
-        return Response.json([{ id: 9, name: "Press banca", tags: [] }]);
+        return Response.json([
+          { id: 9, name: "Press banca", tags: [], aliases: ["bench press"] },
+        ]);
       if (url.includes("/api/templates")) return Response.json([]);
       return Response.json({});
     }),
@@ -84,6 +86,20 @@ describe("paleta de comandos", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     await waitFor(() => expect(window.location.pathname).toBe("/recetario/4"));
     expect(screen.queryByRole("dialog", { name: /buscar/i })).toBeNull();
+  });
+
+  it("el alias encuentra el ejercicio (⌘K casa nombre, alias y grupos)", async () => {
+    await openApp();
+    pressK();
+    const input = await paletteInput();
+    fireEvent.change(input, { target: { value: "bench" } });
+    const option = await screen.findByRole(
+      "option",
+      { name: /Press banca/ },
+      { timeout: 3000 },
+    );
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(window.location.pathname).toBe("/ejercicios/9"));
   });
 
   it("flechas mueven la opción activa dando la vuelta", async () => {

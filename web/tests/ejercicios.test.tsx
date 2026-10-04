@@ -30,6 +30,7 @@ const press: Exercise = {
     "Baja controlado y sube empujando.",
   ],
   tags: ["pecho", "tríceps"],
+  aliases: ["bench press", "press de banca"],
   regions: [
     { region: "chest-lower", role: "primary" },
     { region: "triceps-lateral", role: "secondary" },
@@ -44,6 +45,7 @@ const remo: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["espalda"],
+  aliases: [],
   regions: [{ region: "lats-mid", role: "primary" }],
   kind: "strength",
 };
@@ -55,6 +57,7 @@ const peso: Exercise = {
   techniqueUrl: null,
   steps: null,
   tags: ["pierna"],
+  aliases: [],
   regions: [{ region: "quads", role: "primary" }],
   kind: "strength",
 };
@@ -159,6 +162,17 @@ describe("catalog", () => {
     expect(api.calls.length).toBe(calls);
   });
 
+  it("la búsqueda casa el alias, no solo el nombre", async () => {
+    renderAt("/ejercicios");
+    const search = await screen.findByPlaceholderText(/buscar/i);
+    fireEvent.change(search, { target: { value: "bench press" } });
+    await waitFor(() => expect(screen.queryByText("Remo")).toBeNull());
+    expect(screen.getByText("Press banca")).toBeDefined();
+    // Un alias que no existe no inventa resultados.
+    fireEvent.change(search, { target: { value: "farmer carry" } });
+    await waitFor(() => expect(screen.queryByText("Press banca")).toBeNull());
+  });
+
   it("filtro por grupo: el chip elegido se marca y deja solo sus ejercicios", async () => {
     renderAt("/ejercicios");
     await screen.findByText("Press banca");
@@ -211,11 +225,20 @@ describe("catalog", () => {
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
 
     fireEvent.change(screen.getByLabelText("Nombre"), {
-      target: { value: "Hip thrust" },
+      target: { value: "Sentadilla con copa" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/elige al menos un grupo/i)).toBeDefined();
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
+
+    // Los alias se añaden como fichas: el nombre inglés y los sinónimos.
+    fireEvent.change(screen.getByLabelText("Nuevo alias"), {
+      target: { value: "goblet squat" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Añadir alias" }));
+    expect(
+      screen.getByRole("button", { name: "Quitar alias goblet squat" }),
+    ).toBeDefined();
 
     // Los diez grupos están a la vista como fichas: se eligen con un toque.
     const groups = screen.getByRole("group", { name: "Grupos musculares" });
@@ -254,9 +277,12 @@ describe("catalog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Subir paso 3" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.exercises).toHaveLength(4));
-    await screen.findByRole("heading", { name: "Hip thrust" });
+    await screen.findByRole("heading", { name: "Sentadilla con copa" });
     expect(screen.getByText("glúteo")).toBeDefined();
     expect(screen.getByText("Glúteo mayor")).toBeDefined();
+    expect(
+      screen.getByText(/También conocido como: goblet squat/),
+    ).toBeDefined();
     const post = api.calls.find(
       (c) => c.method === "POST" && c.url === "/api/exercises",
     )!;
@@ -264,12 +290,14 @@ describe("catalog", () => {
     const body = post.body as {
       steps: string[] | null;
       regions: unknown[];
+      aliases: string[];
       kind: string;
     };
     expect(body.steps).toEqual(["Paso uno", "Paso dos"]);
     expect(body.regions).toEqual([
       { region: "gluteus-maximus", role: "secondary" },
     ]);
+    expect(body.aliases).toEqual(["goblet squat"]);
     expect(body.kind).toBe("bike");
   });
 
@@ -312,6 +340,14 @@ describe("detail", () => {
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
     expect(link.getAttribute("href")).toBe("https://youtu.be/dQw4w9WgXcQ");
+  });
+
+  it("la ficha enseña los alias como «También conocido como»", async () => {
+    renderAt("/ejercicios/7");
+    await screen.findByRole("heading", { name: "Press banca" });
+    expect(
+      screen.getByText("También conocido como: bench press, press de banca"),
+    ).toBeDefined();
   });
 
   it("dibuja los músculos en la vista que les toca, y solo esa", async () => {

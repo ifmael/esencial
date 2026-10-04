@@ -62,6 +62,7 @@ import {
   type Exercise,
   type ExerciseKind,
   KIND_LABELS,
+  matchesExercise,
   targetSummary,
   useExercises,
 } from "../lib/exercises";
@@ -175,7 +176,7 @@ function DayPicker({
     ? templates.filter((t) => t.name.toLowerCase().includes(needle))
     : templates;
   const shownExercises = needle
-    ? exercises.filter((e) => e.name.toLowerCase().includes(needle))
+    ? exercises.filter((e) => matchesExercise(e, query))
     : exercises;
   const pickClass =
     "state flex min-h-12 w-full items-center gap-3 rounded-l px-3 py-2 text-left text-body-l transition-colors motion-effects disabled:text-on-surface-variant";

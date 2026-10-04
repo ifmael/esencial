@@ -325,6 +325,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           techniqueUrl?: string | null;
           steps?: string[] | null;
           tags: string[];
+          aliases?: string[];
           regions?: Exercise["regions"];
           kind?: "strength" | "running" | "bike";
         };
@@ -340,6 +341,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           techniqueUrl: b.techniqueUrl ?? null,
           steps: b.steps ?? null,
           tags: b.tags,
+          aliases: b.aliases ?? [],
           regions: b.regions ?? [],
           kind: b.kind ?? "strength",
         };
@@ -363,6 +365,7 @@ export function mockApi(seed: Seed = {}): MockApi {
             techniqueUrl: b.techniqueUrl ?? null,
             steps: b.steps ?? null,
             tags: b.tags,
+            aliases: b.aliases ?? [],
             regions: b.regions ?? [],
             kind: b.kind ?? "strength",
           });

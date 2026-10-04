@@ -58,6 +58,7 @@ import {
   type ExerciseKind,
   type ExerciseRegion,
   KIND_LABELS,
+  matchesExercise,
   type RegionRole,
   ROLE_LABELS,
   useExercises,
@@ -243,6 +244,7 @@ type Draft = {
   techniqueUrl: string;
   steps: string[];
   tags: string[];
+  aliases: string[];
   regions: ExerciseRegion[];
   kind: ExerciseKind;
 };
@@ -254,6 +256,7 @@ const emptyDraft = (): Draft => ({
   techniqueUrl: "",
   steps: [""],
   tags: [],
+  aliases: [],
   regions: [],
   kind: "strength",
 });
@@ -265,6 +268,7 @@ const toDraft = (x: Exercise): Draft => ({
   techniqueUrl: x.techniqueUrl ?? "",
   steps: x.steps?.length ? [...x.steps] : [""],
   tags: [...x.tags],
+  aliases: [...x.aliases],
   regions: x.regions.map((r) => ({ ...r })),
   kind: x.kind,
 });
@@ -278,6 +282,7 @@ const toInput = (d: Draft): ExerciseInput => {
     techniqueUrl: d.techniqueUrl || null,
     steps: steps.length ? steps : null,
     tags: d.tags,
+    aliases: d.aliases,
     regions: d.regions,
     kind: d.kind,
   };
@@ -288,6 +293,7 @@ type FieldErrors = {
   tags?: string;
   regions?: string;
   techniqueUrl?: string;
+  aliases?: string;
 };
 
 /** Posición en la entrada escalonada (`.stagger`). */
@@ -309,7 +315,15 @@ function ExerciseEditor({
   const [draft, setDraft] = useState<Draft>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [alias, setAlias] = useState("");
   const morph = useCreateMorph();
+
+  const addAlias = () => {
+    const v = alias.trim();
+    if (v && !draft.aliases.includes(v))
+      setDraft({ ...draft, aliases: [...draft.aliases, v] });
+    setAlias("");
+  };
 
   const toggleRegion = (region: MuscleRegion) => {
     const on = draft.regions.some((r) => r.region === region.id);
@@ -368,7 +382,8 @@ function ExerciseEditor({
         field === "techniqueUrl" ||
           field === "name" ||
           field === "tags" ||
-          field === "regions"
+          field === "regions" ||
+          field === "aliases"
           ? { [field]: errorMessage(e) }
           : {},
       );
@@ -467,6 +482,68 @@ function ExerciseEditor({
               />
             )}
           </Field>
+          <section
+            aria-labelledby="ex-aliases-label"
+            aria-describedby={errors.aliases ? "ex-aliases-error" : undefined}
+            className="flex flex-col gap-3"
+          >
+            <h2 id="ex-aliases-label" className="text-title-m">
+              Alias de búsqueda
+            </h2>
+            <p className="text-body-m text-on-surface-variant">
+              Otros nombres con los que se encuentra el ejercicio: el inglés y
+              los sinónimos. La búsqueda los casa, pero no se muestran en el
+              catálogo.
+            </p>
+            {draft.aliases.length > 0 && (
+              <ul className="flex flex-wrap gap-2">
+                {draft.aliases.map((al) => (
+                  <li key={al}>
+                    <Chip
+                      aria-label={`Quitar alias ${al}`}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          aliases: draft.aliases.filter((x) => x !== al),
+                        })
+                      }
+                    >
+                      {al}
+                      <CloseIcon width={18} height={18} />
+                    </Chip>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex items-start gap-2">
+              <Field label="Nuevo alias" className="flex-1">
+                {(a) => (
+                  <Input
+                    {...a}
+                    value={alias}
+                    onChange={(e) => setAlias(e.target.value)}
+                  />
+                )}
+              </Field>
+              <Button
+                variant="tonal"
+                size="icon"
+                aria-label="Añadir alias"
+                onClick={addAlias}
+              >
+                <AddIcon />
+              </Button>
+            </div>
+            {errors.aliases && (
+              <p
+                id="ex-aliases-error"
+                role="alert"
+                className="text-body-s text-error"
+              >
+                {errors.aliases}
+              </p>
+            )}
+          </section>
           <section className="flex flex-col gap-3">
             <h2 className="text-title-m">Tipo</h2>
             <ConnectedGroup label="Tipo">
@@ -666,16 +743,11 @@ export function EjerciciosPage() {
   const [group, setGroup] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const q = search.trim().toLowerCase();
   const groups = MUSCLE_GROUPS.filter((g) =>
     exercises.some((e) => e.tags.includes(g)),
   );
   const shown = exercises.filter(
-    (e) =>
-      (!group || e.tags.includes(group)) &&
-      (!q ||
-        e.name.toLowerCase().includes(q) ||
-        e.tags.some((t) => t.toLowerCase().includes(q))),
+    (e) => (!group || e.tags.includes(group)) && matchesExercise(e, search),
   );
   const newButton = (
     <Button
@@ -732,7 +804,7 @@ export function EjerciciosPage() {
       )}
       <SearchBar
         aria-label="Buscar ejercicios"
-        placeholder="Buscar por nombre o tag"
+        placeholder="Buscar por nombre, alias o tag"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -1198,6 +1270,11 @@ export function EjercicioDetailPage() {
             )}
             {exercise.description && (
               <p className="text-body-l">{exercise.description}</p>
+            )}
+            {exercise.aliases.length > 0 && (
+              <p className="text-body-m text-on-surface-variant">
+                También conocido como: {exercise.aliases.join(", ")}
+              </p>
             )}
             {exercise.setupCues && (
               <section className="flex flex-col gap-2">
