@@ -747,6 +747,15 @@ histórico de planificación, justo después del deploy; **0013–0015 y 0018 va
 antes del merge a `main`**, porque el merge publica la API que ya lee
 `exercise_regions.role` y los descansos — ver `DEPLOY.md` §4).
 
+  **Ojo con el orden cuando el cambio no es de ida y vuelta.** Aplicar la
+migración antes del merge solo es seguro si es **aditiva** (una columna nueva
+que deja vacíos, que el código viejo ignora). Si la columna nace **obligatoria**
+sobre filas que ya existen, el código desplegado —que no la rellena— empieza a
+dar 500 en cuanto se aplica (le pasó a `0020`: planificar, plantillas, nota del
+día y semana de comidas dejaron de funcionar hasta el deploy). Para eso el patrón
+es en dos tiempos: 1) columna que admite vacíos → deploy del código que la
+rellena → 2) rellenar lo viejo y hacerla obligatoria. Tres pasos, no uno.
+
 ### 2. wrangler pide confirmación y cuelga en no-TTY
 
 `wrangler d1 migrations apply` muestra un prompt `(Y/n)` cuando corre en un
