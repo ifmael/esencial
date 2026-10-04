@@ -55,7 +55,7 @@ export type Exercise = {
   techniqueUrl: string | null;
   steps: string[] | null;
   tags: string[];
-  /** Nombre inglés y sinónimos de búsqueda, en minúsculas (0021). */
+  /** Nombre inglés y sinónimos de búsqueda, en minúsculas (0022). */
   aliases: string[];
   /** Sub-regiones del mapa anatómico (`web/src/components/body-map/regions`)
    *  con su grado, ordenadas por región. */

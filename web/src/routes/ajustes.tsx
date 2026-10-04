@@ -11,6 +11,7 @@ import {
   LightIcon,
   SwatchIcon,
 } from "../components/icons";
+import { useSnackbar } from "../components/overlay";
 import {
   Alert,
   Badge,
@@ -30,6 +31,7 @@ import {
   type Me,
   type Role,
   removeMember,
+  updateName,
   useMe,
   useUsers,
 } from "../lib/family";
@@ -219,6 +221,75 @@ function FamilyCard({ me }: { me: Me }) {
   );
 }
 
+/** Tarjeta «Perfil»: el nombre de la persona. No es cosa de la familia, así que
+ *  la ve todo el mundo. La API lo normaliza (trim y espacios internos), el vacío
+ *  lo borra, y el 400 del campo se marca en el propio campo. */
+function ProfileCard({ me, reload }: { me: Me; reload: () => Promise<void> }) {
+  const snackbar = useSnackbar();
+  const [name, setName] = useState(me.name ?? "");
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    void (async () => {
+      setFieldError(null);
+      setError(null);
+      setPending(true);
+      try {
+        // Lo guardado vuelve normalizado: el campo enseña eso, no lo tecleado.
+        const saved = await updateName(name);
+        setName(saved.name ?? "");
+        snackbar({ message: "Nombre guardado" });
+        await reload();
+      } catch (e) {
+        const text =
+          e instanceof ApiError && e.error
+            ? e.error
+            : "No se pudo conectar con el servidor";
+        if (e instanceof ApiError && e.field === "name") setFieldError(text);
+        else setError(text);
+      } finally {
+        setPending(false);
+      }
+    })();
+  };
+
+  return (
+    <Card className="flex flex-col gap-stack">
+      <h2 className="text-title-m">Perfil</h2>
+
+      <form
+        className="flex flex-col gap-stack sm:flex-row sm:items-start"
+        onSubmit={submit}
+        noValidate
+      >
+        <Field label="Nombre" error={fieldError} className="grow">
+          {(a11y) => (
+            <Input
+              {...a11y}
+              name="name"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          )}
+        </Field>
+        <Button type="submit" disabled={pending}>
+          Guardar
+        </Button>
+      </form>
+
+      {error ? (
+        <Alert tone="error">
+          <p className="text-body-m">{error}</p>
+        </Alert>
+      ) : null}
+    </Card>
+  );
+}
+
 export function AjustesPage() {
   const theme = useTheme();
   const me = useMe();
@@ -245,6 +316,8 @@ export function AjustesPage() {
           })}
         </ConnectedGroup>
       </Card>
+
+      {me.data ? <ProfileCard me={me.data} reload={me.reload} /> : null}
 
       {me.data?.role === "admin" ? <FamilyCard me={me.data} /> : null}
 

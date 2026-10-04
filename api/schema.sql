@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
   id         INTEGER PRIMARY KEY,
   email      TEXT NOT NULL UNIQUE,
   role       TEXT NOT NULL CHECK (role IN ('admin', 'member')),
+  -- Nombre de perfil (0021): lo teclea la persona, NULL mientras no lo ponga.
+  name       TEXT,
   family_id  INTEGER NOT NULL REFERENCES families(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

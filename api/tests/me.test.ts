@@ -6,7 +6,7 @@ import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, test } from "vitest";
 import { identityEmail, normalizeEmail } from "../src/identity";
 import app from "../src/index";
-import { d1, devGet, freshDb } from "./helpers";
+import { d1, devGet, devSend, freshDb } from "./helpers";
 
 const ME = "http://localhost/api/me";
 
@@ -29,6 +29,7 @@ type Me = {
   email: string;
   role: string;
   familyId: number;
+  name: string | null;
   access: boolean;
 };
 
@@ -108,6 +109,7 @@ describe("GET /api/me", () => {
       email: "pepe@example.com",
       role: "admin",
       familyId: expect.any(Number),
+      name: null,
       access: false,
     });
     expect(await d1.get("SELECT COUNT(*) AS n FROM families")).toEqual({
@@ -162,5 +164,120 @@ describe("GET /api/me", () => {
     expect(
       (await app.request("http://localhost/api/metoo", {}, env)).status,
     ).toBe(401);
+  });
+});
+
+describe("PATCH /api/me", () => {
+  const MAX = 60;
+
+  test("guarda el nombre, lo normaliza y el GET lo devuelve", async () => {
+    await devGet("/api/me", "pepe@example.com");
+    const res = await devSend(
+      "/api/me",
+      "PATCH",
+      { name: "  Ismael   R.  " },
+      "pepe@example.com",
+    );
+    expect(res.status).toBe(200);
+    expect((await meOf(res)).name).toBe("Ismael R.");
+
+    // Persistido de verdad: el GET siguiente (y la fila) lo traen.
+    expect((await meOf(await devGet("/api/me", "pepe@example.com"))).name).toBe(
+      "Ismael R.",
+    );
+    expect(
+      await d1.get(
+        "SELECT name FROM users WHERE email = ?",
+        "pepe@example.com",
+      ),
+    ).toEqual({ name: "Ismael R." });
+  });
+
+  test("colapsa cualquier espacio en blanco, no solo el de teclado", async () => {
+    await devGet("/api/me", "pepe@example.com");
+    const res = await devSend(
+      "/api/me",
+      "PATCH",
+      { name: "A\t B\nC  D" },
+      "pepe@example.com",
+    );
+    expect((await meOf(res)).name).toBe("A B C D");
+  });
+
+  test("vacío o solo espacios borra el nombre (null)", async () => {
+    await devGet("/api/me", "pepe@example.com");
+    await devSend("/api/me", "PATCH", { name: "Pepe" }, "pepe@example.com");
+    const res = await devSend(
+      "/api/me",
+      "PATCH",
+      { name: "   " },
+      "pepe@example.com",
+    );
+    expect(res.status).toBe(200);
+    expect((await meOf(res)).name).toBeNull();
+    expect(
+      await d1.get(
+        "SELECT name FROM users WHERE email = ?",
+        "pepe@example.com",
+      ),
+    ).toEqual({ name: null });
+  });
+
+  test(`admite justo el límite (${MAX}) y rechaza uno más con {field:'name'}`, async () => {
+    await devGet("/api/me", "pepe@example.com");
+    const ok = await devSend(
+      "/api/me",
+      "PATCH",
+      { name: "x".repeat(MAX) },
+      "pepe@example.com",
+    );
+    expect(ok.status).toBe(200);
+    expect((await meOf(ok)).name).toBe("x".repeat(MAX));
+
+    const res = await devSend(
+      "/api/me",
+      "PATCH",
+      { name: "y".repeat(MAX + 1) },
+      "pepe@example.com",
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ field: "name" });
+    // El nombre guardado no se toca.
+    expect(
+      await d1.get(
+        "SELECT name FROM users WHERE email = ?",
+        "pepe@example.com",
+      ),
+    ).toEqual({ name: "x".repeat(MAX) });
+  });
+
+  test("un body sin `name` (o de otro tipo) es 400 {field:'name'}", async () => {
+    await devGet("/api/me", "pepe@example.com");
+    for (const body of [{}, { name: 3 }, { name: null }]) {
+      const res = await devSend("/api/me", "PATCH", body, "pepe@example.com");
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ field: "name" });
+    }
+    // Un cuerpo que ni es JSON: 400, pero el campo es el `body`.
+    const malformed = await devSend(
+      "/api/me",
+      "PATCH",
+      "nope",
+      "pepe@example.com",
+    );
+    expect(malformed.status).toBe(400);
+  });
+
+  test("sin identidad es 401", async () => {
+    const res = await app.request(
+      ME,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "X" }),
+      },
+      env,
+    );
+    expect(res.status).toBe(401);
   });
 });

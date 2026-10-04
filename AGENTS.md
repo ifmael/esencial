@@ -107,6 +107,13 @@ Escala vigente — todo lo demás sale de aquí:
   sesión —cosa de Cloudflare Access, un enlace, no del router— va como botón
   *outlined* al lado del texto y **sin** la flecha de las filas que navegan:
   hace, no lleva.
+- **Nombre de perfil** (`0021_users_name.sql`): la identidad la prueba Access y
+  solo trae el email (el IdP de One-time PIN no aporta `name`), así que el nombre
+  lo teclea la persona en la tarjeta «Perfil» de Ajustes. `PATCH /api/me` lo
+  normaliza (trim y colapso de espacios internos), el vacío lo borra (`null`) y
+  por encima de 60 caracteres es 400 `{field:'name'}`; lo devuelven `GET /api/me`
+  y `GET /api/users`. No se pinta en la cabecera de Hoy ni en la lista de
+  familia.
 - **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
   cada superficie declara `--field-bg` para el recorte).
 - **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
@@ -244,15 +251,22 @@ entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
 
 ### Cabecera del día (`/`)
 
-`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila**
-(~88 px): el `h1` pasa a `sr-only` (sigue siendo el único título y los tests lo
-buscan), sin flor, sin progreso (ni anillo ni barra: decisión del usuario) y sin
-los enlaces a los planes (ya están en la barra inferior). «Hoy» lleva
+`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila de
+controles** (~88 px, ~148 con el saludo a 390 px): el `h1` pasa a `sr-only`
+(sigue siendo el único título y los tests lo buscan), sin flor, sin progreso (ni
+anillo ni barra: decisión del usuario) y sin los enlaces a los planes (ya están
+en la barra inferior). «Hoy» lleva
 `aria-pressed={isToday}`: sin título, es lo que dice que el día elegido es hoy
 (también en escritorio, donde se pinta como píldora en `--accent`). La fecha lleva
 `grow-10` porque `.connected > *` hace crecer a todas las piezas por igual, y su
 `onClick` llama a `showPicker()` para abrir el calendario al pulsar en cualquier
-punto, no solo en el icono. Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
+punto, no solo en el icono. **Saludo**: en el sitio de la etiqueta «Hoy» —arriba,
+sobre la fecha, y visible también en móvil— y en **todos los días** (no solo hoy):
+«Hola … , estos son los planes que tienes para …», con el `name` del perfil
+(`useMe`; sin nombre puesto saluda sin él). La etiqueta «Hoy» ya no se
+pinta: queda `sr-only` dentro del `h1` (el texto y el «Hoy» pulsado siguen
+diciendo qué día es). El e2e móvil mide < 200 px (medido, 148 px a 390 px sin
+nombre). Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
 
 ### Cabecera del detalle de ejercicio (`/ejercicios/:id`)
 
@@ -745,7 +759,11 @@ bootstrap no siembra regiones), así que lo verifica el e2e.
 sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sql`
 es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
 cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
-- `0021_exercise_aliases.sql` es **aditiva**: crea `exercise_aliases` (en
+- `0021_users_name.sql` es **aditiva**: `users.name TEXT` (NULL = sin nombre, el
+  nombre de perfil que la persona edita en Ajustes con `PATCH /api/me`). Al
+  admitir vacíos sobre las filas que ya existen, se puede aplicar antes del
+  merge sin romper al código desplegado (es justo lo contrario de `0020`).
+- `0022_exercise_aliases.sql` es **aditiva**: crea `exercise_aliases` (en
 `schema.sql` y en `TABLES`), renombra a español 12 ejercicios del catálogo y
 siembra los 160 alias de búsqueda de los 91. **No va al bootstrap** (es siembra,
 como 0010); la cubre `api/tests/exercise-aliases-migration.test.ts`, que la
@@ -754,13 +772,13 @@ aplica sobre un catálogo mínimo. El renombrado va **después** de
 reescriben migraciones pasadas. Sin `;` en los comentarios (el test la parte por
 ellos). Los alias se resuelven con un `JOIN`/`SELECT` por nombre, así que un
 catálogo recortado no la rompe.
-- `0022_ejercicios_barra_libre.sql` es **sembrado**: 17 ejercicios de «Barra
+- `0023_ejercicios_barra_libre.sql` es **sembrado**: 17 ejercicios de «Barra
 Libre» con sus tags, sub-regiones (con grado) y alias. Tampoco va al bootstrap;
 la cubre `api/tests/barra-libre-migration.test.ts`.
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
 nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
 histórico de planificación, justo después del deploy; **0013–0015, 0018 y
-0021–0022 van antes del merge a `main`**, porque el merge publica la API que ya
+0022–0023 van antes del merge a `main`**, porque el merge publica la API que ya
 lee `exercise_regions.role`, los descansos y `exercise_aliases` — ver
 `DEPLOY.md` §4).
 
@@ -941,13 +959,13 @@ participación (cabeza larga del tríceps en los presses por encima de la cabeza
 isquios en el hip thrust, `traps-mid` en los encogimientos), no errores de
 participación: no se tocan.
 
-### Nombres, alias y búsqueda (0021–0022)
+### Nombres, alias y búsqueda (0022–0023)
 
 El nombre canónico es **español**. Se conservan los términos ya universales en un
 gimnasio español («curl», «press», «pullover», «crunch», «crossover»), los
 nombres propios («Press Arnold», «Curl en banco Scott», «Remo con barra
 Pendlay») y **`Hip thrust`**, que se conoce por ese nombre (su alias es la
-traducción, «empuje de cadera»). `0021_exercise_aliases.sql` renombra los 12 que
+traducción, «empuje de cadera»). `0022_exercise_aliases.sql` renombra los 12 que
 estaban en inglés (Face pull → Tirón a la cara, Pistol squat → Sentadilla a una
 pierna, Farmer carry → Paseo del granjero…) y siembra `exercise_aliases` —el
 nombre inglés y los sinónimos, en minúsculas— para los 91.
@@ -964,7 +982,7 @@ guarda como los tags/regions. Lo cubren `api/tests/exercises.test.ts`,
 `web/tests/exercise-search.test.ts`, `web/tests/ejercicios.test.tsx` y
 `web/tests/command-palette-ui.test.tsx`.
 
-`0022_ejercicios_barra_libre.sql` añade los **17 ejercicios de «Barra Libre»** que
+`0023_ejercicios_barra_libre.sql` añade los **17 ejercicios de «Barra Libre»** que
 faltaban (Cargada, Press jabalina, Peso muerto unilateral, Curl a una mano/
 invertido con barra, Burpee, Thruster, Swing/Arrancada con kettlebell, Remo alto,
 Cargada y press, Remo renegado/invertido, Dominada con toalla, Sit-up con barra,
@@ -996,7 +1014,7 @@ con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras el gate de id
   eran 5 consultas por receta (501 en total) y 3 por ejercicio (274). En local:
   recetas de ~180 ms a ~12 ms y ejercicios de ~90 ms a ~5 ms, con JSON idéntico
   byte a byte. `api/tests/lists.test.ts` exige que el número de consultas no
-  crezca con las filas. `queryExercises` hidrata un hijo fijo más desde `0021`:
+  crezca con las filas. `queryExercises` hidrata un hijo fijo más desde `0022`:
   tags, sub-regiones y **alias**.
 - **La lista no liga un parámetro por fila**: D1 admite como máximo 100 por
   consulta, así que un `IN (?,…)` con cada id rompería desde la receta 101 (y la

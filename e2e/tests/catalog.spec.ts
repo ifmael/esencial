@@ -1,5 +1,5 @@
 // Catálogo del banco de ejercicios: nombres españoles canónicos + alias de
-// búsqueda (0021) y los ejercicios de «Barra Libre» que faltaban (0022). Todo
+// búsqueda (0022) y los ejercicios de «Barra Libre» que faltaban (0023). Todo
 // esto viaja de la migración a la API y a la pantalla, así que se prueba en el
 // navegador contra el catálogo sembrado de verdad.
 import { type APIRequestContext, expect, test } from "@playwright/test";

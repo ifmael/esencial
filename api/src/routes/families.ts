@@ -130,7 +130,7 @@ export const families = new Hono<AppContext>()
       if (!family) return notFound();
       const user = await row(
         db,
-        "SELECT id, email, role, family_id FROM users WHERE email = ?",
+        "SELECT id, email, role, name, family_id FROM users WHERE email = ?",
         email,
       );
       if (!user) return notFound();
@@ -143,6 +143,7 @@ export const families = new Hono<AppContext>()
         id: userId,
         email: user.email,
         role: user.role,
+        name: user.name,
         familyId,
       });
     }),
@@ -194,7 +195,7 @@ export const users = new Hono<AppContext>()
       json(
         await rows(
           getDb(c.env),
-          "SELECT id, email, role, family_id AS familyId FROM users ORDER BY email COLLATE NOCASE",
+          "SELECT id, email, role, name, family_id AS familyId FROM users ORDER BY email COLLATE NOCASE",
         ),
       ),
     ),

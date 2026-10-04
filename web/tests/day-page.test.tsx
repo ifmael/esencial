@@ -66,10 +66,21 @@ function payload(over: Partial<DayData> = {}): DayData {
 }
 
 let fetchMock: Mock;
+/** Cuenta de `/api/me`; los tests del saludo le cambian el `name`. */
+let me: Record<string, unknown>;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  me = {
+    id: 1,
+    email: "admin@esencial.test",
+    role: "admin",
+    familyId: 1,
+    name: null,
+    access: true,
+  };
   fetchMock = vi.fn(async (url: string) => {
+    if (String(url) === "/api/me") return Response.json(me);
     return Response.json(
       payload({ date: String(url).slice("/api/day/".length) }),
     );
@@ -184,6 +195,50 @@ describe("header y navegación", () => {
     expect(
       within(header).getByRole("link", { name: "Plan fuerza" }),
     ).toBeDefined();
+  });
+});
+
+describe("saludo de bienvenida", () => {
+  it("con nombre, saluda en la cabecera cuando el día es hoy", async () => {
+    me.name = "Ismael";
+    const { container } = renderAt("/");
+    await settle();
+    const header = container.querySelector("header") as HTMLElement;
+    const saludo = within(header).getByText(
+      "Hola Ismael, estos son los planes que tienes para …",
+    );
+    expect(saludo).toBeDefined();
+    // Va arriba, sobre la fecha (el sitio de la etiqueta «Hoy»).
+    const titulo = within(header).getByRole("heading", { level: 1 });
+    expect(
+      saludo.compareDocumentPosition(titulo) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(titulo.textContent).toMatch(/^Hoy/);
+  });
+
+  it("sin nombre puesto, saluda igual (solo «Hola»)", async () => {
+    renderAt("/");
+    await settle();
+    expect(
+      screen.getByText("Hola, estos son los planes que tienes para …"),
+    ).toBeDefined();
+  });
+
+  it("el saludo no depende del día; «Hoy» sí", async () => {
+    me.name = "Ismael";
+    renderAt("/");
+    await settle();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(
+      /^Hoy/,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Día siguiente" }));
+    await settle();
+    expect(
+      screen.getByText("Hola Ismael, estos son los planes que tienes para …"),
+    ).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toMatch(
+      /^Hoy/,
+    );
   });
 });
 

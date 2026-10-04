@@ -45,6 +45,7 @@ import {
   useDay,
 } from "../lib/day";
 import { KIND_LABELS } from "../lib/exercises";
+import { useMe } from "../lib/family";
 
 export function formatDateEs(date: Date): string {
   return new Intl.DateTimeFormat("es-ES", {
@@ -64,11 +65,14 @@ export function DayHeader({
   date,
   onChange,
   progress,
+  name,
 }: {
   date: Date;
   onChange: (d: Date) => void;
   /** Pasos del día (`dayProgress`); sin datos aún, no se pinta el anillo. */
   progress?: { done: number; total: number };
+  /** Nombre de perfil para el saludo; `null` mientras no lo ponga. */
+  name?: string | null;
 }) {
   const isToday = toISODate(date) === toISODate(new Date());
   return (
@@ -82,15 +86,18 @@ export function DayHeader({
           className="text-surface-container-high"
         />
       </span>
+      {/* Saludo: en el sitio de la etiqueta «Hoy», arriba y sobre la fecha, y en
+       * todos los días (no solo hoy). Sin nombre puesto, saluda igual pero sin él. */}
+      <p className="relative text-body-l text-on-surface-variant">
+        {`Hola${name ? ` ${name}` : ""}, estos son los planes que tienes para …`}
+      </p>
+
       {/* Móvil: sin título visible (la fecha ya está en la fila); `contents`
        * para que la fila vacía no sume el hueco de la cabecera. */}
       <div className="contents lg:relative lg:flex lg:items-start lg:justify-between lg:gap-4">
         <h1 className="sr-only min-w-0 text-balance text-display-s text-e md:text-display-m lg:not-sr-only">
-          {isToday && (
-            <span className="block text-title-l text-e text-accent">
-              Hoy<span className="sr-only"> — </span>
-            </span>
-          )}
+          {/* El saludo ocupa su sitio: «Hoy» sigue ahí solo para quien lee. */}
+          {isToday && <span className="sr-only">Hoy — </span>}
           <span className="block first-letter:uppercase">
             {formatDateEs(date)}
           </span>
@@ -606,12 +613,14 @@ export function DiaPage() {
   const [date, setDate] = useState(() => new Date());
   const iso = toISODate(date);
   const { data, loading, error, reload } = useDay(iso);
+  const me = useMe();
   return (
     <>
       <DayHeader
         date={date}
         onChange={setDate}
         progress={data ? dayProgress(data) : undefined}
+        name={me.data?.name ?? null}
       />
       {loading ? (
         <Skeleton />

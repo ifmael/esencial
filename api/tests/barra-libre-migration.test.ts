@@ -1,4 +1,4 @@
-// La 0022 siembra los ejercicios de «Barra Libre» que faltaban (17 filas), con
+// La 0023 siembra los ejercicios de «Barra Libre» que faltaban (17 filas), con
 // sus grupos, sus sub-regiones (con grado) y sus alias de búsqueda. No va al
 // bootstrap de tests (es siembra, como 0010): aquí se aplica a mano sobre el
 // esquema final.
@@ -9,7 +9,7 @@
 // los alias van en minúsculas.
 import { env } from "cloudflare:test";
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
-import m0022 from "../migrations/0022_ejercicios_barra_libre.sql?raw";
+import m0023 from "../migrations/0023_ejercicios_barra_libre.sql?raw";
 import { MUSCLE_REGION_GROUPS } from "../src/muscle-regions";
 import { d1, resetSchema } from "./helpers";
 
@@ -37,7 +37,7 @@ const NUEVOS = [
 
 const apply = () =>
   env.DB.batch(
-    m0022
+    m0023
       .split(";")
       .filter((s) => s.trim())
       .map((s) => env.DB.prepare(s)),
@@ -54,7 +54,7 @@ beforeEach(async () => {
 
 afterAll(resetSchema);
 
-describe("0022 — ejercicios de Barra Libre", () => {
+describe("0023 — ejercicios de Barra Libre", () => {
   test("crea los 17 ejercicios con grupo y al menos un músculo principal", async () => {
     for (const name of NUEVOS) {
       const tags = await d1.all<{ tag: string }>(

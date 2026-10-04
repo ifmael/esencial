@@ -88,6 +88,7 @@ export function mockApi(seed: Seed = {}): MockApi {
         email: "admin@esencial.test",
         role: "admin" as const,
         familyId: 1,
+        name: null,
       },
     ),
     access: seed.access ?? true,
@@ -152,6 +153,17 @@ export function mockApi(seed: Seed = {}): MockApi {
 
     // Familia: /api/me, /api/users y el alta/baja de miembros (solo admin).
     if (url === "/api/me" && method === "GET") return json(api.state.me);
+
+    // El nombre de perfil: la API normaliza (trim + colapso), el vacío es
+    // null y por encima de 60 caracteres es 400 del campo.
+    if (url === "/api/me" && method === "PATCH") {
+      if (typeof body?.name !== "string") return err("Nombre inválido", "name");
+      const name = body.name.trim().replace(/\s+/g, " ");
+      if (name.length > 60)
+        return err("El nombre no puede superar los 60 caracteres", "name");
+      api.state.me.name = name === "" ? null : name;
+      return json(api.state.me);
+    }
 
     if (url === "/api/users" && method === "GET") {
       if (api.state.me.role !== "admin")

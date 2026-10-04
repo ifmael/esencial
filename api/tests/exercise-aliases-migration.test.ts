@@ -1,13 +1,13 @@
-// La 0021 fija el español como nombre canónico del catálogo y siembra los alias
+// La 0022 fija el español como nombre canónico del catálogo y siembra los alias
 // de búsqueda. El bootstrap de tests no la aplica (es siembra, como 0010): el
 // esquema sí trae ya `exercise_aliases`, porque schema.sql es el estado final.
 //
-// El esquema PRE-0021 se levanta a mano a propósito: es una foto congelada del
+// El esquema PRE-0022 se levanta a mano a propósito: es una foto congelada del
 // catálogo antes del renombrado, con los nombres ingleses que la migración
 // tiene que traducir.
 import { env } from "cloudflare:test";
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
-import m0021 from "../migrations/0021_exercise_aliases.sql?raw";
+import m0022 from "../migrations/0022_exercise_aliases.sql?raw";
 import { d1, resetSchema } from "./helpers";
 
 /** Los nombres viejos (en inglés) tal como los dejó 0004. */
@@ -45,7 +45,7 @@ beforeEach(async () => {
   );
   // La migración corre sobre el dato ya existente, que es lo que pasa de verdad.
   await env.DB.batch(
-    m0021
+    m0022
       .split(";")
       .filter((s) => s.trim())
       .map((s) => env.DB.prepare(s)),
@@ -54,7 +54,7 @@ beforeEach(async () => {
 
 afterAll(resetSchema);
 
-describe("0021 — nombres y alias", () => {
+describe("0022 — nombres y alias", () => {
   test("los nombres ingleses se renombran a español canónico", async () => {
     const all = await d1.all<{ name: string }>("SELECT name FROM exercises");
     const names = all.map((r) => r.name);
