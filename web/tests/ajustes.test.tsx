@@ -27,18 +27,21 @@ const ADMIN: FamilyUser = {
   email: "admin@esencial.test",
   role: "admin",
   familyId: 1,
+  name: null,
 };
 const ANA: FamilyUser = {
   id: 2,
   email: "ana@example.com",
   role: "member",
   familyId: 1,
+  name: null,
 };
 const BEA: FamilyUser = {
   id: 3,
   email: "bea@example.com",
   role: "member",
   familyId: 2,
+  name: null,
 };
 
 describe("Ajustes", () => {
@@ -291,5 +294,94 @@ describe("Familia en Ajustes", () => {
     await adminView();
 
     expect(screen.queryByRole("link", { name: /Cerrar sesión/ })).toBeNull();
+  });
+});
+
+describe("Perfil en Ajustes", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    delete document.documentElement.dataset.theme;
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const nameInput = () =>
+    screen.getByRole("textbox", { name: "Nombre" }) as HTMLInputElement;
+
+  const save = () => screen.getByRole("button", { name: "Guardar" });
+
+  it("pinta el nombre guardado", async () => {
+    mockApi({ me: { ...ADMIN, name: "Ismael R." } });
+    renderAt("/ajustes");
+    await waitFor(() => expect(nameInput().value).toBe("Ismael R."));
+  });
+
+  it("sin nombre, el campo va vacío", async () => {
+    mockApi({ me: ADMIN });
+    renderAt("/ajustes");
+    await themeGroup();
+    await waitFor(() => expect(nameInput().value).toBe(""));
+  });
+
+  it("guardar manda el PATCH con lo escrito y refresca", async () => {
+    const api = mockApi({ me: ADMIN });
+    renderAt("/ajustes");
+    await waitFor(() => expect(nameInput().value).toBe(""));
+
+    fireEvent.change(nameInput(), { target: { value: "  Pepe   G. " } });
+    fireEvent.click(save());
+
+    await waitFor(() =>
+      expect(
+        api.calls.find((c) => c.method === "PATCH" && c.url === "/api/me")
+          ?.body,
+      ).toEqual({ name: "  Pepe   G. " }),
+    );
+    // El PATCH devuelve el nombre normalizado y el hook relee /api/me.
+    await waitFor(() => expect(nameInput().value).toBe("Pepe G."));
+  });
+
+  it("vaciar el campo borra el nombre", async () => {
+    const api = mockApi({ me: { ...ADMIN, name: "Ismael" } });
+    renderAt("/ajustes");
+    await waitFor(() => expect(nameInput().value).toBe("Ismael"));
+
+    fireEvent.change(nameInput(), { target: { value: "   " } });
+    fireEvent.click(save());
+
+    await waitFor(() =>
+      expect(
+        api.calls.find((c) => c.method === "PATCH" && c.url === "/api/me")
+          ?.body,
+      ).toEqual({ name: "   " }),
+    );
+    await waitFor(() => expect(nameInput().value).toBe(""));
+  });
+
+  it("el 400 del campo se marca con aria-invalid y su texto", async () => {
+    mockApi({ me: ADMIN });
+    renderAt("/ajustes");
+    await waitFor(() => expect(nameInput().value).toBe(""));
+
+    fireEvent.change(nameInput(), { target: { value: "x".repeat(61) } });
+    fireEvent.click(save());
+
+    await waitFor(() =>
+      expect(nameInput().getAttribute("aria-invalid")).toBe("true"),
+    );
+    expect(
+      screen.getByText("El nombre no puede superar los 60 caracteres"),
+    ).toBeDefined();
+  });
+
+  it("la ve también un member (el nombre no es cosa de la familia)", async () => {
+    mockApi({ me: ANA });
+    renderAt("/ajustes");
+    await themeGroup();
+    expect(
+      await screen.findByRole("textbox", { name: "Nombre" }),
+    ).toBeDefined();
   });
 });
