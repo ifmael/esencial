@@ -11,7 +11,13 @@ const ANA = "ana@example.com";
 const BEA = "bea@example.com";
 const CARLA = "carla@example.com";
 
-type Cuenta = { id: number; email: string; role: string; familyId: number };
+type Cuenta = {
+  id: number;
+  email: string;
+  role: string;
+  familyId: number;
+  name: string | null;
+};
 type Json = Record<string, unknown>;
 
 const cuerpo = async <T = Json>(res: Response): Promise<T> =>
@@ -56,8 +62,19 @@ describe("el listado de cuentas y el gate del admin", () => {
         "email",
         "familyId",
         "id",
+        "name",
         "role",
       ]);
+  });
+
+  test("cada cuenta de la lista lleva su `name`", async () => {
+    await soy(ADMIN);
+    await soy(ANA);
+    await devSend("/api/me", "PATCH", { name: "Ana  G." }, ANA);
+
+    const lista = (await (await get("/api/users")).json()) as Cuenta[];
+    expect(lista.find((u) => u.email === ANA)?.name).toBe("Ana G.");
+    expect(lista.find((u) => u.email === ADMIN)?.name).toBeNull();
   });
 
   test("un member recibe 403 en los tres endpoints; el admin los usa", async () => {
@@ -98,6 +115,7 @@ describe("el listado de cuentas y el gate del admin", () => {
       id: ana.id,
       email: ANA,
       role: "member",
+      name: null,
       familyId: admin.familyId,
     });
     expect(
@@ -141,6 +159,7 @@ describe("añadir un miembro", () => {
       id: ana.id,
       email: ANA,
       role: "member",
+      name: null,
       familyId: admin.familyId,
     });
 

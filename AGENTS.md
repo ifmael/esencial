@@ -107,6 +107,13 @@ Escala vigente — todo lo demás sale de aquí:
   sesión —cosa de Cloudflare Access, un enlace, no del router— va como botón
   *outlined* al lado del texto y **sin** la flecha de las filas que navegan:
   hace, no lleva.
+- **Nombre de perfil** (`0021_users_name.sql`): la identidad la prueba Access y
+  solo trae el email (el IdP de One-time PIN no aporta `name`), así que el nombre
+  lo teclea la persona en la tarjeta «Perfil» de Ajustes. `PATCH /api/me` lo
+  normaliza (trim y colapso de espacios internos), el vacío lo borra (`null`) y
+  por encima de 60 caracteres es 400 `{field:'name'}`; lo devuelven `GET /api/me`
+  y `GET /api/users`. No se pinta en la cabecera de Hoy ni en la lista de
+  familia.
 - **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
   cada superficie declara `--field-bg` para el recorte).
 - **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
@@ -244,15 +251,22 @@ entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
 
 ### Cabecera del día (`/`)
 
-`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila**
-(~88 px): el `h1` pasa a `sr-only` (sigue siendo el único título y los tests lo
-buscan), sin flor, sin progreso (ni anillo ni barra: decisión del usuario) y sin
-los enlaces a los planes (ya están en la barra inferior). «Hoy» lleva
+`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila de
+controles** (~88 px, ~148 con el saludo a 390 px): el `h1` pasa a `sr-only`
+(sigue siendo el único título y los tests lo buscan), sin flor, sin progreso (ni
+anillo ni barra: decisión del usuario) y sin los enlaces a los planes (ya están
+en la barra inferior). «Hoy» lleva
 `aria-pressed={isToday}`: sin título, es lo que dice que el día elegido es hoy
 (también en escritorio, donde se pinta como píldora en `--accent`). La fecha lleva
 `grow-10` porque `.connected > *` hace crecer a todas las piezas por igual, y su
 `onClick` llama a `showPicker()` para abrir el calendario al pulsar en cualquier
-punto, no solo en el icono. Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
+punto, no solo en el icono. **Saludo**: en el sitio de la etiqueta «Hoy» —arriba,
+sobre la fecha, y visible también en móvil— y en **todos los días** (no solo hoy):
+«Hola … , estos son los planes que tienes para …», con el `name` del perfil
+(`useMe`; sin nombre puesto saluda sin él). La etiqueta «Hoy» ya no se
+pinta: queda `sr-only` dentro del `h1` (el texto y el «Hoy» pulsado siguen
+diciendo qué día es). El e2e móvil mide < 200 px (medido, 148 px a 390 px sin
+nombre). Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
 
 ### Cabecera del detalle de ejercicio (`/ejercicios/:id`)
 
@@ -745,6 +759,10 @@ bootstrap no siembra regiones), así que lo verifica el e2e.
 sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sql`
 es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
 cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
+- `0021_users_name.sql` es **aditiva**: `users.name TEXT` (NULL = sin nombre, el
+  nombre de perfil que la persona edita en Ajustes con `PATCH /api/me`). Al
+  admitir vacíos sobre las filas que ya existen, se puede aplicar antes del
+  merge sin romper al código desplegado (es justo lo contrario de `0020`).
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
 nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
 histórico de planificación, justo después del deploy; **0013–0015 y 0018 van

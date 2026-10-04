@@ -380,7 +380,7 @@ export async function ensureUser(
 ): Promise<User> {
   const existing = await row(
     db,
-    "SELECT id, email, role, family_id FROM users WHERE email = ?",
+    "SELECT id, email, role, name, family_id FROM users WHERE email = ?",
     email,
   );
   if (existing) return existing as unknown as User;
@@ -406,13 +406,14 @@ export async function ensureUser(
       id: Number(created.meta.last_row_id),
       email,
       role,
+      name: null,
       family_id: familyId,
     };
   } catch (err) {
     await db.prepare("DELETE FROM families WHERE id = ?").bind(familyId).run();
     const winner = await row(
       db,
-      "SELECT id, email, role, family_id FROM users WHERE email = ?",
+      "SELECT id, email, role, name, family_id FROM users WHERE email = ?",
       email,
     );
     if (winner) return winner as unknown as User;

@@ -49,8 +49,11 @@ export async function identityEmail(
 
 /** `ctx.access` si el Worker lo tiene, es decir si quien autenticó la petición
  *  fue Cloudflare Access. En los tests no hay ExecutionContext y `c.executionCtx`
- *  lanza, así que la lectura va protegida. */
-export function accessContext(c: Context<AppContext>): unknown {
+ *  lanza, así que la lectura va protegida. Solo mira `executionCtx`, no las
+ *  variables, para que valga también en una ruta con `zBody`. */
+export function accessContext(
+  c: Pick<Context<AppContext>, "executionCtx">,
+): unknown {
   try {
     return (c.executionCtx as { access?: unknown } | undefined)?.access;
   } catch {

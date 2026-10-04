@@ -14,6 +14,8 @@ export type FamilyUser = {
   email: string;
   role: Role;
   familyId: number;
+  /** Nombre de perfil: lo teclea la persona; `null` mientras no lo ponga. */
+  name: string | null;
 };
 
 export type Me = FamilyUser & {
@@ -60,7 +62,7 @@ function useResource<T>(path: string): Resource<T> {
   return { data, loading, error, reload: load };
 }
 
-/** Quién soy (id, email, rol y familia). */
+/** Quién soy (id, email, rol, familia y nombre). */
 export const useMe = () => useResource<Me>("/api/me");
 
 /** Todas las cuentas, ordenadas por email; solo el admin recibe 200. */
@@ -73,3 +75,7 @@ export const addMember = (familyId: number, email: string) =>
 /** Baja de la familia: deja al usuario en una familia nueva y vacía (204). */
 export const removeMember = (familyId: number, userId: number) =>
   apiSend<unknown>(`/api/families/${familyId}/members/${userId}`, "DELETE", {});
+
+/** El nombre de perfil: la API lo normaliza y devuelve el cuerpo de `/api/me`. */
+export const updateName = (name: string) =>
+  apiSend<Me>("/api/me", "PATCH", { name });
