@@ -8,7 +8,7 @@ import { createMiddleware } from "hono/factory";
 import { readSession } from "./auth";
 import type { AppContext, Env, User } from "./db";
 import { json } from "./http";
-import { normalizeEmail, requestIdentity } from "./identity";
+import { DEV_EMAIL_HEADER, normalizeEmail, requestIdentity } from "./identity";
 import { ensureUser } from "./repo";
 
 const CSP =
@@ -38,14 +38,20 @@ function allowedOrigin(c: Context<{ Bindings: Env }>): string | null {
   return list.includes(origin) ? origin : null;
 }
 
-function withCors(headers: Headers, origin: string): void {
+function withCors(headers: Headers, origin: string, devAuth: boolean): void {
   headers.set("Access-Control-Allow-Origin", origin);
   headers.set("Access-Control-Allow-Credentials", "true");
   headers.set(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   );
-  headers.set("Access-Control-Allow-Headers", "content-type");
+  // La cabecera de identidad de dev solo se permite cuando el Worker la honra
+  // (DEV_AUTH=1): en producción ni se anuncia ni se acepta. Sin esto, el
+  // navegador en e2e no puede actuar como otro usuario (el preflight la tiraría).
+  headers.set(
+    "Access-Control-Allow-Headers",
+    devAuth ? `content-type, ${DEV_EMAIL_HEADER}` : "content-type",
+  );
   headers.append("Vary", "Origin");
 }
 
@@ -57,13 +63,14 @@ function withCors(headers: Headers, origin: string): void {
  */
 export const cors = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   const origin = allowedOrigin(c);
+  const devAuth = c.env.DEV_AUTH === "1";
   if (c.req.method === "OPTIONS") {
     const res = new Response(null, { status: 204 });
-    if (origin) withCors(res.headers, origin);
+    if (origin) withCors(res.headers, origin, devAuth);
     return res;
   }
   await next();
-  if (origin) withCors(c.res.headers, origin);
+  if (origin) withCors(c.res.headers, origin, devAuth);
 });
 
 /** ¿Trae cookie de sesión válida? Es el puente del SPA mientras siga con su
