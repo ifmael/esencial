@@ -10,6 +10,7 @@ import { cors, identifyUser, securityHeaders } from "./middleware";
 import { authRoutes } from "./routes/auth";
 import { day } from "./routes/day";
 import { exercises } from "./routes/exercises";
+import { families, users } from "./routes/families";
 import { foods } from "./routes/foods";
 import { me } from "./routes/me";
 import { mealPlan } from "./routes/meal-plan";
@@ -25,6 +26,8 @@ export const api = new Hono<AppContext>()
   // TEMP debug: env presence probe (no value disclosure).
   .get("/health", () => json({ ok: true }))
   .route("/auth", authRoutes())
+  .route("/users", users)
+  .route("/families", families)
   .route("/recipes", recipes)
   .route("/exercises", exercises)
   .route("/foods", foods)
