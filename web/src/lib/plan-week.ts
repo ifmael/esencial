@@ -29,6 +29,9 @@ export type SessionExercise = {
   targetRepsMax: number | null;
   targetDistanceKm: number | null;
   targetDurationMin: number | null;
+  /** Descansos programados (segundos): entre series y al terminar el ejercicio. */
+  restSecs: number | null;
+  restAfterSecs: number | null;
 };
 
 /** Fila editable del editor del día (lo que viaja en items[]). */
@@ -39,6 +42,8 @@ export type SessionItem = {
   targetRepsMax?: number | null;
   targetDistanceKm?: number | null;
   targetDurationMin?: number | null;
+  restSecs?: number | null;
+  restAfterSecs?: number | null;
 };
 
 export type SessionPayload = {
@@ -61,6 +66,8 @@ export function planItems(
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
+    restSecs: e.restSecs,
+    restAfterSecs: e.restAfterSecs,
   }));
 }
 

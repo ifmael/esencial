@@ -85,6 +85,8 @@ const tplA = (): Template => ({
       targetRepsMax: 8,
       targetDistanceKm: null,
       targetDurationMin: null,
+      restSecs: 90,
+      restAfterSecs: 150,
       exerciseName: "Press banca",
       kind: "strength",
     },
@@ -97,6 +99,8 @@ const tplA = (): Template => ({
       targetRepsMax: null,
       targetDistanceKm: null,
       targetDurationMin: null,
+      restSecs: null,
+      restAfterSecs: null,
       exerciseName: "Remo",
       kind: "strength",
     },
@@ -109,6 +113,8 @@ const tplA = (): Template => ({
       targetRepsMax: null,
       targetDistanceKm: 10,
       targetDurationMin: 45,
+      restSecs: null,
+      restAfterSecs: null,
       exerciseName: "Running",
       kind: "running",
     },
@@ -292,6 +298,8 @@ describe("template editor", () => {
         targetRepsMax: null,
         targetDistanceKm: null,
         targetDurationMin: null,
+        restSecs: 120,
+        restAfterSecs: 120,
       },
     ]);
     await screen.findByText("D — Movilidad");
@@ -325,6 +333,8 @@ describe("template editor", () => {
         targetRepsMax: null,
         targetDistanceKm: 12,
         targetDurationMin: 55,
+        restSecs: null,
+        restAfterSecs: 120,
       },
     ]);
   });
@@ -453,8 +463,42 @@ describe("template editor", () => {
       targetRepsMax: 8,
       targetDistanceKm: null,
       targetDurationMin: null,
+      restSecs: 90,
+      restAfterSecs: 150,
     });
     await screen.findByText("4 series");
+  });
+
+  it("descansos: prellenados en el editor y viajan en el PUT", async () => {
+    await openPlantillas();
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
+    );
+    await screen.findByLabelText("Nombre");
+    const series = screen.getAllByLabelText("Descanso entre series (s)")[0];
+    expect(series).toHaveProperty("value", "90");
+    expect(series).toHaveProperty("placeholder", "120");
+    fireEvent.change(series, { target: { value: "75" } });
+    const after = screen.getAllByLabelText("Descanso al terminar (s)")[0];
+    expect(after).toHaveProperty("value", "150");
+    fireEvent.change(after, { target: { value: "180" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(mutations().some((c) => c.method === "PUT")).toBe(true),
+    );
+    expect(payloadAt(0).exercises[0]).toMatchObject({
+      restSecs: 75,
+      restAfterSecs: 180,
+    });
+    // Las filas sin descanso guardado nacen con el 120 por defecto (y así se
+    // guarda): vaciar el campo es lo que las deja sin descanso.
+    expect(
+      screen.getAllByLabelText("Descanso entre series (s)")[1],
+    ).toHaveProperty("value", "120");
+    expect(payloadAt(0).exercises[1]).toMatchObject({
+      restSecs: 120,
+      restAfterSecs: 120,
+    });
   });
 
   it("remove entry from draft", async () => {

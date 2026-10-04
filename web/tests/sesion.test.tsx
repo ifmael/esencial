@@ -10,8 +10,9 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/app";
+import { createFakeAudio } from "./audio-fake";
 
 afterEach(() => {
   cleanup();
@@ -48,6 +49,8 @@ const SESSION_DETAIL = {
       targetRepsMax: 8,
       targetDistanceKm: null,
       targetDurationMin: null,
+      restSecs: 90,
+      restAfterSecs: 120,
     },
     {
       id: SE_ROW,
@@ -60,6 +63,8 @@ const SESSION_DETAIL = {
       targetRepsMax: null,
       targetDistanceKm: null,
       targetDurationMin: null,
+      restSecs: null,
+      restAfterSecs: null,
     },
     {
       id: SE_RUN,
@@ -72,6 +77,8 @@ const SESSION_DETAIL = {
       targetRepsMax: null,
       targetDistanceKm: 5,
       targetDurationMin: 30,
+      restSecs: null,
+      restAfterSecs: 120,
     },
   ],
 };
@@ -128,6 +135,8 @@ function mockApi(opts: {
   logs?: Record<string, unknown>; // otros días registrados (sesión anterior)
   lastFails?: boolean;
   postReply?: { status: number; body: unknown };
+  /** Detalle alternativo del día (GET /api/plan-sessions/:id). */
+  detail?: unknown;
 }): Mock {
   let count = 0;
   const posts: unknown[] = [];
@@ -180,7 +189,7 @@ function mockApi(opts: {
           ],
         );
       if (/^\/api\/plan-sessions\/\d+$/.test(url))
-        return reply(200, SESSION_DETAIL);
+        return reply(200, opts.detail ?? SESSION_DETAIL);
       const last = /^\/api\/exercises\/(\d+)\/last(\?.*)?$/.exec(url);
       if (last) {
         if (opts.lastFails) return reply(500, { error: "boom" });
@@ -1151,6 +1160,8 @@ describe("añadir y quitar series", () => {
             targetRepsMax: 8,
             targetDistanceKm: null,
             targetDurationMin: null,
+            restSecs: 90,
+            restAfterSecs: 120,
           },
           {
             exerciseId: 22,
@@ -1159,6 +1170,8 @@ describe("añadir y quitar series", () => {
             targetRepsMax: null,
             targetDistanceKm: null,
             targetDurationMin: null,
+            restSecs: null,
+            restAfterSecs: null,
           },
           {
             exerciseId: 23,
@@ -1167,6 +1180,8 @@ describe("añadir y quitar series", () => {
             targetRepsMax: null,
             targetDistanceKm: 5,
             targetDurationMin: 30,
+            restSecs: null,
+            restAfterSecs: 120,
           },
         ],
       },
@@ -1194,5 +1209,343 @@ describe("añadir y quitar series", () => {
       "PUT /api/plan-sessions/1",
       "PUT /api/workout-logs/2026-09-02",
     ]);
+  });
+});
+
+describe("modo interactivo", () => {
+  // El doble de Web Audio: registra keep-alive y pitidos sin sonar (jsdom no
+  // trae AudioContext).
+  const audio = createFakeAudio();
+
+  beforeEach(() => {
+    audio.reset();
+    vi.stubGlobal("AudioContext", audio.Ctor);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // Marcas de la última sesión: sin ellas las casillas nacen incompletas y no
+  // se pueden marcar (como en el borrador normal).
+  const benchLast = { weightKg: 60, reps: 8, date: "2026-08-30" };
+  const rowLast = { weightKg: 40, reps: 10, date: "2026-08-30" };
+
+  async function enterMode(
+    opts: Parameters<typeof mockApi>[0] = {},
+  ): Promise<HTMLElement> {
+    mockApi(opts);
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^empezar$/i }));
+    return await screen.findByRole("dialog", { name: /modo sesión/i });
+  }
+
+  /** El aspa pregunta antes de salir: aquí se confirma. */
+  function exitMode(mode: HTMLElement) {
+    fireEvent.click(
+      within(mode).getByRole("button", { name: /salir del modo/i }),
+    );
+    const confirm = screen.getByRole("dialog", {
+      name: /¿salir del modo sesión\?/i,
+    });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Salir" }));
+  }
+
+  it("«Empezar» abre el modo con el primer ejercicio; el aspa pide confirmación", async () => {
+    const mode = await enterMode();
+    expect(within(mode).getByText("Press banca")).toBeDefined();
+    expect(within(mode).getByText("0 / 3")).toBeDefined();
+    // El aro del encabezado cuenta ejercicios hechos: empieza en 0.
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: "0 de 3 ejercicios hechos",
+      }),
+    ).toBeDefined();
+
+    // El aspa no sale a la primera: pregunta; «Cancelar» deja el modo abierto.
+    fireEvent.click(
+      within(mode).getByRole("button", { name: /salir del modo/i }),
+    );
+    const confirm = screen.getByRole("dialog", {
+      name: /¿salir del modo sesión\?/i,
+    });
+    fireEvent.click(
+      within(confirm).getByRole("button", { name: /^cancelar$/i }),
+    );
+    expect(screen.getByRole("dialog", { name: /modo sesión/i })).toBeDefined();
+
+    // «Salir» sí: vuelve al borrador.
+    exitMode(mode);
+    expect(screen.queryByRole("dialog", { name: /modo sesión/i })).toBeNull();
+    expect(screen.getByText("Esfuerzo percibido")).toBeDefined();
+  });
+
+  it("marcar una serie intermedia arranca la pausa entre series; al agotarse pita", async () => {
+    const mode = await enterMode({ last: { 21: benchLast } });
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
+    expect(within(mode).getByText("1:30")).toBeDefined();
+    // Keep-alive: la pestaña «suena» mientras corre la pausa.
+    expect(
+      audio.oscillators.some(
+        (o) => o.frequency.value === 60 && o.started && !o.stopped,
+      ),
+    ).toBe(true);
+
+    // El reloj salta más allá del final: el siguiente tic cierra la pausa.
+    const real = Date.now;
+    vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
+    await waitFor(() =>
+      expect(
+        within(mode).queryByRole("progressbar", {
+          name: /pausa entre series/i,
+        }),
+      ).toBeNull(),
+    );
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
+    expect(within(mode).getByText("0 / 3")).toBeDefined();
+  });
+
+  it("la última serie arranca la pausa al terminar y deja activo el siguiente", async () => {
+    const mode = await enterMode({ last: { 21: benchLast } });
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 3" }),
+    );
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa al terminar press banca/i,
+      }),
+    ).toBeDefined();
+    expect(within(mode).getByText("2:00")).toBeDefined();
+    const real = Date.now;
+    vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
+    await waitFor(() =>
+      expect(within(mode).getByText("Remo con barra")).toBeDefined(),
+    );
+  });
+
+  it("sin descansos programados no arranca pausa ni suena", async () => {
+    const mode = await enterMode({ last: { 21: benchLast, 22: rowLast } });
+    fireEvent.click(within(mode).getByRole("button", { name: /^siguiente$/i }));
+    expect(within(mode).getByText("Remo con barra")).toBeDefined();
+    const before = audio.oscillators.length;
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
+    );
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(within(mode).getByText("Sin descansos programados")).toBeDefined();
+    expect(audio.oscillators.length).toBe(before);
+  });
+
+  it("«Descanso» la arranca a mano y «Saltar» la corta sin pitido", async () => {
+    const mode = await enterMode();
+    fireEvent.click(within(mode).getByRole("button", { name: /^descanso$/i }));
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
+    expect(within(mode).getByText("1:30")).toBeDefined();
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(
+      false,
+    );
+    expect(
+      audio.oscillators.some((o) => o.frequency.value === 60 && o.stopped),
+    ).toBe(true);
+  });
+
+  it("al volver a la pestaña la pausa se resincroniza: terminada y con pitido", async () => {
+    const mode = await enterMode({ last: { 21: benchLast } });
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
+
+    const real = Date.now;
+    vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
+    Object.defineProperty(document, "visibilityState", {
+      value: "hidden",
+      configurable: true,
+    });
+    fireEvent(document, new Event("visibilitychange"));
+    expect(
+      within(mode).getByRole("progressbar", { name: /pausa/i }), // oculta: nada cambia
+    ).toBeDefined();
+    Object.defineProperty(document, "visibilityState", {
+      value: "visible",
+      configurable: true,
+    });
+    fireEvent(document, new Event("visibilitychange"));
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
+    Reflect.deleteProperty(document, "visibilityState");
+  });
+
+  it("pide la Wake Lock al entrar y la suelta al salir", async () => {
+    const release = vi.fn(() => Promise.resolve());
+    const request = vi.fn(() => Promise.resolve({ release }));
+    Object.defineProperty(navigator, "wakeLock", {
+      value: { request },
+      configurable: true,
+    });
+    const mode = await enterMode();
+    await waitFor(() => expect(request).toHaveBeenCalledWith("screen"));
+    exitMode(mode);
+    await waitFor(() => expect(release).toHaveBeenCalled());
+    Reflect.deleteProperty(navigator, "wakeLock");
+  });
+
+  it("dentro del modo se registran las marcas de las series y la pausa arranca al completarlas", async () => {
+    const mode = await enterMode();
+    // Sin histórico, la serie nace incompleta y la casilla no se puede marcar.
+    expect(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toHaveProperty("disabled", true);
+    const reps = within(mode).getByLabelText(/^reps · press banca serie 1$/i);
+    fireEvent.change(reps, { target: { value: "8" } });
+    fireEvent.change(
+      within(mode).getByLabelText(/^peso \(kg\) · press banca serie 1$/i),
+      { target: { value: "60" } },
+    );
+    // Completarla la marca sola y arranca la pausa entre series (90 s).
+    expect(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toHaveProperty("checked", true);
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
+
+    // Las marcas van al borrador subyacente: al salir, la serie queda hecha.
+    exitMode(mode);
+    expect(boxOf("press banca", 1)).toHaveProperty("checked", true);
+  });
+
+  it("completar la sesión muestra el esfuerzo; la última marca no arranca cuenta atrás", async () => {
+    const api = mockApi({ last: { 21: benchLast, 22: rowLast } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^empezar$/i }));
+    const mode = await screen.findByRole("dialog", { name: /modo sesión/i });
+    // Mientras queda faena, el esfuerzo no aparece.
+    expect(
+      within(mode).queryByRole("radiogroup", { name: /esfuerzo percibido/i }),
+    ).toBeNull();
+    for (const n of [1, 2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", { name: `Press banca serie ${n}` }),
+      );
+    // La pausa de fin de ejercicio se salta para pasar al siguiente.
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    for (const n of [1, 2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", {
+          name: `Remo con barra serie ${n}`,
+        }),
+      );
+    expect(within(mode).getByText("2 / 3")).toBeDefined();
+    // El cardio cierra la sesión: marcarlo no arranca cuenta atrás.
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Running hecho" }),
+    );
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(within(mode).getByText("3 / 3")).toBeDefined();
+    // Sesión completa: aparece el esfuerzo; sin él, «Terminar» no cierra.
+    expect(
+      within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
+    ).toBeDefined();
+    const terminar = within(mode).getByRole("button", {
+      name: /^terminar$/i,
+    });
+    // Sin esfuerzo no se cierra, igual que «Guardar» en el borrador.
+    expect(terminar).toHaveProperty("disabled", true);
+    fireEvent.click(within(mode).getByRole("radio", { name: /^esfuerzo 3:/i }));
+    fireEvent.click(terminar);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    expect(api.posts[0]).toMatchObject({ effort: 3 });
+    expect(screen.queryByRole("dialog", { name: /modo sesión/i })).toBeNull();
+    // Ya en el registro (solo lectura): está el «Editar» de la vista logged.
+    await screen.findByRole("button", { name: /^editar$/i });
+  });
+
+  it("terminar el último ejercicio corta la pausa que corría y no arranca cuenta atrás", async () => {
+    // Sesión con el cardio en medio y Remo (fuerza) al final, con descansos.
+    const strengthLast = {
+      ...SESSION_DETAIL,
+      exercises: [
+        { ...SESSION_DETAIL.exercises[0], position: 0 },
+        { ...SESSION_DETAIL.exercises[2], position: 1 },
+        {
+          ...SESSION_DETAIL.exercises[1],
+          position: 2,
+          restSecs: 90,
+          restAfterSecs: 120,
+        },
+      ],
+    };
+    const mode = await enterMode({
+      detail: strengthLast,
+      last: { 21: benchLast, 22: rowLast },
+    });
+    // Press banca completa: la pausa de fin se salta para seguir.
+    for (const n of [1, 2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", { name: `Press banca serie ${n}` }),
+      );
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    // El cardio del medio: se marca y su pausa también se salta.
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Running hecho" }),
+    );
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    // En Remo (el último), marcar una serie corre su pausa…
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
+    );
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de remo con barra/i,
+      }),
+    ).toBeDefined();
+    // …y al terminarlo se corta sin pitido: ya no hay nada que descansar.
+    for (const n of [2, 3])
+      fireEvent.click(
+        within(mode).getByRole("checkbox", {
+          name: `Remo con barra serie ${n}`,
+        }),
+      );
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(
+      false,
+    );
+    expect(
+      audio.oscillators.some((o) => o.frequency.value === 60 && o.stopped),
+    ).toBe(true);
+    expect(within(mode).getByText("3 / 3")).toBeDefined();
+    expect(
+      within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
+    ).toBeDefined();
   });
 });

@@ -181,6 +181,8 @@ describe("planItems", () => {
     targetDistanceKm: null,
     targetDurationMin: null,
     ...over,
+    restSecs: over.restSecs ?? null,
+    restAfterSecs: over.restAfterSecs ?? null,
   });
 
   it("sobreescribe las series del borrador y conserva el resto de objetivos", () => {
@@ -209,6 +211,8 @@ describe("planItems", () => {
         targetRepsMax: 10,
         targetDistanceKm: null,
         targetDurationMin: null,
+        restSecs: null,
+        restAfterSecs: null,
       },
       {
         exerciseId: 2,
@@ -217,6 +221,8 @@ describe("planItems", () => {
         targetRepsMax: null,
         targetDistanceKm: 5,
         targetDurationMin: 30,
+        restSecs: null,
+        restAfterSecs: null,
       },
     ]);
   });
@@ -247,6 +253,8 @@ describe("recreatePayload", () => {
       targetRepsMax: 12,
       targetDistanceKm: exerciseId === 10 ? 5 : null,
       targetDurationMin: exerciseId === 10 ? 30 : null,
+      restSecs: null,
+      restAfterSecs: null,
     });
     expect(
       recreatePayload({
@@ -267,6 +275,8 @@ describe("recreatePayload", () => {
           targetRepsMax: 12,
           targetDistanceKm: 5,
           targetDurationMin: 30,
+          restSecs: null,
+          restAfterSecs: null,
         },
         {
           exerciseId: 7,
@@ -275,6 +285,8 @@ describe("recreatePayload", () => {
           targetRepsMax: 12,
           targetDistanceKm: null,
           targetDurationMin: null,
+          restSecs: null,
+          restAfterSecs: null,
         },
       ],
     });

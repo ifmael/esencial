@@ -18,6 +18,8 @@ type Item = {
   targetRepsMax?: number | null;
   targetDistanceKm?: number | null;
   targetDurationMin?: number | null;
+  restSecs?: number | null;
+  restAfterSecs?: number | null;
 };
 
 async function loadSession(
@@ -35,6 +37,7 @@ async function loadSession(
     `SELECT pse.id, pse.exercise_id AS exerciseId, pse.position,
             pse.target_sets AS targetSets, pse.target_reps_min AS targetRepsMin, pse.target_reps_max AS targetRepsMax,
             pse.target_distance_km AS targetDistanceKm, pse.target_duration_min AS targetDurationMin,
+            pse.rest_secs AS restSecs, pse.rest_after_secs AS restAfterSecs,
             e.name AS exerciseName, e.kind AS kind
      FROM plan_session_exercises pse JOIN exercises e ON e.id = pse.exercise_id
      WHERE pse.plan_session_id = ? ORDER BY pse.position, pse.id`,
@@ -52,10 +55,13 @@ type CurrentItem = {
   targetRepsMax: number | null;
   targetDistanceKm: number | null;
   targetDurationMin: number | null;
+  restSecs: number | null;
+  restAfterSecs: number | null;
 };
 
 /** Una sesión registrada solo admite cambiar el recuento de series: los mismos
- * ejercicios en el mismo orden y el resto de objetivos intactos. */
+ * ejercicios en el mismo orden y el resto de objetivos (descansos incluidos)
+ * intactos. */
 function onlySetCountsChange(current: CurrentItem[], items: Item[]): boolean {
   if (current.length !== items.length) return false;
   return current.every((cur, i) => {
@@ -65,7 +71,9 @@ function onlySetCountsChange(current: CurrentItem[], items: Item[]): boolean {
       cur.targetRepsMin === (it.targetRepsMin ?? null) &&
       cur.targetRepsMax === (it.targetRepsMax ?? null) &&
       cur.targetDistanceKm === (it.targetDistanceKm ?? null) &&
-      cur.targetDurationMin === (it.targetDurationMin ?? null)
+      cur.targetDurationMin === (it.targetDurationMin ?? null) &&
+      cur.restSecs === (it.restSecs ?? null) &&
+      cur.restAfterSecs === (it.restAfterSecs ?? null)
     );
   });
 }
@@ -96,8 +104,8 @@ function itemStatements(
   return items.map((it, pos) =>
     db
       .prepare(
-        `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min)
-         VALUES (${where.sql}, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
+         VALUES (${where.sql}, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         ...(where.args as never[]),
@@ -108,6 +116,8 @@ function itemStatements(
         it.targetRepsMax ?? null,
         it.targetDistanceKm ?? null,
         it.targetDurationMin ?? null,
+        it.restSecs ?? null,
+        it.restAfterSecs ?? null,
       ),
   );
 }
@@ -183,7 +193,8 @@ export const planSessions = new Hono<{ Bindings: Env }>()
         db,
         `SELECT id, exercise_id AS exerciseId, target_sets AS targetSets,
                 target_reps_min AS targetRepsMin, target_reps_max AS targetRepsMax,
-                target_distance_km AS targetDistanceKm, target_duration_min AS targetDurationMin
+                target_distance_km AS targetDistanceKm, target_duration_min AS targetDurationMin,
+                rest_secs AS restSecs, rest_after_secs AS restAfterSecs
          FROM plan_session_exercises WHERE plan_session_id = ?
          ORDER BY position, id`,
         id,
@@ -224,19 +235,21 @@ export const planSessions = new Hono<{ Bindings: Env }>()
             it.targetRepsMax ?? null,
             it.targetDistanceKm ?? null,
             it.targetDurationMin ?? null,
+            it.restSecs ?? null,
+            it.restAfterSecs ?? null,
           ];
           const existing = kept.get(it.exerciseId);
           if (existing === undefined)
             return db
               .prepare(
-                `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               )
               .bind(id, it.exerciseId, ...targets);
           return db
             .prepare(
               `UPDATE plan_session_exercises
-               SET position = ?, target_sets = ?, target_reps_min = ?, target_reps_max = ?, target_distance_km = ?, target_duration_min = ?
+               SET position = ?, target_sets = ?, target_reps_min = ?, target_reps_max = ?, target_distance_km = ?, target_duration_min = ?, rest_secs = ?, rest_after_secs = ?
                WHERE id = ?`,
             )
             .bind(...targets, existing);

@@ -77,6 +77,7 @@ import {
 import {
   addEntry,
   buildTemplatePayload,
+  DEFAULT_REST_SECS,
   type Draft,
   type DraftEntry,
   intAt,
@@ -85,6 +86,7 @@ import {
   nextCopyName,
   numAt,
   removeEntry,
+  restAt,
   setTargets,
   type Targets,
 } from "../lib/template-draft";
@@ -104,6 +106,10 @@ const toDraft = (t: Template): Draft => ({
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
+    // 120 s por defecto (lo que ve el borrador es lo que se guarda): vaciar el
+    // campo es lo que deja el ejercicio sin descanso programado.
+    restSecs: e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null),
+    restAfterSecs: e.restAfterSecs ?? DEFAULT_REST_SECS,
   })),
 });
 
@@ -369,7 +375,7 @@ function EntryRow({
     label: string,
     value: number | null,
     patch: (raw: string) => Partial<Targets>,
-    extra?: { min?: number; step?: string },
+    extra?: { min?: number; step?: string; placeholder?: string },
   ) => (
     <label className="flex flex-col gap-1 text-label-m text-on-surface-variant">
       {label}
@@ -378,6 +384,7 @@ function EntryRow({
         type="number"
         min={extra?.min ?? 1}
         step={extra?.step}
+        placeholder={extra?.placeholder}
         value={value ?? ""}
         onChange={(e) => onPatch(entry.key, patch(e.target.value))}
       />
@@ -430,6 +437,18 @@ function EntryRow({
             {target("Reps máx", entry.targetRepsMax, (v) => ({
               targetRepsMax: intAt(v),
             }))}
+            {target(
+              "Descanso entre series (s)",
+              entry.restSecs,
+              (v) => ({ restSecs: restAt(v) }),
+              { placeholder: "120" },
+            )}
+            {target(
+              "Descanso al terminar (s)",
+              entry.restAfterSecs,
+              (v) => ({ restAfterSecs: restAt(v) }),
+              { placeholder: "120" },
+            )}
           </>
         ) : (
           <>
@@ -444,6 +463,12 @@ function EntryRow({
               entry.targetDurationMin,
               (v) => ({ targetDurationMin: intAt(v) }),
               { min: 0 },
+            )}
+            {target(
+              "Descanso al terminar (s)",
+              entry.restAfterSecs,
+              (v) => ({ restAfterSecs: restAt(v) }),
+              { placeholder: "120" },
             )}
           </>
         )}
@@ -526,6 +551,8 @@ function TemplateEditor({
         targetRepsMax: null,
         targetDistanceKm: null,
         targetDurationMin: null,
+        restSecs: e.kind === "strength" ? DEFAULT_REST_SECS : null,
+        restAfterSecs: DEFAULT_REST_SECS,
       }),
     );
 

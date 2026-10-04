@@ -226,23 +226,29 @@ function wavePath(
 }
 
 /** Progreso ondulado lineal (M3E): la parte hecha ondula, la pendiente es
- * una pista recta. `label` nombra la barra para el lector. */
+ * una pista recta. Con `waveOnly` no hay pista ni fondo: solo la ola que
+ * avanza. `label` nombra la barra para el lector. */
 export function WavyProgress({
   value,
   max,
   label,
   className,
+  waveOnly,
 }: {
   value: number;
   max: number;
   label: string;
   className?: string;
+  /** Solo la ola que avanza: sin pista recta ni banda de fondo (para el modo
+   *  sesión, donde solo se quiere ver lo hecho). */
+  waveOnly?: boolean;
 }) {
   const now = Math.max(0, Math.min(max, value));
   const pct = max > 0 ? (now / max) * 100 : 0;
   const W = 240;
   const H = 12;
   const wavelength = 24;
+  const wave = wavePath(W + wavelength, 2.5, wavelength, H / 2);
   return (
     <div
       role="progressbar"
@@ -261,32 +267,36 @@ export function WavyProgress({
         className="absolute inset-0 h-full w-full"
         aria-hidden="true"
       >
-        {/* Pista pendiente: recta y a la derecha, con un hueco de 4 px. */}
-        <line
-          x1={0}
-          x2={W}
-          y1={H / 2}
-          y2={H / 2}
-          stroke="var(--color-accent-container)"
-          strokeWidth={4}
-          strokeLinecap="round"
-        />
+        {!waveOnly && (
+          // Pista pendiente: recta y a la derecha, con un hueco de 4 px.
+          <line
+            x1={0}
+            x2={W}
+            y1={H / 2}
+            y2={H / 2}
+            stroke="var(--color-accent-container)"
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+        )}
         <clipPath id={`wavy-${label.replace(/\W/g, "")}`}>
           <rect x={0} y={0} width={(W * pct) / 100} height={H} />
         </clipPath>
         <g clipPath={`url(#wavy-${label.replace(/\W/g, "")})`}>
-          <rect
-            x={0}
-            y={0}
-            width={(W * pct) / 100}
-            height={H}
-            fill="var(--color-surface-container-high)"
-            className="transition-[width] motion-spatial-slow"
-          />
+          {!waveOnly && (
+            <rect
+              x={0}
+              y={0}
+              width={(W * pct) / 100}
+              height={H}
+              fill="var(--color-surface-container-high)"
+              className="transition-[width] motion-spatial-slow"
+            />
+          )}
           <path
             className="wavy-track"
             style={{ ["--wave-length" as string]: `-${wavelength}px` }}
-            d={wavePath(W + wavelength, 2.5, wavelength, H / 2)}
+            d={wave}
             fill="none"
             stroke="currentColor"
             strokeWidth={4}
@@ -304,6 +314,7 @@ export function WavyRing({
   max,
   label,
   className = "size-28",
+  waveOnly,
   children,
 }: {
   value: number;
@@ -311,6 +322,9 @@ export function WavyRing({
   label: string;
   /** Tamaño por clases (`size-24 lg:size-28`): así puede cambiar por breakpoint. */
   className?: string;
+  /** Solo el arco que avanza: sin el círculo de fondo (para el modo sesión,
+   *  donde solo se quiere ver lo hecho). */
+  waveOnly?: boolean;
   children?: ReactNode;
 }) {
   const now = Math.max(0, Math.min(max, value));
@@ -347,14 +361,16 @@ export function WavyRing({
         className="absolute inset-0 size-full"
         aria-hidden="true"
       >
-        <circle
-          cx={c}
-          cy={c}
-          r={r}
-          fill="none"
-          stroke="var(--color-accent-container)"
-          strokeWidth={6}
-        />
+        {!waveOnly && (
+          <circle
+            cx={c}
+            cy={c}
+            r={r}
+            fill="none"
+            stroke="var(--color-accent-container)"
+            strokeWidth={6}
+          />
+        )}
         <path
           d={d}
           fill="none"

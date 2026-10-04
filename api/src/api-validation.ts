@@ -97,6 +97,10 @@ export type ExerciseInput = z.infer<typeof exerciseSchema>;
 
 // --- Templates -------------------------------------------------------------
 
+/** Descanso programado en segundos: pausa entre series (`restSecs`) o al
+ *  terminar el ejercicio (`restAfterSecs`). null = sin descanso. */
+const restSeconds = z.number().int().min(1).max(3600).optional().nullable();
+
 export const templateExerciseSchema = z.object({
   exerciseId: z.number().int().positive(),
   targetSets: z.number().int().positive().optional().nullable(),
@@ -104,6 +108,8 @@ export const templateExerciseSchema = z.object({
   targetRepsMax: z.number().int().positive().optional().nullable(),
   targetDistanceKm: z.number().min(0).optional().nullable(),
   targetDurationMin: z.number().int().min(0).optional().nullable(),
+  restSecs: restSeconds,
+  restAfterSecs: restSeconds,
 });
 
 export const templateSchema = z.object({
@@ -137,6 +143,8 @@ export const planSessionItemSchema = z.object({
   targetRepsMax: z.number().int().min(0).optional().nullable(),
   targetDistanceKm: z.number().min(0).optional().nullable(),
   targetDurationMin: z.number().int().min(0).optional().nullable(),
+  restSecs: restSeconds,
+  restAfterSecs: restSeconds,
 });
 
 export const planSessionCreateSchema = z.object({

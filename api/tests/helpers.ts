@@ -9,6 +9,7 @@ import migrations0002 from "../migrations/0002_e2_recipes_photo_tags.sql?raw";
 import m0003Sql from "../migrations/0003_e3_shopping.sql?raw";
 import m0005Sql from "../migrations/0005_exercise_steps.sql?raw";
 import m0016Sql from "../migrations/0016_alimentos.sql?raw";
+import m0018Sql from "../migrations/0018_descansos.sql?raw";
 import schemaSql from "../schema.sql?raw";
 import app from "../src/index";
 
@@ -26,7 +27,7 @@ async function bootstrap(): Promise<void> {
   ]);
   // Reproduce the wrangler runner's end state: each additive migration file
   // in filename order. E2 0002 + E3 0003 mirror _cf_D1_MIGRATIONS (once per worker).
-  for (const sql of [m0003Sql, m0005Sql, m0016Sql])
+  for (const sql of [m0003Sql, m0005Sql, m0016Sql, m0018Sql])
     await env.DB.batch(
       sql
         .split(";")

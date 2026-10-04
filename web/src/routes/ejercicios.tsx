@@ -847,6 +847,8 @@ function AddToTemplate({
             targetRepsMax: e.targetRepsMax,
             targetDistanceKm: e.targetDistanceKm,
             targetDurationMin: e.targetDurationMin,
+            restSecs: e.restSecs,
+            restAfterSecs: e.restAfterSecs,
           })),
           {
             exerciseId: exercise.id,
@@ -855,6 +857,8 @@ function AddToTemplate({
             targetRepsMax: null,
             targetDistanceKm: null,
             targetDurationMin: null,
+            restSecs: null,
+            restAfterSecs: null,
           },
         ],
       });

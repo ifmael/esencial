@@ -342,6 +342,61 @@ móvil y las de escritorio simulan la consulta. Lo cubren
   siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
   lista también (el único `PUT` admitido es el recuento de series, ver arriba).
 
+### Modo interactivo de sesión y descansos (0018)
+
+`/sesion/:date` tiene un botón «Empezar» (tonal, a lo ancho, bajo la cabecera)
+que abre el **modo sesión** (`components/session-mode.tsx`): una capa
+`fixed inset-0` que sustituye la página — `role="dialog"`, y el aspa (o Escape)
+piden **confirmación** antes de salir («¿Salir del modo sesión?»), sin tocar el
+borrador. El encabezado lleva a la izquierda el **aro de progreso**
+(`WavyRing` con `waveOnly`: solo el arco que avanza, sin círculo de fondo) con
+«N / M» dentro — **empieza en 0** y sube al registrar cada ejercicio entero — y
+a la derecha el aspa. Un ejercicio
+a la vez en el orden del día: nombre, objetivo, «Sin peso» y **sus series
+editables** (los mismos `Stepper` —compartidos con el borrador— y la casilla; se
+marca al quedar completa y la pausa arranca al quedar hecha, la marques a mano o
+escribiendo sus marcas).
+
+- **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
+  `rest_after_secs` (al terminar el ejercicio); columnas nulables en
+  `template_exercises` y `plan_session_exercises` (migración aditiva **0018**,
+  que el bootstrap de tests aplica). Se programan en el editor del día y en el
+  editor de plantillas; al planificar, el día **copia** lo que la plantilla tenía
+  en ese momento y editar la plantilla después no toca los días ya planificados.
+  Los campos nacen con **120 s** (editable; vaciarlos es lo que deja el
+  ejercicio sin descanso; `restAt` recorta 1..3600, espejo del rango que valida
+  la API). En cardio solo se programa «al terminar». En una
+  base de dev anterior hay que aplicar la migración (`pnpm db:migrate:local`);
+  sin ella, leer o guardar ejercicios del plan responde **500** (no tal
+  columna).
+- **Pausas**: marcar una serie arranca la «entre series»; la **última** arranca
+  la «al terminar» y, al agotarse o saltarla, el siguiente ejercicio queda
+  activo. Un ejercicio sin descansos se comporta como la página normal: ni barra
+  ni pitido (el modo lo dice: «Sin descansos programados»; «Sin pausa entre
+  series» si solo falta la de entre series). La **última serie del último
+  ejercicio no arranca nada y corta la pausa que estuviera corriendo** (sin
+  pitido): la sesión ya se acabó. «Descanso» la arranca a
+  mano, «Saltar» la corta (sin pitido) y
+  «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
+  por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
+- **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al
+  terminar; mientras corre una pausa suena un keep-alive casi inaudible (60 Hz,
+  gain 0.0008) que mantiene la pestaña «sonando» para que el navegador no la
+  congele en segundo plano. Best effort: si la suspende o ralentiza, el pitido
+  suena tarde o al volver (resincronización por `endsAt`), nunca dos veces.
+- **Wake Lock** (`lib/wake-lock.ts`): pantalla encendida mientras el modo está
+  visible; el navegador la suelta al ocultar la pestaña y se re-pide al volver.
+- Al **completar la sesión** (todas las series y cardios marcados) aparecen el
+  selector de esfuerzo en el pie y «Terminar», que es el «Guardar» de la sesión.
+  Salir sin terminar deja el borrador intacto.
+
+Lo cubren `api/tests/templates.test.ts` y `plan-sessions.test.ts` (ida y vuelta
+de los descansos; en una sesión registrada no cambian → 409),
+`web/tests/template-draft.test.ts`, `plantillas.test.tsx` y
+`plan-fuerza.test.tsx` (campos y copia al planificar), `web/tests/sesion.test.tsx`
+(el modo entero, con el doble de Web Audio de `web/tests/audio-fake.ts`),
+`web/tests/rest-audio.test.ts` y `e2e/tests/session-mode.spec.ts` (móvil, 390 px).
+
 ### Historial (`/historial` y la ficha del ejercicio)
 
 `HistorialPage` (`web/src/routes/historial.tsx`) es hija de **Deporte** en el
@@ -687,9 +742,9 @@ es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
 cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
 nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
-histórico de planificación, justo después del deploy; **0013–0015 van antes del
-merge a `main`**, porque el merge publica la API que ya lee
-`exercise_regions.role` — ver `DEPLOY.md` §4).
+histórico de planificación, justo después del deploy; **0013–0015 y 0018 van
+antes del merge a `main`**, porque el merge publica la API que ya lee
+`exercise_regions.role` y los descansos — ver `DEPLOY.md` §4).
 
 ### 2. wrangler pide confirmación y cuelga en no-TTY
 
@@ -759,6 +814,17 @@ navegador trata los dos nombres como sitios distintos y la cookie de sesión
 `localhost` el login parece ignorarse: la petición responde 200 y la app se
 queda en `/login` sin error visible. Se arregla con un origen canónico en vez de
 duplicar `WEB_ORIGIN` (CORS) y `API_ORIGIN` (CSP) para los dos nombres.
+
+Para probar desde el móvil (misma Wi‑Fi), `ESENCIAL_HOST=<ip> pnpm dev` (p. ej.
+`ESENCIAL_HOST=192.168.1.100 pnpm dev`): `api/scripts/dev.ts` pasa esa IP a los
+dos servidores —`--ip` (bind) y los orígenes de la corrida, es decir
+`WEB_ORIGIN`, `API_ORIGIN` y `VITE_API_URL`—, así que se entra (móvil y
+escritorio) por `http://<ip>:8787`, el origen canónico de esa corrida; la cookie
+viaja igual porque los dos Workers comparten host. Sin `ESENCIAL_HOST` todo
+sigue en `127.0.0.1`, y no conviene mezclar los dos hosts en la misma corrida
+(la cookie es por host). El cortafuegos de macOS pedirá permitir conexiones
+entrantes la primera vez. Con Tailscale, `ESENCIAL_HOST=<ip-tailscale>` hace lo
+mismo fuera de casa.
 
 ### 5. `pnpm deploy` no ejecuta el script de deploy
 

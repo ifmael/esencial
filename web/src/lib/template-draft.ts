@@ -13,6 +13,9 @@ export type DraftEntry = {
   targetRepsMax: number | null;
   targetDistanceKm: number | null;
   targetDurationMin: number | null;
+  /** Descansos programados (segundos): entre series y al terminar el ejercicio. */
+  restSecs: number | null;
+  restAfterSecs: number | null;
 };
 
 export type Draft = {
@@ -27,6 +30,8 @@ export type Targets = Pick<
   | "targetRepsMax"
   | "targetDistanceKm"
   | "targetDurationMin"
+  | "restSecs"
+  | "restAfterSecs"
 >;
 
 let keySeq = 0;
@@ -80,6 +85,8 @@ export type TemplateEntryPayload = {
   targetRepsMax: number | null;
   targetDistanceKm: number | null;
   targetDurationMin: number | null;
+  restSecs: number | null;
+  restAfterSecs: number | null;
 };
 
 export type TemplatePayload = {
@@ -97,6 +104,8 @@ export function buildTemplatePayload(draft: Draft): TemplatePayload {
       targetRepsMax: e.targetRepsMax,
       targetDistanceKm: e.targetDistanceKm,
       targetDurationMin: e.targetDurationMin,
+      restSecs: e.restSecs,
+      restAfterSecs: e.restAfterSecs,
     })),
   };
 }
@@ -106,6 +115,15 @@ export function buildTemplatePayload(draft: Draft): TemplatePayload {
 /** "" → null; cualquier otro valor → entero ≥ 1 (nunca NaN). */
 export const intAt = (raw: string): number | null =>
   raw === "" ? null : Math.max(1, Math.trunc(Number(raw) || 1));
+
+/** Descanso en segundos: "" → null; el resto se recorta a 1..3600 (el espejo
+ *  del rango que valida la API). */
+export const restAt = (raw: string): number | null =>
+  raw === "" ? null : Math.min(3600, Math.max(1, Math.trunc(Number(raw) || 1)));
+
+/** Descanso por defecto de los editores (segundos): los campos nacen con este
+ *  valor (y se guarda tal cual); vaciarlos deja el ejercicio sin descanso. */
+export const DEFAULT_REST_SECS = 120;
 
 /** "" o valores no finitos/negativos → null; el resto, número tal cual. */
 export function numAt(raw: string): number | null {

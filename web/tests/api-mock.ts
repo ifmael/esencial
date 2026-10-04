@@ -22,6 +22,8 @@ export type SessionExerciseRow = {
   targetRepsMax: number | null;
   targetDistanceKm: number | null;
   targetDurationMin: number | null;
+  restSecs: number | null;
+  restAfterSecs: number | null;
 };
 
 export type PlanSessionRow = {
@@ -64,6 +66,8 @@ type RawItem = {
   targetRepsMax?: number | null;
   targetDistanceKm?: number | null;
   targetDurationMin?: number | null;
+  restSecs?: number | null;
+  restAfterSecs?: number | null;
 };
 
 export function mockApi(seed: Seed = {}): MockApi {
@@ -106,6 +110,8 @@ export function mockApi(seed: Seed = {}): MockApi {
         targetRepsMax: raw.targetRepsMax ?? null,
         targetDistanceKm: raw.targetDistanceKm ?? null,
         targetDurationMin: raw.targetDurationMin ?? null,
+        restSecs: raw.restSecs ?? null,
+        restAfterSecs: raw.restAfterSecs ?? null,
       };
     });
 
@@ -319,6 +325,8 @@ function hydrate(
     targetRepsMax: e.targetRepsMax ?? null,
     targetDistanceKm: e.targetDistanceKm ?? null,
     targetDurationMin: e.targetDurationMin ?? null,
+    restSecs: e.restSecs ?? null,
+    restAfterSecs: e.restAfterSecs ?? null,
     exerciseName: ex?.name ?? "?",
     kind: ex?.kind ?? "strength",
   };

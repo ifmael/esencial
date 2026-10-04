@@ -73,7 +73,7 @@ import {
   type SessionPayload,
   usePlanWeek,
 } from "../lib/plan-week";
-import { intAt, numAt } from "../lib/template-draft";
+import { DEFAULT_REST_SECS, intAt, numAt, restAt } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 import { runViewTransition } from "../lib/view-transition";
 import { DEFAULT_SETS, weekProgress } from "../lib/workout";
@@ -99,6 +99,10 @@ function rowsFrom(session: PlanSession | null): DayRow[] {
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
+    // 120 s por defecto (lo que ve el borrador es lo que se guarda): vaciar el
+    // campo es lo que deja el ejercicio sin descanso programado.
+    restSecs: e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null),
+    restAfterSecs: e.restAfterSecs ?? DEFAULT_REST_SECS,
   }));
 }
 
@@ -126,6 +130,8 @@ function expandTemplate(
       targetRepsMax: e.targetRepsMax,
       targetDistanceKm: e.targetDistanceKm,
       targetDurationMin: e.targetDurationMin,
+      restSecs: e.restSecs,
+      restAfterSecs: e.restAfterSecs,
     });
   }
   return { rows, skipped };
@@ -308,7 +314,10 @@ function Target({
   label: string;
   aria: string;
   wide?: boolean;
-} & Pick<ComponentProps<"input">, "value" | "onChange" | "min" | "step">) {
+} & Pick<
+  ComponentProps<"input">,
+  "value" | "onChange" | "min" | "step" | "placeholder"
+>) {
   return (
     <label className="flex flex-col gap-1 text-label-m text-on-surface-variant">
       {label}
@@ -410,6 +419,26 @@ function DayRowItem({
               onPatch(row.key, { targetRepsMax: intAt(e.target.value) })
             }
           />
+          <Target
+            label="Descanso entre series (s)"
+            aria={`${row.exerciseName} descanso entre series`}
+            min={1}
+            placeholder="120"
+            value={row.restSecs ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { restSecs: restAt(e.target.value) })
+            }
+          />
+          <Target
+            label="Descanso al terminar (s)"
+            aria={`${row.exerciseName} descanso al terminar`}
+            min={1}
+            placeholder="120"
+            value={row.restAfterSecs ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { restAfterSecs: restAt(e.target.value) })
+            }
+          />
         </>
       ) : (
         <>
@@ -432,6 +461,16 @@ function DayRowItem({
             value={row.targetDurationMin ?? ""}
             onChange={(e) =>
               onPatch(row.key, { targetDurationMin: intAt(e.target.value) })
+            }
+          />
+          <Target
+            label="Descanso al terminar (s)"
+            aria={`${row.exerciseName} descanso al terminar`}
+            min={1}
+            placeholder="120"
+            value={row.restAfterSecs ?? ""}
+            onChange={(e) =>
+              onPatch(row.key, { restAfterSecs: restAt(e.target.value) })
             }
           />
         </>
@@ -517,6 +556,8 @@ function SessionEditor({
         targetRepsMax: null,
         targetDistanceKm: null,
         targetDurationMin: null,
+        restSecs: e.kind === "strength" ? DEFAULT_REST_SECS : null,
+        restAfterSecs: DEFAULT_REST_SECS,
       },
     ]);
   };
@@ -533,6 +574,8 @@ function SessionEditor({
           targetRepsMax: r.targetRepsMax,
           targetDistanceKm: r.targetDistanceKm,
           targetDurationMin: r.targetDurationMin,
+          restSecs: r.restSecs,
+          restAfterSecs: r.restAfterSecs,
         })),
       },
       andLog,
