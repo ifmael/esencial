@@ -86,15 +86,21 @@ export function DayHeader({
           className="text-surface-container-high"
         />
       </span>
+      {/* Saludo: solo el día en curso (el cliente decide «hoy») y en el sitio de
+       * la etiqueta «Hoy», arriba y sobre la fecha. Sin nombre puesto, saluda
+       * igual pero sin él. */}
+      {isToday && (
+        <p className="relative text-body-l text-on-surface-variant">
+          {`Hola${name ? ` ${name}` : ""}, estos son los planes que tienes para …`}
+        </p>
+      )}
+
       {/* Móvil: sin título visible (la fecha ya está en la fila); `contents`
        * para que la fila vacía no sume el hueco de la cabecera. */}
       <div className="contents lg:relative lg:flex lg:items-start lg:justify-between lg:gap-4">
         <h1 className="sr-only min-w-0 text-balance text-display-s text-e md:text-display-m lg:not-sr-only">
-          {isToday && (
-            <span className="block text-title-l text-e text-accent">
-              Hoy<span className="sr-only"> — </span>
-            </span>
-          )}
+          {/* El saludo ocupa su sitio: «Hoy» sigue ahí solo para quien lee. */}
+          {isToday && <span className="sr-only">Hoy — </span>}
           <span className="block first-letter:uppercase">
             {formatDateEs(date)}
           </span>
@@ -120,14 +126,6 @@ export function DayHeader({
           </div>
         )}
       </div>
-
-      {/* Bienvenida: solo el día en curso (el cliente decide «hoy»). Sin
-       * nombre puesto saluda igual, sin él. */}
-      {isToday && (
-        <p className="relative text-body-l text-on-surface-variant">
-          {`Hola${name ? ` ${name}` : ""}, estos son los planes que tienes para HOY`}
-        </p>
-      )}
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
         <ConnectedGroup label="Cambiar de día" className="w-full lg:w-auto">

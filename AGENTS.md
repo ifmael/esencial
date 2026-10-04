@@ -260,12 +260,13 @@ en la barra inferior). «Hoy» lleva
 (también en escritorio, donde se pinta como píldora en `--accent`). La fecha lleva
 `grow-10` porque `.connected > *` hace crecer a todas las piezas por igual, y su
 `onClick` llama a `showPicker()` para abrir el calendario al pulsar en cualquier
-punto, no solo en el icono. **Saludo**: sobre la fila, y solo cuando el día
-elegido es hoy (`isToday`), «Hola … , estos son los planes que tienes para HOY»
-con el `name` del perfil (`useMe`; sin nombre puesto saluda sin él). Es una línea
-más en la cabecera también en móvil (decisión del usuario), así que el tope del
-e2e móvil es < 200 px y no < 100. Lo cubren `day-page.test.tsx` y
-`auth-dia.spec.ts`.
+punto, no solo en el icono. **Saludo**: en el sitio de la etiqueta «Hoy» —arriba,
+sobre la fecha, y visible también en móvil— y solo cuando el día elegido es hoy
+(`isToday`): «Hola … , estos son los planes que tienes para …», con el `name`
+del perfil (`useMe`; sin nombre puesto saluda sin él). La etiqueta «Hoy» ya no se
+pinta: queda `sr-only` dentro del `h1` (el texto y el «Hoy» pulsado siguen
+diciendo qué día es). El e2e móvil mide < 200 px (medido, 148 px a 390 px sin
+nombre). Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
 
 ### Cabecera del detalle de ejercicio (`/ejercicios/:id`)
 

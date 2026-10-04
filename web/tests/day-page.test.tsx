@@ -204,18 +204,23 @@ describe("saludo de bienvenida", () => {
     const { container } = renderAt("/");
     await settle();
     const header = container.querySelector("header") as HTMLElement;
+    const saludo = within(header).getByText(
+      "Hola Ismael, estos son los planes que tienes para …",
+    );
+    expect(saludo).toBeDefined();
+    // Va arriba, sobre la fecha (el sitio de la etiqueta «Hoy»).
+    const titulo = within(header).getByRole("heading", { level: 1 });
     expect(
-      within(header).getByText(
-        "Hola Ismael, estos son los planes que tienes para HOY",
-      ),
-    ).toBeDefined();
+      saludo.compareDocumentPosition(titulo) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(titulo.textContent).toMatch(/^Hoy/);
   });
 
   it("sin nombre puesto, saluda igual (solo «Hola»)", async () => {
     renderAt("/");
     await settle();
     expect(
-      screen.getByText("Hola, estos son los planes que tienes para HOY"),
+      screen.getByText("Hola, estos son los planes que tienes para …"),
     ).toBeDefined();
   });
 
@@ -237,7 +242,7 @@ describe("saludo de bienvenida", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ir a hoy" }));
     await settle();
     expect(
-      screen.getByText("Hola Ismael, estos son los planes que tienes para HOY"),
+      screen.getByText("Hola Ismael, estos son los planes que tienes para …"),
     ).toBeDefined();
   });
 });

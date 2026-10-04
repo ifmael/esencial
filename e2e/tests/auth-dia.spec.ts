@@ -58,7 +58,7 @@ test.describe("DÍA empty states", () => {
     // la cabecera sigue siendo compacta, pero ya no mide una sola fila. Medido
     // a 390 px sin nombre (el admin de e2e no tiene): 148 px.
     await expect(
-      header.getByText(/estos son los planes que tienes para HOY/),
+      header.getByText(/estos son los planes que tienes para/),
     ).toBeVisible();
     await expect.poll(() => height(header)).toBeLessThan(200);
 
