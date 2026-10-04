@@ -27,7 +27,11 @@ const API_SERVER =
   // --var WEB_ORIGIN: el [vars] de api/wrangler.toml es el origen de producción;
   // en e2e el navegador viene de http://127.0.0.1:8788 y sin esto la API no le
   // daría permiso CORS (el login fallaría).
-  `npx wrangler dev -c api/wrangler.toml --port ${API_PORT} --var WEB_ORIGIN:${BASE} --persist-to e2e/.state`;
+  // --var DEV_AUTH + ADMIN_EMAIL (multi-usuario): aquí no hay Access delante, así
+  // que una petición sin cabecera X-Dev-Email cae en la cookie de sesión del SPA
+  // y esa cookie es el admin (ADMIN_EMAIL). Con X-Dev-Email y DEV_AUTH=1 los
+  // tests pueden actuar como varios usuarios (aislamiento, familia).
+  `npx wrangler dev -c api/wrangler.toml --port ${API_PORT} --var WEB_ORIGIN:${BASE} --var DEV_AUTH:1 --var ADMIN_EMAIL:admin@esencial.test --persist-to e2e/.state`;
 
 // El Worker del frontal no toca D1: se le da su propio estado local para que el
 // `rm -rf e2e/.state` del arranque de la API no le pise la caché a mitad de

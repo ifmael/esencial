@@ -4,9 +4,9 @@
 // E7: security headers on every response y el 401 gate en /api/*. El guard del
 // HTML (302 → /login) vive en el Worker del frontal (B', dos despliegues).
 import { Hono } from "hono";
-import type { Env } from "./db";
+import type { AppContext } from "./db";
 import { dbFailure, json } from "./http";
-import { authGuard, cors, securityHeaders } from "./middleware";
+import { cors, identifyUser, securityHeaders } from "./middleware";
 import { authRoutes } from "./routes/auth";
 import { day } from "./routes/day";
 import { exercises } from "./routes/exercises";
@@ -21,7 +21,7 @@ import { templates } from "./routes/templates";
 import { uploads } from "./routes/uploads";
 import { workoutLogs } from "./routes/workout-logs";
 
-export const api = new Hono<{ Bindings: Env }>()
+export const api = new Hono<AppContext>()
   // TEMP debug: env presence probe (no value disclosure).
   .get("/health", () => json({ ok: true }))
   .route("/auth", authRoutes())
@@ -38,10 +38,10 @@ export const api = new Hono<{ Bindings: Env }>()
   .route("/day", day)
   .route("/uploads", uploads);
 
-const app = new Hono<{ Bindings: Env }>()
+const app = new Hono<AppContext>()
   .use(securityHeaders)
   .use(cors)
-  .use(authGuard)
+  .use(identifyUser)
   .route("/api", api)
   // B': este Worker solo sirve /api/*; el SPA (y su guard) vive en el Worker
   // del frontal, así que cualquier otra ruta es un 404 JSON.

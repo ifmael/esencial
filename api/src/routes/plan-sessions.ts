@@ -1,12 +1,14 @@
 // /api/plan-sessions — la sesión ES el día: nombre + ejercicios expandidos
 // (fuerza y/o cardio), sin duplicados. GET lista · POST crea · /:id GET/PUT/DELETE.
 // Una sesión `logged` solo admite el recuento de series (PUT); DELETE → 409.
+// El plan es privado del usuario: todo filtra por user_id (un id ajeno es 404) y
+// el UNIQUE es (user_id, date), así que dos personas pueden planificar el mismo día.
 import { Hono } from "hono";
 import {
   planSessionCreateSchema,
   planSessionUpdateSchema,
 } from "../api-validation";
-import { type Env, getDb } from "../db";
+import { type AppContext, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
 import { row, rows } from "../repo";
 import { zBody } from "../validation";
@@ -22,14 +24,17 @@ type Item = {
   restAfterSecs?: number | null;
 };
 
+/** Sesión del usuario `userId` con sus ejercicios; un id ajeno es null (404). */
 async function loadSession(
   db: D1Database,
   id: number,
+  userId: number,
 ): Promise<Record<string, unknown> | null> {
   const head = await row(
     db,
-    "SELECT id, date, name, status FROM plan_sessions WHERE id = ?",
+    "SELECT id, date, name, status FROM plan_sessions WHERE id = ? AND user_id = ?",
     id,
+    userId,
   );
   if (!head) return null;
   head.exercises = await rows(
@@ -125,14 +130,21 @@ function itemStatements(
 const cleanName = (name: string | null | undefined): string | null =>
   name?.trim() ? name.trim() : null;
 
-export const planSessions = new Hono<{ Bindings: Env }>()
+export const planSessions = new Hono<AppContext>()
   .get("/", (c) =>
     guard(async () => {
       const db = getDb(c.env);
-      const ids = await rows(db, "SELECT id FROM plan_sessions ORDER BY date");
+      const userId = c.get("user").id;
+      const ids = await rows(
+        db,
+        "SELECT id FROM plan_sessions WHERE user_id = ? ORDER BY date",
+        userId,
+      );
       // Cada sesión con sus ejercicios: la rejilla semanal pinta el desglose.
       return json(
-        await Promise.all(ids.map((r) => loadSession(db, Number(r.id)))),
+        await Promise.all(
+          ids.map((r) => loadSession(db, Number(r.id), userId)),
+        ),
       );
     }),
   )
@@ -140,29 +152,35 @@ export const planSessions = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const input = c.get("validated");
       const db = getDb(c.env);
+      const userId = c.get("user").id;
       const problem = await itemsError(db, input.items);
       if (problem) return fail(problem, "items");
       if (
-        await row(db, "SELECT id FROM plan_sessions WHERE date = ?", input.date)
+        await row(
+          db,
+          "SELECT id FROM plan_sessions WHERE date = ? AND user_id = ?",
+          input.date,
+          userId,
+        )
       )
         return fail("Ya hay una sesión ese día", "date", 409);
       const results = await db.batch([
         db
           .prepare(
-            "INSERT INTO plan_sessions (date, name, status) VALUES (?, ?, 'planned')",
+            "INSERT INTO plan_sessions (user_id, date, name, status) VALUES (?, ?, ?, 'planned')",
           )
-          .bind(input.date, cleanName(input.name)),
+          .bind(userId, input.date, cleanName(input.name)),
         ...itemStatements(
           {
-            sql: "(SELECT id FROM plan_sessions WHERE date = ?)",
-            args: [input.date],
+            sql: "(SELECT id FROM plan_sessions WHERE date = ? AND user_id = ?)",
+            args: [input.date, userId],
           },
           input.items,
           db,
         ),
       ]);
       return json(
-        await loadSession(db, Number(results[0].meta.last_row_id)),
+        await loadSession(db, Number(results[0].meta.last_row_id), userId),
         201,
       );
     }),
@@ -171,7 +189,7 @@ export const planSessions = new Hono<{ Bindings: Env }>()
     guard(async () => {
       const id = parseId(c.req.param("id"));
       if (id === null) return fail("id must be a positive integer", "id");
-      const session = await loadSession(getDb(c.env), id);
+      const session = await loadSession(getDb(c.env), id, c.get("user").id);
       return session ? json(session) : fail("Not found", undefined, 404);
     }),
   )
@@ -180,10 +198,12 @@ export const planSessions = new Hono<{ Bindings: Env }>()
       const id = parseId(c.req.param("id"));
       if (id === null) return fail("id must be a positive integer", "id");
       const db = getDb(c.env);
+      const userId = c.get("user").id;
       const session = await row(
         db,
-        "SELECT id, name, status FROM plan_sessions WHERE id = ?",
+        "SELECT id, name, status FROM plan_sessions WHERE id = ? AND user_id = ?",
         id,
+        userId,
       );
       if (!session) return fail("Not found", undefined, 404);
       const input = c.get("validated");
@@ -217,7 +237,7 @@ export const planSessions = new Hono<{ Bindings: Env }>()
               .bind(it.targetSets ?? null, id, it.exerciseId),
           ),
         );
-        return json(await loadSession(db, id));
+        return json(await loadSession(db, id, userId));
       }
 
       // Upsert: los items que siguen conservan su id —el registro del día cuelga
@@ -225,8 +245,10 @@ export const planSessions = new Hono<{ Bindings: Env }>()
       const kept = new Map(current.map((r) => [r.exerciseId, r.id]));
       await db.batch([
         db
-          .prepare("UPDATE plan_sessions SET name = ? WHERE id = ?")
-          .bind(cleanName(input.name), id),
+          .prepare(
+            "UPDATE plan_sessions SET name = ? WHERE id = ? AND user_id = ?",
+          )
+          .bind(cleanName(input.name), id, userId),
         ...input.items.map((it, pos) => {
           const targets = [
             pos,
@@ -264,7 +286,7 @@ export const planSessions = new Hono<{ Bindings: Env }>()
               .bind(r.id),
           ),
       ]);
-      return json(await loadSession(db, id));
+      return json(await loadSession(db, id, userId));
     }),
   )
   .delete("/:id", (c) =>
@@ -274,13 +296,17 @@ export const planSessions = new Hono<{ Bindings: Env }>()
       const db = getDb(c.env);
       const session = await row(
         db,
-        "SELECT id, status FROM plan_sessions WHERE id = ?",
+        "SELECT id, status FROM plan_sessions WHERE id = ? AND user_id = ?",
         id,
+        c.get("user").id,
       );
       if (!session) return fail("Not found", undefined, 404);
       if (session.status === "logged")
         return fail("Sesión ya registrada", undefined, 409);
-      await db.prepare("DELETE FROM plan_sessions WHERE id = ?").bind(id).run();
+      await db
+        .prepare("DELETE FROM plan_sessions WHERE id = ? AND user_id = ?")
+        .bind(id, c.get("user").id)
+        .run();
       return json({});
     }),
   );

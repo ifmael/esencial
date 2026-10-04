@@ -1,7 +1,7 @@
 // CRUD de plantillas: agrupaciones semánticas de ejercicios (fuerza y cardio)
 // con series/tiempos por defecto. Sin rotación; sin ejercicios duplicados.
 import { beforeAll, describe, expect, it } from "vitest";
-import { d1, del, freshDb, get, post, put } from "./helpers";
+import { d1, del, devGet, devSend, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -244,5 +244,69 @@ describe("/api/templates", () => {
     await post("/api/templates", payload("G — Referencia"));
     const res = await del(`/api/exercises/${benchId}`);
     expect(res.status).toBe(400);
+  });
+});
+
+// La plantilla es privada del usuario: B no la ve ni la puede tocar (404), pero
+// sí puede tener una con el mismo nombre (UNIQUE(user_id, name)).
+const B = "bea@esencial.test";
+
+describe("plantillas privadas por usuario", () => {
+  it("B no ve la plantilla de A en la lista; A sí", async () => {
+    const a = await body(await post("/api/templates", payload("Torso")));
+    const listB = (await (await devGet("/api/templates", B)).json()) as {
+      id: number;
+      name: string;
+    }[];
+    expect(listB.some((t) => Number(t.id) === Number(a.id))).toBe(false);
+    expect(listB.some((t) => t.name === "Torso")).toBe(false);
+    const listA = (await (await get("/api/templates")).json()) as {
+      id: number;
+    }[];
+    expect(listA.some((t) => Number(t.id) === Number(a.id))).toBe(true);
+  });
+
+  it("B no puede leer, editar ni borrar la de A (404)", async () => {
+    const a = await body(await post("/api/templates", payload("Privada")));
+    const id = Number(a.id);
+    expect((await devGet(`/api/templates/${id}`, B)).status).toBe(404);
+    expect(
+      (await devSend(`/api/templates/${id}`, "PUT", payload("Privada"), B))
+        .status,
+    ).toBe(404);
+    expect(
+      (await devSend(`/api/templates/${id}`, "DELETE", undefined, B)).status,
+    ).toBe(404);
+    // Sigue intacta para su dueño.
+    expect((await get(`/api/templates/${id}`)).status).toBe(200);
+  });
+
+  it("B crea una con el mismo nombre sin pisar la de A", async () => {
+    const a = await body(await post("/api/templates", payload("Espalda")));
+    const resB = await devSend(
+      "/api/templates",
+      "POST",
+      {
+        name: "Espalda",
+        exercises: [{ exerciseId: rowId, targetSets: 2 }],
+      },
+      B,
+    );
+    expect(resB.status).toBe(201);
+    const b = await body(resB);
+    expect(Number(b.id)).not.toBe(Number(a.id));
+    expect(
+      (b.exercises as { exerciseId: number }[]).map((e) => e.exerciseId),
+    ).toEqual([rowId]);
+    // La de A conserva sus hijos.
+    const aGot = await body(await get(`/api/templates/${Number(a.id)}`));
+    expect(
+      (aGot.exercises as { exerciseId: number }[]).map((e) => e.exerciseId),
+    ).toEqual([benchId, squatId]);
+    // Y B solo ve la suya.
+    const listB = (await (await devGet("/api/templates", B)).json()) as {
+      id: number;
+    }[];
+    expect(listB.map((t) => Number(t.id))).toEqual([Number(b.id)]);
   });
 });

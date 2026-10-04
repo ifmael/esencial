@@ -9,7 +9,7 @@ import {
   shoppingItemPatchSchema,
   shoppingItemsSchema,
 } from "../api-validation";
-import { type Env, getDb } from "../db";
+import { type AppContext, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
 import { type Row, row, rows } from "../repo";
 import { zBody } from "../validation";
@@ -62,13 +62,19 @@ const manualRow = (r: Row) => ({
   section: r.section === null ? null : String(r.section),
   checked: Number(r.checked) === 1,
 });
-const WEEK_PLAN_ID = "(SELECT id FROM week_plans WHERE iso_week = ?)";
+const WEEK_PLAN_ID =
+  "(SELECT id FROM week_plans WHERE family_id = ? AND iso_week = ?)";
 
-async function serializeItems(db: D1Database, week: string): Promise<Response> {
+async function serializeItems(
+  db: D1Database,
+  week: string,
+  familyId: number,
+): Promise<Response> {
   const items = await rows(
     db,
     `SELECT id, position, food, quantity, unit, section, checked FROM shopping_items
      WHERE week_plan_id = ${WEEK_PLAN_ID} ORDER BY position, id`,
+    familyId,
     week,
   );
   return json({ isoWeek: week, items: items.map(manualRow) });
@@ -97,16 +103,18 @@ function validWeek(week: string): Response | null {
     : fail("week must match YYYY-Www (ISO)", "week");
 }
 
-export const shoppingList = new Hono<{ Bindings: Env }>()
+export const shoppingList = new Hono<AppContext>()
   .get("/:week", (c) =>
     guard(async () => {
       const week = c.req.param("week");
       const bad = validWeek(week);
       if (bad) return bad;
       const db = getDb(c.env);
+      const familyId = c.get("user").family_id;
       const plan = await row(
         db,
-        "SELECT id FROM week_plans WHERE iso_week = ?",
+        "SELECT id FROM week_plans WHERE family_id = ? AND iso_week = ?",
+        familyId,
         week,
       );
       if (!plan) return json({ isoWeek: week, sections: [] });
@@ -190,7 +198,7 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
       const week = c.req.param("week");
       const bad = validWeek(week);
       if (bad) return bad;
-      return serializeItems(getDb(c.env), week);
+      return serializeItems(getDb(c.env), week, c.get("user").family_id);
     }),
   )
   // Replace-all PUT mirrors meal-plan.ts: lazy week_plans row + delete/reinsert
@@ -202,21 +210,25 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
       if (bad) return bad;
       const input = c.get("validated");
       const db = getDb(c.env);
+      const familyId = c.get("user").family_id;
       await db.batch([
         db
-          .prepare("INSERT OR IGNORE INTO week_plans (iso_week) VALUES (?)")
-          .bind(week),
+          .prepare(
+            "INSERT OR IGNORE INTO week_plans (family_id, iso_week) VALUES (?, ?)",
+          )
+          .bind(familyId, week),
         db
           .prepare(
             `DELETE FROM shopping_items WHERE week_plan_id = ${WEEK_PLAN_ID}`,
           )
-          .bind(week),
+          .bind(familyId, week),
         ...input.items.map((i, pos) =>
           db
             .prepare(
               `INSERT INTO shopping_items (week_plan_id, position, food, quantity, unit, section, checked) VALUES (${WEEK_PLAN_ID}, ?, ?, ?, ?, ?, ?)`,
             )
             .bind(
+              familyId,
               week,
               pos,
               i.food,
@@ -227,7 +239,7 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
             ),
         ),
       ]);
-      return serializeItems(db, week);
+      return serializeItems(db, week, familyId);
     }),
   )
   .patch("/:week/items/:id", zBody(shoppingItemPatchSchema), (c) =>
@@ -243,6 +255,7 @@ export const shoppingList = new Hono<{ Bindings: Env }>()
         db,
         `SELECT id FROM shopping_items WHERE id = ? AND week_plan_id = ${WEEK_PLAN_ID}`,
         id,
+        c.get("user").family_id,
         week,
       );
       if (!existing) return fail("Not found", undefined, 404);

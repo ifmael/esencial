@@ -2,7 +2,7 @@
 // /api/day/:date devuelve `nutrition` (null sin recetas) y /api/meal-plan/:week
 // `totals`, uno por día de la semana (null en los días sin recetas).
 import { beforeAll, describe, expect, it } from "vitest";
-import { d1, freshDb, get, post, put } from "./helpers";
+import { d1, devGet, devSend, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -24,6 +24,7 @@ async function recipe(
 }
 
 const W40 = "2026-W40"; // lunes 2026-09-28; miércoles = día 2
+const W41 = "2026-W41"; // lunes 2026-10-05; miércoles = 2026-10-07
 
 describe("totales del día", () => {
   let tortilla: number;
@@ -92,5 +93,45 @@ describe("totales del día", () => {
     expect(plan.totals[4]).toMatchObject({ kcal: 0, approximate: true });
     expect(plan.totals[5]).toBeNull();
     expect(plan.totals[0]).toBeNull();
+  });
+
+  it("el día suma las comidas de la FAMILIA: los menús no cruzan", async () => {
+    // La cookie resuelve al admin; /api/me lo autoprovisiona y da su familia.
+    const me = (await (await get("/api/me")).json()) as { familyId: number };
+    const adminFamily = me.familyId;
+    await d1.run(
+      "INSERT INTO users (email, role, family_id) VALUES (?, 'member', ?)",
+      "hermano@esencial.test",
+      adminFamily,
+    );
+    const otraFamilia = await d1.run(
+      "INSERT INTO families (name) VALUES ('Otra')",
+    );
+    await d1.run(
+      "INSERT INTO users (email, role, family_id) VALUES (?, 'member', ?)",
+      "ajeno@esencial.test",
+      otraFamilia,
+    );
+
+    // W41 (miércoles 2026-10-07): el admin planifica desayuno; la otra familia,
+    // cena en el MISMO día. Cada /api/day ve solo lo de su familia.
+    await put(`/api/meal-plan/${W41}`, {
+      slots: [{ day: 2, meal: "desayuno", recipeId: tortilla }],
+    });
+    await devSend(
+      `/api/meal-plan/${W41}`,
+      "PUT",
+      { slots: [{ day: 2, meal: "cena", recipeId: ensalada }] },
+      "ajeno@esencial.test",
+    );
+
+    const hermana = (await (
+      await devGet("/api/day/2026-10-07", "hermano@esencial.test")
+    ).json()) as { meals: { meal: string }[] };
+    expect(hermana.meals.map((m) => m.meal)).toEqual(["desayuno"]);
+    const ajena = (await (
+      await devGet("/api/day/2026-10-07", "ajeno@esencial.test")
+    ).json()) as { meals: { meal: string }[] };
+    expect(ajena.meals.map((m) => m.meal)).toEqual(["cena"]);
   });
 });

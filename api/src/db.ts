@@ -19,3 +19,18 @@ export type Env = {
 export function getDb(env: Env): D1Database {
   return env.DB;
 }
+
+/** Una cuenta de `users`. El email llega ya normalizado (identity.ts). */
+export type User = {
+  id: number;
+  email: string;
+  role: "admin" | "member";
+  family_id: number;
+};
+
+/** Contexto de las rutas: además de los bindings llevan el usuario de la
+ *  petición, que pone el gate (`identifyUser`). */
+export type AppContext = {
+  Bindings: Env;
+  Variables: { user: User };
+};

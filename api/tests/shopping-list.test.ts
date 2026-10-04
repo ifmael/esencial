@@ -2,7 +2,17 @@
 // PUT/GET/PATCH de ítems manuales (D5). Seeds reales vía /api/recipes y
 // /api/meal-plan para probar la cadena completa.
 import { beforeAll, describe, expect, it } from "vitest";
-import { del, freshDb, get, post, put, send } from "./helpers";
+import {
+  d1,
+  del,
+  devGet,
+  devSend,
+  freshDb,
+  get,
+  post,
+  put,
+  send,
+} from "./helpers";
 
 beforeAll(freshDb);
 
@@ -273,5 +283,58 @@ describe("manual items CRUD", () => {
     });
     expect(week.status).toBe(400);
     expect((await body(week)).field).toBe("week");
+  });
+});
+
+describe("la lista de la compra es de la FAMILIA", () => {
+  it("aislada entre familias, compartida dentro; un id ajeno → 404", async () => {
+    // La cookie resuelve al admin; /api/me lo autoprovisiona y da su familia.
+    const adminFamily = Number((await body(await get("/api/me"))).familyId);
+    await d1.run(
+      "INSERT INTO users (email, role, family_id) VALUES (?, 'member', ?)",
+      "hermano@esencial.test",
+      adminFamily,
+    );
+    const otraFamilia = await d1.run(
+      "INSERT INTO families (name) VALUES ('Otra')",
+    );
+    await d1.run(
+      "INSERT INTO users (email, role, family_id) VALUES (?, 'member', ?)",
+      "ajeno@esencial.test",
+      otraFamilia,
+    );
+
+    await put("/api/shopping-list/2026-W48/items", {
+      items: [{ food: "Pan" }],
+    });
+
+    // Mismo family_id → ve la línea manual.
+    const same = (await (
+      await devGet("/api/shopping-list/2026-W48", "hermano@esencial.test")
+    ).json()) as { sections: Section[] };
+    expect(findItem(same.sections, "Despensa", "Pan")).toBeDefined();
+
+    // Distinta familia → ni la lista compuesta ni los ítems manuales.
+    const other = (await (
+      await devGet("/api/shopping-list/2026-W48", "ajeno@esencial.test")
+    ).json()) as { sections: Section[] };
+    expect(other.sections).toEqual([]);
+    const otherItems = (await (
+      await devGet("/api/shopping-list/2026-W48/items", "ajeno@esencial.test")
+    ).json()) as { items: unknown[] };
+    expect(otherItems.items).toEqual([]);
+
+    // Un id de la lista ajena responde 404: se filtra por el padre en el SQL.
+    const mine = (await (
+      await get("/api/shopping-list/2026-W48/items")
+    ).json()) as { items: { id: number }[] };
+    const id = mine.items[0].id;
+    const forbidden = await devSend(
+      `/api/shopping-list/2026-W48/items/${id}`,
+      "PATCH",
+      { checked: true },
+      "ajeno@esencial.test",
+    );
+    expect(forbidden.status).toBe(404);
   });
 });

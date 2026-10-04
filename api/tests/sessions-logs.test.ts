@@ -1,7 +1,7 @@
 // Cerrar el día: series de fuerza + marcas de cardio contra los ejercicios de la
 // sesión; doble POST 409; logged solo lectura; last-values por ejercicio.
 import { beforeAll, describe, expect, it } from "vitest";
-import { d1, freshDb, get, post, put } from "./helpers";
+import { d1, devGet, devSend, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -541,5 +541,85 @@ describe("last values per exercise", () => {
 
   it("404 for unknown exercise", async () => {
     expect((await get("/api/exercises/999999/last")).status).toBe(404);
+  });
+});
+
+/** Segundo usuario de dev: el registro y el histórico son privados. */
+const OTRO = "otro@esencial.test";
+
+describe("aislamiento del registro", () => {
+  it("el día registrado por A no existe para B (404 al verlo, corregirlo o cerrarlo)", async () => {
+    const s = await seed("2026-09-20");
+    await post("/api/workout-logs/2026-09-20", {
+      effort: 3,
+      sets: [
+        {
+          planSessionExerciseId: s.seBench,
+          setIndex: 0,
+          weightKg: 60,
+          reps: 8,
+          done: true,
+        },
+      ],
+    });
+
+    expect((await devGet("/api/workout-logs/2026-09-20", OTRO)).status).toBe(
+      404,
+    );
+    expect(
+      (
+        await devSend(
+          "/api/workout-logs/2026-09-20",
+          "PUT",
+          { effort: 5, sets: [] },
+          OTRO,
+        )
+      ).status,
+    ).toBe(404);
+    // Tampoco puede cerrar la sesión de A el mismo día.
+    expect(
+      (
+        await devSend(
+          "/api/workout-logs/2026-09-20",
+          "POST",
+          { effort: 5, sets: [] },
+          OTRO,
+        )
+      ).status,
+    ).toBe(404);
+    // El índice de B está vacío y el de A mantiene su día.
+    const bIdx = (await body(await devGet("/api/workout-logs", OTRO))) as {
+      days: unknown[];
+    };
+    expect(bIdx.days).toEqual([]);
+    const got = (await body(await get("/api/workout-logs/2026-09-20"))) as {
+      effort: number;
+    };
+    expect(got.effort).toBe(3);
+  });
+
+  it("las «últimas marcas» de un ejercicio son las de cada usuario", async () => {
+    const s = await seed("2026-09-21");
+    await post("/api/workout-logs/2026-09-21", {
+      effort: 3,
+      sets: [
+        {
+          planSessionExerciseId: s.seBench,
+          setIndex: 0,
+          weightKg: 60,
+          reps: 8,
+          done: true,
+        },
+      ],
+    });
+    // B no ha registrado nada: el ejercicio es de catálogo, su prefill va vacío.
+    const b = (await body(
+      await devGet(`/api/exercises/${s.benchId}/last`, OTRO),
+    )) as { last: unknown };
+    expect(b.last).toBeNull();
+    const a = (await body(await get(`/api/exercises/${s.benchId}/last`))) as {
+      last: { weightKg: number } | null;
+    };
+    expect(a.last?.weightKg).toBe(60);
   });
 });

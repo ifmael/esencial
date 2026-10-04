@@ -7,7 +7,7 @@
 //     la cabecera se ignora.
 // Todo lo demás falla cerrado: sin un email con forma válida no hay identidad.
 import type { Context } from "hono";
-import type { Env } from "./db";
+import type { AppContext } from "./db";
 
 export const DEV_EMAIL_HEADER = "x-dev-email";
 
@@ -51,7 +51,7 @@ export async function identityEmail(
  *  los tests no hay ExecutionContext (Hono pone uno por defecto, sin `access`),
  *  y `c.executionCtx` lanza si no lo hay. */
 export async function requestIdentity(
-  c: Context<{ Bindings: Env }>,
+  c: Context<AppContext>,
 ): Promise<string | null> {
   let access: unknown;
   try {

@@ -3,11 +3,38 @@
 -- No PRAGMAs: D1 manages WAL/journal itself. NOTE: additive changes now live in
 -- api/migrations/ and apply with `pnpm db:migrate:local` (wrangler d1 migrations).
 
+-- Multi-usuario (0019). La identidad la prueba Cloudflare Access en el borde:
+-- sin password_hash. `recipes.owner_id` NULL = catálogo; la visibilidad de
+-- familia es derivada (owner_id ∈ mi familia), así que no hay columna de familia.
+CREATE TABLE IF NOT EXISTS families (
+  id         INTEGER PRIMARY KEY,
+  name       TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id         INTEGER PRIMARY KEY,
+  email      TEXT NOT NULL UNIQUE,
+  role       TEXT NOT NULL CHECK (role IN ('admin', 'member')),
+  family_id  INTEGER NOT NULL REFERENCES families(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Una fila por objeto subido a R2: de quién es la key (la foto se sube antes de
+-- que exista la receta que la va a usar, así que la propiedad no se deriva).
+CREATE TABLE IF NOT EXISTS uploads (
+  key           TEXT PRIMARY KEY,
+  owner_user_id INTEGER NOT NULL REFERENCES users(id),
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS recipes (
   id          INTEGER PRIMARY KEY,
   name        TEXT NOT NULL UNIQUE,
   description TEXT,
-  servings    INTEGER
+  servings    INTEGER,
+  -- NULL = catálogo (solo lo escribe el admin). Con dueño, lo ve y lo edita su familia.
+  owner_id    INTEGER REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS recipe_ingredients (
@@ -59,8 +86,10 @@ CREATE TABLE IF NOT EXISTS exercise_regions (
 );
 
 CREATE TABLE IF NOT EXISTS session_templates (
-  id   INTEGER PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE
+  id      INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  name    TEXT NOT NULL,
+  UNIQUE (user_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS template_exercises (
@@ -76,9 +105,12 @@ CREATE TABLE IF NOT EXISTS template_exercises (
   UNIQUE (template_id, exercise_id)
 );
 
+-- La semana es de la familia, no de la persona: menú y compra se comparten.
 CREATE TABLE IF NOT EXISTS week_plans (
-  id       INTEGER PRIMARY KEY,
-  iso_week TEXT NOT NULL UNIQUE
+  id        INTEGER PRIMARY KEY,
+  family_id INTEGER NOT NULL REFERENCES families(id),
+  iso_week  TEXT NOT NULL,
+  UNIQUE (family_id, iso_week)
 );
 
 CREATE TABLE IF NOT EXISTS meal_slots (
@@ -91,10 +123,12 @@ CREATE TABLE IF NOT EXISTS meal_slots (
 );
 
 CREATE TABLE IF NOT EXISTS plan_sessions (
-  id     INTEGER PRIMARY KEY,
-  date   TEXT NOT NULL UNIQUE,
-  name   TEXT,
-  status TEXT NOT NULL CHECK (status IN ('planned', 'logged'))
+  id      INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  date    TEXT NOT NULL,
+  name    TEXT,
+  status  TEXT NOT NULL CHECK (status IN ('planned', 'logged')),
+  UNIQUE (user_id, date)
 );
 
 CREATE TABLE IF NOT EXISTS plan_session_exercises (
@@ -138,33 +172,10 @@ CREATE TABLE IF NOT EXISTS cardio_logs (
   UNIQUE (workout_log_id, plan_session_exercise_id)
 );
 
--- One editable note per day: date is the PK (implicitly UNIQUE).
+-- Una nota editable por día y persona: la PK es (user_id, date).
 CREATE TABLE IF NOT EXISTS day_notes (
-  date TEXT PRIMARY KEY,
-  text TEXT
-);
-
--- Multi-usuario (0019). La identidad la prueba Cloudflare Access en el borde:
--- sin password_hash. `recipes.owner_id` NULL = catálogo; la visibilidad de
--- familia es derivada (owner_id ∈ mi familia), así que no hay columna de familia.
-CREATE TABLE IF NOT EXISTS families (
-  id         INTEGER PRIMARY KEY,
-  name       TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS users (
-  id         INTEGER PRIMARY KEY,
-  email      TEXT NOT NULL UNIQUE,
-  role       TEXT NOT NULL CHECK (role IN ('admin', 'member')),
-  family_id  INTEGER NOT NULL REFERENCES families(id),
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
--- Una fila por objeto subido a R2: de quién es la key (la foto se sube antes de
--- que exista la receta que la va a usar, así que la propiedad no se deriva).
-CREATE TABLE IF NOT EXISTS uploads (
-  key           TEXT PRIMARY KEY,
-  owner_user_id INTEGER NOT NULL REFERENCES users(id),
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  date    TEXT NOT NULL,
+  text    TEXT,
+  PRIMARY KEY (user_id, date)
 );

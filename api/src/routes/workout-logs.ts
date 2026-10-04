@@ -4,7 +4,7 @@
 // y cardio; los ejercicios de la sesión no cambian).
 import { Hono } from "hono";
 import { type WorkoutLogInput, workoutLogSchema } from "../api-validation";
-import { type Env, getDb } from "../db";
+import { type AppContext, getDb } from "../db";
 import { dateFilter, fail, guard, json, readCursor } from "../http";
 import { row, rows } from "../repo";
 import { zBody } from "../validation";
@@ -23,15 +23,23 @@ const HISTORY_DAYS = `SELECT wl.date AS date, ps.name AS sessionName,
        (SELECT COUNT(*) FROM cardio_logs cl
          WHERE cl.workout_log_id = wl.id AND cl.done = 1) AS cardio
 FROM workout_logs wl
-JOIN plan_sessions ps ON ps.id = wl.plan_session_id`;
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id AND ps.user_id = ?`;
 
-async function sessionOn(db: D1Database, date: string) {
+/** La sesión planificada del usuario `userId` ese día (el UNIQUE es por usuario). */
+async function sessionOn(db: D1Database, date: string, userId: number) {
   return row(
     db,
-    "SELECT id, date, status, name FROM plan_sessions WHERE date = ?",
+    "SELECT id, date, status, name FROM plan_sessions WHERE date = ? AND user_id = ?",
     date,
+    userId,
   );
 }
+
+/** El log de ese día y usuario; la fecha no es UNIQUE (cada usuario tiene el suyo). */
+const LOG_OF_USER = `SELECT wl.id, wl.effort, wl.note, wl.plan_session_id
+FROM workout_logs wl
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+WHERE wl.date = ? AND ps.user_id = ?`;
 
 /** kind de cada plan_session_exercise referenciado; ausente = fuera de la sesión. */
 async function kindsOf(
@@ -80,9 +88,16 @@ async function invalidItems(
   return null;
 }
 
-/** INSERTs de series y cardio colgando del log de `date` (subselect por la fecha UNIQUE). */
-function itemInserts(db: D1Database, date: string, input: WorkoutLogInput) {
-  const LOG_ID = "(SELECT id FROM workout_logs WHERE date = ?)";
+/** INSERTs de series y cardio colgando del log de ese día y usuario (subselect
+ *  acotado por la fecha y el dueño de la sesión; el UNIQUE es por usuario). */
+function itemInserts(
+  db: D1Database,
+  date: string,
+  userId: number,
+  input: WorkoutLogInput,
+) {
+  const LOG_ID =
+    "(SELECT wl.id FROM workout_logs wl JOIN plan_sessions ps ON ps.id = wl.plan_session_id WHERE wl.date = ? AND ps.user_id = ?)";
   return [
     ...input.sets.map((s) =>
       db
@@ -92,6 +107,7 @@ function itemInserts(db: D1Database, date: string, input: WorkoutLogInput) {
         )
         .bind(
           date,
+          userId,
           s.planSessionExerciseId,
           s.setIndex,
           s.weightKg ?? null,
@@ -107,6 +123,7 @@ function itemInserts(db: D1Database, date: string, input: WorkoutLogInput) {
         )
         .bind(
           date,
+          userId,
           cardio.planSessionExerciseId,
           cardio.distanceKm ?? null,
           cardio.durationMin ?? null,
@@ -120,6 +137,7 @@ async function serialize(
   db: D1Database,
   date: string,
   log: Record<string, unknown>,
+  userId: number,
   status = 200,
 ) {
   const rawSets = await rows(
@@ -147,7 +165,7 @@ async function serialize(
     Number(log.id),
   );
   const cardio = rawCardio.map((r) => ({ ...r, done: Number(r.done) === 1 }));
-  const session = await sessionOn(db, date);
+  const session = await sessionOn(db, date, userId);
   return json(
     {
       date,
@@ -163,7 +181,7 @@ async function serialize(
   );
 }
 
-export const workoutLogs = new Hono<{ Bindings: Env }>()
+export const workoutLogs = new Hono<AppContext>()
   // Índice del histórico: los días registrados, del más reciente al más antiguo,
   // paginados con `?before=&limit=` (el detalle sigue en /:date).
   .get("/", (c) =>
@@ -179,6 +197,7 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
             : ""
         }
          ORDER BY wl.date DESC LIMIT ?`,
+        c.get("user").id,
         ...filter.args,
         cursor.limit + 1,
       );
@@ -203,13 +222,10 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
       const date = c.req.param("date");
       if (!DATE.test(date)) return fail("date must be YYYY-MM-DD", "date");
       const db = getDb(c.env);
-      const log = await row(
-        db,
-        "SELECT id, effort, note FROM workout_logs WHERE date = ?",
-        date,
-      );
+      const userId = c.get("user").id;
+      const log = await row(db, LOG_OF_USER, date, userId);
       if (!log) return fail("No workout logged for this date", "date", 404);
-      return serialize(db, date, log);
+      return serialize(db, date, log, userId);
     }),
   )
   .post("/:date", zBody(workoutLogSchema), (c) =>
@@ -218,7 +234,8 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
       if (!DATE.test(date)) return fail("date must be YYYY-MM-DD", "date");
       const input = c.get("validated");
       const db = getDb(c.env);
-      const session = await sessionOn(db, date);
+      const userId = c.get("user").id;
+      const session = await sessionOn(db, date, userId);
       if (!session)
         return fail("No session planned for this date", "date", 404);
       if (session.status === "logged")
@@ -233,18 +250,16 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
             "INSERT INTO workout_logs (plan_session_id, date, effort, note) VALUES (?, ?, ?, ?)",
           )
           .bind(sessionId, date, input.effort, input.note ?? null),
-        ...itemInserts(db, date, input),
+        ...itemInserts(db, date, userId, input),
         db
-          .prepare("UPDATE plan_sessions SET status = 'logged' WHERE id = ?")
-          .bind(sessionId),
+          .prepare(
+            "UPDATE plan_sessions SET status = 'logged' WHERE id = ? AND user_id = ?",
+          )
+          .bind(sessionId, userId),
       ]);
-      const log = await row(
-        db,
-        "SELECT id, effort, note FROM workout_logs WHERE date = ?",
-        date,
-      );
+      const log = await row(db, LOG_OF_USER, date, userId);
       if (!log) return fail("No workout logged for this date", "date", 404);
-      return serialize(db, date, log, 201);
+      return serialize(db, date, log, userId, 201);
     }),
   )
   .put("/:date", zBody(workoutLogSchema), (c) =>
@@ -253,11 +268,8 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
       if (!DATE.test(date)) return fail("date must be YYYY-MM-DD", "date");
       const input = c.get("validated");
       const db = getDb(c.env);
-      const log = await row(
-        db,
-        "SELECT id, plan_session_id FROM workout_logs WHERE date = ?",
-        date,
-      );
+      const userId = c.get("user").id;
+      const log = await row(db, LOG_OF_USER, date, userId);
       if (!log) return fail("No workout logged for this date", "date", 404);
       const invalid = await invalidItems(
         db,
@@ -276,12 +288,17 @@ export const workoutLogs = new Hono<{ Bindings: Env }>()
         db
           .prepare("DELETE FROM cardio_logs WHERE workout_log_id = ?")
           .bind(log.id),
-        ...itemInserts(db, date, input),
+        ...itemInserts(db, date, userId, input),
       ]);
-      return serialize(db, date, {
-        id: log.id,
-        effort: input.effort,
-        note: input.note ?? null,
-      });
+      return serialize(
+        db,
+        date,
+        {
+          id: log.id,
+          effort: input.effort,
+          note: input.note ?? null,
+        },
+        userId,
+      );
     }),
   );

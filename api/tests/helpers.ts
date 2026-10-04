@@ -65,10 +65,31 @@ const TABLES = [
   "day_notes",
 ];
 
-/** Fresh tables per test file (files run sequentially in one worker). */
+/** Fresh tables per test file (files run sequentially in one worker). Los
+ *  borrados van en un batch con la comprobación de FK diferida: las tablas se
+ *  referencian entre sí (users ← plan_sessions), así que en orden de hijos a
+ *  padres salta el constraint a media lista. */
 export async function freshDb(): Promise<void> {
   await bootstrap();
-  for (const t of TABLES) await env.DB.prepare(`DELETE FROM ${t}`).run();
+  await env.DB.batch([
+    env.DB.prepare("PRAGMA defer_foreign_keys = true"),
+    ...TABLES.map((t) => env.DB.prepare(`DELETE FROM ${t}`)),
+  ]);
+}
+
+/** Rehace el esquema desde cero: lo usan los tests que tocan la DDL (los de
+ *  migraciones, que recrean tablas). Los ficheros comparten la D1 del worker,
+ *  así que hay que dejarla como estaba. */
+export async function resetSchema(): Promise<void> {
+  // Las tablas se referencian entre sí (users ← plan_sessions), así que soltarlas
+  // en orden de hijos a padres no basta: se difiere la comprobación de FK hasta
+  // el final, cuando ya no queda ninguna tabla a la que apuntar.
+  await env.DB.batch([
+    env.DB.prepare("PRAGMA defer_foreign_keys = true"),
+    ...TABLES.map((t) => env.DB.prepare(`DROP TABLE IF EXISTS ${t}`)),
+  ]);
+  bootstrapped = false;
+  await bootstrap();
 }
 
 /** Direct D1 helpers for seeding/assertions (mirrors legacy getDb usage). */
@@ -164,6 +185,20 @@ export async function send(
       },
       body: typeof body === "string" ? body : JSON.stringify(body),
     },
+    env,
+  );
+}
+
+/** E8: multipart POST con una identidad dev concreta (para probar el
+ *  aislamiento de las fotos: la subida es de quien la hace). */
+export async function devPostForm(
+  path: string,
+  form: FormData,
+  email: string,
+): Promise<Response> {
+  return await app.request(
+    url(path),
+    { method: "POST", body: form, headers: { "X-Dev-Email": email } },
     env,
   );
 }

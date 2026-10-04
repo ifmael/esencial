@@ -1,8 +1,9 @@
 // /api/exercises — GET (?tag=) · POST · /:id GET/PUT/DELETE · /:id/last GET ·
 // /:id/history GET. last-values endpoint per E1 design D5.
+// Catálogo: lo lee todo el mundo; solo el admin lo escribe (403).
 import { Hono } from "hono";
 import { type ExerciseInput, exerciseSchema } from "../api-validation";
-import { type Env, getDb } from "../db";
+import { type AppContext, getDb } from "../db";
 import { dateFilter, fail, guard, json, parseId, readCursor } from "../http";
 import { listExercises, loadExercise, type Row, row, rows } from "../repo";
 import { zBody } from "../validation";
@@ -29,7 +30,7 @@ FROM set_logs sl
 JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = sl.workout_log_id
 JOIN plan_sessions ps ON ps.id = wl.plan_session_id
-WHERE pse.exercise_id = ? AND sl.done = 1`;
+WHERE pse.exercise_id = ? AND ps.user_id = ? AND sl.done = 1`;
 
 /** Días con cardio hecho del ejercicio. */
 const CARDIO_DATES = `SELECT wl.date AS date, MAX(ps.name) AS sessionName
@@ -37,7 +38,7 @@ FROM cardio_logs cl
 JOIN plan_session_exercises pse ON pse.id = cl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = cl.workout_log_id
 JOIN plan_sessions ps ON ps.id = wl.plan_session_id
-WHERE pse.exercise_id = ? AND cl.done = 1`;
+WHERE pse.exercise_id = ? AND ps.user_id = ? AND cl.done = 1`;
 
 /** Series marcadas del ejercicio (la fecha va en el IN que añade la ruta). */
 const SET_MARKS = `SELECT wl.date AS date, sl.set_index AS setIndex,
@@ -45,26 +46,27 @@ const SET_MARKS = `SELECT wl.date AS date, sl.set_index AS setIndex,
 FROM set_logs sl
 JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = sl.workout_log_id
-WHERE pse.exercise_id = ? AND sl.done = 1`;
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+WHERE pse.exercise_id = ? AND ps.user_id = ? AND sl.done = 1`;
 
 /** Las mejores series KILOS primero (y a igualdad, reps) y, sin kilos, las
  *  que más repiten: la fila es la del día que las consiguió. */
-const SET_BEST = `SELECT wl.date AS date,
-       (SELECT name FROM plan_sessions WHERE id = wl.plan_session_id) AS sessionName,
+const SET_BEST = `SELECT wl.date AS date, ps.name AS sessionName,
        sl.set_index AS setIndex, sl.weight_kg AS weightKg, sl.reps AS reps
 FROM set_logs sl
 JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = sl.workout_log_id
-WHERE pse.exercise_id = ? AND sl.done = 1`;
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+WHERE pse.exercise_id = ? AND ps.user_id = ? AND sl.done = 1`;
 
 /** La mejor marca de cardio: la distancia más larga (y a igualdad, el tiempo). */
-const CARDIO_BEST = `SELECT wl.date AS date,
-       (SELECT name FROM plan_sessions WHERE id = wl.plan_session_id) AS sessionName,
+const CARDIO_BEST = `SELECT wl.date AS date, ps.name AS sessionName,
        cl.distance_km AS distanceKm, cl.duration_min AS durationMin
 FROM cardio_logs cl
 JOIN plan_session_exercises pse ON pse.id = cl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = cl.workout_log_id
-WHERE pse.exercise_id = ? AND cl.done = 1`;
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+WHERE pse.exercise_id = ? AND ps.user_id = ? AND cl.done = 1`;
 
 /** Marcas de cardio del ejercicio. */
 const CARDIO_MARKS = `SELECT wl.date AS date, cl.distance_km AS distanceKm,
@@ -72,7 +74,8 @@ const CARDIO_MARKS = `SELECT wl.date AS date, cl.distance_km AS distanceKm,
 FROM cardio_logs cl
 JOIN plan_session_exercises pse ON pse.id = cl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = cl.workout_log_id
-WHERE pse.exercise_id = ? AND cl.done = 1`;
+JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+WHERE pse.exercise_id = ? AND ps.user_id = ? AND cl.done = 1`;
 
 function tagStatements(
   name: string,
@@ -102,7 +105,7 @@ function regionStatements(
   );
 }
 
-export const exercises = new Hono<{ Bindings: Env }>()
+export const exercises = new Hono<AppContext>()
   .get("/", (c) =>
     guard(async () => {
       return json(await listExercises(getDb(c.env), c.req.query("tag")));
@@ -110,6 +113,9 @@ export const exercises = new Hono<{ Bindings: Env }>()
   )
   .post("/", zBody(exerciseSchema), (c) =>
     guard(async () => {
+      // El catálogo lo escribe solo el admin: leerlo es de todos, tocarlo no.
+      if (c.get("user").role !== "admin")
+        return json({ error: "Forbidden" }, 403);
       const input = c.get("validated");
       const db = getDb(c.env);
       const name = input.name.trim();
@@ -145,6 +151,9 @@ export const exercises = new Hono<{ Bindings: Env }>()
   )
   .put("/:id", zBody(exerciseSchema), (c) =>
     guard(async () => {
+      // El catálogo lo escribe solo el admin.
+      if (c.get("user").role !== "admin")
+        return json({ error: "Forbidden" }, 403);
       const id = parseId(c.req.param("id"));
       if (id === null) return fail("id must be a positive integer", "id");
       const input = c.get("validated");
@@ -180,6 +189,9 @@ export const exercises = new Hono<{ Bindings: Env }>()
   )
   .delete("/:id", (c) =>
     guard(async () => {
+      // El catálogo lo borra solo el admin.
+      if (c.get("user").role !== "admin")
+        return json({ error: "Forbidden" }, 403);
       const id = parseId(c.req.param("id"));
       if (id === null) return fail("id must be a positive integer", "id");
       const { meta } = await c.env.DB.prepare(
@@ -197,23 +209,27 @@ export const exercises = new Hono<{ Bindings: Env }>()
       const id = parseId(c.req.param("id"));
       if (id === null) return fail("id must be a positive integer", "id");
       const db = getDb(c.env);
+      const userId = c.get("user").id;
       if (!(await row(db, "SELECT id FROM exercises WHERE id = ?", id)))
         return fail("Not found", undefined, 404);
       // ?before=YYYY-MM-DD: solo lo registrado antes de esa fecha (registrar un día pasado).
       const before = c.req.query("before") ?? "9999-12-31";
       if (!/^\d{4}-\d{2}-\d{2}$/.test(before))
         return fail("before must be YYYY-MM-DD", "before");
+      // Las marcas son del usuario: el ejercicio es de catálogo, su prefill no.
       const last = await row(
         db,
         `SELECT sl.weight_kg AS weightKg, sl.reps, wl.date
          FROM set_logs sl
          JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
          JOIN workout_logs wl ON wl.id = sl.workout_log_id
-         WHERE pse.exercise_id = ? AND wl.date < ?
+         JOIN plan_sessions ps ON ps.id = wl.plan_session_id
+         WHERE pse.exercise_id = ? AND ps.user_id = ? AND wl.date < ?
            AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL)
          ORDER BY wl.date DESC, sl.id DESC
          LIMIT 1`,
         id,
+        userId,
         before,
       );
       return json({ exerciseId: id, last: last ?? null });
@@ -238,6 +254,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
       const isCardio = String(exercise.kind) !== "strength";
       // El rango pedido y el cursor son las mismas condiciones para las dos consultas.
       const filter = dateFilter(cursor);
+      const userId = c.get("user").id;
       const dates = await rows(
         db,
         `${isCardio ? CARDIO_DATES : SET_DATES}${filter.conditions
@@ -245,6 +262,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
           .join("")}
          GROUP BY wl.date ORDER BY wl.date DESC LIMIT ?`,
         id,
+        userId,
         ...filter.args,
         cursor.limit + 1,
       );
@@ -260,6 +278,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
                AND wl.date IN (${page.map(() => "?").join(",")})
                ORDER BY wl.date DESC${isCardio ? ", cl.id" : ", sl.set_index, sl.id"}`,
               id,
+              userId,
               ...page.map((d) => String(d.date)),
             );
       const setsByDate = new Map<string, Mark[]>();
@@ -292,6 +311,7 @@ export const exercises = new Hono<{ Bindings: Env }>()
 }, wl.date DESC
          LIMIT 1`,
         id,
+        userId,
         ...filter.args,
       );
       const best = bestRow

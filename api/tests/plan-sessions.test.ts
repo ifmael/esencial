@@ -1,7 +1,7 @@
 // Sesiones por día: la sesión es el día (nombre + ejercicios expandidos, sin
 // duplicados), creada y reemplazada con items de fuerza y/o cardio.
 import { beforeAll, describe, expect, it } from "vitest";
-import { d1, del, freshDb, get, post, put } from "./helpers";
+import { d1, del, devGet, devSend, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -430,5 +430,132 @@ describe("descansos por ejercicio", () => {
       items: [{ exerciseId: bench, targetSets: 3, restSecs: 120 }],
     });
     expect(res.status).toBe(409);
+  });
+});
+
+/** Segundo usuario de dev (familia propia): el plan de fuerza es privado. */
+const OTRO = "otro@esencial.test";
+
+describe("aislamiento del plan de fuerza", () => {
+  it("B no ve ni toca la sesión de A: 404 por id y su lista va aparte", async () => {
+    const { bench } = await seed();
+    const a = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-12-01",
+        name: "De A",
+        items: [{ exerciseId: bench, targetSets: 3 }],
+      }),
+    )) as { id: number };
+
+    // B no la lista, no la lee, no la edita y no la borra.
+    const suyas = (await (
+      await devGet("/api/plan-sessions", OTRO)
+    ).json()) as unknown[];
+    expect(suyas).toEqual([]);
+    expect((await devGet(`/api/plan-sessions/${a.id}`, OTRO)).status).toBe(404);
+    expect(
+      (
+        await devSend(
+          `/api/plan-sessions/${a.id}`,
+          "PUT",
+          { items: [{ exerciseId: bench }] },
+          OTRO,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (await devSend(`/api/plan-sessions/${a.id}`, "DELETE", null, OTRO))
+        .status,
+    ).toBe(404);
+    // La de A sigue intacta.
+    const still = (await body(await get(`/api/plan-sessions/${a.id}`))) as {
+      name: string;
+    };
+    expect(still.name).toBe("De A");
+  });
+
+  it("cada usuario planifica y registra el MISMO día sin pisarse", async () => {
+    const { bench } = await seed();
+    const a = (await body(
+      await post("/api/plan-sessions", {
+        date: "2026-12-02",
+        name: "A",
+        items: [{ exerciseId: bench, targetSets: 3 }],
+      }),
+    )) as { id: number; exercises: { id: number }[] };
+    expect(
+      (
+        await post("/api/workout-logs/2026-12-02", {
+          effort: 3,
+          sets: [
+            {
+              planSessionExerciseId: a.exercises[0].id,
+              setIndex: 0,
+              reps: 8,
+              done: true,
+            },
+          ],
+        })
+      ).status,
+    ).toBe(201);
+
+    // El UNIQUE es (user_id, date): B estrena su propia sesión ese día.
+    const bRes = await devSend(
+      "/api/plan-sessions",
+      "POST",
+      {
+        date: "2026-12-02",
+        name: "B",
+        items: [{ exerciseId: bench, targetSets: 5 }],
+      },
+      OTRO,
+    );
+    expect(bRes.status).toBe(201);
+    const b = (await bRes.json()) as {
+      id: number;
+      exercises: { id: number }[];
+    };
+    expect(b.id).not.toBe(a.id);
+    expect(
+      (
+        await devSend(
+          "/api/workout-logs/2026-12-02",
+          "POST",
+          {
+            effort: 4,
+            sets: [
+              {
+                planSessionExerciseId: b.exercises[0].id,
+                setIndex: 0,
+                reps: 10,
+                done: true,
+              },
+            ],
+          },
+          OTRO,
+        )
+      ).status,
+    ).toBe(201);
+
+    // El registro del mismo día es de cada uno, y el índice también.
+    const logA = (await (await get("/api/workout-logs/2026-12-02")).json()) as {
+      effort: number;
+      session: { name: string };
+    };
+    expect(logA.effort).toBe(3);
+    expect(logA.session.name).toBe("A");
+    const logB = (await (
+      await devGet("/api/workout-logs/2026-12-02", OTRO)
+    ).json()) as { effort: number; session: { name: string } };
+    expect(logB.effort).toBe(4);
+    expect(logB.session.name).toBe("B");
+    const histA = (await (await get("/api/workout-logs")).json()) as {
+      days: { sessionName: string }[];
+    };
+    expect(histA.days.map((d) => d.sessionName)).toEqual(["A"]);
+    const histB = (await (await devGet("/api/workout-logs", OTRO)).json()) as {
+      days: { sessionName: string }[];
+    };
+    expect(histB.days.map((d) => d.sessionName)).toEqual(["B"]);
   });
 });

@@ -6,8 +6,10 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { readSession } from "./auth";
-import type { Env } from "./db";
+import type { AppContext, Env, User } from "./db";
 import { json } from "./http";
+import { normalizeEmail, requestIdentity } from "./identity";
+import { ensureUser } from "./repo";
 
 const CSP =
   "default-src 'self'; frame-src https://www.youtube.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'";
@@ -64,11 +66,10 @@ export const cors = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   if (origin) withCors(c.res.headers, origin);
 });
 
-async function hasValidSession(
-  c: Context<{ Bindings: Env }>,
-): Promise<boolean> {
+/** ¿Trae cookie de sesión válida? Es el puente del SPA mientras siga con su
+ *  propio /login; sin `AUTH_SECRET` falla cerrado (no hay cookie verificable). */
+async function hasValidSession(c: Context<AppContext>): Promise<boolean> {
   const secret = c.env.AUTH_SECRET;
-  // Missing secret fails closed: no key ⇒ no verifiable cookie ever.
   if (!secret) return false;
   // El header entero: el navegador puede mandar varias cookies del mismo
   // nombre (una vieja del host y la compartida del dominio) y basta con que
@@ -76,24 +77,32 @@ async function hasValidSession(
   return (await readSession(secret, c.req.header("cookie"))) !== null;
 }
 
+/** Usuario de la petición, o null. La identidad la prueba Access en el borde;
+ *  mientras el frontal siga con su login, una cookie de sesión válida vale como
+ *  el usuario legacy —el admin, que es el único de una instalación de uno—. Ese
+ *  puente desaparece en cuanto el SPA borre /login y su guard. */
+async function requestUser(c: Context<AppContext>): Promise<User | null> {
+  const email = await requestIdentity(c);
+  if (email) return await ensureUser(c.env.DB, email, c.env.ADMIN_EMAIL);
+  if (!(await hasValidSession(c))) return null;
+  const admin = normalizeEmail(c.env.ADMIN_EMAIL);
+  return admin ? await ensureUser(c.env.DB, admin, admin) : null;
+}
+
 /**
- * Gate on /api/*: only the auth endpoints (they are the session lifecycle) and
- * GET /api/health (deploy probe) stay open. The gate runs BEFORE routing, so
- * unknown /api paths answer 401, not 404, when anonymous.
+ * Gate on /api/*: fija el usuario de la petición o corta con 401. Siguen
+ * abiertos los endpoints de sesión (son su propio ciclo de vida) y GET
+ * /api/health (sonda de deploy). La primera petición de un email autenticado
+ * autoprovisiona su cuenta.
  */
-export const authGuard = createMiddleware<{ Bindings: Env }>(
-  async (c, next) => {
-    const { pathname } = new URL(c.req.url);
-    const method = c.req.method;
-    if (!pathname.startsWith("/api/")) return next();
-    if (method === "GET" && pathname === "/api/health") return next();
-    if (pathname.startsWith("/api/auth/")) return next();
-    // Multi-usuario: la identidad la prueba Access, no la cookie de sesión, así
-    // que /api/me va por su propio gate (requestIdentity, fail closed). El resto
-    // de rutas sigue con la cookie hasta el cutover (slice de tenancy + front).
-    if (pathname === "/api/me") return next();
-    if (!(await hasValidSession(c)))
-      return json({ error: "Unauthorized" }, 401);
-    return next();
-  },
-);
+export const identifyUser = createMiddleware<AppContext>(async (c, next) => {
+  const { pathname } = new URL(c.req.url);
+  const method = c.req.method;
+  if (!pathname.startsWith("/api/")) return next();
+  if (method === "GET" && pathname === "/api/health") return next();
+  if (pathname.startsWith("/api/auth/")) return next();
+  const user = await requestUser(c);
+  if (!user) return json({ error: "Unauthorized" }, 401);
+  c.set("user", user);
+  return next();
+});

@@ -2,7 +2,7 @@
 // PUT replaces the whole week's slot set (clear + reinsert in one batch).
 import { Hono } from "hono";
 import { ISO_WEEK, mealPlanSchema } from "../api-validation";
-import { type Env, getDb } from "../db";
+import { type AppContext, getDb } from "../db";
 import { fail, guard, json } from "../http";
 import { nutritionByRecipe, row, rows, sumNutrition } from "../repo";
 import { zBody } from "../validation";
@@ -36,16 +36,18 @@ async function serializeSlots(
   return json({ isoWeek, slots, totals });
 }
 
-export const mealPlan = new Hono<{ Bindings: Env }>()
+export const mealPlan = new Hono<AppContext>()
   .get("/:week", (c) =>
     guard(async () => {
       const week = c.req.param("week");
       if (!ISO_WEEK.test(week))
         return fail("week must match YYYY-Www (ISO)", "week");
       const db = getDb(c.env);
+      const familyId = c.get("user").family_id;
       const plan = await row(
         db,
-        "SELECT id FROM week_plans WHERE iso_week = ?",
+        "SELECT id FROM week_plans WHERE family_id = ? AND iso_week = ?",
+        familyId,
         week,
       );
       if (!plan)
@@ -67,26 +69,31 @@ export const mealPlan = new Hono<{ Bindings: Env }>()
         seen.add(key);
       }
       const db = getDb(c.env);
+      const familyId = c.get("user").family_id;
       // One transaction: plan upsert + clear + reinsert via by-week subselect.
-      const PLAN_ID = "(SELECT id FROM week_plans WHERE iso_week = ?)";
+      const PLAN_ID =
+        "(SELECT id FROM week_plans WHERE family_id = ? AND iso_week = ?)";
       await db.batch([
         db
-          .prepare("INSERT OR IGNORE INTO week_plans (iso_week) VALUES (?)")
-          .bind(week),
+          .prepare(
+            "INSERT OR IGNORE INTO week_plans (family_id, iso_week) VALUES (?, ?)",
+          )
+          .bind(familyId, week),
         db
           .prepare(`DELETE FROM meal_slots WHERE week_plan_id = ${PLAN_ID}`)
-          .bind(week),
+          .bind(familyId, week),
         ...input.slots.map((s) =>
           db
             .prepare(
               `INSERT INTO meal_slots (week_plan_id, day, meal, recipe_id) VALUES (${PLAN_ID}, ?, ?, ?)`,
             )
-            .bind(week, s.day, s.meal, s.recipeId ?? null),
+            .bind(familyId, week, s.day, s.meal, s.recipeId ?? null),
         ),
       ]);
       const plan = await row(
         db,
-        "SELECT id FROM week_plans WHERE iso_week = ?",
+        "SELECT id FROM week_plans WHERE family_id = ? AND iso_week = ?",
+        familyId,
         week,
       );
       return serializeSlots(db, Number(plan?.id), week);

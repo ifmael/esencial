@@ -5,7 +5,7 @@
 // borrador sin marcar no cuenta.
 import { env } from "cloudflare:test";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { d1, freshDb, get, post } from "./helpers";
+import { d1, devGet, freshDb, get, post } from "./helpers";
 
 beforeAll(freshDb);
 afterEach(() => vi.restoreAllMocks());
@@ -671,5 +671,30 @@ describe("GET /api/exercises/:id/history", () => {
     const bench = await exerciseId("Press banca");
     const badLimit = await get(`/api/exercises/${bench}/history?limit=0`);
     expect(badLimit.status).toBe(400);
+  });
+});
+
+describe("aislamiento del histórico", () => {
+  it("B no ve el índice, ni el día, ni el historial de ejercicio de A", async () => {
+    await reset();
+    await logDay(pushDay("2026-09-05", "A", [{ weightKg: 57.5, reps: 8 }]));
+    const bench = await exerciseId("Press banca");
+    const otros = "otro@esencial.test";
+
+    // El índice y el día registrado son del usuario: para B no existen.
+    const idxRes = await devGet("/api/workout-logs", otros);
+    const idx = (await idxRes.json()) as { days: unknown[] };
+    expect(idx.days).toEqual([]);
+    expect((await devGet("/api/workout-logs/2026-09-05", otros)).status).toBe(
+      404,
+    );
+    // El ejercicio es de catálogo, pero sus marcas son de quien las registró.
+    const histRes = await devGet(`/api/exercises/${bench}/history`, otros);
+    const hist = (await histRes.json()) as {
+      sessions: unknown[];
+      best: unknown;
+    };
+    expect(hist.sessions).toEqual([]);
+    expect(hist.best).toBeNull();
   });
 });

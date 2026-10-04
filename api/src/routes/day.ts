@@ -4,13 +4,13 @@
 // only a malformed :date fails (400 { error, field: "date" }, notes parity).
 import { Hono } from "hono";
 import { dayIndexOf, isoWeekOf } from "../dates";
-import { type Env, getDb } from "../db";
+import { type AppContext, getDb } from "../db";
 import { fail, guard, json } from "../http";
 import { nutritionByRecipe, row, rows, sumNutrition } from "../repo";
 
 // `:date{.*}` so the trailing-slash case (`/api/day/`) reaches validation too:
 // Hono mounts do not route an empty param to `/`, and the spec wants 400 there.
-export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
+export const day = new Hono<AppContext>().get("/:date{.*}", (c) =>
   guard(async () => {
     const date = c.req.param("date");
     const isoWeek = isoWeekOf(date);
@@ -18,6 +18,7 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
     if (isoWeek === null || dayIndex === null)
       return fail("date must be YYYY-MM-DD", "date");
     const db = getDb(c.env);
+    const user = c.get("user");
 
     // Slots only exist through the week plan; LEFT JOIN keeps cleared slots
     // (deleted recipe) readable as { recipeId: null, recipeName: null }.
@@ -27,8 +28,9 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
        FROM meal_slots ms
        JOIN week_plans wp ON wp.id = ms.week_plan_id
        LEFT JOIN recipes r ON r.id = ms.recipe_id
-       WHERE wp.iso_week = ? AND ms.day = ?
+       WHERE wp.family_id = ? AND wp.iso_week = ? AND ms.day = ?
        ORDER BY CASE ms.meal WHEN 'desayuno' THEN 0 WHEN 'almuerzo' THEN 1 ELSE 2 END`,
+      user.family_id,
       isoWeek,
       dayIndex,
     );
@@ -47,10 +49,11 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
               COUNT(DISTINCT sl.plan_session_exercise_id) AS exercises,
               COUNT(sl.id) AS sets
        FROM plan_sessions ps
-       LEFT JOIN workout_logs wl ON wl.date = ps.date
+       LEFT JOIN workout_logs wl ON wl.plan_session_id = ps.id
        LEFT JOIN set_logs sl ON sl.workout_log_id = wl.id
-       WHERE ps.date = ?
+       WHERE ps.user_id = ? AND ps.date = ?
        GROUP BY ps.id`,
+      user.id,
       date,
     );
     const exercises = session
@@ -69,7 +72,8 @@ export const day = new Hono<{ Bindings: Env }>().get("/:date{.*}", (c) =>
 
     const note = await row(
       db,
-      "SELECT text FROM day_notes WHERE date = ?",
+      "SELECT text FROM day_notes WHERE user_id = ? AND date = ?",
+      user.id,
       date,
     );
 

@@ -1,7 +1,7 @@
-// /api/foods: el catálogo que alimenta el editor (sugerencias) y que el usuario
-// amplía con alimentos propios. Valores por 100 g/ml; gramsPerUnit opcional.
+// /api/foods: el catálogo que alimenta el editor (sugerencias). Valores por
+// 100 g/ml; gramsPerUnit opcional. Lo lee todo el mundo; solo el admin lo escribe.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, get, post } from "./helpers";
+import { devGet, devSend, freshDb, get, post } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -85,5 +85,24 @@ describe("/api/foods", () => {
     expect(blank.status).toBe(400);
     const blankErr = (await blank.json()) as { field: string };
     expect(blankErr.field).toBe("name");
+  });
+});
+
+// El catálogo lo lee todo el mundo; solo el admin lo escribe.
+const MEMBER = "bea@esencial.test";
+
+describe("catálogo de alimentos: solo el admin escribe", () => {
+  it("un member lista (200) pero no crea (403)", async () => {
+    // El admin se autoprovisiona con la primera petición de cookie.
+    expect((await get("/api/foods")).status).toBe(200);
+    expect((await devGet("/api/foods", MEMBER)).status).toBe(200);
+    const res = await devSend(
+      "/api/foods",
+      "POST",
+      { name: "Del member", kcal: 1, protein: 1, fat: 1, carbs: 1 },
+      MEMBER,
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Forbidden" });
   });
 });

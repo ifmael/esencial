@@ -1,6 +1,16 @@
 // E1 parity: meal-plan week PUT/GET; slot referencing deleted recipe reads empty.
 import { beforeAll, describe, expect, it } from "vitest";
-import { del, freshDb, get, post, postForm, put } from "./helpers";
+import {
+  d1,
+  del,
+  devGet,
+  devSend,
+  freshDb,
+  get,
+  post,
+  postForm,
+  put,
+} from "./helpers";
 
 beforeAll(freshDb);
 
@@ -136,5 +146,56 @@ describe("/api/meal-plan/:week", () => {
       ],
     });
     expect(res.status).toBe(400);
+  });
+
+  it("la semana es de la FAMILIA: otra familia no la ve; la misma sí", async () => {
+    // La cookie resuelve al admin; /api/me lo autoprovisiona y da su familia.
+    const adminFamily = Number((await body(await get("/api/me"))).familyId);
+    await d1.run(
+      "INSERT INTO users (email, role, family_id) VALUES (?, 'member', ?)",
+      "hermano@esencial.test",
+      adminFamily,
+    );
+    const otraFamilia = await d1.run(
+      "INSERT INTO families (name) VALUES ('Otra')",
+    );
+    await d1.run(
+      "INSERT INTO users (email, role, family_id) VALUES (?, 'member', ?)",
+      "ajeno@esencial.test",
+      otraFamilia,
+    );
+
+    const id = await makeRecipe("Cocido");
+    await put("/api/meal-plan/2026-W35", {
+      slots: [{ day: 0, meal: "almuerzo", recipeId: id }],
+    });
+
+    // Mismo family_id → comparte la semana.
+    const same = await body(
+      await devGet("/api/meal-plan/2026-W35", "hermano@esencial.test"),
+    );
+    expect((same.slots as unknown[]).length).toBe(1);
+
+    // Distinta familia → semana vacía.
+    const other = await body(
+      await devGet("/api/meal-plan/2026-W35", "ajeno@esencial.test"),
+    );
+    expect(other).toEqual({
+      isoWeek: "2026-W35",
+      slots: [],
+      totals: [null, null, null, null, null, null, null],
+    });
+
+    // La otra familia fija ESA misma ISO week sin tocar la de la primera.
+    await devSend(
+      "/api/meal-plan/2026-W35",
+      "PUT",
+      { slots: [{ day: 1, meal: "cena", recipeId: id }] },
+      "ajeno@esencial.test",
+    );
+    const admin = await body(await get("/api/meal-plan/2026-W35"));
+    const slots = admin.slots as { day: number }[];
+    expect(slots.length).toBe(1);
+    expect(slots[0].day).toBe(0);
   });
 });

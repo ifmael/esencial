@@ -1,16 +1,12 @@
-// GET /api/me: quién soy para el SPA ({id, email, role, familyId}). La identidad
-// la prueba Access en el borde; la primera petición autenticada autoprovisiona
-// la cuenta (el admin se designa con ADMIN_EMAIL o cae en el primer usuario).
+// GET /api/me: quién soy para el SPA ({id, email, role, familyId}). El usuario
+// lo deja el gate (identidad de Access, o la cookie de sesión como puente), y
+// la primera petición autenticada de un email autoprovisiona su cuenta.
 import { Hono } from "hono";
-import type { Env } from "../db";
+import type { AppContext } from "../db";
 import { json } from "../http";
-import { requestIdentity } from "../identity";
-import { ensureUser } from "../repo";
 
-export const me = new Hono<{ Bindings: Env }>().get("/", async (c) => {
-  const email = await requestIdentity(c);
-  if (!email) return json({ error: "Unauthorized" }, 401);
-  const user = await ensureUser(c.env.DB, email, c.env.ADMIN_EMAIL);
+export const me = new Hono<AppContext>().get("/", (c) => {
+  const user = c.get("user");
   return json({
     id: user.id,
     email: user.email,

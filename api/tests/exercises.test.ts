@@ -1,6 +1,6 @@
 // E1 parity: exercises CRUD + tags; ?tag= filter (unknown tag → [] not error).
 import { beforeAll, describe, expect, it } from "vitest";
-import { del, freshDb, get, post, put } from "./helpers";
+import { del, devGet, devSend, freshDb, get, post, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -167,5 +167,46 @@ describe("/api/exercises", () => {
     });
     expect(res.status).toBe(400);
     expect((await body(res)).field).toBe("kind");
+  });
+});
+
+// El catálogo lo lee todo el mundo; solo el admin lo escribe.
+const MEMBER = "bea@esencial.test";
+
+describe("catálogo de ejercicios: solo el admin escribe", () => {
+  it("un member lee (200) pero no crea, edita ni borra (403)", async () => {
+    const id = await makePressBanca();
+    expect((await devGet("/api/exercises", MEMBER)).status).toBe(200);
+    expect((await devGet(`/api/exercises/${id}`, MEMBER)).status).toBe(200);
+
+    const created = await devSend(
+      "/api/exercises",
+      "POST",
+      { name: "Del member", tags: ["pecho"] },
+      MEMBER,
+    );
+    expect(created.status).toBe(403);
+    expect(await body(created)).toEqual({ error: "Forbidden" });
+
+    const edited = await devSend(
+      `/api/exercises/${id}`,
+      "PUT",
+      { name: "Renombrado por member", tags: ["pecho"] },
+      MEMBER,
+    );
+    expect(edited.status).toBe(403);
+
+    const removed = await devSend(
+      `/api/exercises/${id}`,
+      "DELETE",
+      undefined,
+      MEMBER,
+    );
+    expect(removed.status).toBe(403);
+
+    // El catálogo queda intacto: ni creado, ni renombrado, ni borrado.
+    expect((await body(await get(`/api/exercises/${id}`))).name).toBe(
+      "Press banca",
+    );
   });
 });

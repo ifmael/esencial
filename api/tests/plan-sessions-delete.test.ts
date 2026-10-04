@@ -1,7 +1,7 @@
 // DELETE /api/plan-sessions/:id — planned→200 {}, logged→409 {error},
 // inexistente→404 {error:"Not found"}. Seed directo por D1 + sesión por HTTP.
 import { beforeAll, describe, expect, it } from "vitest";
-import { d1, del, freshDb, post } from "./helpers";
+import { d1, del, devSend, freshDb, post } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -85,5 +85,20 @@ describe("DELETE /api/plan-sessions/:id", () => {
     const res = await del("/api/plan-sessions/999999");
     expect(res.status).toBe(404);
     expect((await body(res)).error).toBe("Not found");
+  });
+
+  it("la sesión de otro usuario → 404 y no se borra", async () => {
+    const s = await seed();
+    const id = await plannedSession(s.exerciseId, "2026-09-09");
+    const res = await devSend(
+      `/api/plan-sessions/${id}`,
+      "DELETE",
+      null,
+      "otro@esencial.test",
+    );
+    expect(res.status).toBe(404);
+    expect((await body(res)).error).toBe("Not found");
+    const row = await d1.get("SELECT id FROM plan_sessions WHERE id=?", id);
+    expect(row).not.toBeNull();
   });
 });

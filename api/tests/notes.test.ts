@@ -1,6 +1,6 @@
 // E1 parity: per-day notes — PUT upserts, GET reads, re-save replaces.
 import { beforeAll, describe, expect, it } from "vitest";
-import { freshDb, get, put } from "./helpers";
+import { devGet, devSend, freshDb, get, put } from "./helpers";
 
 beforeAll(freshDb);
 
@@ -49,5 +49,33 @@ describe("/api/notes/:date", () => {
     const res = await put("/api/notes/2026-09-05", {});
     expect(res.status).toBe(400);
     expect((await body(res)).field).toBe("text");
+  });
+});
+
+// La nota del día es privada del usuario: dos personas pueden tener la suya el
+// mismo día (PK (user_id, date)) y la de una no pisa ni contamina la de la otra.
+const B = "bea@esencial.test";
+
+describe("notas privadas por usuario", () => {
+  it("la nota de B no aparece en la de A ni la pisa", async () => {
+    // A (cookie) provisiona el admin; B entra como member.
+    expect((await put("/api/notes/2026-09-10", { text: "de A" })).status).toBe(
+      200,
+    );
+    expect(
+      (await devSend("/api/notes/2026-09-10", "PUT", { text: "de B" }, B))
+        .status,
+    ).toBe(200);
+
+    expect((await body(await get("/api/notes/2026-09-10"))).text).toBe("de A");
+    expect((await body(await devGet("/api/notes/2026-09-10", B))).text).toBe(
+      "de B",
+    );
+
+    // Un día que solo tiene A sale vacío para B (no se mezclan): 200 sin texto.
+    await put("/api/notes/2026-09-11", { text: "solo A" });
+    expect((await body(await devGet("/api/notes/2026-09-11", B))).text).toBe(
+      "",
+    );
   });
 });

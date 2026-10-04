@@ -1,5 +1,6 @@
 // Tiny async query/serialization helpers shared by route handlers (E1 repo.ts
 // ported to D1). Routes may import this; only routes + env access touch the binding.
+import type { User } from "./db";
 import { normalizeEmail } from "./identity";
 
 export type Row = Record<string, unknown>;
@@ -176,7 +177,7 @@ async function queryRecipes(
   } = await hydrate(
     db,
     args,
-    `SELECT r.id, r.name, r.description, r.servings, r.photo_path FROM recipes r ${where} ORDER BY r.name COLLATE NOCASE`,
+    `SELECT r.id, r.name, r.description, r.servings, r.photo_path, r.owner_id AS ownerId FROM recipes r ${where} ORDER BY r.name COLLATE NOCASE`,
     [
       `SELECT ri.recipe_id AS parent, ri.id, ri.food, ri.quantity, ri.unit, ri.section, ri.food_id, ri.optional,
               f.kcal, f.protein, f.fat, f.carbs, f.grams_per_unit
@@ -215,13 +216,79 @@ async function queryRecipes(
   });
 }
 
-export const listRecipes = (db: D1Database) => queryRecipes(db);
+/** Quien mira: las recetas de su familia son suyas de ida y vuelta. */
+export type RecipeView = { userId: number; familyId: number };
+
+/** ¿Alguna receta que este usuario puede leer usa esta key de subida? Hace
+ *  falta además de la propiedad: la foto se sube ANTES de que exista la receta,
+ *  así que las del catálogo apuntan a keys que subió el admin. */
+export async function uploadUsedByReadableRecipe(
+  db: D1Database,
+  key: string,
+  view: RecipeView,
+): Promise<boolean> {
+  const found = await row(
+    db,
+    `SELECT 1 AS ok FROM recipes r WHERE r.photo_path = ? AND ${RECIPE_VISIBLE}`,
+    key,
+    view.userId,
+    view.familyId,
+  );
+  return Boolean(found);
+}
+
+/** Usuario de una subida, o null si no está registrada. */
+export async function uploadOwner(
+  db: D1Database,
+  key: string,
+): Promise<number | null> {
+  const found = await row(
+    db,
+    "SELECT owner_user_id AS ownerId FROM uploads WHERE key = ?",
+    key,
+  );
+  return found ? Number(found.ownerId) : null;
+}
+
+/** Solo id y nombre de lo que puede ver (la búsqueda ⌘K): una consulta y unos
+ *  KB, no la lista hidratada (~337 KB). */
+export async function listRecipeNames(
+  db: D1Database,
+  view: RecipeView,
+): Promise<Row[]> {
+  return await rows(
+    db,
+    `SELECT r.id, r.name FROM recipes r WHERE ${RECIPE_VISIBLE} ORDER BY r.name COLLATE NOCASE`,
+    view.userId,
+    view.familyId,
+  );
+}
+
+/** Recetas legibles: el catálogo (owner_id NULL), las mías y las de mi familia.
+ *  La pertenencia a la familia es derivada (`users.family_id`), no hay columna
+ *  de familia en recipes: por eso consultar la receta de un hermano es gratis. */
+const RECIPE_VISIBLE = `(r.owner_id IS NULL OR r.owner_id = ?
+   OR r.owner_id IN (SELECT u.id FROM users u WHERE u.family_id = ?))`;
+
+export const listRecipes = (db: D1Database, view: RecipeView) =>
+  queryRecipes(db, `WHERE ${RECIPE_VISIBLE}`, view.userId, view.familyId);
 
 export async function loadRecipe(
   db: D1Database,
   id: number,
+  view: RecipeView,
 ): Promise<Row | null> {
-  return (await queryRecipes(db, "WHERE r.id = ?", id))[0] ?? null;
+  return (
+    (
+      await queryRecipes(
+        db,
+        `WHERE r.id = ? AND ${RECIPE_VISIBLE}`,
+        id,
+        view.userId,
+        view.familyId,
+      )
+    )[0] ?? null
+  );
 }
 
 /** Ejercicios con sus tags y sus regiones (con grado). `where` filtra
@@ -277,11 +344,13 @@ export async function loadExercise(
 export async function loadTemplate(
   db: D1Database,
   id: number,
+  userId: number,
 ): Promise<Row | null> {
   const head = await row(
     db,
-    "SELECT id, name FROM session_templates WHERE id = ?",
+    "SELECT id, name FROM session_templates WHERE id = ? AND user_id = ?",
     id,
+    userId,
   );
   if (!head) return null;
   head.exercises = await rows(
@@ -297,13 +366,6 @@ export async function loadTemplate(
   );
   return head;
 }
-
-export type User = {
-  id: number;
-  email: string;
-  role: "admin" | "member";
-  family_id: number;
-};
 
 /** Autoprovisión multi-usuario: la primera petición autenticada de un email
  *  estrena su cuenta con familia de uno. El admin se designa por ADMIN_EMAIL y,
