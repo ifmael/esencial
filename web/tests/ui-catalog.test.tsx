@@ -8,6 +8,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
 import * as icons from "../src/components/icons";
 import { SnackbarHost } from "../src/components/overlay";
@@ -18,12 +19,20 @@ afterEach(cleanup);
 
 const renderUi = () =>
   render(
-    <SnackbarHost>
-      <UiPage />
-    </SnackbarHost>,
+    <MemoryRouter>
+      <SnackbarHost>
+        <UiPage />
+      </SnackbarHost>
+    </MemoryRouter>,
   );
 
 describe("catálogo del sistema de diseño", () => {
+  it("vuelve a Ajustes", () => {
+    renderUi();
+    const back = screen.getByRole("link", { name: "Volver a ajustes" });
+    expect(back.getAttribute("href")).toBe("/ajustes");
+  });
+
   it("expone las cinco variantes de botón, los tamaños y el deshabilitado", () => {
     renderUi();
     for (const name of [

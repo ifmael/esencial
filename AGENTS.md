@@ -133,7 +133,8 @@ Escala vigente — todo lo demás sale de aquí:
   si otra copia de la foto se pidió sin CORS, la caché sirve esa y la lectura
   falla.
 - Catálogo de variantes en la ruta **`/ui`** (se llega desde Ajustes y desde
-  ⌘K): míralo antes de inventar una pieza.
+  ⌘K, y su cabecera vuelve a Ajustes con la flecha, al nivel del título): míralo
+  antes de inventar una pieza.
 - `wireframes/DESIGN.md` y `docs/architecture/diseno.html` siguen con el sistema
   anterior; donde discrepen de `globals.css`, manda `globals.css`.
 

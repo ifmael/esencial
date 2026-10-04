@@ -2,6 +2,7 @@
 // diseño"). Todas las variantes en un sitio: es lo que se mira antes de
 // inventar una pieza. Se llega por «Sistema de diseño» en el menú.
 import { type ReactNode, useState } from "react";
+import { Link } from "react-router";
 import {
   CountUp,
   EmptyState,
@@ -13,7 +14,7 @@ import {
   WavyRing,
 } from "../components/expressive";
 import * as icons from "../components/icons";
-import { AddIcon, CheckIcon, EditIcon } from "../components/icons";
+import { AddIcon, BackIcon, CheckIcon, EditIcon } from "../components/icons";
 import {
   Dialog,
   OverlayHeader,
@@ -25,6 +26,7 @@ import {
   Alert,
   Badge,
   Button,
+  buttonClass,
   Card,
   Checkbox,
   Chip,
@@ -149,15 +151,25 @@ export function UiPage() {
 
   return (
     <div className="flex flex-col gap-section">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-display-s text-e">Sistema de diseño</h1>
-        <p className="max-w-2xl text-body-l text-on-surface-variant">
-          Material 3 Expressive. Los valores viven en{" "}
-          <code>web/src/globals.css</code> y <code>web/src/tokens.css</code>{" "}
-          (generado); las piezas, en <code>components/ui.tsx</code>,{" "}
-          <code>expressive.tsx</code> y <code>overlay.tsx</code>. Si algo no
-          encaja, se añade un token; nunca un valor suelto.
-        </p>
+      <header className="flex items-start gap-3">
+        <Link
+          to="/ajustes"
+          aria-label="Volver a ajustes"
+          title="Volver a ajustes"
+          className={buttonClass({ variant: "text", size: "icon" })}
+        >
+          <BackIcon />
+        </Link>
+        <div className="flex min-w-0 flex-col gap-2">
+          <h1 className="text-display-s text-e">Sistema de diseño</h1>
+          <p className="max-w-2xl text-body-l text-on-surface-variant">
+            Material 3 Expressive. Los valores viven en{" "}
+            <code>web/src/globals.css</code> y <code>web/src/tokens.css</code>{" "}
+            (generado); las piezas, en <code>components/ui.tsx</code>,{" "}
+            <code>expressive.tsx</code> y <code>overlay.tsx</code>. Si algo no
+            encaja, se añade un token; nunca un valor suelto.
+          </p>
+        </div>
       </header>
 
       <Block
