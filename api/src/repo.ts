@@ -1,5 +1,6 @@
 // Tiny async query/serialization helpers shared by route handlers (E1 repo.ts
 // ported to D1). Routes may import this; only routes + env access touch the binding.
+import { normalizeEmail } from "./identity";
 
 export type Row = Record<string, unknown>;
 
@@ -295,4 +296,64 @@ export async function loadTemplate(
     id,
   );
   return head;
+}
+
+export type User = {
+  id: number;
+  email: string;
+  role: "admin" | "member";
+  family_id: number;
+};
+
+/** Autoprovisión multi-usuario: la primera petición autenticada de un email
+ *  estrena su cuenta con familia de uno. El admin se designa por ADMIN_EMAIL y,
+ *  si no hay ninguno, cae en el primer usuario. Idempotente: el email es UNIQUE
+ *  y, si dos peticiones llegan a la vez, la que pierde relee al ganador en vez
+ *  de reventar (su familia recién creada no queda huérfana). El email llega ya
+ *  normalizado (identity.ts), así que aquí es la clave de búsqueda tal cual. */
+export async function ensureUser(
+  db: D1Database,
+  email: string,
+  adminEmail?: string,
+): Promise<User> {
+  const existing = await row(
+    db,
+    "SELECT id, email, role, family_id FROM users WHERE email = ?",
+    email,
+  );
+  if (existing) return existing as unknown as User;
+
+  const total = await row(db, "SELECT COUNT(*) AS n FROM users");
+  const role =
+    Number(total?.n ?? 0) === 0 || normalizeEmail(adminEmail) === email
+      ? "admin"
+      : "member";
+
+  const family = await db
+    .prepare("INSERT INTO families (name) VALUES (?)")
+    .bind(email)
+    .run();
+  const familyId = Number(family.meta.last_row_id);
+
+  try {
+    const created = await db
+      .prepare("INSERT INTO users (email, role, family_id) VALUES (?, ?, ?)")
+      .bind(email, role, familyId)
+      .run();
+    return {
+      id: Number(created.meta.last_row_id),
+      email,
+      role,
+      family_id: familyId,
+    };
+  } catch (err) {
+    await db.prepare("DELETE FROM families WHERE id = ?").bind(familyId).run();
+    const winner = await row(
+      db,
+      "SELECT id, email, role, family_id FROM users WHERE email = ?",
+      email,
+    );
+    if (winner) return winner as unknown as User;
+    throw err;
+  }
 }

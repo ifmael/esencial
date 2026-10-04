@@ -9,6 +9,11 @@ export type Env = {
   // B' (dos despliegues): orígenes de la web autorizados para CORS (CSV).
   // Sin valor, la API no autoriza a nadie (fail closed).
   WEB_ORIGIN?: string;
+  // Multi-usuario: seam de identidad solo-dev (`X-Dev-Email` se honra con
+  // DEV_AUTH="1"; en producción la identidad la prueba Access) y el email que
+  // se designa admin. Ninguno de los dos va en el wrangler de producción.
+  DEV_AUTH?: string;
+  ADMIN_EMAIL?: string;
 };
 
 export function getDb(env: Env): D1Database {

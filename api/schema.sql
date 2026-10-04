@@ -143,3 +143,28 @@ CREATE TABLE IF NOT EXISTS day_notes (
   date TEXT PRIMARY KEY,
   text TEXT
 );
+
+-- Multi-usuario (0019). La identidad la prueba Cloudflare Access en el borde:
+-- sin password_hash. `recipes.owner_id` NULL = catálogo; la visibilidad de
+-- familia es derivada (owner_id ∈ mi familia), así que no hay columna de familia.
+CREATE TABLE IF NOT EXISTS families (
+  id         INTEGER PRIMARY KEY,
+  name       TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id         INTEGER PRIMARY KEY,
+  email      TEXT NOT NULL UNIQUE,
+  role       TEXT NOT NULL CHECK (role IN ('admin', 'member')),
+  family_id  INTEGER NOT NULL REFERENCES families(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Una fila por objeto subido a R2: de quién es la key (la foto se sube antes de
+-- que exista la receta que la va a usar, así que la propiedad no se deriva).
+CREATE TABLE IF NOT EXISTS uploads (
+  key           TEXT PRIMARY KEY,
+  owner_user_id INTEGER NOT NULL REFERENCES users(id),
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);

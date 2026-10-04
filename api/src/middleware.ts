@@ -88,6 +88,10 @@ export const authGuard = createMiddleware<{ Bindings: Env }>(
     if (!pathname.startsWith("/api/")) return next();
     if (method === "GET" && pathname === "/api/health") return next();
     if (pathname.startsWith("/api/auth/")) return next();
+    // Multi-usuario: la identidad la prueba Access, no la cookie de sesión, así
+    // que /api/me va por su propio gate (requestIdentity, fail closed). El resto
+    // de rutas sigue con la cookie hasta el cutover (slice de tenancy + front).
+    if (pathname === "/api/me") return next();
     if (!(await hasValidSession(c)))
       return json({ error: "Unauthorized" }, 401);
     return next();

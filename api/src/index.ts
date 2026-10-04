@@ -11,6 +11,7 @@ import { authRoutes } from "./routes/auth";
 import { day } from "./routes/day";
 import { exercises } from "./routes/exercises";
 import { foods } from "./routes/foods";
+import { me } from "./routes/me";
 import { mealPlan } from "./routes/meal-plan";
 import { notes } from "./routes/notes";
 import { planSessions } from "./routes/plan-sessions";
@@ -29,6 +30,7 @@ export const api = new Hono<{ Bindings: Env }>()
   .route("/foods", foods)
   .route("/templates", templates)
   .route("/meal-plan", mealPlan)
+  .route("/me", me)
   .route("/plan-sessions", planSessions)
   .route("/workout-logs", workoutLogs)
   .route("/notes", notes)

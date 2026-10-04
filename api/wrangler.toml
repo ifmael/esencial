@@ -18,3 +18,14 @@ bucket_name = "esencial-photos"
 # Origen del Worker de la web autorizado para CORS (CSV). Sin valor no se
 # autoriza a nadie (fail closed).
 WEB_ORIGIN = "https://esencial.nutrirutina.workers.dev"
+
+# Multi-usuario: en `pnpm dev` no hay Access delante, así que wrangler simula
+# la identidad que Access ya probaría en producción (mismo
+# ctx.access.getIdentity()). El aud es el de la app de Access de la cuenta. En
+# e2e no vale —hace falta más de un usuario— y allí se usa el otro seam:
+# X-Dev-Email con DEV_AUTH=1 (fail closed sin el flag).
+[access.dev]
+aud = "280c84d8f285f6f7b76df01d1c0db07df4dab3be6dcb88e7ff23eac396fe7080"
+
+  [access.dev.identity]
+  email = "ismael.rm.1986@gmail.com"

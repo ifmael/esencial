@@ -22,3 +22,9 @@ AUTH_SECRET = "test-auth-secret-32-bytes-long-xx"
 PASSWORD_HASH = "pbkdf2$210000$w96YZTwA8VV+FIucnHHGeQ==$uxU0SzCOX6HKPgMKm1TgAtFlwpKIZkP5004JDJhFRQM="
 # B': origen del Worker de la web en tests (contrato fijado en tests/cors.test.ts).
 WEB_ORIGIN = "http://127.0.0.1:8788"
+# Multi-usuario: seam de identidad solo-para-dev. Con DEV_AUTH="1" se honra la
+# cabecera X-Dev-Email (varios usuarios en una corrida: aislamiento y familia);
+# sin el flag se ignora y la petición falla cerrada (tests/me.test.ts lo fija).
+# En producción esto NO existe: la identidad la prueba Access en el borde.
+DEV_AUTH = "1"
+ADMIN_EMAIL = "admin@esencial.test"
