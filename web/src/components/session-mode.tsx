@@ -369,20 +369,24 @@ export function SessionMode({
 
           {pause && (
             <div className="flex w-full max-w-sm flex-col items-center gap-2">
-              <WavyProgress
-                className="w-full"
-                waveOnly
-                value={pause.durationMs - remainingMs}
-                max={pause.durationMs}
-                label={
-                  pause.kind === "sets"
-                    ? `Pausa entre series de ${item.name}`
-                    : `Pausa al terminar ${item.name}`
-                }
-              />
-              <span className="tabular text-display-m">
-                {formatCountdown(remainingMs)}
-              </span>
+              {/* Barra y tiempo en una sola fila: la barra se queda el ancho
+                  que sobra (`flex-1`) y el `mm:ss` va al final, a su derecha. */}
+              <div className="flex w-full items-center gap-3">
+                <WavyProgress
+                  className="min-w-0 flex-1"
+                  waveOnly
+                  value={pause.durationMs - remainingMs}
+                  max={pause.durationMs}
+                  label={
+                    pause.kind === "sets"
+                      ? `Pausa entre series de ${item.name}`
+                      : `Pausa al terminar ${item.name}`
+                  }
+                />
+                <span className="tabular text-display-m">
+                  {formatCountdown(remainingMs)}
+                </span>
+              </div>
               <Button variant="tonal" onClick={skipPause}>
                 Saltar
               </Button>

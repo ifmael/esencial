@@ -116,6 +116,34 @@ async function measureModeBody(page: Page) {
   });
 }
 
+/** Geometría de la fila de pausa: la barra y la cuenta atrás. Se miden las
+ *  cajas (no las clases) porque lo que se prueba es dónde cae cada una; el
+ *  tiempo se busca dentro del contenedor de la barra, así que la medición vale
+ *  tanto si va al lado (una fila) como si va debajo (dos). */
+async function measurePauseRow(page: Page) {
+  return page.evaluate(() => {
+    const section = document.querySelector<HTMLElement>(
+      'section[aria-label="Modo sesión"]',
+    );
+    if (!section) throw new Error("El modo sesión no está abierto");
+    const bar = section.querySelector<HTMLElement>(
+      '[role="progressbar"][aria-label^="Pausa"]',
+    );
+    if (!bar) throw new Error("La pausa no pinta su barra");
+    const time = bar.parentElement?.querySelector<HTMLElement>(".tabular");
+    if (!time) throw new Error("La pausa no pinta la cuenta atrás");
+    const b = bar.getBoundingClientRect();
+    const t = time.getBoundingClientRect();
+    return {
+      sameRow: Math.abs((b.top + b.bottom) / 2 - (t.top + t.bottom) / 2) <= 8,
+      timeAfterBar: t.left >= b.right - 1,
+      barWidth: b.width,
+      timeWidth: t.width,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+}
+
 /** ISO week ("YYYY-Www") de una fecha (misma convención que la app). */
 function isoWeekOf(date: string): string {
   const t = new Date(`${date}T12:00:00Z`);
@@ -443,5 +471,87 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     expect(tall.scrollTop).toBe(0);
     expect(tall.nameTop).toBeGreaterThanOrEqual(0);
     expect(tall.nameBottom).toBeLessThanOrEqual(tall.height);
+  });
+
+  test("la cuenta atrás va al final de la barra, en la misma fila (móvil)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const past = mondayFrom(315 + testInfo.retry * 14);
+    const date = mondayFrom(322 + testInfo.retry * 14);
+    await resetPlanned(page.request, past);
+    await resetPlanned(page.request, date);
+    await logPast(
+      page.request,
+      past,
+      [
+        { exerciseId: press.id, targetSets: 2, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 1, targetRepsMin: 10 },
+      ],
+      [
+        {
+          exerciseId: press.id,
+          sets: [
+            { weightKg: 60, reps: 8 },
+            { weightKg: 60, reps: 8 },
+          ],
+        },
+        { exerciseId: remo.id, sets: [{ weightKg: 40, reps: 10 }] },
+      ],
+    );
+    await createSession(
+      page.request,
+      date,
+      [
+        {
+          exerciseId: press.id,
+          targetSets: 2,
+          targetRepsMin: 8,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+        {
+          exerciseId: remo.id,
+          targetSets: 1,
+          targetRepsMin: 10,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+      ],
+      "Fila",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await expect(
+      mode.getByRole("heading", { name: "Press banca" }),
+    ).toBeVisible();
+
+    // Pausa entre series: el `mm:ss` va al final de la barra, en su misma fila
+    // (antes caía debajo, en una línea propia).
+    const row = async () => {
+      const m = await measurePauseRow(page);
+      return { sameRow: m.sameRow, timeAfterBar: m.timeAfterBar };
+    };
+    await mode.getByRole("checkbox", { name: "Press banca serie 1" }).check();
+    await expect(
+      mode.getByRole("progressbar", {
+        name: "Pausa entre series de Press banca",
+      }),
+    ).toBeVisible();
+    await expect.poll(row).toEqual({ sameRow: true, timeAfterBar: true });
+
+    // Y lo mismo en la pausa de fin de ejercicio.
+    await mode.getByRole("checkbox", { name: "Press banca serie 2" }).check();
+    await expect(
+      mode.getByRole("progressbar", { name: "Pausa al terminar Press banca" }),
+    ).toBeVisible();
+    await expect.poll(row).toEqual({ sameRow: true, timeAfterBar: true });
+
+    // La fila no desborda a 390 px.
+    expect((await measurePauseRow(page)).pageWidth).toBeLessThanOrEqual(390);
   });
 });
