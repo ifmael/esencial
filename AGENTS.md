@@ -370,6 +370,14 @@ editables** (los mismos `Stepper` —compartidos con el borrador— y la casilla
 marca al quedar completa y la pausa arranca al quedar hecha, la marques a mano o
 escribiendo sus marcas).
 
+El cuerpo (bajo el encabezado, con scroll) centra su contenido con **márgenes
+automáticos** —un bloque interno con `my-auto`—, nunca con `justify-center` en
+el contenedor: con más series de las que caben, el centrado deja el desborde de
+arriba inaccesible (el nombre del ejercicio salía cortado bajo la cabecera),
+mientras que los márgenes automáticos se anulan solos al desbordar y el scroll
+arranca en el principio. Lo cubre `e2e/tests/session-mode.spec.ts`, que mide la
+posición del nombre y los dos huecos del centrado (no una clase).
+
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
   `rest_after_secs` (al terminar el ejercicio); columnas nulables en
   `template_exercises` y `plan_session_exercises` (migración aditiva **0018**,

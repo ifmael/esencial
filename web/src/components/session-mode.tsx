@@ -268,120 +268,127 @@ export function SessionMode({
         </Button>
       </header>
 
-      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-6 pb-2 text-center">
-        <p className="section-label text-accent">{KIND_LABELS[item.kind]}</p>
-        <h2 className="text-display-s text-e">{item.name}</h2>
-        {item.objective && (
-          <p className="tabular text-title-m text-on-surface-variant">
-            {item.objective}
-          </p>
-        )}
+      {/* El centrado va en los márgenes automáticos del contenido, no en
+          `justify-center`: con contenido más alto que la pantalla el centrado
+          deja el desborde de arriba inaccesible (el nombre salía cortado bajo
+          la cabecera) y los márgenes automáticos se anulan solos al desbordar,
+          así que el scroll arranca en el principio. */}
+      <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pb-2 text-center">
+        <div className="my-auto flex w-full flex-col items-center gap-5">
+          <p className="section-label text-accent">{KIND_LABELS[item.kind]}</p>
+          <h2 className="text-display-s text-e">{item.name}</h2>
+          {item.objective && (
+            <p className="tabular text-title-m text-on-surface-variant">
+              {item.objective}
+            </p>
+          )}
 
-        {item.sets !== null && (
-          <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
-            <Switch
-              aria-label={`Sin peso · ${item.name}`}
-              checked={item.noWeight}
-              onChange={() => onToggleNoWeight(item.id)}
-            />
-            Sin peso
-          </div>
-        )}
+          {item.sets !== null && (
+            <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
+              <Switch
+                aria-label={`Sin peso · ${item.name}`}
+                checked={item.noWeight}
+                onChange={() => onToggleNoWeight(item.id)}
+              />
+              Sin peso
+            </div>
+          )}
 
-        {item.sets !== null && (
-          <div className="flex w-full max-w-sm flex-col items-center gap-2">
-            <ul className="flex w-full flex-col gap-2 text-left">
-              {item.sets.map((s, i) => (
-                <li
-                  key={i}
-                  className={cx(
-                    "flex flex-col gap-2 rounded-l p-2",
-                    s.done
-                      ? "bg-surface-container-lowest"
-                      : "bg-surface-container-high",
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      aria-label={`${item.name} serie ${i + 1}`}
-                      checked={s.done}
-                      disabled={!s.done && !s.filled}
-                      onChange={() => onToggleSet(item.id, i)}
-                    />
-                    <span className="text-label-l text-on-surface-variant">
-                      Serie {i + 1}
-                    </span>
-                  </div>
-                  <div
+          {item.sets !== null && (
+            <div className="flex w-full max-w-sm flex-col items-center gap-2">
+              <ul className="flex w-full flex-col gap-2 text-left">
+                {item.sets.map((s, i) => (
+                  <li
+                    key={i}
                     className={cx(
-                      "grid gap-3",
-                      item.noWeight ? "grid-cols-1" : "grid-cols-2",
+                      "flex flex-col gap-2 rounded-l p-2",
+                      s.done
+                        ? "bg-surface-container-lowest"
+                        : "bg-surface-container-high",
                     )}
                   >
-                    {!item.noWeight && (
-                      <Stepper
-                        caption="Peso (kg)"
-                        context={`${item.name} serie ${i + 1}`}
-                        value={s.weightKg}
-                        step={2.5}
-                        onValue={(v) => onSetValue(item.id, i, "weightKg", v)}
-                        onStep={(d) => onStep(item.id, i, "weightKg", d)}
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        aria-label={`${item.name} serie ${i + 1}`}
+                        checked={s.done}
+                        disabled={!s.done && !s.filled}
+                        onChange={() => onToggleSet(item.id, i)}
                       />
-                    )}
-                    <Stepper
-                      caption="Reps"
-                      context={`${item.name} serie ${i + 1}`}
-                      value={s.reps}
-                      step={1}
-                      onValue={(v) => onSetValue(item.id, i, "reps", v)}
-                      onStep={(d) => onStep(item.id, i, "reps", d)}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {item.restSecs === null && (
-              <p className="text-body-s text-on-surface-variant">
-                {item.restAfterSecs === null
-                  ? "Sin descansos programados"
-                  : "Sin pausa entre series"}
-              </p>
-            )}
-          </div>
-        )}
+                      <span className="text-label-l text-on-surface-variant">
+                        Serie {i + 1}
+                      </span>
+                    </div>
+                    <div
+                      className={cx(
+                        "grid gap-3",
+                        item.noWeight ? "grid-cols-1" : "grid-cols-2",
+                      )}
+                    >
+                      {!item.noWeight && (
+                        <Stepper
+                          caption="Peso (kg)"
+                          context={`${item.name} serie ${i + 1}`}
+                          value={s.weightKg}
+                          step={2.5}
+                          onValue={(v) => onSetValue(item.id, i, "weightKg", v)}
+                          onStep={(d) => onStep(item.id, i, "weightKg", d)}
+                        />
+                      )}
+                      <Stepper
+                        caption="Reps"
+                        context={`${item.name} serie ${i + 1}`}
+                        value={s.reps}
+                        step={1}
+                        onValue={(v) => onSetValue(item.id, i, "reps", v)}
+                        onStep={(d) => onStep(item.id, i, "reps", d)}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {item.restSecs === null && (
+                <p className="text-body-s text-on-surface-variant">
+                  {item.restAfterSecs === null
+                    ? "Sin descansos programados"
+                    : "Sin pausa entre series"}
+                </p>
+              )}
+            </div>
+          )}
 
-        {item.done !== null && (
-          <div className="flex items-center gap-2 text-title-m">
-            <Checkbox
-              aria-label={`${item.name} hecho`}
-              checked={item.done}
-              onChange={() => onToggleCardio(item.id)}
-            />
-            Hecho
-          </div>
-        )}
+          {item.done !== null && (
+            <div className="flex items-center gap-2 text-title-m">
+              <Checkbox
+                aria-label={`${item.name} hecho`}
+                checked={item.done}
+                onChange={() => onToggleCardio(item.id)}
+              />
+              Hecho
+            </div>
+          )}
 
-        {pause && (
-          <div className="flex w-full max-w-sm flex-col items-center gap-2">
-            <WavyProgress
-              className="w-full"
-              waveOnly
-              value={pause.durationMs - remainingMs}
-              max={pause.durationMs}
-              label={
-                pause.kind === "sets"
-                  ? `Pausa entre series de ${item.name}`
-                  : `Pausa al terminar ${item.name}`
-              }
-            />
-            <span className="tabular text-display-m">
-              {formatCountdown(remainingMs)}
-            </span>
-            <Button variant="tonal" onClick={skipPause}>
-              Saltar
-            </Button>
-          </div>
-        )}
+          {pause && (
+            <div className="flex w-full max-w-sm flex-col items-center gap-2">
+              <WavyProgress
+                className="w-full"
+                waveOnly
+                value={pause.durationMs - remainingMs}
+                max={pause.durationMs}
+                label={
+                  pause.kind === "sets"
+                    ? `Pausa entre series de ${item.name}`
+                    : `Pausa al terminar ${item.name}`
+                }
+              />
+              <span className="tabular text-display-m">
+                {formatCountdown(remainingMs)}
+              </span>
+              <Button variant="tonal" onClick={skipPause}>
+                Saltar
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <footer className="relative flex flex-col gap-3 p-4 pb-6">

@@ -2,7 +2,12 @@
 // plan, «Empezar» a pantalla completa, pausas con barra y cuenta atrás, y el
 // paso al siguiente ejercicio al agotarse la pausa del ejercicio. Se prueba en
 // móvil (390 px), que es el caso del gimnasio.
-import { type APIRequestContext, expect, test } from "@playwright/test";
+import {
+  type APIRequestContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 import { apiRequest, apiUrl, seededExercise } from "./helpers";
 
 type ItemPayload = {
@@ -70,6 +75,44 @@ async function logPast(
       }));
     }),
     cardio: [],
+  });
+}
+
+/** Geometría del cuerpo del modo: si el contenido desborda su caja con scroll,
+ *  dónde arranca el scroll y si el nombre del ejercicio queda dentro del borde
+ *  visible. Se mide a mano porque Playwright da por «visible» un elemento
+ *  recortado por arriba (que es justo el fallo). */
+async function measureModeBody(page: Page) {
+  return page.evaluate(() => {
+    const section = document.querySelector<HTMLElement>(
+      'section[aria-label="Modo sesión"]',
+    );
+    if (!section) throw new Error("El modo sesión no está abierto");
+    const heading = section.querySelector<HTMLElement>("h2");
+    if (!heading) throw new Error("El modo no pinta el nombre del ejercicio");
+    let scroller = heading.parentElement as HTMLElement;
+    while (scroller !== section) {
+      const { overflowY } = getComputedStyle(scroller);
+      if (overflowY === "auto" || overflowY === "scroll") break;
+      scroller = scroller.parentElement as HTMLElement;
+    }
+    const style = getComputedStyle(scroller);
+    const box = scroller.getBoundingClientRect();
+    // Caja de contenido (sin relleno): ahí se miden los dos huecos del centrado.
+    const top = box.top + parseFloat(style.paddingTop);
+    const bottom = box.bottom - parseFloat(style.paddingBottom);
+    const first = scroller.firstElementChild?.getBoundingClientRect();
+    const last = scroller.lastElementChild?.getBoundingClientRect();
+    const name = heading.getBoundingClientRect();
+    return {
+      overflows: scroller.scrollHeight > scroller.clientHeight + 1,
+      scrollTop: scroller.scrollTop,
+      topGap: first ? first.top - top : 0,
+      bottomGap: last ? bottom - last.bottom : 0,
+      nameTop: name.top - top,
+      nameBottom: name.bottom - top,
+      height: bottom - top,
+    };
   });
 }
 
@@ -349,5 +392,56 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(page.getByLabel(/^reps · press banca serie 1$/i)).toHaveValue(
       "9",
     );
+  });
+
+  test("el cuerpo centra el contenido y, si no cabe, el nombre no queda tapado (móvil)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    // Una serie (cabe) y ocho (no cabe), en fechas propias del test.
+    const shortDate = mondayFrom(301 + testInfo.retry * 14);
+    const tallDate = mondayFrom(308 + testInfo.retry * 14);
+    await resetPlanned(page.request, shortDate);
+    await resetPlanned(page.request, tallDate);
+    await createSession(
+      page.request,
+      shortDate,
+      [{ exerciseId: press.id, targetSets: 1, targetRepsMin: 8 }],
+      "Cabe",
+    );
+    await createSession(
+      page.request,
+      tallDate,
+      [{ exerciseId: press.id, targetSets: 8, targetRepsMin: 8 }],
+      "No cabe",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    // Con una serie el contenido cabe en el alto: sigue centrado (los dos
+    // huecos, arriba y abajo, iguales).
+    await page.goto(`/sesion/${shortDate}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    await expect(
+      page.getByRole("dialog", { name: "Modo sesión" }),
+    ).toBeVisible();
+    const fits = await measureModeBody(page);
+    expect(fits.overflows).toBe(false);
+    expect(fits.topGap).toBeGreaterThan(80);
+    expect(Math.abs(fits.topGap - fits.bottomGap)).toBeLessThanOrEqual(8);
+
+    // Con ocho series el contenido desborda: el scroll arranca en el principio y
+    // el nombre se ve entero. Centraba con `justify-center`, así que la mitad de
+    // arriba quedaba inaccesible y el nombre aparecía cortado bajo la cabecera.
+    await page.goto(`/sesion/${tallDate}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    await expect(
+      page.getByRole("dialog", { name: "Modo sesión" }),
+    ).toBeVisible();
+    const tall = await measureModeBody(page);
+    expect(tall.overflows).toBe(true);
+    expect(tall.scrollTop).toBe(0);
+    expect(tall.nameTop).toBeGreaterThanOrEqual(0);
+    expect(tall.nameBottom).toBeLessThanOrEqual(tall.height);
   });
 });
