@@ -345,6 +345,15 @@ móvil y las de escritorio simulan la consulta. Lo cubren
   lo registrado sin llamar a la API. Los ejercicios de una sesión registrada
   siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
   lista también (el único `PUT` admitido es el recuento de series, ver arriba).
+- **Autoguardado del borrador** (`lib/day-draft.ts`): cada cambio de una sesión
+  **planificada** —marcas de series, cardio, esfuerzo y nota— se escribe en
+  `localStorage` bajo `esencial.borrador.<fecha>`, así que un refresco accidental
+  no pierde nada al volver. Se limpia al cerrar la sesión y al abrir un día sin
+  sesión o ya registrado; al **corregir** manda el registro y no se guarda. Al
+  restaurar solo se aplica lo que sigue encajando con el plan (mismo item y mismo
+  número de series); no viaja entre dispositivos. Lo cubren
+  `web/tests/day-draft.test.ts`, `web/tests/sesion.test.tsx` y
+  `e2e/tests/session-mode.spec.ts`.
 
 ### Modo interactivo de sesión y descansos (0018)
 

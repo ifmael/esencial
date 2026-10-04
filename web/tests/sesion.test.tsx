@@ -17,6 +17,8 @@ import { createFakeAudio } from "./audio-fake";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // El autoguardado del borrador escribe aquí: que no lo vea el caso siguiente.
+  window.localStorage.clear();
   window.history.pushState({}, "", "/");
 });
 
@@ -220,6 +222,73 @@ function renderAt(path: string) {
 const LOGGED = [
   { id: 1, date: "2026-09-02", name: "Empuje A", status: "logged" },
 ];
+
+describe("autoguardado del borrador", () => {
+  const DRAFT_KEY = "esencial.borrador.2026-09-02";
+  const savedDraft = () =>
+    JSON.parse(window.localStorage.getItem(DRAFT_KEY) ?? "null");
+
+  it("guarda lo escrito en cada cambio y lo recupera al volver a la pantalla", async () => {
+    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    fireEvent.change(screen.getByLabelText(/^reps · press banca serie 1$/i), {
+      target: { value: "10" },
+    });
+    // Lo escrito viaja al almacén, atado al ejercicio del plan.
+    await waitFor(() =>
+      expect(savedDraft().exercises[0].sets[0]).toMatchObject({
+        weightKg: 60,
+        reps: 10,
+        done: true,
+        touched: true,
+      }),
+    );
+    expect(savedDraft().exercises[0].id).toBe(SE_BENCH);
+
+    // Otro montaje, como un refresco: el borrador vuelve tal cual.
+    cleanup();
+    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    expect(
+      (
+        screen.getByLabelText(
+          /^reps · press banca serie 1$/i,
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("10");
+    expect(boxOf("press banca", 1).checked).toBe(true);
+  });
+
+  it("al cerrar la sesión se borra el borrador guardado", async () => {
+    const api = mockApi({
+      last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    fireEvent.click(boxOf("press banca", 1));
+    await waitFor(() =>
+      expect(window.localStorage.getItem(DRAFT_KEY)).not.toBeNull(),
+    );
+
+    fireEvent.click(
+      within(
+        screen.getByRole("radiogroup", { name: /esfuerzo percibido/i }),
+      ).getByRole("radio", { name: /^esfuerzo 3:/i }),
+    );
+    fireEvent.click(await primaryClose());
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    await screen.findByRole("button", { name: /^editar$/i });
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
+});
 
 describe("route states", () => {
   it("header shows Spanish date + session name", async () => {

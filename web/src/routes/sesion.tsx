@@ -44,6 +44,14 @@ import {
   Textarea,
 } from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
+import {
+  clearDraft,
+  readDraft,
+  restoreCardio,
+  restoreExercises,
+  snapshotOf,
+  writeDraft,
+} from "../lib/day-draft";
 import { targetSummary } from "../lib/exercises";
 import {
   type PlanSession,
@@ -176,7 +184,10 @@ async function buildDraft(
       )
     : null;
   let historyFailed = false;
-  const exercises: DraftExercise[] = await Promise.all(
+  // Autoguardado: al abrir una sesión planificada se recupera lo que hubiera
+  // quedado del último intento. Al corregir un registro manda el registro.
+  const stored = log ? null : readDraft(date);
+  let exercises: DraftExercise[] = await Promise.all(
     items
       .filter((e) => e.kind === "strength")
       .map(async (se) => {
@@ -222,25 +233,29 @@ async function buildDraft(
         };
       }),
   );
-  const cardio: CardioDraft[] = items
-    .filter((e) => e.kind !== "strength")
-    .map((se) => {
-      const c = log?.cardio.find((x) => x.planSessionExerciseId === se.id);
-      return {
-        se,
-        distanceKm: c?.distanceKm ?? null,
-        durationMin: c?.durationMin ?? null,
-        done: c?.done ?? false,
-      };
-    });
+  const cardio: CardioDraft[] = restoreCardio(
+    items
+      .filter((e) => e.kind !== "strength")
+      .map((se) => {
+        const c = log?.cardio.find((x) => x.planSessionExerciseId === se.id);
+        return {
+          se,
+          distanceKm: c?.distanceKm ?? null,
+          durationMin: c?.durationMin ?? null,
+          done: c?.done ?? false,
+        };
+      }),
+    stored?.cardio,
+  );
+  if (stored) exercises = restoreExercises(exercises, stored.exercises);
   return {
     kind: "draft",
     session,
     exercises,
     cardio,
     historyFailed,
-    effort: log?.effort ?? null,
-    note: log?.note ?? "",
+    effort: log?.effort ?? stored?.effort ?? null,
+    note: log?.note ?? stored?.note ?? "",
     pending: false,
     submitError: null,
     editing: log,
@@ -311,8 +326,13 @@ export function useWorkoutDay(date: string) {
       const sessions = await apiGet<PlanSession[]>("/api/plan-sessions");
       sessionsRef.current = sessions;
       const session = sessions.find((s) => s.date === date);
-      if (!session) return setView({ kind: "empty" });
+      // Sin sesión o ya registrada, un borrador guardado de ese día sobra.
+      if (!session) {
+        clearDraft(date);
+        return setView({ kind: "empty" });
+      }
       if (session.status === "logged") {
+        clearDraft(date);
         const log = await apiGet<LoggedDay>(`/api/workout-logs/${date}`);
         return setView({ kind: "logged", session, log });
       }
@@ -344,6 +364,17 @@ export function useWorkoutDay(date: string) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Autoguardado: cada cambio del borrador de una sesión planificada se escribe
+  // en `localStorage` tal cual (marcas, cardio, esfuerzo y nota), así que un
+  // refresco accidental no pierde nada. Corrigiendo un registro no se guarda.
+  useEffect(() => {
+    if (view.kind !== "draft" || view.editing) return;
+    writeDraft(
+      date,
+      snapshotOf(view.exercises, view.cardio, view.effort, view.note),
+    );
+  }, [date, view]);
 
   const patchDraft = (patch: (v: Draft) => Partial<Draft>) =>
     setView((v) => (v.kind === "draft" ? { ...v, ...patch(v) } : v));
@@ -550,11 +581,14 @@ export function useWorkoutDay(date: string) {
             v.editing ? "PUT" : "POST",
             payload,
           );
+          // El día queda registrado: el borrador guardado ya no vale.
+          clearDraft(date);
           setView({ kind: "logged", session: v.session, log });
         } catch (err) {
           if (err instanceof ApiError && err.status === 409 && !v.editing) {
             try {
               const log = await apiGet<LoggedDay>(`/api/workout-logs/${date}`);
+              clearDraft(date);
               setView({ kind: "logged", session: v.session, log });
               return;
             } catch {

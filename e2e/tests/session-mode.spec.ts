@@ -312,4 +312,42 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
       }),
     ).toBeVisible();
   });
+
+  test("lo registrado sobrevive a un recargado (autoguardado)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const date = mondayFrom(294 + testInfo.retry * 14);
+    await resetPlanned(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 8 }],
+      "Autoguardado",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Series de Press banca" }).click();
+    await page.getByLabel(/^peso \(kg\) · press banca serie 1$/i).fill("55");
+    await page.getByLabel(/^reps · press banca serie 1$/i).fill("9");
+    // Completar las marcas marca la serie.
+    await expect(
+      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toBeChecked();
+
+    // Un refresco accidental: al volver, el borrador está tal cual (la tarjeta
+    // arranca plegada, así que la casilla que se ve es la de la tira).
+    await page.reload();
+    await expect(
+      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+    ).toBeChecked();
+    await page.getByRole("button", { name: "Series de Press banca" }).click();
+    await expect(
+      page.getByLabel(/^peso \(kg\) · press banca serie 1$/i),
+    ).toHaveValue("55");
+    await expect(page.getByLabel(/^reps · press banca serie 1$/i)).toHaveValue(
+      "9",
+    );
+  });
 });
