@@ -20,7 +20,7 @@ import { WavyProgress, WavyRing } from "./expressive";
 import { CloseIcon } from "./icons";
 import { Dialog } from "./overlay";
 import { Stepper } from "./stepper";
-import { Button, Checkbox, cx, Switch } from "./ui";
+import { Button, Checkbox, cx, ScrollStrip, Switch } from "./ui";
 
 /** Un ejercicio del modo: fuerza con sus series, o cardio con «Hecho». */
 export type ModeItem = {
@@ -284,13 +284,31 @@ export function SessionMode({
           )}
 
           {item.sets !== null && (
-            <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
-              <Switch
-                aria-label={`Sin peso · ${item.name}`}
-                checked={item.noWeight}
-                onChange={() => onToggleNoWeight(item.id)}
-              />
-              Sin peso
+            <div className="flex w-full max-w-sm min-w-0 flex-col items-center gap-3">
+              <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
+                <Switch
+                  aria-label={`Sin peso · ${item.name}`}
+                  checked={item.noWeight}
+                  onChange={() => onToggleNoWeight(item.id)}
+                />
+                Sin peso
+              </div>
+              {/* Las casillas de todas las series van en el encabezado, en una
+                  sola tira que desplaza (el patrón de la tarjeta plegada del
+                  borrador): cada fila de serie se queda con su número y sus
+                  steppers y el ejercicio ahorra alto. */}
+              <ScrollStrip className="flex w-full min-w-0 items-center gap-1">
+                {item.sets.map((s, i) => (
+                  <Checkbox
+                    key={i}
+                    className="shrink-0"
+                    aria-label={`${item.name} serie ${i + 1}`}
+                    checked={s.done}
+                    disabled={!s.done && !s.filled}
+                    onChange={() => onToggleSet(item.id, i)}
+                  />
+                ))}
+              </ScrollStrip>
             </div>
           )}
 
@@ -307,17 +325,9 @@ export function SessionMode({
                         : "bg-surface-container-high",
                     )}
                   >
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        aria-label={`${item.name} serie ${i + 1}`}
-                        checked={s.done}
-                        disabled={!s.done && !s.filled}
-                        onChange={() => onToggleSet(item.id, i)}
-                      />
-                      <span className="text-label-l text-on-surface-variant">
-                        Serie {i + 1}
-                      </span>
-                    </div>
+                    <span className="text-label-l text-on-surface-variant">
+                      Serie {i + 1}
+                    </span>
                     <div
                       className={cx(
                         "grid gap-3",

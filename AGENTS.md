@@ -366,9 +366,16 @@ borrador. El encabezado lleva a la izquierda el **aro de progreso**
 «N / M» dentro — **empieza en 0** y sube al registrar cada ejercicio entero — y
 a la derecha el aspa. Un ejercicio
 a la vez en el orden del día: nombre, objetivo, «Sin peso» y **sus series
-editables** (los mismos `Stepper` —compartidos con el borrador— y la casilla; se
-marca al quedar completa y la pausa arranca al quedar hecha, la marques a mano o
-escribiendo sus marcas).
+editables** (los mismos `Stepper` —compartidos con el borrador—; se marca al
+quedar completa y la pausa arranca al quedar hecha, la marques a mano o
+escribiendo sus marcas). Las **casillas de las series van en el encabezado del
+ejercicio**, en una sola tira de una línea (`ScrollStrip` + `Checkbox`, el mismo
+patrón de la tarjeta plegada del borrador) junto a «Sin peso»: cada fila de
+serie se queda con su número y sus steppers (a 390 px un checkbox de 48 px no
+comparte fila con dos steppers, así que ocupaba una línea por serie). Lo cubre
+`e2e/tests/session-mode.spec.ts` (a 390 px con doce series: la tira en el
+encabezado, ninguna casilla en las filas y la pausa que arranca la casilla que
+se pulsa).
 
 El cuerpo (bajo el encabezado, con scroll) centra su contenido con **márgenes
 automáticos** —un bloque interno con `my-auto`—, nunca con `justify-center` en

@@ -144,6 +144,49 @@ async function measurePauseRow(page: Page) {
   });
 }
 
+/** Geometría del encabezado del ejercicio en el modo: la tira que contiene las
+ *  casillas de las series (el ancestro más cercano que desplaza en horizontal),
+ *  dónde cae respecto a la lista de series y qué casillas quedan dentro de cada
+ *  fila. Se mide el desborde y las cajas reales, no las clases. */
+async function measureSetStrip(page: Page) {
+  return page.evaluate(() => {
+    const section = document.querySelector<HTMLElement>(
+      'section[aria-label="Modo sesión"]',
+    );
+    if (!section) throw new Error("El modo sesión no está abierto");
+    // Las casillas de las series: su nombre acaba en «serie N».
+    const setBoxes = [
+      ...section.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    ].filter((b) => / serie \d+$/.test(b.getAttribute("aria-label") ?? ""));
+    if (setBoxes.length === 0)
+      throw new Error("El modo no pinta las casillas de las series");
+    // La tira: el ancestro más cercano de la casilla que desplaza en horizontal.
+    let strip = setBoxes[0].parentElement as HTMLElement;
+    while (strip !== section && getComputedStyle(strip).overflowX !== "auto") {
+      strip = strip.parentElement as HTMLElement;
+    }
+    if (strip === section)
+      throw new Error("Las casillas de las series no viven en una tira");
+    const list = section.querySelector<HTMLElement>("ul");
+    if (!list) throw new Error("El modo no pinta la lista de las series");
+    const rows = [...list.querySelectorAll<HTMLElement>(":scope > li")];
+    const box = strip.getBoundingClientRect();
+    return {
+      sets: setBoxes.length,
+      allInStrip: setBoxes.every((b) => strip.contains(b)),
+      stripHeight: box.height,
+      stripAboveList: box.bottom <= list.getBoundingClientRect().top,
+      scrolls: strip.scrollWidth > strip.clientWidth + 1,
+      boxesInRows: list.querySelectorAll('input[type="checkbox"]').length,
+      rows: rows.length,
+      rowsWithSteppers: rows.filter(
+        (r) => r.querySelectorAll('input[type="number"]').length > 0,
+      ).length,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+}
+
 /** ISO week ("YYYY-Www") de una fecha (misma convención que la app). */
 function isoWeekOf(date: string): string {
   const t = new Date(`${date}T12:00:00Z`);
@@ -553,5 +596,100 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
 
     // La fila no desborda a 390 px.
     expect((await measurePauseRow(page)).pageWidth).toBeLessThanOrEqual(390);
+  });
+
+  test("las casillas de las series van en una tira del encabezado, no una por fila (móvil)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const past = mondayFrom(364 + testInfo.retry * 14);
+    const date = mondayFrom(371 + testInfo.retry * 14);
+    await resetPlanned(page.request, past);
+    await resetPlanned(page.request, date);
+    await logPast(
+      page.request,
+      past,
+      [
+        { exerciseId: press.id, targetSets: 12, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 1, targetRepsMin: 10 },
+      ],
+      [
+        {
+          exerciseId: press.id,
+          sets: Array.from({ length: 12 }, () => ({ weightKg: 60, reps: 8 })),
+        },
+        { exerciseId: remo.id, sets: [{ weightKg: 40, reps: 10 }] },
+      ],
+    );
+    await createSession(
+      page.request,
+      date,
+      [
+        {
+          exerciseId: press.id,
+          targetSets: 12,
+          targetRepsMin: 8,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+        {
+          exerciseId: remo.id,
+          targetSets: 1,
+          targetRepsMin: 10,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+      ],
+      "Tira",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await expect(
+      mode.getByRole("heading", { name: "Press banca" }),
+    ).toBeVisible();
+
+    // Las doce casillas viven en la tira del encabezado (una sola línea, que
+    // desplaza) y ninguna fila de serie lleva casilla: cada fila se queda con
+    // su número y sus steppers.
+    const geo = await measureSetStrip(page);
+    expect(geo).toMatchObject({
+      sets: 12,
+      allInStrip: true,
+      boxesInRows: 0,
+      rows: 12,
+      rowsWithSteppers: 12,
+      stripAboveList: true,
+      scrolls: true,
+    });
+    expect(geo.stripHeight).toBeLessThan(60);
+    expect(geo.pageWidth).toBeLessThanOrEqual(390);
+
+    // La casilla de la tira marca SU serie: la primera arranca la pausa entre
+    // series y la última (con otro ejercicio detrás) la de fin de ejercicio.
+    const box = (n: number) =>
+      mode.getByRole("checkbox", {
+        name: `Press banca serie ${n}`,
+        exact: true,
+      });
+    await box(1).check();
+    await expect(box(1)).toBeChecked();
+    await expect(
+      mode.getByRole("progressbar", {
+        name: "Pausa entre series de Press banca",
+      }),
+    ).toBeVisible();
+
+    await mode.getByRole("button", { name: "Saltar" }).click();
+    await box(12).check();
+    await expect(box(12)).toBeChecked();
+    await expect(
+      mode.getByRole("progressbar", {
+        name: "Pausa al terminar Press banca",
+      }),
+    ).toBeVisible();
   });
 });
