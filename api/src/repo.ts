@@ -301,7 +301,7 @@ async function queryExercises(
   const mine = `exercise_id IN (SELECT e.id FROM exercises e ${where})`;
   const {
     heads,
-    kids: [tags, regions],
+    kids: [tags, regions, aliases],
   } = await hydrate(
     db,
     args,
@@ -309,6 +309,7 @@ async function queryExercises(
     [
       `SELECT exercise_id AS parent, tag FROM exercise_tags WHERE ${mine} ORDER BY exercise_id, tag`,
       `SELECT exercise_id AS parent, region, role FROM exercise_regions WHERE ${mine} ORDER BY exercise_id, region`,
+      `SELECT exercise_id AS parent, alias FROM exercise_aliases WHERE ${mine} ORDER BY exercise_id, alias`,
     ],
   );
   return heads.map((h) => {
@@ -321,6 +322,7 @@ async function queryExercises(
         region: String(r.region),
         role: String(r.role),
       })),
+      aliases: (aliases.get(id) ?? []).map((a) => String(a.alias)),
     };
   });
 }

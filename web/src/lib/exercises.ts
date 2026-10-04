@@ -55,6 +55,8 @@ export type Exercise = {
   techniqueUrl: string | null;
   steps: string[] | null;
   tags: string[];
+  /** Nombre inglés y sinónimos de búsqueda, en minúsculas (0021). */
+  aliases: string[];
   /** Sub-regiones del mapa anatómico (`web/src/components/body-map/regions`)
    *  con su grado, ordenadas por región. */
   regions: ExerciseRegion[];
@@ -68,10 +70,39 @@ export type ExerciseInput = {
   techniqueUrl?: string | null;
   steps?: string[] | null;
   tags: string[];
+  aliases: string[];
   regions?: ExerciseRegion[];
   /** Ausente = el servidor aplica "strength". */
   kind?: ExerciseKind;
 };
+
+/** Minúsculas y sin tildes: «Elevación» y «elevacion» son lo mismo. */
+function fold(s: string): string {
+  return s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+/** Textos por los que se busca un ejercicio: nombre canónico, alias y grupos.
+ *  La paleta ⌘K los usa como `keywords` (su ranking es difuso). */
+export function exerciseSearchTerms(
+  e: Pick<Exercise, "name" | "aliases" | "tags">,
+): string[] {
+  return [e.name, ...e.aliases, ...e.tags];
+}
+
+/** ¿Casa la consulta con el nombre, los alias o los grupos del ejercicio?
+ *  `extra` añade textos de la superficie (p. ej. la etiqueta de la sub-región).
+ *  La consulta vacía casa todo. */
+export function matchesExercise(
+  e: Pick<Exercise, "name" | "aliases" | "tags">,
+  q: string,
+  extra: readonly string[] = [],
+): boolean {
+  const needle = fold(q.trim());
+  if (!needle) return true;
+  return [...exerciseSearchTerms(e), ...extra].some((t) =>
+    fold(t).includes(needle),
+  );
+}
 
 export type ExercisesState = {
   exercises: Exercise[];
