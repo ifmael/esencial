@@ -86,6 +86,16 @@ test.describe("RECIPES — loop end to end", () => {
     await card.click();
     await expect(page.getByRole("heading", { name })).toBeVisible();
     await expect(page.getByText(food, { exact: false }).first()).toBeVisible();
+
+    // Y la foto se sirve de verdad: la API la autoriza (es una receta que el
+    // usuario puede leer) y el <img> va con credenciales — sin
+    // crossOrigin="use-credentials" el navegador no manda la cookie cross-origin
+    // y esto daría 404.
+    const foto = page.locator('img[src*="/api/uploads/"]').first();
+    await expect(foto).toBeVisible();
+    await expect
+      .poll(() => foto.evaluate((el) => (el as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
   });
 
   test("empty name shows validation error and does not navigate", async ({
