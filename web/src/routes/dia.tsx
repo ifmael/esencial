@@ -86,14 +86,11 @@ export function DayHeader({
           className="text-surface-container-high"
         />
       </span>
-      {/* Saludo: solo el día en curso (el cliente decide «hoy») y en el sitio de
-       * la etiqueta «Hoy», arriba y sobre la fecha. Sin nombre puesto, saluda
-       * igual pero sin él. */}
-      {isToday && (
-        <p className="relative text-body-l text-on-surface-variant">
-          {`Hola${name ? ` ${name}` : ""}, estos son los planes que tienes para …`}
-        </p>
-      )}
+      {/* Saludo: en el sitio de la etiqueta «Hoy», arriba y sobre la fecha, y en
+       * todos los días (no solo hoy). Sin nombre puesto, saluda igual pero sin él. */}
+      <p className="relative text-body-l text-on-surface-variant">
+        {`Hola${name ? ` ${name}` : ""}, estos son los planes que tienes para …`}
+      </p>
 
       {/* Móvil: sin título visible (la fecha ya está en la fila); `contents`
        * para que la fila vacía no sume el hueco de la cabecera. */}

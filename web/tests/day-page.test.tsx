@@ -224,26 +224,21 @@ describe("saludo de bienvenida", () => {
     ).toBeDefined();
   });
 
-  it("no saluda si el día elegido no es hoy", async () => {
+  it("el saludo no depende del día; «Hoy» sí", async () => {
     me.name = "Ismael";
     renderAt("/");
     await settle();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(
+      /^Hoy/,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Día siguiente" }));
-    await settle();
-    expect(screen.queryByText(/estos son los planes/)).toBeNull();
-  });
-
-  it("vuelve a saludar al volver a hoy", async () => {
-    me.name = "Ismael";
-    renderAt("/");
-    await settle();
-    fireEvent.click(screen.getByRole("button", { name: "Día siguiente" }));
-    await settle();
-    fireEvent.click(screen.getByRole("button", { name: "Ir a hoy" }));
     await settle();
     expect(
       screen.getByText("Hola Ismael, estos son los planes que tienes para …"),
     ).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toMatch(
+      /^Hoy/,
+    );
   });
 });
 

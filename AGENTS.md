@@ -261,9 +261,9 @@ en la barra inferior). «Hoy» lleva
 `grow-10` porque `.connected > *` hace crecer a todas las piezas por igual, y su
 `onClick` llama a `showPicker()` para abrir el calendario al pulsar en cualquier
 punto, no solo en el icono. **Saludo**: en el sitio de la etiqueta «Hoy» —arriba,
-sobre la fecha, y visible también en móvil— y solo cuando el día elegido es hoy
-(`isToday`): «Hola … , estos son los planes que tienes para …», con el `name`
-del perfil (`useMe`; sin nombre puesto saluda sin él). La etiqueta «Hoy» ya no se
+sobre la fecha, y visible también en móvil— y en **todos los días** (no solo hoy):
+«Hola … , estos son los planes que tienes para …», con el `name` del perfil
+(`useMe`; sin nombre puesto saluda sin él). La etiqueta «Hoy» ya no se
 pinta: queda `sr-only` dentro del `h1` (el texto y el «Hoy» pulsado siguen
 diciendo qué día es). El e2e móvil mide < 200 px (medido, 148 px a 390 px sin
 nombre). Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
