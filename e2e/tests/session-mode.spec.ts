@@ -5,6 +5,7 @@
 import {
   type APIRequestContext,
   expect,
+  type Locator,
   type Page,
   test,
 } from "@playwright/test";
@@ -838,6 +839,186 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(lastOne).toHaveCount(0);
     await mode.getByRole("checkbox", { name: `${run.name} hecho` }).check();
     await expect(lastOne).toBeVisible();
+
+    // Nada se sale de la pantalla en móvil.
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+  });
+
+  test("el encabezado lleva el ejercicio activo y su lista salta de uno a otro (móvil)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const run = await apiRequest<{ id: number; name: string }>(
+      page.request,
+      "POST",
+      "/api/exercises",
+      { name: uniqueName("Cinta"), tags: ["cardio"], kind: "running" },
+    );
+    const past = mondayFrom(406 + testInfo.retry * 14);
+    const date = mondayFrom(413 + testInfo.retry * 14);
+    await resetPlanned(page.request, past);
+    await resetPlanned(page.request, date);
+    // Marcas previas: las series llegan completas de `/last` (en el modo no hay
+    // campos donde escribirlas, solo casillas).
+    await logPast(
+      page.request,
+      past,
+      [
+        { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 1, targetRepsMin: 10 },
+      ],
+      [
+        {
+          exerciseId: press.id,
+          sets: [
+            { weightKg: 60, reps: 8 },
+            { weightKg: 60, reps: 8 },
+            { weightKg: 60, reps: 8 },
+          ],
+        },
+        { exerciseId: remo.id, sets: [{ weightKg: 40, reps: 10 }] },
+      ],
+    );
+    await createSession(
+      page.request,
+      date,
+      [
+        {
+          exerciseId: press.id,
+          targetSets: 3,
+          targetRepsMin: 8,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+        {
+          exerciseId: remo.id,
+          targetSets: 1,
+          targetRepsMin: 10,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+        { exerciseId: run.id, targetDistanceKm: 5, targetDurationMin: 30 },
+      ],
+      "Lista",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    const heading = (name: string) => mode.getByRole("heading", { name });
+    // El botón del encabezado lleva el nombre del activo; la fila del listado,
+    // el mismo nombre más su estado («, pendiente» / «, hecho»).
+    const opener = (name: string) =>
+      mode.getByRole("button", { name, exact: true });
+    const sheet = () => page.getByRole("dialog", { name: "Ejercicios" });
+    const row = (name: string, done: boolean) =>
+      sheet().getByRole("button", {
+        name: `${name}, ${done ? "hecho" : "pendiente"}`,
+        exact: true,
+      });
+    // El color con el que se pinta cada fila (se mide, no se leen clases).
+    const bg = (l: Locator) =>
+      l.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+    await expect(heading("Press banca")).toBeVisible();
+    // El nombre del activo va en el encabezado, encima del nombre del cuerpo.
+    const openerBox = await opener("Press banca").boundingBox();
+    const headingBox = await heading("Press banca").boundingBox();
+    expect((openerBox?.y ?? 0) + (openerBox?.height ?? 0)).toBeLessThanOrEqual(
+      headingBox?.y ?? 0,
+    );
+
+    // Al pulsarlo se abre el sheet con los tres ejercicios del día, en el orden
+    // del día y cada uno con su estado: ninguno hecho todavía.
+    await opener("Press banca").click();
+    await expect(sheet()).toBeVisible();
+    await expect(row("Press banca", false)).toBeVisible();
+    await expect(row("Remo con barra", false)).toBeVisible();
+    await expect(row(run.name, false)).toBeVisible();
+    const y = await Promise.all(
+      [
+        row("Press banca", false),
+        row("Remo con barra", false),
+        row(run.name, false),
+      ].map(async (r) => (await r.boundingBox())?.y ?? 0),
+    );
+    expect(y[0]).toBeLessThan(y[1]);
+    expect(y[1]).toBeLessThan(y[2]);
+    // Y el que está en curso va resaltado: su fondo no es el del reposo, que
+    // comparten los otros dos.
+    const bgs = await Promise.all([
+      bg(row("Press banca", false)),
+      bg(row("Remo con barra", false)),
+      bg(row(run.name, false)),
+    ]);
+    expect(bgs[0]).not.toBe(bgs[1]);
+    expect(bgs[1]).toBe(bgs[2]);
+
+    // Pulsar una fila cierra el listado y salta a ese ejercicio.
+    await row("Remo con barra", false).click();
+    await expect(sheet()).toBeHidden();
+    await expect(heading("Remo con barra")).toBeVisible();
+    await expect(opener("Remo con barra")).toBeVisible();
+    await expect(
+      mode.getByRole("checkbox", { name: "Remo con barra serie 1" }),
+    ).toBeVisible();
+
+    // Con el salto, la fila en curso pasa a ser la del ejercicio elegido.
+    await opener("Remo con barra").click();
+    const jumpBgs = await Promise.all([
+      bg(row("Press banca", false)),
+      bg(row("Remo con barra", false)),
+      bg(row(run.name, false)),
+    ]);
+    expect(jumpBgs[1]).not.toBe(jumpBgs[0]);
+    expect(jumpBgs[1]).not.toBe(jumpBgs[2]);
+    // Escape cierra el listado, no el modo.
+    await page.keyboard.press("Escape");
+    await expect(sheet()).toBeHidden();
+    await expect(mode).toBeVisible();
+
+    // Con una pausa corriendo, el salto no la toca: la misma pausa (su nombre
+    // no cambia con el ejercicio activo) y la ola sigue avanzando.
+    await mode
+      .getByRole("checkbox", { name: "Remo con barra serie 1" })
+      .check();
+    const pause = mode.getByRole("progressbar", {
+      name: "Pausa al terminar Remo con barra",
+    });
+    await expect(pause).toBeVisible();
+    await opener("Remo con barra").click();
+    // Remo hecho (todas sus series) frente a Press banca, todavía pendiente.
+    await expect(row("Remo con barra", true)).toBeVisible();
+    await expect(row("Press banca", false)).toBeVisible();
+    await row(run.name, false).click();
+    await expect(sheet()).toBeHidden();
+    await expect(heading(run.name)).toBeVisible();
+    // Con el nombre largo del cardio el encabezado sigue en una sola fila: el
+    // nombre se recorta y no empuja el aspa.
+    const longOpener = await opener(run.name).boundingBox();
+    const closeButton = await mode
+      .getByRole("button", { name: "Salir del modo sesión" })
+      .boundingBox();
+    expect((longOpener?.x ?? 0) + (longOpener?.width ?? 0)).toBeLessThanOrEqual(
+      closeButton?.x ?? 0,
+    );
+    expect((await mode.locator("header").boundingBox())?.height).toBeLessThan(
+      96,
+    );
+    const before = Number(await pause.getAttribute("aria-valuenow"));
+    await expect
+      .poll(async () => Number(await pause.getAttribute("aria-valuenow")))
+      .toBeGreaterThan(before);
+
+    // El cardio, hecho, también sale con su ✓.
+    await mode.getByRole("checkbox", { name: `${run.name} hecho` }).check();
+    await opener(run.name).click();
+    await expect(row(run.name, true)).toBeVisible();
+    await expect(row("Remo con barra", true)).toBeVisible();
 
     // Nada se sale de la pantalla en móvil.
     expect(

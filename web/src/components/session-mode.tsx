@@ -17,8 +17,8 @@ import { type ExerciseKind, KIND_LABELS } from "../lib/exercises";
 import { beep, startPauseAudio, stopPauseAudio } from "../lib/rest-audio";
 import { useWakeLock } from "../lib/wake-lock";
 import { WavyProgress, WavyRing } from "./expressive";
-import { CloseIcon } from "./icons";
-import { Dialog } from "./overlay";
+import { CheckIcon, ChevronDownIcon, CloseIcon } from "./icons";
+import { Dialog, OverlayHeader } from "./overlay";
 import { Stepper } from "./stepper";
 import { Button, Checkbox, cx, ScrollStrip, Switch } from "./ui";
 
@@ -48,7 +48,13 @@ export type ModeItem = {
   restAfterSecs: number | null;
 };
 
-type Pause = { kind: "sets" | "after"; durationMs: number; endsAt: number };
+type Pause = {
+  kind: "sets" | "after";
+  durationMs: number;
+  endsAt: number;
+  /** El ejercicio de la pausa: saltar a otro no la renombra. */
+  name: string;
+};
 
 /** mm:ss del reloj de la pausa. */
 function formatCountdown(ms: number): string {
@@ -98,6 +104,8 @@ export function SessionMode({
   const [now, setNow] = useState(() => Date.now());
   // Salir pregunta antes (puede ser un despiste con el móvil en la mano).
   const [confirmingExit, setConfirmingExit] = useState(false);
+  // El botón del encabezado abre la lista de ejercicios de la sesión.
+  const [listing, setListing] = useState(false);
   // Un cierre de pausa solo dispara una vez (el tic y el regreso pueden
   // coincidir); saltarla lo marca para que no pite después.
   const finished = useRef(false);
@@ -117,13 +125,16 @@ export function SessionMode({
     [items.length],
   );
 
-  const startPause = useCallback((seconds: number, kind: Pause["kind"]) => {
-    finished.current = false;
-    startPauseAudio();
-    const durationMs = seconds * 1000;
-    setPause({ kind, durationMs, endsAt: Date.now() + durationMs });
-    setNow(Date.now());
-  }, []);
+  const startPause = useCallback(
+    (seconds: number, kind: Pause["kind"], name: string) => {
+      finished.current = false;
+      startPauseAudio();
+      const durationMs = seconds * 1000;
+      setPause({ kind, durationMs, endsAt: Date.now() + durationMs, name });
+      setNow(Date.now());
+    },
+    [],
+  );
 
   const finishPause = useCallback(
     (kind: Pause["kind"]) => {
@@ -163,10 +174,10 @@ export function SessionMode({
           return;
         }
         if (item.restAfterSecs !== null)
-          startPause(item.restAfterSecs, "after");
+          startPause(item.restAfterSecs, "after", item.name);
         else advance();
       } else if (item.restSecs !== null) {
-        startPause(item.restSecs, "sets");
+        startPause(item.restSecs, "sets", item.name);
       }
       return;
     }
@@ -178,7 +189,8 @@ export function SessionMode({
         setPause(null);
         return;
       }
-      if (item.restAfterSecs !== null) startPause(item.restAfterSecs, "after");
+      if (item.restAfterSecs !== null)
+        startPause(item.restAfterSecs, "after", item.name);
       else advance();
     }
   }, [item, last, advance, startPause]);
@@ -265,7 +277,22 @@ export function SessionMode({
             {doneItems} / {items.length}
           </span>
         </WavyRing>
-        <span className="flex-1" />
+        {/* Botón central: el ejercicio en curso, y al pulsarlo la lista de la
+            sesión para saltar a otro. */}
+        <Button
+          variant="text"
+          aria-haspopup="dialog"
+          aria-expanded={listing}
+          className="min-w-0 flex-1 gap-2 text-title-m"
+          onClick={() => setListing(true)}
+        >
+          <span className="min-w-0 truncate">{item.name}</span>
+          <ChevronDownIcon
+            width={18}
+            height={18}
+            className="shrink-0 text-on-surface-variant"
+          />
+        </Button>
         <Button
           variant="text"
           size="icon"
@@ -413,8 +440,8 @@ export function SessionMode({
                   max={pause.durationMs}
                   label={
                     pause.kind === "sets"
-                      ? `Pausa entre series de ${item.name}`
-                      : `Pausa al terminar ${item.name}`
+                      ? `Pausa entre series de ${pause.name}`
+                      : `Pausa al terminar ${pause.name}`
                   }
                 />
                 <span className="tabular text-display-m">
@@ -438,7 +465,8 @@ export function SessionMode({
               item.sets === null || item.restSecs === null || pause !== null
             }
             onClick={() =>
-              item.restSecs !== null && startPause(item.restSecs, "sets")
+              item.restSecs !== null &&
+              startPause(item.restSecs, "sets", item.name)
             }
           >
             Descanso
@@ -455,6 +483,58 @@ export function SessionMode({
           </Button>
         </div>
       </footer>
+
+      {/* Lista de la sesión: el encabezado lleva el ejercicio en curso y desde
+          aquí se salta a cualquiera, sin tocar el borrador ni la pausa que
+          estuviera corriendo. */}
+      {listing && (
+        <Dialog
+          labelledBy="session-items-title"
+          onClose={() => setListing(false)}
+          mobile="sheet"
+          className="md:max-w-md"
+        >
+          <OverlayHeader
+            id="session-items-title"
+            title="Ejercicios"
+            onClose={() => setListing(false)}
+          />
+          <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto pb-6">
+            {items.map((it, i) => {
+              // Hecho = todas sus series (o el cardio marcado), el mismo
+              // criterio que el aro «N / M».
+              const isDone = it.sets
+                ? it.sets.length > 0 && it.sets.every((s) => s.done)
+                : it.done === true;
+              return (
+                <li key={it.id}>
+                  <Button
+                    variant="text"
+                    className="list-row w-full justify-start text-left"
+                    aria-label={`${it.name}, ${isDone ? "hecho" : "pendiente"}`}
+                    aria-pressed={i === active}
+                    onClick={() => {
+                      setActive(i);
+                      setListing(false);
+                    }}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-title-m">
+                      {it.name}
+                    </span>
+                    <span aria-hidden="true" className="grid size-5 shrink-0">
+                      {isDone ? (
+                        <CheckIcon filled width={20} height={20} />
+                      ) : (
+                        <span className="size-5 rounded-full border-2 border-current" />
+                      )}
+                    </span>
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </Dialog>
+      )}
 
       {confirmingExit && (
         <Dialog

@@ -415,6 +415,17 @@ posición del nombre y los dos huecos del centrado (no una clase).
   «Último ejercicio». Un ejercicio de una sola serie lo anuncia desde que se
   abre. Va antes del bloque de la pausa, así que sigue a la vista durante la de
   fin. Lo cubre `e2e/tests/session-mode.spec.ts`.
+- **El encabezado lleva el ejercicio en curso** y, al pulsarlo, un `Dialog`
+  (`mobile="sheet"`) con **todos** los ejercicios de la sesión en su orden: cada
+  fila lleva el nombre y un ✓ si está hecho —todas sus series, o el cardio
+  `done`, el mismo criterio que el aro «N / M»— o un ○, con la fila del activo
+  resaltada (`aria-pressed`, la piel tonal del sistema). Pulsar una fila cierra
+  el listado y salta a ese ejercicio. El **salto no toca la pausa** que esté
+  corriendo: sigue la misma —la pausa guarda el nombre del ejercicio con el que
+  nació, así que un salto no la renombra— y pita al agotarse, y en una de fin de
+  ejercicio avanza desde donde estés. El nombre del encabezado se recorta: con
+  nombres largos la fila no crece. Lo cubren `web/tests/sesion.test.tsx` y
+  `e2e/tests/session-mode.spec.ts` (390 px).
 - **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al
   terminar; mientras corre una pausa suena un keep-alive casi inaudible (60 Hz,
   gain 0.0008) que mantiene la pestaña «sonando» para que el navegador no la
