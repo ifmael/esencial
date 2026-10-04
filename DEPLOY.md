@@ -70,8 +70,8 @@ texto, cantidad y unidad).
 
 **0021–0022 (alias de búsqueda y ejercicios de Barra Libre) también van ANTES
 del merge.** `0021` crea `exercise_aliases` y la API nueva la lee en cada
-`GET /api/exercises` (La lista, la ficha y el selector): sin la tabla, 500.
-Además renombra a español 13 ejercicios y siembra los alias de los 91. `0022`
+`GET /api/exercises` (lista, ficha y selector): sin la tabla, 500.
+Además renombra a español 12 ejercicios y siembra los alias de los 91. `0022`
 añade los 17 ejercicios de Barra Libre con sus grupos, sub-regiones y alias.
 Las dos son aditivas (la API vieja no consulta la tabla y la fila nueva es un
 ejercicio más), así que la ventana entre aplicarlas y el deploy no rompe nada.

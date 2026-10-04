@@ -8,8 +8,10 @@
 -- el alias salvo en la ficha («También conocido como»).
 --
 -- Qué NO se renombra: los nombres propios («Press Arnold», «Curl en banco
--- Scott», «Remo con barra Pendlay») y los términos ya universales en un gimnasio
--- español («curl», «press», «pullover», «crunch», «crossover»).
+-- Scott», «Remo con barra Pendlay»), los términos ya universales en un gimnasio
+-- español («curl», «press», «pullover», «crunch», «crossover») y **«Hip
+-- thrust»**: es el nombre con el que se conoce el ejercicio, así que se queda y
+-- su alias es la traducción («empuje de cadera»).
 --
 -- Este renombrado va DESPUÉS de 0006/0007/0008/0010/0011/0013/0015, que
 -- referencian ejercicios por su nombre viejo: como esos ya se aplicaron, aquí es
@@ -32,7 +34,6 @@ UPDATE exercises SET name = 'Press con impulso' WHERE name = 'Push press';
 UPDATE exercises SET name = 'Sentadilla con copa' WHERE name = 'Sentadilla goblet';
 UPDATE exercises SET name = 'Sentadilla a una pierna' WHERE name = 'Pistol squat';
 UPDATE exercises SET name = 'Curl nórdico' WHERE name = 'Nordic curl';
-UPDATE exercises SET name = 'Empuje de cadera' WHERE name = 'Hip thrust';
 UPDATE exercises SET name = 'Puente de rana' WHERE name = 'Frog pump';
 UPDATE exercises SET name = 'Giro ruso' WHERE name = 'Russian twist';
 UPDATE exercises SET name = 'Bicho muerto' WHERE name = 'Dead bug';
@@ -277,7 +278,7 @@ INSERT OR IGNORE INTO exercise_aliases (exercise_id, alias)
 INSERT OR IGNORE INTO exercise_aliases (exercise_id, alias)
   SELECT id, 'nordic hamstring curl' FROM exercises WHERE name = 'Curl nórdico';
 INSERT OR IGNORE INTO exercise_aliases (exercise_id, alias)
-  SELECT id, 'hip thrust' FROM exercises WHERE name = 'Empuje de cadera';
+  SELECT id, 'empuje de cadera' FROM exercises WHERE name = 'Hip thrust';
 INSERT OR IGNORE INTO exercise_aliases (exercise_id, alias)
   SELECT id, 'glute bridge' FROM exercises WHERE name = 'Puente de glúteo';
 INSERT OR IGNORE INTO exercise_aliases (exercise_id, alias)

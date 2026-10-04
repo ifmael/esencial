@@ -52,7 +52,7 @@ async function resetPlanned(request: APIRequestContext, date: string) {
 }
 
 test.describe("CATÁLOGO — español canónico y alias", () => {
-  test("el nombre inglés se renombró y el alias encuentra el ejercicio", async ({
+  test("el alias encuentra el ejercicio (renombrado o conservado)", async ({
     page,
     request,
   }) => {
@@ -80,6 +80,12 @@ test.describe("CATÁLOGO — español canónico y alias", () => {
     await expect(
       page.getByRole("link", { name: /^Tirón a la cara/ }),
     ).toBeVisible();
+
+    // «Hip thrust» conserva su nombre (se conoce por él) y su alias es la
+    // traducción: la búsqueda en español también lo encuentra.
+    expect(list.some((e) => e.name === "Hip thrust")).toBe(true);
+    await search.fill("empuje de cadera");
+    await expect(page.getByRole("link", { name: /^Hip thrust/ })).toBeVisible();
   });
 });
 

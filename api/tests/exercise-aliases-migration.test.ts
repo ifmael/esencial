@@ -17,7 +17,6 @@ const VIEJOS = [
   "Sentadilla goblet",
   "Pistol squat",
   "Nordic curl",
-  "Hip thrust",
   "Frog pump",
   "Russian twist",
   "Dead bug",
@@ -27,8 +26,15 @@ const VIEJOS = [
   "Farmer carry",
 ];
 
-/** Un par que no se renombra pero sí recibe alias. */
-const SIN_RENOMBRAR = ["Sit-up", "Plancha", "Zancadas", "Dominadas"];
+/** Los que no se renombran pero sí reciben alias. «Hip thrust» se queda con su
+ *  nombre en inglés: es el que se usa, y su alias es la traducción. */
+const SIN_RENOMBRAR = [
+  "Sit-up",
+  "Plancha",
+  "Zancadas",
+  "Dominadas",
+  "Hip thrust",
+];
 
 beforeEach(async () => {
   await resetSchema();
@@ -59,7 +65,6 @@ describe("0021 — nombres y alias", () => {
       "Sentadilla con copa",
       "Sentadilla a una pierna",
       "Curl nórdico",
-      "Empuje de cadera",
       "Puente de rana",
       "Giro ruso",
       "Bicho muerto",
@@ -103,6 +108,23 @@ describe("0021 — nombres y alias", () => {
         WHERE NOT EXISTS (SELECT 1 FROM exercises e WHERE e.id = a.exercise_id)`,
     );
     expect(huerfanos[0].n).toBe(0);
+  });
+
+  test("«Hip thrust» conserva su nombre y su alias es la traducción", async () => {
+    const row = await d1.get<{ id: number }>(
+      "SELECT id FROM exercises WHERE name = 'Hip thrust'",
+    );
+    expect(row).toBeTruthy();
+    const aliases = (
+      await d1.all<{ alias: string }>(
+        "SELECT alias FROM exercise_aliases WHERE exercise_id = ? ORDER BY alias",
+        row?.id,
+      )
+    ).map((r) => r.alias);
+    expect(aliases).toEqual(["empuje de cadera"]);
+    expect(
+      await d1.get("SELECT id FROM exercises WHERE name = 'Empuje de cadera'"),
+    ).toBeNull();
   });
 
   test("los que no se renombran también reciben sinónimos de búsqueda", async () => {

@@ -746,7 +746,7 @@ sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sq
 es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
 cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
 - `0021_exercise_aliases.sql` es **aditiva**: crea `exercise_aliases` (en
-`schema.sql` y en `TABLES`), renombra a español 13 ejercicios del catálogo y
+`schema.sql` y en `TABLES`), renombra a español 12 ejercicios del catálogo y
 siembra los 160 alias de búsqueda de los 91. **No va al bootstrap** (es siembra,
 como 0010); la cubre `api/tests/exercise-aliases-migration.test.ts`, que la
 aplica sobre un catálogo mínimo. El renombrado va **después** de
@@ -944,12 +944,13 @@ participación: no se tocan.
 ### Nombres, alias y búsqueda (0021–0022)
 
 El nombre canónico es **español**. Se conservan los términos ya universales en un
-gimnasio español («curl», «press», «pullover», «crunch», «crossover») y los
+gimnasio español («curl», «press», «pullover», «crunch», «crossover»), los
 nombres propios («Press Arnold», «Curl en banco Scott», «Remo con barra
-Pendlay»). `0021_exercise_aliases.sql` renombra los 13 que estaban en inglés
-(Face pull → Tirón a la cara, Hip thrust → Empuje de cadera, Pistol squat →
-Sentadilla a una pierna, Farmer carry → Paseo del granjero…) y siembra
-`exercise_aliases` —el nombre inglés y los sinónimos, en minúsculas— para los 91.
+Pendlay») y **`Hip thrust`**, que se conoce por ese nombre (su alias es la
+traducción, «empuje de cadera»). `0021_exercise_aliases.sql` renombra los 12 que
+estaban en inglés (Face pull → Tirón a la cara, Pistol squat → Sentadilla a una
+pierna, Farmer carry → Paseo del granjero…) y siembra `exercise_aliases` —el
+nombre inglés y los sinónimos, en minúsculas— para los 91.
 
 `Exercise` (web) y el payload de `/api/exercises` (lista y ficha) llevan
 `aliases: string[]`. La búsqueda casa **nombre + alias + tags**: el helper puro

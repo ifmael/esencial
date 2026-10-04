@@ -225,7 +225,7 @@ describe("catalog", () => {
     expect(api.calls.some((c) => c.method === "POST")).toBe(false);
 
     fireEvent.change(screen.getByLabelText("Nombre"), {
-      target: { value: "Empuje de cadera" },
+      target: { value: "Sentadilla con copa" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     expect(screen.getByText(/elige al menos un grupo/i)).toBeDefined();
@@ -233,11 +233,11 @@ describe("catalog", () => {
 
     // Los alias se añaden como fichas: el nombre inglés y los sinónimos.
     fireEvent.change(screen.getByLabelText("Nuevo alias"), {
-      target: { value: "hip thrust" },
+      target: { value: "goblet squat" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Añadir alias" }));
     expect(
-      screen.getByRole("button", { name: "Quitar alias hip thrust" }),
+      screen.getByRole("button", { name: "Quitar alias goblet squat" }),
     ).toBeDefined();
 
     // Los diez grupos están a la vista como fichas: se eligen con un toque.
@@ -277,10 +277,12 @@ describe("catalog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Subir paso 3" }));
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(api.state.exercises).toHaveLength(4));
-    await screen.findByRole("heading", { name: "Empuje de cadera" });
+    await screen.findByRole("heading", { name: "Sentadilla con copa" });
     expect(screen.getByText("glúteo")).toBeDefined();
     expect(screen.getByText("Glúteo mayor")).toBeDefined();
-    expect(screen.getByText(/También conocido como: hip thrust/)).toBeDefined();
+    expect(
+      screen.getByText(/También conocido como: goblet squat/),
+    ).toBeDefined();
     const post = api.calls.find(
       (c) => c.method === "POST" && c.url === "/api/exercises",
     )!;
@@ -295,7 +297,7 @@ describe("catalog", () => {
     expect(body.regions).toEqual([
       { region: "gluteus-maximus", role: "secondary" },
     ]);
-    expect(body.aliases).toEqual(["hip thrust"]);
+    expect(body.aliases).toEqual(["goblet squat"]);
     expect(body.kind).toBe("bike");
   });
 
