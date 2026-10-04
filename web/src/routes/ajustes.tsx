@@ -15,6 +15,7 @@ import {
   Alert,
   Badge,
   Button,
+  buttonClass,
   Card,
   ConnectedGroup,
   ConnectedItem,
@@ -250,22 +251,25 @@ export function AjustesPage() {
       {/* Cerrar sesión es cosa de Access: se enseña solo cuando Access está
           delante (en local no hay sesión que cerrar). Es un enlace normal, no
           del router: esa ruta la atiende Cloudflare antes que el Worker, y desde
-          el dominio de la app borra la cookie al instante. */}
+          el dominio de la app borra la cookie al instante. Va como botón
+          (outlined), sin la flecha de las filas que navegan: hace, no lleva. */}
       {me.data?.access ? (
-        <Card className="flex flex-col gap-stack">
-          <h2 className="text-title-m">Sesión</h2>
+        <Card className="flex items-center justify-between gap-stack">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className="text-title-m">Sesión</h2>
+            <p className="text-body-m text-on-surface-variant">
+              Te saca de Cloudflare Access en este navegador.
+            </p>
+          </div>
           <a
             href="/cdn-cgi/access/logout"
             onPointerDown={ripple}
-            className="state list-row min-h-12 rounded-m px-3 text-on-surface"
+            className={buttonClass({
+              variant: "outlined",
+              className: "shrink-0",
+            })}
           >
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-body-l">Cerrar sesión</span>
-              <span className="text-body-m text-on-surface-variant">
-                Te saca de Cloudflare Access en este navegador
-              </span>
-            </span>
-            <ChevronRightIcon className="text-on-surface-variant" />
+            Cerrar sesión
           </a>
         </Card>
       ) : null}

@@ -103,7 +103,10 @@ Escala vigente — todo lo demás sale de aquí:
   (`/ajustes`, `routes/ajustes.tsx`, entrada en el raíl, el cajón y la barra
   inferior) o con «Cambiar tema» de ⌘K; el Shell ya no lleva conmutador.
   `useTheme()` (`useSyncExternalStore`; `applyTheme` avisa) mantiene a los dos
-  al día. Lo cubre `tests/ajustes.test.tsx`.
+  al día. Lo cubre `tests/ajustes.test.tsx`. En su tarjeta «Sesión» el cierre de
+  sesión —cosa de Cloudflare Access, un enlace, no del router— va como botón
+  *outlined* al lado del texto y **sin** la flecha de las filas que navegan:
+  hace, no lleva.
 - **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
   cada superficie declara `--field-bg` para el recorte).
 - **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No

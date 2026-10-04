@@ -274,13 +274,16 @@ describe("Familia en Ajustes", () => {
   });
 
   // Cerrar sesión es de Cloudflare Access: el enlace va a la ruta que atiende
-  // Cloudflare (no a la app), y solo se enseña cuando Access está delante.
+  // Cloudflare (no a la app), y solo se enseña cuando Access está delante. Va
+  // como botón, sin la flecha de las filas que navegan: hace, no lleva.
   it("con Access delante ofrece cerrar sesión, en la ruta de Cloudflare", async () => {
     mockApi({ access: true });
     await adminView();
 
     const salir = await screen.findByRole("link", { name: /Cerrar sesión/ });
     expect(salir.getAttribute("href")).toBe("/cdn-cgi/access/logout");
+    expect(salir.className).toContain("btn-outlined");
+    expect(salir.querySelector("svg")).toBeNull();
   });
 
   it("en local, sin Access, no ofrece cerrar sesión", async () => {
