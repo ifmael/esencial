@@ -19,6 +19,7 @@ const make = (over: Partial<Exercise> = {}): Exercise => ({
   regions: [{ region: "forearm", role: "primary" }],
   aliases: ["farmer carry", "farmer's walk", "paseo de granjero"],
   kind: "strength",
+  metric: "weight_reps",
   ...over,
 });
 

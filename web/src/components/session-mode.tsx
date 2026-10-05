@@ -13,9 +13,14 @@ import {
   useState,
 } from "react";
 import { pushEscape } from "../lib/escape-stack";
-import { type ExerciseKind, KIND_LABELS } from "../lib/exercises";
+import {
+  type ExerciseKind,
+  type ExerciseMetric,
+  KIND_LABELS,
+} from "../lib/exercises";
 import { beep, startPauseAudio, stopPauseAudio } from "../lib/rest-audio";
 import { useWakeLock } from "../lib/wake-lock";
+import { setFields } from "../lib/workout";
 import { WavyProgress, WavyRing } from "./expressive";
 import { CheckIcon, ChevronDownIcon, CloseIcon } from "./icons";
 import { Dialog, OverlayHeader } from "./overlay";
@@ -34,13 +39,16 @@ export type ModeItem = {
     | {
         weightKg: number | null;
         reps: number | null;
+        durationSecs: number | null;
         done: boolean;
         /** Marcas completas: la casilla se puede marcar (mismas reglas que el borrador). */
         filled: boolean;
       }[]
     | null;
   done: boolean | null;
-  /** Sin peso: se ocultan los kilos y bastan las reps. */
+  /** Unidad de la serie (decide qué campos se piden). */
+  metric: ExerciseMetric;
+  /** Sin peso: solo suelta los kilos de la métrica `weight_reps`. */
   noWeight: boolean;
   /** Pausa entre series y al terminar el ejercicio, en segundos; null = sin
    *  descanso programado. */
@@ -80,13 +88,13 @@ export function SessionMode({
   onSetValue: (
     id: number,
     index: number,
-    field: "weightKg" | "reps",
+    field: "weightKg" | "reps" | "durationSecs",
     raw: string,
   ) => void;
   onStep: (
     id: number,
     index: number,
-    field: "weightKg" | "reps",
+    field: "weightKg" | "reps" | "durationSecs",
     delta: number,
   ) => void;
   onToggleNoWeight: (id: number) => void;
@@ -119,6 +127,7 @@ export function SessionMode({
 
   const item = items[Math.min(active, items.length - 1)];
   const last = active >= items.length - 1;
+  const fields = setFields(item.metric, item.noWeight);
 
   const advance = useCallback(
     () => setActive((i) => Math.min(i + 1, items.length - 1)),
@@ -320,14 +329,17 @@ export function SessionMode({
 
           {item.sets !== null && (
             <div className="flex w-full max-w-sm min-w-0 flex-col items-center gap-3">
-              <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
-                <Switch
-                  aria-label={`Sin peso · ${item.name}`}
-                  checked={item.noWeight}
-                  onChange={() => onToggleNoWeight(item.id)}
-                />
-                Sin peso
-              </div>
+              {/* «Sin peso» solo donde el kg es opcional (`weight_reps`). */}
+              {item.metric === "weight_reps" && (
+                <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
+                  <Switch
+                    aria-label={`Sin peso · ${item.name}`}
+                    checked={item.noWeight}
+                    onChange={() => onToggleNoWeight(item.id)}
+                  />
+                  Sin peso
+                </div>
+              )}
               {/* Las casillas de todas las series van en el encabezado, en una
                   sola tira que desplaza (el patrón de la tarjeta plegada del
                   borrador): cada fila de serie se queda con su número y sus
@@ -366,10 +378,12 @@ export function SessionMode({
                     <div
                       className={cx(
                         "grid gap-3",
-                        item.noWeight ? "grid-cols-1" : "grid-cols-2",
+                        fields.weight && (fields.reps || fields.time)
+                          ? "grid-cols-2"
+                          : "grid-cols-1",
                       )}
                     >
-                      {!item.noWeight && (
+                      {fields.weight && (
                         <Stepper
                           caption="Peso (kg)"
                           context={`${item.name} serie ${i + 1}`}
@@ -379,14 +393,28 @@ export function SessionMode({
                           onStep={(d) => onStep(item.id, i, "weightKg", d)}
                         />
                       )}
-                      <Stepper
-                        caption="Reps"
-                        context={`${item.name} serie ${i + 1}`}
-                        value={s.reps}
-                        step={1}
-                        onValue={(v) => onSetValue(item.id, i, "reps", v)}
-                        onStep={(d) => onStep(item.id, i, "reps", d)}
-                      />
+                      {fields.reps && (
+                        <Stepper
+                          caption="Reps"
+                          context={`${item.name} serie ${i + 1}`}
+                          value={s.reps}
+                          step={1}
+                          onValue={(v) => onSetValue(item.id, i, "reps", v)}
+                          onStep={(d) => onStep(item.id, i, "reps", d)}
+                        />
+                      )}
+                      {fields.time && (
+                        <Stepper
+                          caption="Segundos"
+                          context={`${item.name} serie ${i + 1}`}
+                          value={s.durationSecs}
+                          step={5}
+                          onValue={(v) =>
+                            onSetValue(item.id, i, "durationSecs", v)
+                          }
+                          onStep={(d) => onStep(item.id, i, "durationSecs", d)}
+                        />
+                      )}
                     </div>
                   </li>
                 ))}

@@ -9,14 +9,20 @@ import { listExercises, loadExercise, type Row, row, rows } from "../repo";
 import { zBody } from "../validation";
 
 /** Serie marcada de un ejercicio (el `done` ya lo garantiza la consulta). */
-type Mark = { setIndex: number; weightKg: number | null; reps: number };
+type Mark = {
+  setIndex: number;
+  weightKg: number | null;
+  reps: number | null;
+  durationSecs: number | null;
+};
 /** Marca de cardio hecha. */
 type CardioMark = { distanceKm: number | null; durationMin: number | null };
 
 const markOf = (r: Row): Mark => ({
   setIndex: Number(r.setIndex),
   weightKg: r.weightKg === null ? null : Number(r.weightKg),
-  reps: Number(r.reps),
+  reps: r.reps === null ? null : Number(r.reps),
+  durationSecs: r.durationSecs === null ? null : Number(r.durationSecs),
 });
 
 const cardioMarkOf = (r: Row): CardioMark => ({
@@ -42,17 +48,18 @@ WHERE pse.exercise_id = ? AND ps.user_id = ? AND cl.done = 1`;
 
 /** Series marcadas del ejercicio (la fecha va en el IN que añade la ruta). */
 const SET_MARKS = `SELECT wl.date AS date, sl.set_index AS setIndex,
-       sl.weight_kg AS weightKg, sl.reps AS reps
+       sl.weight_kg AS weightKg, sl.reps AS reps, sl.duration_secs AS durationSecs
 FROM set_logs sl
 JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = sl.workout_log_id
 JOIN plan_sessions ps ON ps.id = wl.plan_session_id
 WHERE pse.exercise_id = ? AND ps.user_id = ? AND sl.done = 1`;
 
-/** Las mejores series KILOS primero (y a igualdad, reps) y, sin kilos, las
- *  que más repiten: la fila es la del día que las consiguió. */
+/** Las mejores series KILOS primero (y a igualdad, segundos/repeticiones) y,
+ *  sin kilos, las que más duran o repiten: la fila es la del día que lo logró. */
 const SET_BEST = `SELECT wl.date AS date, ps.name AS sessionName,
-       sl.set_index AS setIndex, sl.weight_kg AS weightKg, sl.reps AS reps
+       sl.set_index AS setIndex, sl.weight_kg AS weightKg, sl.reps AS reps,
+       sl.duration_secs AS durationSecs
 FROM set_logs sl
 JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
 JOIN workout_logs wl ON wl.id = sl.workout_log_id
@@ -136,7 +143,7 @@ export const exercises = new Hono<AppContext>()
       const results = await db.batch([
         db
           .prepare(
-            "INSERT INTO exercises (name, description, setup_cues, technique_url, steps, kind) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO exercises (name, description, setup_cues, technique_url, steps, kind, metric) VALUES (?, ?, ?, ?, ?, ?, ?)",
           )
           .bind(
             name,
@@ -145,6 +152,7 @@ export const exercises = new Hono<AppContext>()
             input.techniqueUrl ?? null,
             input.steps ? JSON.stringify(input.steps) : null,
             input.kind,
+            input.metric,
           ),
         ...tagStatements(name, input.tags, db),
         ...regionStatements(name, input.regions, db),
@@ -183,7 +191,7 @@ export const exercises = new Hono<AppContext>()
       await db.batch([
         db
           .prepare(
-            "UPDATE exercises SET name=?, description=?, setup_cues=?, technique_url=?, steps=?, kind=? WHERE id=?",
+            "UPDATE exercises SET name=?, description=?, setup_cues=?, technique_url=?, steps=?, kind=?, metric=? WHERE id=?",
           )
           .bind(
             name,
@@ -192,6 +200,7 @@ export const exercises = new Hono<AppContext>()
             input.techniqueUrl ?? null,
             input.steps ? JSON.stringify(input.steps) : null,
             input.kind,
+            input.metric,
             id,
           ),
         db.prepare("DELETE FROM exercise_tags WHERE exercise_id=?").bind(id),
@@ -236,13 +245,13 @@ export const exercises = new Hono<AppContext>()
       // Las marcas son del usuario: el ejercicio es de catálogo, su prefill no.
       const last = await row(
         db,
-        `SELECT sl.weight_kg AS weightKg, sl.reps, wl.date
+        `SELECT sl.weight_kg AS weightKg, sl.reps, sl.duration_secs AS durationSecs, wl.date
          FROM set_logs sl
          JOIN plan_session_exercises pse ON pse.id = sl.plan_session_exercise_id
          JOIN workout_logs wl ON wl.id = sl.workout_log_id
          JOIN plan_sessions ps ON ps.id = wl.plan_session_id
          WHERE pse.exercise_id = ? AND ps.user_id = ? AND wl.date < ?
-           AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL)
+           AND (sl.weight_kg IS NOT NULL OR sl.reps IS NOT NULL OR sl.duration_secs IS NOT NULL)
          ORDER BY wl.date DESC, sl.id DESC
          LIMIT 1`,
         id,
@@ -324,7 +333,7 @@ export const exercises = new Hono<AppContext>()
          ORDER BY ${
            isCardio
              ? "(cl.distance_km IS NULL), cl.distance_km DESC, cl.duration_min DESC"
-             : "(sl.weight_kg IS NULL), sl.weight_kg DESC, sl.reps DESC"
+             : "(sl.weight_kg IS NULL), sl.weight_kg DESC, sl.duration_secs DESC, sl.reps DESC"
 }, wl.date DESC
          LIMIT 1`,
         id,

@@ -56,8 +56,11 @@ import {
   type Exercise,
   type ExerciseInput,
   type ExerciseKind,
+  type ExerciseMetric,
   type ExerciseRegion,
   KIND_LABELS,
+  METRIC_LABELS,
+  METRIC_ORDER,
   matchesExercise,
   type RegionRole,
   ROLE_LABELS,
@@ -247,6 +250,7 @@ type Draft = {
   aliases: string[];
   regions: ExerciseRegion[];
   kind: ExerciseKind;
+  metric: ExerciseMetric;
 };
 
 const emptyDraft = (): Draft => ({
@@ -259,6 +263,7 @@ const emptyDraft = (): Draft => ({
   aliases: [],
   regions: [],
   kind: "strength",
+  metric: "weight_reps",
 });
 
 const toDraft = (x: Exercise): Draft => ({
@@ -271,6 +276,7 @@ const toDraft = (x: Exercise): Draft => ({
   aliases: [...x.aliases],
   regions: x.regions.map((r) => ({ ...r })),
   kind: x.kind,
+  metric: x.metric,
 });
 
 const toInput = (d: Draft): ExerciseInput => {
@@ -285,6 +291,7 @@ const toInput = (d: Draft): ExerciseInput => {
     aliases: d.aliases,
     regions: d.regions,
     kind: d.kind,
+    metric: d.metric,
   };
 };
 
@@ -563,6 +570,23 @@ function ExerciseEditor({
               })}
             </ConnectedGroup>
           </section>
+          {draft.kind === "strength" && (
+            <section className="flex flex-col gap-3">
+              <h2 className="text-title-m">Métrica de la serie</h2>
+              <ConnectedGroup label="Métrica de la serie">
+                {METRIC_ORDER.map((m) => (
+                  <ConnectedItem
+                    key={m}
+                    pressed={draft.metric === m}
+                    className="min-h-12"
+                    onClick={() => setDraft({ ...draft, metric: m })}
+                  >
+                    {METRIC_LABELS[m]}
+                  </ConnectedItem>
+                ))}
+              </ConnectedGroup>
+            </section>
+          )}
           <section className="flex flex-col gap-3">
             <h2 id="ex-tags-label" className="text-title-m">
               Grupos musculares
@@ -1223,7 +1247,13 @@ export function EjercicioDetailPage() {
         <div className="relative flex min-w-0 grow flex-col">
           <p className="flex items-center gap-1 text-label-m">
             <KindIcon width={16} height={16} aria-hidden="true" />
-            {KIND_LABELS[exercise.kind]} · {exercise.tags.length}{" "}
+            {KIND_LABELS[exercise.kind]}
+            {/* La métrica de la serie se declara en la ficha (solo fuerza): es
+                lo que explica por qué un ejercicio pide segundos y no kilos. */}
+            {exercise.kind === "strength"
+              ? ` · ${METRIC_LABELS[exercise.metric ?? "weight_reps"]}`
+              : ""}{" "}
+            · {exercise.tags.length}{" "}
             {exercise.tags.length === 1 ? "grupo" : "grupos"}
           </p>
           <h1 className="text-headline-s text-e break-words">

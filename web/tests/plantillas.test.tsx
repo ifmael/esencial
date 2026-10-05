@@ -38,6 +38,7 @@ const press: Exercise = {
   aliases: ["bench press"],
   regions: [{ region: "chest-lower", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 const remo: Exercise = {
   id: 8,
@@ -50,6 +51,7 @@ const remo: Exercise = {
   aliases: [],
   regions: [{ region: "lats-mid", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 const sent: Exercise = {
   id: 9,
@@ -62,6 +64,7 @@ const sent: Exercise = {
   aliases: [],
   regions: [{ region: "quads", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 const run: Exercise = {
   id: 10,
@@ -74,6 +77,7 @@ const run: Exercise = {
   aliases: [],
   regions: [],
   kind: "running",
+  metric: "weight_reps",
 };
 
 const tplA = (): Template => ({
@@ -93,6 +97,7 @@ const tplA = (): Template => ({
       restAfterSecs: 150,
       exerciseName: "Press banca",
       kind: "strength",
+      metric: "weight_reps",
     },
     {
       id: 12,
@@ -107,6 +112,7 @@ const tplA = (): Template => ({
       restAfterSecs: null,
       exerciseName: "Remo",
       kind: "strength",
+      metric: "weight_reps",
     },
     {
       id: 13,
@@ -121,6 +127,7 @@ const tplA = (): Template => ({
       restAfterSecs: null,
       exerciseName: "Running",
       kind: "running",
+      metric: "weight_reps",
     },
   ],
 });

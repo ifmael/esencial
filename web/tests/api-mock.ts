@@ -17,6 +17,7 @@ export type SessionExerciseRow = {
   exerciseId: number;
   exerciseName: string;
   kind: "strength" | "running" | "bike";
+  metric: Exercise["metric"];
   position: number;
   targetSets: number | null;
   targetRepsMin: number | null;
@@ -128,6 +129,7 @@ export function mockApi(seed: Seed = {}): MockApi {
         exerciseId: raw.exerciseId,
         exerciseName: ex?.name ?? "?",
         kind: ex?.kind ?? "strength",
+        metric: ex?.metric ?? "weight_reps",
         position: pos,
         targetSets: raw.targetSets ?? null,
         targetRepsMin: raw.targetRepsMin ?? null,
@@ -328,6 +330,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           aliases?: string[];
           regions?: Exercise["regions"];
           kind?: "strength" | "running" | "bike";
+          metric?: Exercise["metric"];
         };
         const bad = validate(b);
         if (bad) return bad;
@@ -344,6 +347,7 @@ export function mockApi(seed: Seed = {}): MockApi {
           aliases: b.aliases ?? [],
           regions: b.regions ?? [],
           kind: b.kind ?? "strength",
+          metric: b.metric ?? "weight_reps",
         };
         api.state.exercises.push(ex);
         return json(ex, 201);
@@ -368,6 +372,7 @@ export function mockApi(seed: Seed = {}): MockApi {
             aliases: b.aliases ?? [],
             regions: b.regions ?? [],
             kind: b.kind ?? "strength",
+            metric: b.metric ?? "weight_reps",
           });
           return json(ex);
         }
@@ -411,5 +416,6 @@ function hydrate(
     restAfterSecs: e.restAfterSecs ?? null,
     exerciseName: ex?.name ?? "?",
     kind: ex?.kind ?? "strength",
+    metric: ex?.metric ?? "weight_reps",
   };
 }
