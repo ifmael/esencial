@@ -28,6 +28,7 @@ const press: Exercise = {
   aliases: ["bench press"],
   regions: [{ region: "chest-lower", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 const remo: Exercise = {
   id: 8,
@@ -40,6 +41,7 @@ const remo: Exercise = {
   aliases: [],
   regions: [{ region: "lats-mid", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 const run: Exercise = {
   id: 10,
@@ -52,6 +54,7 @@ const run: Exercise = {
   aliases: [],
   regions: [],
   kind: "running",
+  metric: "weight_reps",
 };
 
 const tplA = (): Template => ({
@@ -71,6 +74,7 @@ const tplA = (): Template => ({
       restAfterSecs: 150,
       exerciseName: "Press banca",
       kind: "strength",
+      metric: "weight_reps",
     },
     {
       id: 12,
@@ -85,6 +89,7 @@ const tplA = (): Template => ({
       restAfterSecs: null,
       exerciseName: "Remo",
       kind: "strength",
+      metric: "weight_reps",
     },
     {
       id: 13,
@@ -99,6 +104,7 @@ const tplA = (): Template => ({
       restAfterSecs: null,
       exerciseName: "Running",
       kind: "running",
+      metric: "weight_reps",
     },
   ],
 });
@@ -270,6 +276,7 @@ describe("plan screen", () => {
               exerciseId: 7,
               exerciseName: "Press banca",
               kind: "strength",
+              metric: "weight_reps",
               position: 0,
               targetSets: 3,
               targetRepsMin: 8,
@@ -284,6 +291,7 @@ describe("plan screen", () => {
               exerciseId: 8,
               exerciseName: "Remo",
               kind: "strength",
+              metric: "weight_reps",
               position: 1,
               targetSets: 3,
               targetRepsMin: 10,
@@ -331,6 +339,7 @@ describe("plan screen", () => {
               exerciseId: 7,
               exerciseName: "Press banca",
               kind: "strength",
+              metric: "weight_reps",
               position: 0,
               targetSets: 3,
               targetRepsMin: 8,
@@ -346,6 +355,7 @@ describe("plan screen", () => {
               exerciseId: 10,
               exerciseName: "Running",
               kind: "running",
+              metric: "weight_reps",
               position: 1,
               targetSets: null,
               targetRepsMin: null,
@@ -429,6 +439,7 @@ describe("plan screen", () => {
               exerciseId: 7,
               exerciseName: "Press banca",
               kind: "strength",
+              metric: "weight_reps",
               position: 0,
               targetSets: 3,
               targetRepsMin: 8,
@@ -485,6 +496,7 @@ describe("plan screen", () => {
               exerciseId: 7,
               exerciseName: "Press banca",
               kind: "strength",
+              metric: "weight_reps",
               position: 0,
               targetSets: 3,
               targetRepsMin: 8,
@@ -546,6 +558,7 @@ describe("plan screen", () => {
     exerciseId,
     exerciseName: name,
     kind: "strength" as const,
+    metric: "weight_reps" as const,
     position,
     targetSets: 4,
     targetRepsMin: 6,
@@ -877,6 +890,7 @@ describe("editor del día (sesión) en modal", () => {
               exerciseId: 7,
               exerciseName: "Press banca",
               kind: "strength",
+              metric: "weight_reps",
               position: 0,
               targetSets: 3,
               targetRepsMin: 8,
@@ -949,6 +963,7 @@ describe("editor del día (sesión) en modal", () => {
               exerciseId: 7,
               exerciseName: "Press banca",
               kind: "strength",
+              metric: "weight_reps",
               position: 0,
               targetSets: 3,
               targetRepsMin: 8,

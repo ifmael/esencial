@@ -360,6 +360,49 @@ móvil y las de escritorio simulan la consulta. Lo cubren
   siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
   lista también (el único `PUT` admitido es el recuento de series, ver arriba).
 
+### Métrica de la serie (0025)
+
+No todos los ejercicios encajan en kilos × repeticiones, así que cada ejercicio
+de fuerza declara su **unidad** en `exercises.metric` (migración aditiva
+`0025_exercise_metric.sql`):
+
+|Métrica|Qué se registra|Ejemplos|
+|---|---|---|
+|`weight_reps`|kg × repeticiones (el caso normal; también los que admiten lastre o implemento)|Press banca, dominadas con cinturón, fondos|
+|`reps`|repeticiones sin peso|Flexiones, rueda abdominal, bicho muerto|
+|`time`|segundos (isométricos y aguantes)|Plancha, bote hueco, colgarse de la barra|
+|`weight_time`|kilos + segundos|Paseo del granjero|
+
+- El vocabulario vive en **dos espejos que un test ata**: `METRICS`
+  (`api/src/api-validation.ts`) y `METRIC_LABELS` (`web/src/lib/exercises.ts`);
+  lo cubre `web/tests/exercise-metric.test.ts`. El editor de ejercicios lo elige
+  en el grupo «Métrica de la serie» (solo para fuerza) y la API lo valida
+  (una métrica desconocida → 400 `{field:'metric'}`).
+- `setFields(metric, noWeight)` (`lib/workout.ts`) dice qué pide una serie y el
+  borrador (y el modo sesión) pinta solo esos campos: kg, reps y/o segundos. El
+  conmutador **«Sin peso» solo existe en `weight_reps`** (suelta el kg ad hoc);
+  en `reps`/`time` no hay kilos y en `weight_time` la carga es parte del
+  ejercicio.
+- Una serie por tiempo viaja con `durationSecs` y sin `reps` ni `weightKg`
+  (`set_logs.duration_secs`, columna nula: `schema.sql` la refleja y el
+  bootstrap la aplica por ahí, como 0021). El payload normaliza: la métrica
+  decide qué campos salen (`weightKg`/`reps`/`durationSecs`), así que no viajan
+  kilos sembrados que nadie vio. `setLogSchema` exige **reps o segundos** en una
+  serie hecha.
+- El plan **no prescribe segundos todavía** (decisión: «N series» basta). Lo
+  que sí hace es **ocultar** «Reps mín/máx» cuando la métrica es de tiempo, en
+  el editor del día y en el de plantillas (el `metric` viaja en las filas del
+  plan y de la plantilla).
+- El histórico lo entiende: `progressMetric` añade `durationSecs` (kilos →
+  segundos → reps → km) y `/last` y `/api/exercises/:id/history` devuelven la
+  columna; el «mejor» desempata por kilos, luego segundos, luego reps. Los
+  formateadores toleran un campo ausente (`!= null`) para no pintar «undefined
+  s» contra un Worker antiguo.
+- Lo cubren `api/tests/exercise-metric.test.ts` (ida y vuelta por la API real),
+  `web/tests/exercise-metric.test.ts` (espejos y `setFields`),
+  `web/tests/workout-helpers.test.ts`, `web/tests/sesion.test.tsx` (un ejercicio
+  `time` pide segundos y los manda) y `web/tests/ejercicios.test.tsx` (el editor).
+
 ### Modo interactivo de sesión y descansos (0018)
 
 `/sesion/:date` tiene un botón «Empezar» (tonal, a lo ancho, bajo la cabecera)
@@ -773,14 +816,29 @@ reescriben migraciones pasadas. Sin `;` en los comentarios (el test la parte por
 ellos). Los alias se resuelven con un `JOIN`/`SELECT` por nombre, así que un
 catálogo recortado no la rompe.
 - `0023_ejercicios_barra_libre.sql` es **sembrado**: 17 ejercicios de «Barra
-Libre» con sus tags, sub-regiones (con grado) y alias. Tampoco va al bootstrap;
-la cubre `api/tests/barra-libre-migration.test.ts`.
+  Libre» con sus tags, sub-regiones (con grado) y alias. Tampoco va al bootstrap;
+  la cubre `api/tests/barra-libre-migration.test.ts`.
+- `0024_videos_barra_libre.sql` es **sembrado** y aditivo: el `technique_url`
+  (YouTube, en español) de esos 17, que eran los únicos del catálogo sin vídeo.
+  Resuelve por nombre (un catálogo recortado no la rompe), va **después** de
+  0023 y tampoco va al bootstrap. Sin `;` en los comentarios (el test la parte
+  por ellos); la cubre `api/tests/barra-libre-videos-migration.test.ts`.
+- `0025_exercise_metric.sql` es **aditiva**: `exercises.metric` (la unidad de la
+  serie: `weight_reps` | `reps` | `time` | `weight_time`) y
+  `set_logs.duration_secs` (los segundos de una serie por tiempo). Siembra la
+  métrica de los ejercicios que no encajan en kilos × repeticiones (isométricos
+  y aguantes → `time`, peso corporal → `reps`, paseo del granjero →
+  `weight_time`); el resto queda en `weight_reps`. Las dos columnas nacen con
+  valor por defecto o nulas, así que se puede aplicar antes del merge; va al
+  bootstrap por `schema.sql` (como 0021), no necesita lista propia. Sin `;` en
+  los comentarios. La documenta «Métrica de la serie» y la cubre
+  `api/tests/exercise-metric.test.ts`.
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
-nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
-histórico de planificación, justo después del deploy; **0013–0015, 0018 y
-0022–0023 van antes del merge a `main`**, porque el merge publica la API que ya
-lee `exercise_regions.role`, los descansos y `exercise_aliases` — ver
-`DEPLOY.md` §4).
+  nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
+  histórico de planificación, justo después del deploy; **0013–0015, 0018 y
+  0022–0025 van antes del merge a `main`**, porque el merge publica la API que ya
+  lee `exercise_regions.role`, los descansos, `exercise_aliases`, los vídeos de
+  los ejercicios nuevos y la métrica — ver `DEPLOY.md` §4).
 
   **Ojo con el orden cuando el cambio no es de ida y vuelta.** Aplicar la
 migración antes del merge solo es seguro si es **aditiva** (una columna nueva
@@ -943,9 +1001,11 @@ con taxonomía general de grupo muscular: `pecho`, `espalda`, `hombro`, `bíceps
 `technique_url` (vídeos de YouTube) y `steps` (arreglo JSON de pasos, columna
 añadida en 0005) se ingestan por nombre en `0006_exercise_steps_data.sql`.
 Todos los vídeos del catálogo son en **español** (auditado con yt-dlp en e8;
-faltantes/reemplazos viven en `0007` y `0008`).
-Los pasos solo faltan en ejercicios creados a mano — rellenarlos desde el
-editor (textarea "Pasos de ejecución", un paso por línea).
+faltantes/reemplazos viven en `0007`, `0008` y, para los 17 de «Barra Libre»,
+`0024`).
+Los pasos faltan en los ejercicios creados a mano **y en los 17 de "Barra
+Libre"** — rellenarlos desde el editor (textarea "Pasos de ejecución", un paso
+por línea).
 
 Las **sub-regiones** de esos 91 ejercicios vienen en
 `0010_exercise_regions.sql`: 237 filas, 33 de las 35 regiones que tenía entonces
@@ -996,6 +1056,14 @@ por eso «Squat en rack con kettlebell» es fila propia y no la sentadilla goble
 Fuera de alcance: «Saltos de cuerda», que es cardio (`kind` no lo admite). Lo
 cubre `e2e/tests/catalog.spec.ts` (el alias busca, el nuevo aparece, filtra por
 músculo y se añade a un día del plan).
+
+Los 17 entraron **sin vídeo de técnica** (los 91 originales lo traen desde
+`0006`): `0024_videos_barra_libre.sql` les pone el suyo, en español y con el
+canal hispanohablante, elegido a mano y verificado con yt-dlp (existe y es
+embebible). Lo cubre `api/tests/barra-libre-videos-migration.test.ts`, que
+comprueba que las 17 filas resuelven por nombre, que la URL es la forma
+`watch?v=` de 11 caracteres que reconoce `ytEmbedId` y que no hay clips
+repetidos.
 
 ## Fotos de recetas (R2)
 

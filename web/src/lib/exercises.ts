@@ -11,6 +11,25 @@ export const KIND_LABELS: Record<ExerciseKind, string> = {
   bike: "Bici",
 };
 
+/** Unidad de la serie de un ejercicio de fuerza (espejo de `METRICS` en la API;
+ *  lo ata `tests/muscle-regions.test.ts`). El cardio usa distancia/tiempo. */
+export type ExerciseMetric = "weight_reps" | "reps" | "time" | "weight_time";
+
+export const METRIC_LABELS: Record<ExerciseMetric, string> = {
+  weight_reps: "Peso × reps",
+  reps: "Reps",
+  time: "Segundos",
+  weight_time: "Peso × segundos",
+};
+
+/** Orden de la escala, para el grupo conectado del editor. */
+export const METRIC_ORDER: ExerciseMetric[] = [
+  "weight_reps",
+  "reps",
+  "time",
+  "weight_time",
+];
+
 /** Grado de implicación de un músculo, de más a menos (espejo de
  *  `REGION_ROLES` en la API; `tests/muscle-regions.test.ts` los ata). */
 export type RegionRole = "primary" | "secondary" | "stabilizer";
@@ -61,6 +80,8 @@ export type Exercise = {
    *  con su grado, ordenadas por región. */
   regions: ExerciseRegion[];
   kind: ExerciseKind;
+  /** Unidad de la serie (solo fuerza): kg×reps, reps, segundos o kg+segundos. */
+  metric: ExerciseMetric;
 };
 
 export type ExerciseInput = {
@@ -74,6 +95,8 @@ export type ExerciseInput = {
   regions?: ExerciseRegion[];
   /** Ausente = el servidor aplica "strength". */
   kind?: ExerciseKind;
+  /** Ausente = el servidor aplica "weight_reps". */
+  metric?: ExerciseMetric;
 };
 
 /** Minúsculas y sin tildes: «Elevación» y «elevacion» son lo mismo. */

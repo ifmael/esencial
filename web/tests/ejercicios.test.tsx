@@ -36,6 +36,7 @@ const press: Exercise = {
     { region: "triceps-lateral", role: "secondary" },
   ],
   kind: "strength",
+  metric: "weight_reps",
 };
 const remo: Exercise = {
   id: 8,
@@ -48,6 +49,7 @@ const remo: Exercise = {
   aliases: [],
   regions: [{ region: "lats-mid", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 const peso: Exercise = {
   id: 9,
@@ -60,6 +62,7 @@ const peso: Exercise = {
   aliases: [],
   regions: [{ region: "quads", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 
 const tplA = (): Template => ({
@@ -79,6 +82,7 @@ const tplA = (): Template => ({
       restAfterSecs: null,
       exerciseName: "Press banca",
       kind: "strength",
+      metric: "weight_reps",
     },
     {
       id: 12,
@@ -93,6 +97,7 @@ const tplA = (): Template => ({
       restAfterSecs: null,
       exerciseName: "Remo",
       kind: "strength",
+      metric: "weight_reps",
     },
   ],
 });
@@ -564,5 +569,25 @@ describe("detail", () => {
     );
     const put = api.calls.find((c) => c.method === "PUT")!;
     expect(put.url).toBe("/api/exercises/8");
+  });
+
+  it("el editor elige la métrica de la serie y la manda al guardar", async () => {
+    renderAt("/ejercicios/8");
+    await screen.findByRole("heading", { name: "Remo" });
+    fireEvent.click(screen.getByRole("button", { name: /editar/i }));
+    await screen.findByLabelText("Nombre");
+    // El grupo solo existe para fuerza; «Remo» es weight_reps por defecto.
+    expect(
+      screen
+        .getByRole("button", { name: "Peso × reps" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Segundos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(api.calls.some((c) => c.method === "PUT")).toBe(true),
+    );
+    const put = api.calls.find((c) => c.method === "PUT")!;
+    expect(put.body?.metric).toBe("time");
   });
 });

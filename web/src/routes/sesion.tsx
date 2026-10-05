@@ -44,7 +44,7 @@ import {
   Textarea,
 } from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
-import { targetSummary } from "../lib/exercises";
+import { type ExerciseMetric, targetSummary } from "../lib/exercises";
 import {
   type PlanSession,
   planItems,
@@ -72,19 +72,27 @@ import {
   parseDateEs,
   previousMarks,
   previousSession,
+  type SetFields,
+  setFields,
   setsProgress,
 } from "../lib/workout";
 import { formatDateEs } from "./dia";
 
 // --- Wire types (camelCase after the E6 setLogSchema normalization) ---------
 
-type LastValue = { weightKg: number | null; reps: number; date: string };
+type LastValue = {
+  weightKg: number | null;
+  reps: number | null;
+  durationSecs: number | null;
+  date: string;
+};
 
 type SetLogItem = {
   planSessionExerciseId: number;
   setIndex: number;
   weightKg: number | null;
   reps: number | null;
+  durationSecs: number | null;
   done: boolean;
   exerciseId: number;
   exerciseName: string;
@@ -115,6 +123,7 @@ type LoggedDay = {
 type DraftSet = {
   weightKg: number | null;
   reps: number | null;
+  durationSecs: number | null;
   done: boolean;
   touched: boolean;
 };
@@ -125,6 +134,8 @@ type DraftExercise = {
   previous: string | null;
   /** Esa misma sesión, serie a serie: la homóloga de cada serie del borrador. */
   prevSets: (HomologMarks | null)[];
+  /** Unidad de la serie (la declara el catálogo); decide qué campos se piden. */
+  metric: ExerciseMetric;
   /** Sin peso: se oculta el campo de kilos, bastan las reps y viaja weightKg null. */
   noWeight: boolean;
   sets: DraftSet[];
@@ -194,28 +205,41 @@ async function buildDraft(
           log?.sets.filter((s) => s.planSessionExerciseId === se.id) ?? [];
         const prevSets =
           prevLog?.sets.filter((s) => s.exerciseId === se.exerciseId) ?? [];
+        const noWeight =
+          logged.length > 0
+            ? isNoWeight(logged)
+            : last !== null && isNoWeight([last]);
+        // Qué pide la serie lo decide la métrica del ejercicio; «sin peso» solo
+        // suelta el kg de «Peso × reps». El resto de campos no se piden ni se
+        // siembran (el registro los normaliza al guardar).
+        const fields = setFields(se.metric, noWeight);
         return {
           se,
           last,
           previous: prev && formatPrevious(prev.date, prevSets),
           prevSets: previousMarks(prevSets),
-          noWeight:
-            logged.length > 0
-              ? isNoWeight(logged)
-              : last !== null && isNoWeight([last]),
+          metric: se.metric,
+          noWeight,
           sets:
             logged.length > 0
-              ? logged.map(({ weightKg, reps, done }) => ({
+              ? logged.map(({ weightKg, reps, durationSecs, done }) => ({
                   weightKg,
                   reps,
+                  durationSecs,
                   // Hecha solo con sus marcas: un registro antiguo sin ellas no cuenta.
                   done:
-                    done && isSetFilled({ weightKg, reps }, isNoWeight(logged)),
+                    done &&
+                    isSetFilled({ weightKg, reps, durationSecs }, fields),
                   touched: false,
                 }))
               : Array.from({ length: defaultSetCount(se.targetSets) }, () => ({
-                  weightKg: last?.weightKg ?? null,
-                  reps: last?.reps ?? se.targetRepsMin ?? null,
+                  weightKg: fields.weight ? (last?.weightKg ?? null) : null,
+                  reps: fields.reps
+                    ? (last?.reps ?? se.targetRepsMin ?? null)
+                    : null,
+                  durationSecs: fields.time
+                    ? (last?.durationSecs ?? null)
+                    : null,
                   done: false,
                   touched: false,
                 })),
@@ -266,10 +290,12 @@ function modeItems(v: Draft): ModeItem[] {
         sets: ex.sets.map((s) => ({
           weightKg: s.weightKg,
           reps: s.reps,
+          durationSecs: s.durationSecs,
           done: s.done,
-          filled: isSetFilled(s, ex.noWeight),
+          filled: isSetFilled(s, setFields(ex.metric, ex.noWeight)),
         })),
         done: null,
+        metric: ex.metric,
         noWeight: ex.noWeight,
         restSecs: ex.se.restSecs ?? null,
         restAfterSecs: ex.se.restAfterSecs ?? null,
@@ -284,6 +310,7 @@ function modeItems(v: Draft): ModeItem[] {
         objective: targetSummary(c.se),
         sets: null,
         done: c.done,
+        metric: c.se.metric,
         noWeight: false,
         restSecs: null,
         restAfterSecs: c.se.restAfterSecs ?? null,
@@ -364,34 +391,37 @@ export function useWorkoutDay(date: string) {
       ),
     }));
 
-  /** Tocar una marca decide «hecha»: completa (kilos y reps, o solo reps sin
-   * peso) la marca; vaciarla la desmarca. La precarga no pasa por aquí. */
-  const withMarks = (s: DraftSet, noWeight: boolean): DraftSet => ({
+  /** Tocar una marca decide «hecha»: la métrica del ejercicio dice qué campos
+   *  hacen falta; vaciar uno requerido la desmarca. La precarga no pasa por aquí. */
+  const withMarks = (s: DraftSet, fields: SetFields): DraftSet => ({
     ...s,
     touched: true,
-    done: isSetFilled(s, noWeight),
+    done: isSetFilled(s, fields),
   });
 
   const setDraftValue = (
     seId: number,
     setIdx: number,
-    field: "weightKg" | "reps",
+    field: "weightKg" | "reps" | "durationSecs",
     value: string,
   ) =>
     mutateSet(seId, setIdx, (s, ex) =>
-      withMarks({ ...s, [field]: numOrNull(value) }, ex.noWeight),
+      withMarks(
+        { ...s, [field]: numOrNull(value) },
+        setFields(ex.metric, ex.noWeight),
+      ),
     );
 
   const stepValue = (
     seId: number,
     setIdx: number,
-    field: "weightKg" | "reps",
+    field: "weightKg" | "reps" | "durationSecs",
     delta: number,
   ) =>
     mutateSet(seId, setIdx, (s, ex) =>
       withMarks(
         { ...s, [field]: Math.max(0, (s[field] ?? 0) + delta) },
-        ex.noWeight,
+        setFields(ex.metric, ex.noWeight),
       ),
     );
 
@@ -399,7 +429,7 @@ export function useWorkoutDay(date: string) {
   const toggleDone = (seId: number, setIdx: number) =>
     mutateSet(seId, setIdx, (s, ex) => ({
       ...s,
-      done: !s.done && isSetFilled(s, ex.noWeight),
+      done: !s.done && isSetFilled(s, setFields(ex.metric, ex.noWeight)),
     }));
 
   /** Copia la serie homóloga de la sesión anterior: no marca la serie (ver
@@ -416,13 +446,14 @@ export function useWorkoutDay(date: string) {
       exercises: v.exercises.map((ex) => {
         if (ex.se.id !== seId) return ex;
         const noWeight = !ex.noWeight;
+        const fields = setFields(ex.metric, noWeight);
         return {
           ...ex,
           noWeight,
           sets: ex.sets.map((s) =>
             s.touched
-              ? withMarks(s, noWeight)
-              : { ...s, done: s.done && isSetFilled(s, noWeight) },
+              ? withMarks(s, fields)
+              : { ...s, done: s.done && isSetFilled(s, fields) },
           ),
         };
       }),
@@ -455,17 +486,17 @@ export function useWorkoutDay(date: string) {
 
   const completeExercise = (seId: number) =>
     patchDraft((v) => ({
-      exercises: v.exercises.map((ex) =>
-        ex.se.id !== seId
-          ? ex
-          : {
-              ...ex,
-              sets: ex.sets.map((s) => ({
-                ...s,
-                done: s.done || isSetFilled(s, ex.noWeight),
-              })),
-            },
-      ),
+      exercises: v.exercises.map((ex) => {
+        if (ex.se.id !== seId) return ex;
+        const fields = setFields(ex.metric, ex.noWeight);
+        return {
+          ...ex,
+          sets: ex.sets.map((s) => ({
+            ...s,
+            done: s.done || isSetFilled(s, fields),
+          })),
+        };
+      }),
     }));
 
   const mutateCardio = (seId: number, patch: (c: CardioDraft) => CardioDraft) =>
@@ -504,15 +535,19 @@ export function useWorkoutDay(date: string) {
         const payload = {
           effort: v.effort,
           note: noteOrNull(v.note),
-          sets: v.exercises.flatMap((ex) =>
-            ex.sets.map((s, i) => ({
+          sets: v.exercises.flatMap((ex) => {
+            const fields = setFields(ex.metric, ex.noWeight);
+            return ex.sets.map((s, i) => ({
               planSessionExerciseId: ex.se.id,
               setIndex: i,
-              weightKg: ex.noWeight ? null : s.weightKg,
-              reps: s.reps,
+              // La métrica decide qué viaja: nada de kilos sembrados que el
+              // usuario no vio, ni reps de un ejercicio por tiempo.
+              weightKg: fields.weight ? s.weightKg : null,
+              reps: fields.reps ? s.reps : null,
+              durationSecs: fields.time ? s.durationSecs : null,
               done: s.done,
-            })),
-          ),
+            }));
+          }),
           cardio: v.cardio
             .filter(
               (c) => c.done || c.distanceKm !== null || c.durationMin !== null,
@@ -1005,7 +1040,9 @@ function SesionView() {
   const openPending = v.exercises.find(
     (ex) =>
       day.expanded[ex.se.id] &&
-      ex.sets.some((s) => !s.done && isSetFilled(s, ex.noWeight)),
+      ex.sets.some(
+        (s) => !s.done && isSetFilled(s, setFields(ex.metric, ex.noWeight)),
+      ),
   );
   return (
     <div className="pb-24">
@@ -1035,6 +1072,7 @@ function SesionView() {
           const open = !!day.expanded[ex.se.id];
           const helper = ex.previous ?? formatLast(ex.last);
           const allDone = ex.sets.every((s) => s.done);
+          const fields = setFields(ex.metric, ex.noWeight);
           return (
             <Card
               key={ex.se.id}
@@ -1065,14 +1103,19 @@ function SesionView() {
                     Desde `sm` la fila lleva también la tira y va al final, como
                     el resto de cabeceras M3. */}
                 <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-end">
-                  <span className="flex shrink-0 items-center gap-2 pr-2 text-label-l">
-                    <Switch
-                      aria-label={`Sin peso · ${ex.se.exerciseName}`}
-                      checked={ex.noWeight}
-                      onChange={() => day.toggleNoWeight(ex.se.id)}
-                    />
-                    Sin peso
-                  </span>
+                  {/* «Sin peso» solo tiene sentido donde el kg es opcional
+                      (`weight_reps`): en `reps`/`time` no hay kilos y en
+                      `weight_time` la carga es parte del ejercicio. */}
+                  {ex.metric === "weight_reps" && (
+                    <span className="flex shrink-0 items-center gap-2 pr-2 text-label-l">
+                      <Switch
+                        aria-label={`Sin peso · ${ex.se.exerciseName}`}
+                        checked={ex.noWeight}
+                        onChange={() => day.toggleNoWeight(ex.se.id)}
+                      />
+                      Sin peso
+                    </span>
+                  )}
                   {!open && (
                     // Una sola línea: en móvil se lleva la suya (ancho completo)
                     // y a partir de `sm` solo cae a otra si no cabe. El borde
@@ -1084,7 +1127,7 @@ function SesionView() {
                           className="shrink-0"
                           aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
                           checked={s.done}
-                          disabled={!s.done && !isSetFilled(s, ex.noWeight)}
+                          disabled={!s.done && !isSetFilled(s, fields)}
                           onChange={() => day.toggleDone(ex.se.id, i)}
                         />
                       ))}
@@ -1132,7 +1175,7 @@ function SesionView() {
                             <Checkbox
                               aria-label={ctx}
                               checked={s.done}
-                              disabled={!s.done && !isSetFilled(s, ex.noWeight)}
+                              disabled={!s.done && !isSetFilled(s, fields)}
                               onChange={() => day.toggleDone(ex.se.id, i)}
                             />
                             <span className="w-14 text-label-l text-on-surface-variant">
@@ -1140,7 +1183,7 @@ function SesionView() {
                             </span>
                             {prev && (
                               // El valor de la serie homóloga y, a la vez, el
-                              // botón que la copia (reps y kilos, sin marcar).
+                              // botón que la copia (sus marcas, sin marcar).
                               <Button
                                 variant="text"
                                 size="md"
@@ -1156,10 +1199,12 @@ function SesionView() {
                           <div
                             className={cx(
                               "grid flex-1 gap-3",
-                              ex.noWeight ? "grid-cols-1" : "grid-cols-2",
+                              fields.weight && (fields.reps || fields.time)
+                                ? "grid-cols-2"
+                                : "grid-cols-1",
                             )}
                           >
-                            {!ex.noWeight && (
+                            {fields.weight && (
                               <Stepper
                                 caption="Peso (kg)"
                                 context={ctx}
@@ -1178,18 +1223,39 @@ function SesionView() {
                                 }
                               />
                             )}
-                            <Stepper
-                              caption="Reps"
-                              context={ctx}
-                              value={s.reps}
-                              step={1}
-                              onValue={(val) =>
-                                day.setDraftValue(ex.se.id, i, "reps", val)
-                              }
-                              onStep={(d) =>
-                                day.stepValue(ex.se.id, i, "reps", d)
-                              }
-                            />
+                            {fields.reps && (
+                              <Stepper
+                                caption="Reps"
+                                context={ctx}
+                                value={s.reps}
+                                step={1}
+                                onValue={(val) =>
+                                  day.setDraftValue(ex.se.id, i, "reps", val)
+                                }
+                                onStep={(d) =>
+                                  day.stepValue(ex.se.id, i, "reps", d)
+                                }
+                              />
+                            )}
+                            {fields.time && (
+                              <Stepper
+                                caption="Segundos"
+                                context={ctx}
+                                value={s.durationSecs}
+                                step={5}
+                                onValue={(val) =>
+                                  day.setDraftValue(
+                                    ex.se.id,
+                                    i,
+                                    "durationSecs",
+                                    val,
+                                  )
+                                }
+                                onStep={(d) =>
+                                  day.stepValue(ex.se.id, i, "durationSecs", d)
+                                }
+                              />
+                            )}
                           </div>
                         </li>
                       );

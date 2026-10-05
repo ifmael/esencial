@@ -1,13 +1,15 @@
 // Lógica pura del editor de plantillas (E4 design D2): el editor muta un
 // borrador local; guardar envía un único payload con posiciones 0..n-1.
 // Una entrada es de fuerza (series/reps) o de cardio (distancia/tiempo).
-import type { ExerciseKind } from "./exercises";
+import type { ExerciseKind, ExerciseMetric } from "./exercises";
 
 export type DraftEntry = {
   key: string; // stable React row key (never the position)
   exerciseId: number;
   exerciseName: string;
   kind: ExerciseKind;
+  /** Unidad de la serie (solo fuerza): decide los campos de objetivo. */
+  metric: ExerciseMetric;
   targetSets: number | null;
   targetRepsMin: number | null;
   targetRepsMax: number | null;

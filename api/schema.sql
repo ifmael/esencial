@@ -68,7 +68,10 @@ CREATE TABLE IF NOT EXISTS exercises (
   setup_cues    TEXT,
   technique_url TEXT,
   -- 'strength' | 'running' | 'bike'; el cardio usa distance/duration, no series.
-  kind          TEXT NOT NULL DEFAULT 'strength'
+  kind          TEXT NOT NULL DEFAULT 'strength',
+  -- Unidad de la serie (solo kind='strength'): 'weight_reps' (kg × reps),
+  -- 'reps' (peso corporal), 'time' (segundos) o 'weight_time' (kg + segundos).
+  metric        TEXT NOT NULL DEFAULT 'weight_reps'
 );
 
 CREATE TABLE IF NOT EXISTS exercise_tags (
@@ -170,6 +173,8 @@ CREATE TABLE IF NOT EXISTS set_logs (
   set_index                INTEGER NOT NULL,
   weight_kg                REAL,
   reps                     INTEGER,
+  -- Segundos de la serie (isométricos y aguantes): nulo en el resto.
+  duration_secs            INTEGER,
   done                     INTEGER NOT NULL DEFAULT 0
 );
 

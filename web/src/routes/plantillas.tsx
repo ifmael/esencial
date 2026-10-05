@@ -93,7 +93,7 @@ import {
 } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 import { morphFrom, useCreateMorph } from "../lib/view-transition";
-import { DEFAULT_SETS } from "../lib/workout";
+import { DEFAULT_SETS, setFields } from "../lib/workout";
 
 const toDraft = (t: Template): Draft => ({
   name: t.name,
@@ -102,6 +102,7 @@ const toDraft = (t: Template): Draft => ({
     exerciseId: e.exerciseId,
     exerciseName: e.exerciseName,
     kind: e.kind,
+    metric: e.metric,
     targetSets: e.targetSets,
     targetRepsMin: e.targetRepsMin,
     targetRepsMax: e.targetRepsMax,
@@ -427,12 +428,17 @@ function EntryRow({
             {target("Series", entry.targetSets, (v) => ({
               targetSets: intAt(v),
             }))}
-            {target("Reps mín", entry.targetRepsMin, (v) => ({
-              targetRepsMin: intAt(v),
-            }))}
-            {target("Reps máx", entry.targetRepsMax, (v) => ({
-              targetRepsMax: intAt(v),
-            }))}
+            {/* Los ejercicios por tiempo no se prescriben en repeticiones. */}
+            {setFields(entry.metric).reps && (
+              <>
+                {target("Reps mín", entry.targetRepsMin, (v) => ({
+                  targetRepsMin: intAt(v),
+                }))}
+                {target("Reps máx", entry.targetRepsMax, (v) => ({
+                  targetRepsMax: intAt(v),
+                }))}
+              </>
+            )}
             {target(
               "Descanso entre series (s)",
               entry.restSecs,
@@ -542,6 +548,7 @@ function TemplateEditor({
         exerciseId: e.id,
         exerciseName: e.name,
         kind: e.kind,
+        metric: e.metric,
         targetSets: e.kind === "strength" ? DEFAULT_SETS : null,
         targetRepsMin: null,
         targetRepsMax: null,

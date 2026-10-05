@@ -305,7 +305,7 @@ async function queryExercises(
   } = await hydrate(
     db,
     args,
-    `SELECT e.id, e.name, e.description, e.setup_cues AS setupCues, e.technique_url AS techniqueUrl, e.steps, e.kind FROM exercises e ${where} ORDER BY e.name COLLATE NOCASE`,
+    `SELECT e.id, e.name, e.description, e.setup_cues AS setupCues, e.technique_url AS techniqueUrl, e.steps, e.kind, e.metric FROM exercises e ${where} ORDER BY e.name COLLATE NOCASE`,
     [
       `SELECT exercise_id AS parent, tag FROM exercise_tags WHERE ${mine} ORDER BY exercise_id, tag`,
       `SELECT exercise_id AS parent, region, role FROM exercise_regions WHERE ${mine} ORDER BY exercise_id, region`,
@@ -361,7 +361,7 @@ export async function loadTemplate(
             te.target_sets AS targetSets, te.target_reps_min AS targetRepsMin, te.target_reps_max AS targetRepsMax,
             te.target_distance_km AS targetDistanceKm, te.target_duration_min AS targetDurationMin,
             te.rest_secs AS restSecs, te.rest_after_secs AS restAfterSecs,
-            e.name AS exerciseName, e.kind AS kind
+            e.name AS exerciseName, e.kind AS kind, e.metric AS metric
      FROM template_exercises te JOIN exercises e ON e.id = te.exercise_id
      WHERE te.template_id = ? ORDER BY te.position, te.id`,
     id,

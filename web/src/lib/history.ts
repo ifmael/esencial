@@ -23,7 +23,9 @@ export type HistoryDay = {
 export type ExerciseMark = {
   setIndex: number;
   weightKg: number | null;
-  reps: number;
+  reps: number | null;
+  /** Segundos de la serie (métricas de tiempo); nulo en el resto. */
+  durationSecs: number | null;
 };
 
 export type CardioMark = {
@@ -273,11 +275,17 @@ export function marksText(sets: readonly ExerciseMark[]): string | null {
 }
 
 /** Qué mide la gráfica de progresión: kilos si alguna serie los trae, si no
- *  repeticiones; en cardio, kilómetros. null cuando no hay nada que dibujar. */
-export type ProgressMetric = "weightKg" | "reps" | "distanceKm";
+ *  segundos (ejercicios por tiempo), si no repeticiones; en cardio, kilómetros.
+ *  null cuando no hay nada que dibujar. */
+export type ProgressMetric =
+  | "weightKg"
+  | "durationSecs"
+  | "reps"
+  | "distanceKm";
 
 export const PROGRESS_UNIT: Record<ProgressMetric, string> = {
   weightKg: "kg",
+  durationSecs: "s",
   reps: "reps",
   distanceKm: "km",
 };
@@ -285,10 +293,12 @@ export const PROGRESS_UNIT: Record<ProgressMetric, string> = {
 export function progressMetric(
   sessions: readonly ExerciseHistorySession[],
 ): ProgressMetric | null {
-  if (sessions.some((s) => s.sets.some((x) => x.weightKg !== null)))
+  if (sessions.some((s) => s.sets.some((x) => x.weightKg != null)))
     return "weightKg";
+  if (sessions.some((s) => s.sets.some((x) => x.durationSecs != null)))
+    return "durationSecs";
   if (sessions.some((s) => s.sets.length > 0)) return "reps";
-  if (sessions.some((s) => s.cardio !== null && s.cardio.distanceKm !== null))
+  if (sessions.some((s) => s.cardio != null && s.cardio.distanceKm != null))
     return "distanceKm";
   return null;
 }
@@ -310,7 +320,7 @@ export function progressPoints(
           : [session.cardio.distanceKm]
         : session.sets
             .map((s) => s[metric])
-            .filter((value): value is number => value !== null);
+            .filter((value): value is number => value != null);
     if (values.length === 0) continue;
     points.push({ date: session.date, value: Math.max(...values) });
   }

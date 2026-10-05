@@ -47,6 +47,10 @@ export const foodSchema = z.object({
 
 export const KINDS = ["strength", "running", "bike"] as const;
 
+/** Unidad de la serie de un ejercicio de fuerza. Espejo de `METRIC_LABELS`
+ *  (web), que ata `tests/muscle-regions.test.ts`. */
+export const METRICS = ["weight_reps", "reps", "time", "weight_time"] as const;
+
 /** Grado de implicación de un músculo en un ejercicio, de más a menos. */
 export const REGION_ROLES = ["primary", "secondary", "stabilizer"] as const;
 
@@ -78,6 +82,7 @@ export const exerciseSchema = z
       .optional()
       .default([]),
     kind: z.enum(KINDS).default("strength"),
+    metric: z.enum(METRICS).default("weight_reps"),
   })
   .superRefine((v, ctx) => {
     // Alias: sin vacíos y sin repetidos (misma clave que la búsqueda: en
@@ -189,12 +194,19 @@ export const setLogSchema = z
     setIndex: z.number().int().min(0),
     weightKg: z.number().min(0).optional().nullable(),
     reps: z.number().int().min(0).optional().nullable(),
+    /** Segundos de la serie (métricas `time` y `weight_time`). */
+    durationSecs: z.number().int().min(0).optional().nullable(),
     done: z.boolean().optional().default(false),
   })
-  .refine((s) => !s.done || (s.reps ?? null) !== null, {
-    message: "A done set requires reps",
-    path: ["reps"],
-  });
+  // Una serie hecha lleva su unidad: repeticiones (fuerza) o segundos (tiempo).
+  .refine(
+    (s) =>
+      !s.done || (s.reps ?? null) !== null || (s.durationSecs ?? null) !== null,
+    {
+      message: "A done set requires reps or duration",
+      path: ["reps"],
+    },
+  );
 
 // Cardio: distancia y tiempo opcionales; `done` sin marcas = hecho sin números.
 export const cardioLogSchema = z.object({

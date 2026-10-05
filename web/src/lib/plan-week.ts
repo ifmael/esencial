@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiGet, apiSend } from "./api";
 import { toISODate } from "./day";
-import type { ExerciseKind } from "./exercises";
+import type { ExerciseKind, ExerciseMetric } from "./exercises";
 import { weekStreak } from "./reward";
 
 export type PlanSession = {
@@ -23,6 +23,8 @@ export type SessionExercise = {
   exerciseId: number;
   exerciseName: string;
   kind: ExerciseKind;
+  /** Unidad de la serie (solo fuerza): decide qué campos se registran. */
+  metric: ExerciseMetric;
   position: number;
   targetSets: number | null;
   targetRepsMin: number | null;

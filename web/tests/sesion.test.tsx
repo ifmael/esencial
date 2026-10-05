@@ -43,6 +43,7 @@ const SESSION_DETAIL = {
       exerciseId: 21,
       exerciseName: "Press banca",
       kind: "strength",
+      metric: "weight_reps",
       position: 0,
       targetSets: 3,
       targetRepsMin: 6,
@@ -57,6 +58,7 @@ const SESSION_DETAIL = {
       exerciseId: 22,
       exerciseName: "Remo con barra",
       kind: "strength",
+      metric: "weight_reps",
       position: 1,
       targetSets: null,
       targetRepsMin: null,
@@ -71,6 +73,7 @@ const SESSION_DETAIL = {
       exerciseId: 23,
       exerciseName: "Running",
       kind: "running",
+      metric: "weight_reps",
       position: 2,
       targetSets: null,
       targetRepsMin: null,
@@ -129,7 +132,12 @@ function mockApi(opts: {
   }[];
   last?: Record<
     number,
-    { weightKg: number | null; reps: number; date: string } | null
+    {
+      weightKg: number | null;
+      reps: number | null;
+      durationSecs?: number | null;
+      date: string;
+    } | null
   >;
   log?: unknown; // GET /api/workout-logs response when logged
   logs?: Record<string, unknown>; // otros días registrados (sesión anterior)
@@ -424,6 +432,7 @@ describe("state A: editable", () => {
       setIndex: 0,
       weightKg: null,
       reps: 6, // objetivo de reps del plan cuando no hay histórico
+      durationSecs: null,
       done: false,
     });
     expect(body.sets[0]).not.toHaveProperty("set_index");
@@ -1544,5 +1553,119 @@ describe("modo interactivo", () => {
     expect(
       within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
     ).toBeDefined();
+  });
+});
+
+describe("ejercicio por tiempo (metric: time)", () => {
+  const CORE = {
+    id: 1,
+    date: "2026-09-02",
+    name: "Core",
+    status: "planned",
+    exercises: [
+      {
+        id: 31,
+        exerciseId: 41,
+        exerciseName: "Plancha",
+        kind: "strength",
+        metric: "time",
+        position: 0,
+        targetSets: 2,
+        targetRepsMin: null,
+        targetRepsMax: null,
+        targetDistanceKm: null,
+        targetDurationMin: null,
+        restSecs: null,
+        restAfterSecs: null,
+      },
+    ],
+  };
+
+  it("pide segundos (ni kilos ni reps) y los manda al cerrar la sesión", async () => {
+    const api = mockApi({
+      detail: CORE,
+      sessions: [
+        { id: 1, date: "2026-09-02", name: "Core", status: "planned" },
+      ],
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de plancha/i }),
+    );
+
+    expect((await screen.findAllByText("Segundos")).length).toBe(2);
+    expect(screen.queryAllByText("Peso (kg)")).toHaveLength(0);
+    expect(screen.queryAllByText("Reps")).toHaveLength(0);
+    // Sin kg no hay conmutador «Sin peso».
+    expect(screen.queryByRole("switch")).toBeNull();
+
+    // Escribir los segundos de la primera serie la marca sola.
+    fireEvent.change(screen.getByLabelText(/^segundos · plancha serie 1$/i), {
+      target: { value: "45" },
+    });
+    const first = screen.getByRole("checkbox", { name: "Plancha serie 1" });
+    await waitFor(() => expect((first as HTMLInputElement).checked).toBe(true));
+
+    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    fireEvent.click(await primaryClose());
+    await waitFor(() => expect(api.posts.length).toBe(1));
+    const body = api.posts[0] as { sets: SetItem[] };
+    expect(body.sets[0]).toEqual({
+      planSessionExerciseId: 31,
+      setIndex: 0,
+      weightKg: null,
+      reps: null,
+      durationSecs: 45,
+      done: true,
+    });
+  });
+
+  it("la sesión anterior por tiempo rellena los segundos homólogos", async () => {
+    mockApi({
+      detail: CORE,
+      sessions: [
+        { id: 1, date: "2026-09-02", name: "Core", status: "planned" },
+        { id: 9, date: "2026-08-26", name: "Core", status: "logged" },
+      ],
+      logs: {
+        "2026-08-26": {
+          date: "2026-08-26",
+          status: "logged",
+          readOnly: true,
+          effort: 3,
+          note: null,
+          session: { id: 9, name: "Core" },
+          sets: [
+            {
+              planSessionExerciseId: 99,
+              setIndex: 0,
+              weightKg: null,
+              reps: null,
+              durationSecs: 60,
+              done: true,
+              exerciseId: 41,
+              exerciseName: "Plancha",
+            },
+          ],
+          cardio: [],
+        },
+      },
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de plancha/i }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /copiar 60 s de la sesión anterior a plancha serie 1/i,
+      }),
+    );
+    expect(
+      (
+        screen.getByLabelText(
+          /^segundos · plancha serie 1$/i,
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("60");
   });
 });

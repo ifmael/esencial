@@ -2,7 +2,7 @@
 // ejercicios (fuerza y/o cardio) en orden alfabético + mutate + refetch.
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "./api";
-import type { ExerciseKind } from "./exercises";
+import type { ExerciseKind, ExerciseMetric } from "./exercises";
 import type { TemplatePayload } from "./template-draft";
 
 export type TemplateExerciseRow = {
@@ -19,6 +19,8 @@ export type TemplateExerciseRow = {
   restAfterSecs: number | null;
   exerciseName: string;
   kind: ExerciseKind;
+  /** Unidad de la serie (solo fuerza): decide los campos de objetivo. */
+  metric: ExerciseMetric;
 };
 
 export type Template = {

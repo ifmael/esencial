@@ -102,8 +102,8 @@ function itemInserts(
     ...input.sets.map((s) =>
       db
         .prepare(
-          `INSERT INTO set_logs (workout_log_id, plan_session_exercise_id, set_index, weight_kg, reps, done)
-           VALUES (${LOG_ID}, ?, ?, ?, ?, ?)`,
+          `INSERT INTO set_logs (workout_log_id, plan_session_exercise_id, set_index, weight_kg, reps, duration_secs, done)
+           VALUES (${LOG_ID}, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           date,
@@ -112,6 +112,7 @@ function itemInserts(
           s.setIndex,
           s.weightKg ?? null,
           s.reps ?? null,
+          s.durationSecs ?? null,
           s.done ? 1 : 0,
         ),
     ),
@@ -142,7 +143,8 @@ async function serialize(
 ) {
   const rawSets = await rows(
     db,
-    `SELECT sl.set_index AS setIndex, sl.weight_kg AS weightKg, sl.reps, sl.done,
+    `SELECT sl.set_index AS setIndex, sl.weight_kg AS weightKg, sl.reps,
+            sl.duration_secs AS durationSecs, sl.done,
             sl.plan_session_exercise_id AS planSessionExerciseId,
             e.name AS exerciseName, e.kind AS kind, e.id AS exerciseId
      FROM set_logs sl
