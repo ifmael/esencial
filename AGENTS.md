@@ -359,6 +359,15 @@ móvil y las de escritorio simulan la consulta. Lo cubren
   lo registrado sin llamar a la API. Los ejercicios de una sesión registrada
   siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
   lista también (el único `PUT` admitido es el recuento de series, ver arriba).
+- **Autoguardado del borrador** (`lib/day-draft.ts`): cada cambio de una sesión
+  **planificada** —marcas de series, cardio, esfuerzo y nota— se escribe en
+  `localStorage` bajo `esencial.borrador.<fecha>`, así que un refresco accidental
+  no pierde nada al volver. Se limpia al cerrar la sesión y al abrir un día sin
+  sesión o ya registrado; al **corregir** manda el registro y no se guarda. Al
+  restaurar solo se aplica lo que sigue encajando con el plan (mismo item y mismo
+  número de series); no viaja entre dispositivos. Lo cubren
+  `web/tests/day-draft.test.ts`, `web/tests/sesion.test.tsx` y
+  `e2e/tests/session-mode.spec.ts`.
 
 ### Métrica de la serie (0025)
 
@@ -398,10 +407,14 @@ de fuerza declara su **unidad** en `exercises.metric` (migración aditiva
   columna; el «mejor» desempata por kilos, luego segundos, luego reps. Los
   formateadores toleran un campo ausente (`!= null`) para no pintar «undefined
   s» contra un Worker antiguo.
+- El **autoguardado del borrador** (`lib/day-draft.ts`) lleva también los
+  segundos: el snapshot sube a **versión 2** y una `v1` se descarta al leerla
+  (como cualquier otra versión).
 - Lo cubren `api/tests/exercise-metric.test.ts` (ida y vuelta por la API real),
   `web/tests/exercise-metric.test.ts` (espejos y `setFields`),
   `web/tests/workout-helpers.test.ts`, `web/tests/sesion.test.tsx` (un ejercicio
-  `time` pide segundos y los manda) y `web/tests/ejercicios.test.tsx` (el editor).
+  `time` pide segundos y los manda), `web/tests/day-draft.test.ts` (los segundos
+  vuelven del snapshot) y `web/tests/ejercicios.test.tsx` (el editor).
 
 ### Modo interactivo de sesión y descansos (0018)
 
@@ -414,9 +427,24 @@ borrador. El encabezado lleva a la izquierda el **aro de progreso**
 «N / M» dentro — **empieza en 0** y sube al registrar cada ejercicio entero — y
 a la derecha el aspa. Un ejercicio
 a la vez en el orden del día: nombre, objetivo, «Sin peso» y **sus series
-editables** (los mismos `Stepper` —compartidos con el borrador— y la casilla; se
-marca al quedar completa y la pausa arranca al quedar hecha, la marques a mano o
-escribiendo sus marcas).
+editables** (los mismos `Stepper` —compartidos con el borrador—; se marca al
+quedar completa y la pausa arranca al quedar hecha, la marques a mano o
+escribiendo sus marcas). Las **casillas de las series van en el encabezado del
+ejercicio**, en una sola tira de una línea (`ScrollStrip` + `Checkbox`, el mismo
+patrón de la tarjeta plegada del borrador) junto a «Sin peso»: cada fila de
+serie se queda con su número y sus steppers (a 390 px un checkbox de 48 px no
+comparte fila con dos steppers, así que ocupaba una línea por serie). Lo cubre
+`e2e/tests/session-mode.spec.ts` (a 390 px con doce series: la tira en el
+encabezado, ninguna casilla en las filas y la pausa que arranca la casilla que
+se pulsa).
+
+El cuerpo (bajo el encabezado, con scroll) centra su contenido con **márgenes
+automáticos** —un bloque interno con `my-auto`—, nunca con `justify-center` en
+el contenedor: con más series de las que caben, el centrado deja el desborde de
+arriba inaccesible (el nombre del ejercicio salía cortado bajo la cabecera),
+mientras que los márgenes automáticos se anulan solos al desbordar y el scroll
+arranca en el principio. Lo cubre `e2e/tests/session-mode.spec.ts`, que mide la
+posición del nombre y los dos huecos del centrado (no una clase).
 
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
   `rest_after_secs` (al terminar el ejercicio); columnas nulables en
@@ -440,6 +468,25 @@ escribiendo sus marcas).
   mano, «Saltar» la corta (sin pitido) y
   «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
+- **«A continuación: …»**: bajo la lista de series (o del «Hecho» del cardio), el
+  nombre del siguiente ejercicio **por orden** —el de al lado en el día, no el
+  siguiente pendiente— cuando al ejercicio activo solo le queda su última serie
+  (marcada la última también, que es lo que pasa mientras corre la pausa de fin
+  de ejercicio) o el cardio está hecho; si no queda ninguno detrás, dice
+  «Último ejercicio». Un ejercicio de una sola serie lo anuncia desde que se
+  abre. Va antes del bloque de la pausa, así que sigue a la vista durante la de
+  fin. Lo cubre `e2e/tests/session-mode.spec.ts`.
+- **El encabezado lleva el ejercicio en curso** y, al pulsarlo, un `Dialog`
+  (`mobile="sheet"`) con **todos** los ejercicios de la sesión en su orden: cada
+  fila lleva el nombre y un ✓ si está hecho —todas sus series, o el cardio
+  `done`, el mismo criterio que el aro «N / M»— o un ○, con la fila del activo
+  resaltada (`aria-pressed`, la piel tonal del sistema). Pulsar una fila cierra
+  el listado y salta a ese ejercicio. El **salto no toca la pausa** que esté
+  corriendo: sigue la misma —la pausa guarda el nombre del ejercicio con el que
+  nació, así que un salto no la renombra— y pita al agotarse, y en una de fin de
+  ejercicio avanza desde donde estés. El nombre del encabezado se recorta: con
+  nombres largos la fila no crece. Lo cubren `web/tests/sesion.test.tsx` y
+  `e2e/tests/session-mode.spec.ts` (390 px).
 - **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al
   terminar; mientras corre una pausa suena un keep-alive casi inaudible (60 Hz,
   gain 0.0008) que mantiene la pestaña «sonando» para que el navegador no la

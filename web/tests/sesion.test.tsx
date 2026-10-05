@@ -17,6 +17,8 @@ import { createFakeAudio } from "./audio-fake";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // El autoguardado del borrador escribe aquí: que no lo vea el caso siguiente.
+  window.localStorage.clear();
   window.history.pushState({}, "", "/");
 });
 
@@ -228,6 +230,73 @@ function renderAt(path: string) {
 const LOGGED = [
   { id: 1, date: "2026-09-02", name: "Empuje A", status: "logged" },
 ];
+
+describe("autoguardado del borrador", () => {
+  const DRAFT_KEY = "esencial.borrador.2026-09-02";
+  const savedDraft = () =>
+    JSON.parse(window.localStorage.getItem(DRAFT_KEY) ?? "null");
+
+  it("guarda lo escrito en cada cambio y lo recupera al volver a la pantalla", async () => {
+    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    fireEvent.change(screen.getByLabelText(/^reps · press banca serie 1$/i), {
+      target: { value: "10" },
+    });
+    // Lo escrito viaja al almacén, atado al ejercicio del plan.
+    await waitFor(() =>
+      expect(savedDraft().exercises[0].sets[0]).toMatchObject({
+        weightKg: 60,
+        reps: 10,
+        done: true,
+        touched: true,
+      }),
+    );
+    expect(savedDraft().exercises[0].id).toBe(SE_BENCH);
+
+    // Otro montaje, como un refresco: el borrador vuelve tal cual.
+    cleanup();
+    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    expect(
+      (
+        screen.getByLabelText(
+          /^reps · press banca serie 1$/i,
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("10");
+    expect(boxOf("press banca", 1).checked).toBe(true);
+  });
+
+  it("al cerrar la sesión se borra el borrador guardado", async () => {
+    const api = mockApi({
+      last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /series de press banca/i }),
+    );
+    fireEvent.click(boxOf("press banca", 1));
+    await waitFor(() =>
+      expect(window.localStorage.getItem(DRAFT_KEY)).not.toBeNull(),
+    );
+
+    fireEvent.click(
+      within(
+        screen.getByRole("radiogroup", { name: /esfuerzo percibido/i }),
+      ).getByRole("radio", { name: /^esfuerzo 3:/i }),
+    );
+    fireEvent.click(await primaryClose());
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    await screen.findByRole("button", { name: /^editar$/i });
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
+});
 
 describe("route states", () => {
   it("header shows Spanish date + session name", async () => {
@@ -1259,7 +1328,9 @@ describe("modo interactivo", () => {
 
   it("«Empezar» abre el modo con el primer ejercicio; el aspa pide confirmación", async () => {
     const mode = await enterMode();
-    expect(within(mode).getByText("Press banca")).toBeDefined();
+    expect(
+      within(mode).getByRole("heading", { name: "Press banca" }),
+    ).toBeDefined();
     expect(within(mode).getByText("0 / 3")).toBeDefined();
     // El aro del encabezado cuenta ejercicios hechos: empieza en 0.
     expect(
@@ -1332,14 +1403,18 @@ describe("modo interactivo", () => {
     const real = Date.now;
     vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
     await waitFor(() =>
-      expect(within(mode).getByText("Remo con barra")).toBeDefined(),
+      expect(
+        within(mode).getByRole("heading", { name: "Remo con barra" }),
+      ).toBeDefined(),
     );
   });
 
   it("sin descansos programados no arranca pausa ni suena", async () => {
     const mode = await enterMode({ last: { 21: benchLast, 22: rowLast } });
     fireEvent.click(within(mode).getByRole("button", { name: /^siguiente$/i }));
-    expect(within(mode).getByText("Remo con barra")).toBeDefined();
+    expect(
+      within(mode).getByRole("heading", { name: "Remo con barra" }),
+    ).toBeDefined();
     const before = audio.oscillators.length;
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
@@ -1553,6 +1628,63 @@ describe("modo interactivo", () => {
     expect(
       within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
     ).toBeDefined();
+  });
+
+  it("el encabezado lleva el ejercicio activo y su lista salta al elegido", async () => {
+    const mode = await enterMode({ last: { 21: benchLast, 22: rowLast } });
+    // El botón del encabezado dice el ejercicio activo y abre la lista.
+    const opener = (name: string) => within(mode).getByRole("button", { name });
+    const list = () => screen.getByRole("dialog", { name: /^ejercicios$/i });
+    // Cada fila añade su estado al nombre: «, pendiente» o «, hecho».
+    const row = (name: string, done = false) =>
+      within(list()).getByRole("button", {
+        name: `${name}, ${done ? "hecho" : "pendiente"}`,
+      });
+
+    fireEvent.click(opener("Press banca"));
+    expect(row("Press banca")).toBeDefined();
+    expect(row("Remo con barra")).toBeDefined();
+    expect(row("Running")).toBeDefined();
+
+    // Pulsar una fila cierra la lista y deja ese ejercicio activo.
+    fireEvent.click(row("Remo con barra"));
+    expect(screen.queryByRole("dialog", { name: /^ejercicios$/i })).toBeNull();
+    expect(opener("Remo con barra")).toBeDefined();
+    expect(
+      within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
+    ).toBeDefined();
+
+    // Volver a Press banca por la lista y arrancar su pausa entre series.
+    fireEvent.click(opener("Remo con barra"));
+    fireEvent.click(row("Press banca"));
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    const pause = () =>
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      });
+    expect(pause()).toBeDefined();
+    expect(within(mode).getByText("1:30")).toBeDefined();
+
+    // Con la pausa corriendo, el salto no la toca: sigue siendo la misma (su
+    // nombre no pasa a ser el del ejercicio nuevo) y al agotarse pita.
+    fireEvent.click(opener("Press banca"));
+    fireEvent.click(row("Remo con barra"));
+    expect(screen.queryByRole("dialog", { name: /^ejercicios$/i })).toBeNull();
+    expect(opener("Remo con barra")).toBeDefined();
+    expect(pause()).toBeDefined();
+
+    const real = Date.now;
+    vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
+    await waitFor(() =>
+      expect(
+        within(mode).queryByRole("progressbar", { name: /pausa/i }),
+      ).toBeNull(),
+    );
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
+    // Era «entre series»: al acabar no cambia de ejercicio.
+    expect(opener("Remo con barra")).toBeDefined();
   });
 });
 
