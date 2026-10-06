@@ -29,13 +29,14 @@ const press: Exercise = {
   aliases: [],
   regions: [],
   kind: "strength",
+  metric: "weight_reps",
 };
 
 const session = (
   over: Partial<ExerciseHistorySession> & { date: string },
 ): ExerciseHistorySession => ({
   sessionName: "Empuje A",
-  sets: [{ setIndex: 0, weightKg: 60, reps: 8 }],
+  sets: [{ setIndex: 0, weightKg: 60, reps: 8, durationSecs: null }],
   cardio: null,
   ...over,
 });
@@ -77,7 +78,7 @@ describe("historial del ejercicio", () => {
         best: session({
           date: "2026-07-06",
           sessionName: "Empuje A",
-          sets: [{ setIndex: 0, weightKg: 70, reps: 3 }],
+          sets: [{ setIndex: 0, weightKg: 70, reps: 3, durationSecs: null }],
         }),
         sessions: [
           session({ date: "2026-09-03", sessionName: "Empuje B" }),
@@ -85,8 +86,8 @@ describe("historial del ejercicio", () => {
             date: "2026-09-01",
             sessionName: "Empuje A",
             sets: [
-              { setIndex: 0, weightKg: 55, reps: 10 },
-              { setIndex: 1, weightKg: 62.5, reps: 5 },
+              { setIndex: 0, weightKg: 55, reps: 10, durationSecs: null },
+              { setIndex: 1, weightKg: 62.5, reps: 5, durationSecs: null },
             ],
           }),
         ],
@@ -118,7 +119,7 @@ describe("historial del ejercicio", () => {
           session({ date: "2026-09-03" }),
           session({
             date: "2026-09-01",
-            sets: [{ setIndex: 0, weightKg: 55, reps: 10 }],
+            sets: [{ setIndex: 0, weightKg: 55, reps: 10, durationSecs: null }],
           }),
         ],
       },
@@ -144,13 +145,15 @@ describe("historial del ejercicio", () => {
           session({
             date: "2026-09-03",
             sets: [
-              { setIndex: 0, weightKg: null, reps: 9 },
-              { setIndex: 1, weightKg: null, reps: 4 },
+              { setIndex: 0, weightKg: null, reps: 9, durationSecs: null },
+              { setIndex: 1, weightKg: null, reps: 4, durationSecs: null },
             ],
           }),
           session({
             date: "2026-09-01",
-            sets: [{ setIndex: 0, weightKg: null, reps: 6 }],
+            sets: [
+              { setIndex: 0, weightKg: null, reps: 6, durationSecs: null },
+            ],
           }),
         ],
       },
@@ -201,7 +204,9 @@ describe("historial del ejercicio", () => {
             session({
               date: "2026-08-20",
               sessionName: "Tirón",
-              sets: [{ setIndex: 0, weightKg: 65, reps: 6 }],
+              sets: [
+                { setIndex: 0, weightKg: 65, reps: 6, durationSecs: null },
+              ],
             }),
           ],
           next: null,
@@ -285,7 +290,7 @@ describe("métrica de la progresión (helpers)", () => {
       progressMetric([
         session({
           date: "2026-09-01",
-          sets: [{ setIndex: 0, weightKg: null, reps: 8 }],
+          sets: [{ setIndex: 0, weightKg: null, reps: 8, durationSecs: null }],
         }),
       ]),
     ).toBe("reps");
@@ -298,13 +303,13 @@ describe("métrica de la progresión (helpers)", () => {
       session({
         date: "2026-09-03",
         sets: [
-          { setIndex: 0, weightKg: 60, reps: 8 },
-          { setIndex: 1, weightKg: 62.5, reps: 5 },
+          { setIndex: 0, weightKg: 60, reps: 8, durationSecs: null },
+          { setIndex: 1, weightKg: 62.5, reps: 5, durationSecs: null },
         ],
       }),
       session({
         date: "2026-09-01",
-        sets: [{ setIndex: 0, weightKg: 55, reps: 10 }],
+        sets: [{ setIndex: 0, weightKg: 55, reps: 10, durationSecs: null }],
       }),
       // Día sin marcas de fuerza: no pinta barra.
       session({ date: "2026-09-02", sets: [] }),

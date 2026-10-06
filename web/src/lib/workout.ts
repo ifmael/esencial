@@ -1,5 +1,5 @@
 // Pure helpers for the workout-day screen (E6 task 2.3). No React, no fetch.
-import type { ExerciseKind } from "./exercises";
+import type { ExerciseKind, ExerciseMetric } from "./exercises";
 import type { ShapeName } from "./shapes";
 
 // --- Bloques (superseries) --------------------------------------------------
@@ -144,18 +144,38 @@ export function defaultSetCount(targetSets?: number | null): number {
   return targetSets ?? DEFAULT_SETS;
 }
 
-/** "última: 57.5×8" (o "última: 10 reps" sin peso); null when there is nothing
- * displayable (never logged, or no reps — the API echoes nullable columns). */
-export function formatLast(
-  last: { weightKg: number | null; reps: number | null } | null,
-): string | null {
-  if (!last || last.reps === null) return null;
-  return last.weightKg === null
-    ? `última: ${last.reps} reps`
-    : `última: ${last.weightKg}×${last.reps}`;
+/** "última: 57.5×8" (o "última: 10 reps" sin peso, o "última: 45 s" por
+ *  tiempo); null when there is nothing displayable (never logged, or an empty
+ *  mark — the API echoes nullable columns). */
+export function formatLast(last: Marks | null): string | null {
+  if (!last) return null;
+  const text = formatSetText(last);
+  return text === "—" ? null : `última: ${text}`;
 }
 
-export type Marks = { weightKg: number | null; reps: number | null };
+/** Marcas de una serie: kilos, repeticiones y/o segundos según la métrica. */
+export type Marks = {
+  weightKg: number | null;
+  reps: number | null;
+  durationSecs: number | null;
+};
+
+/** Qué pide una serie según la métrica del ejercicio. El «sin peso» de la
+ *  sesión solo suelta los kilos de la métrica de kilos (`weight_reps`). */
+export type SetFields = { weight: boolean; reps: boolean; time: boolean };
+
+export function setFields(metric: ExerciseMetric, noWeight = false): SetFields {
+  switch (metric) {
+    case "reps":
+      return { weight: false, reps: true, time: false };
+    case "time":
+      return { weight: false, reps: false, time: true };
+    case "weight_time":
+      return { weight: true, reps: false, time: true };
+    default:
+      return { weight: !noWeight, reps: true, time: false };
+  }
+}
 
 /** Series por ejercicio en el registro: suelo 1 (ahí se apaga el ➖) y techo 20. */
 export const MIN_SETS = 1;
@@ -164,18 +184,26 @@ export const MAX_SETS = 20;
 /** Serie nueva del ➕: copia las marcas de la última y nace sin marcar. */
 export function addedSet(sets: readonly Marks[]): Marks {
   const last = sets[sets.length - 1];
-  return { weightKg: last?.weightKg ?? null, reps: last?.reps ?? null };
+  return {
+    weightKg: last?.weightKg ?? null,
+    reps: last?.reps ?? null,
+    durationSecs: last?.durationSecs ?? null,
+  };
 }
 
-/** Serie con sus marcas completas: kilos y reps, o solo reps si va sin peso. */
-export function isSetFilled(set: Marks, noWeight: boolean): boolean {
-  return set.reps !== null && (noWeight || set.weightKg !== null);
+/** Serie con sus marcas completas según lo que pida su métrica. */
+export function isSetFilled(set: Marks, fields: SetFields): boolean {
+  return (
+    (!fields.weight || set.weightKg != null) &&
+    (!fields.reps || set.reps != null) &&
+    (!fields.time || set.durationSecs != null)
+  );
 }
 
 /** Un ejercicio registrado «sin peso»: ninguna serie con kilos y alguna con reps. */
 export function isNoWeight(sets: readonly Marks[]): boolean {
   return (
-    sets.some((s) => s.reps !== null) && sets.every((s) => s.weightKg === null)
+    sets.some((s) => s.reps != null) && sets.every((s) => s.weightKg == null)
   );
 }
 
@@ -213,42 +241,55 @@ export function formatPrevious(
   date: string,
   sets: readonly Marks[],
 ): string | null {
-  const marks = sets.filter((s) => s.reps !== null || s.weightKg !== null);
+  const marks = sets.filter(
+    (s) => s.reps != null || s.weightKg != null || s.durationSecs != null,
+  );
   if (marks.length === 0) return null;
   return `${formatShortDate(date)}: ${marks.map(formatSetText).join(" · ")}`;
 }
 
-/** Marcas de una serie de la sesión igual: siempre con repeticiones (las series
- * sin ellas no se ofrecen) y kilos solo si ese día los hubo. */
-export type HomologMarks = { weightKg: number | null; reps: number };
+/** Marcas de una serie de la sesión igual: siempre con algo que copiar (las
+ *  series vacías no se ofrecen) y kilos solo si ese día los hubo. */
+export type HomologMarks = {
+  weightKg: number | null;
+  reps: number | null;
+  durationSecs: number | null;
+};
 
 /** Series de la sesión igual indexadas por su `setIndex`: la homóloga de cada
- * serie del borrador. `null` donde no hay homóloga o no tiene reps que copiar. */
+ *  serie del borrador. `null` donde no hay homóloga o está vacía. */
 export function previousMarks(
   sets: readonly {
     setIndex: number;
     weightKg: number | null;
     reps: number | null;
+    durationSecs: number | null;
   }[],
 ): (HomologMarks | null)[] {
   const size = sets.reduce((max, s) => Math.max(max, s.setIndex + 1), 0);
   const out: (HomologMarks | null)[] = Array.from({ length: size }, () => null);
   for (const s of sets)
-    if (s.reps !== null)
-      out[s.setIndex] = { weightKg: s.weightKg, reps: s.reps };
+    if (s.reps != null || s.durationSecs != null)
+      out[s.setIndex] = {
+        weightKg: s.weightKg,
+        reps: s.reps,
+        durationSecs: s.durationSecs,
+      };
   return out;
 }
 
-/** Marca copiada de la serie homóloga: las reps siempre y los kilos solo si la
- * igual los trae (con «sin peso» no se escriben). Copiar **nunca** marca la
- * serie: queda desmarcada y sin `touched`, así que completarla sigue siendo cosa
- * del usuario — ni el conmutador «Sin peso» la re-marca después. */
+/** Marca copiada de la serie homóloga: las reps y los segundos siempre, y los
+ *  kilos solo si la igual los trae (con «sin peso» no se escriben). Copiar
+ *  **nunca** marca la serie: queda desmarcada y sin `touched`, así que
+ *  completarla sigue siendo cosa del usuario — ni el conmutador «Sin peso» la
+ *  re-marca después. */
 export function copiedMarks<
   T extends Marks & { done: boolean; touched: boolean },
 >(target: T, src: HomologMarks, noWeight: boolean): T {
   return {
     ...target,
     reps: src.reps,
+    durationSecs: src.durationSecs,
     weightKg:
       noWeight || src.weightKg === null ? target.weightKg : src.weightKg,
     done: false,
@@ -305,11 +346,18 @@ export const EFFORT_SHAPES: ShapeName[] = [
   "sunny",
 ];
 
-/** Text values: "60×8", "12 reps" sin peso, or "—" when there is nothing. */
+/** Text values: "60×8", "12 reps" sin peso, "45 s" o "80 kg × 40 s" por tiempo;
+ *  "—" when there is nothing. Tolera un campo ausente (un Worker antiguo sin
+ *  `durationSecs` no debe pintar «undefined s»). */
 export function formatSetText(set: Marks): string {
-  if (set.weightKg === null && set.reps === null) return "—";
-  if (set.weightKg === null) return `${set.reps} reps`;
-  return `${set.weightKg}×${set.reps ?? "—"}`;
+  if (set.durationSecs != null)
+    return set.weightKg == null
+      ? `${set.durationSecs} s`
+      : `${set.weightKg} kg × ${set.durationSecs} s`;
+  if (set.reps == null && set.weightKg == null) return "—";
+  if (set.reps == null) return `${set.weightKg} kg`;
+  if (set.weightKg == null) return `${set.reps} reps`;
+  return `${set.weightKg}×${set.reps}`;
 }
 
 /** Series hechas sobre el total de la sesión; cada cardio cuenta como una. */

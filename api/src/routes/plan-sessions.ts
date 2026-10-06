@@ -47,7 +47,7 @@ async function loadSession(
             pse.target_sets AS targetSets, pse.target_reps_min AS targetRepsMin, pse.target_reps_max AS targetRepsMax,
             pse.target_distance_km AS targetDistanceKm, pse.target_duration_min AS targetDurationMin,
             pse.rest_secs AS restSecs, pse.rest_after_secs AS restAfterSecs,
-            e.name AS exerciseName, e.kind AS kind
+            e.name AS exerciseName, e.kind AS kind, e.metric AS metric
      FROM plan_session_exercises pse JOIN exercises e ON e.id = pse.exercise_id
      WHERE pse.plan_session_id = ? ORDER BY pse.position, pse.id`,
       id,

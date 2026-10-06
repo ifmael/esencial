@@ -388,7 +388,12 @@ describe("GET /api/workout-logs", () => {
 type ExerciseSession = {
   date: string;
   sessionName: string | null;
-  sets: { setIndex: number; weightKg: number | null; reps: number }[];
+  sets: {
+    setIndex: number;
+    weightKg: number | null;
+    reps: number | null;
+    durationSecs: number | null;
+  }[];
 };
 type ExerciseHistory = {
   exerciseId: number;
@@ -462,15 +467,15 @@ describe("GET /api/exercises/:id/history", () => {
         date: "2026-09-03",
         sessionName: "Empuje B",
         sets: [
-          { setIndex: 0, weightKg: 60, reps: 8 },
-          { setIndex: 1, weightKg: 60, reps: 7 },
+          { setIndex: 0, weightKg: 60, reps: 8, durationSecs: null },
+          { setIndex: 1, weightKg: 60, reps: 7, durationSecs: null },
         ],
         cardio: null,
       },
       {
         date: "2026-09-01",
         sessionName: "Empuje A",
-        sets: [{ setIndex: 0, weightKg: 55, reps: 10 }],
+        sets: [{ setIndex: 0, weightKg: 55, reps: 10, durationSecs: null }],
         cardio: null,
       },
     ]);
@@ -585,7 +590,7 @@ describe("GET /api/exercises/:id/history", () => {
     expect(page.best).toEqual({
       date: "2026-09-01",
       sessionName: "A",
-      sets: [{ setIndex: 0, weightKg: 80, reps: 3 }],
+      sets: [{ setIndex: 0, weightKg: 80, reps: 3, durationSecs: null }],
       cardio: null,
     });
   });
@@ -615,7 +620,9 @@ describe("GET /api/exercises/:id/history", () => {
 
     const page = await exerciseHistory(await exerciseId("Dominadas"));
 
-    expect(page.best?.sets).toEqual([{ setIndex: 0, weightKg: null, reps: 9 }]);
+    expect(page.best?.sets).toEqual([
+      { setIndex: 0, weightKg: null, reps: 9, durationSecs: null },
+    ]);
   });
 
   it("en cardio, el «mejor» es la distancia más larga", async () => {
@@ -652,7 +659,9 @@ describe("GET /api/exercises/:id/history", () => {
     const bench = await exerciseId("Press banca");
 
     const rango = await exerciseHistory(bench, "?from=2026-09-02");
-    expect(rango.best?.sets).toEqual([{ setIndex: 0, weightKg: 60, reps: 8 }]);
+    expect(rango.best?.sets).toEqual([
+      { setIndex: 0, weightKg: 60, reps: 8, durationSecs: null },
+    ]);
 
     const vacio = await exerciseHistory(bench, "?from=2027-01-01");
     expect(vacio.sessions).toEqual([]);

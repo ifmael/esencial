@@ -14,6 +14,7 @@ import {
   parseDateEs,
   previousMarks,
   previousSession,
+  setFields,
   setsProgress,
   weekProgress,
 } from "../src/lib/workout";
@@ -32,49 +33,121 @@ describe("addedSet", () => {
   it("copia las marcas de la última serie", () => {
     expect(
       addedSet([
-        { weightKg: 60, reps: 8 },
-        { weightKg: 62.5, reps: 6 },
+        { weightKg: 60, reps: 8, durationSecs: null },
+        { weightKg: 62.5, reps: 6, durationSecs: null },
       ]),
-    ).toEqual({ weightKg: 62.5, reps: 6 });
+    ).toEqual({ weightKg: 62.5, reps: 6, durationSecs: null });
+  });
+  it("copia también los segundos (ejercicios por tiempo)", () => {
+    expect(
+      addedSet([{ weightKg: null, reps: null, durationSecs: 45 }]),
+    ).toEqual({ weightKg: null, reps: null, durationSecs: 45 });
   });
   it("sin series sale vacía", () => {
-    expect(addedSet([])).toEqual({ weightKg: null, reps: null });
+    expect(addedSet([])).toEqual({
+      weightKg: null,
+      reps: null,
+      durationSecs: null,
+    });
   });
 });
 
 describe("formatLast", () => {
   it("formatea última sesión", () => {
-    expect(formatLast({ weightKg: 57.5, reps: 8 })).toBe("última: 57.5×8");
+    expect(formatLast({ weightKg: 57.5, reps: 8, durationSecs: null })).toBe(
+      "última: 57.5×8",
+    );
   });
   it("null sin helper", () => {
     expect(formatLast(null)).toBeNull();
   });
   it("sin valores displayables no muestra helper", () => {
-    expect(formatLast({ weightKg: null, reps: null })).toBeNull();
-    expect(formatLast({ weightKg: 60, reps: null })).toBeNull();
+    expect(
+      formatLast({ weightKg: null, reps: null, durationSecs: null }),
+    ).toBeNull();
   });
   it("sin peso muestra solo las repeticiones", () => {
-    expect(formatLast({ weightKg: null, reps: 10 })).toBe("última: 10 reps");
+    expect(formatLast({ weightKg: null, reps: 10, durationSecs: null })).toBe(
+      "última: 10 reps",
+    );
+  });
+  it("por tiempo muestra los segundos", () => {
+    expect(formatLast({ weightKg: null, reps: null, durationSecs: 45 })).toBe(
+      "última: 45 s",
+    );
   });
 });
 
 describe("formatSetText", () => {
   it("peso×reps, solo reps sin peso, raya si no hay nada", () => {
-    expect(formatSetText({ weightKg: 60, reps: 8 })).toBe("60×8");
-    expect(formatSetText({ weightKg: null, reps: 12 })).toBe("12 reps");
-    expect(formatSetText({ weightKg: null, reps: null })).toBe("—");
+    expect(formatSetText({ weightKg: 60, reps: 8, durationSecs: null })).toBe(
+      "60×8",
+    );
+    expect(
+      formatSetText({ weightKg: null, reps: 12, durationSecs: null }),
+    ).toBe("12 reps");
+    expect(
+      formatSetText({ weightKg: null, reps: null, durationSecs: null }),
+    ).toBe("—");
+  });
+  it("por tiempo: segundos, con los kilos delante si los hay", () => {
+    expect(
+      formatSetText({ weightKg: null, reps: null, durationSecs: 45 }),
+    ).toBe("45 s");
+    expect(formatSetText({ weightKg: 80, reps: null, durationSecs: 40 })).toBe(
+      "80 kg × 40 s",
+    );
   });
 });
 
 describe("isSetFilled", () => {
-  it("con peso exige kilos y reps", () => {
-    expect(isSetFilled({ weightKg: 60, reps: 8 }, false)).toBe(true);
-    expect(isSetFilled({ weightKg: null, reps: 8 }, false)).toBe(false);
-    expect(isSetFilled({ weightKg: 60, reps: null }, false)).toBe(false);
+  it("kg×reps exige kilos y reps", () => {
+    const f = setFields("weight_reps");
+    expect(isSetFilled({ weightKg: 60, reps: 8, durationSecs: null }, f)).toBe(
+      true,
+    );
+    expect(
+      isSetFilled({ weightKg: null, reps: 8, durationSecs: null }, f),
+    ).toBe(false);
+    expect(
+      isSetFilled({ weightKg: 60, reps: null, durationSecs: null }, f),
+    ).toBe(false);
   });
   it("sin peso bastan las reps", () => {
-    expect(isSetFilled({ weightKg: null, reps: 8 }, true)).toBe(true);
-    expect(isSetFilled({ weightKg: null, reps: null }, true)).toBe(false);
+    const f = setFields("weight_reps", true);
+    expect(
+      isSetFilled({ weightKg: null, reps: 8, durationSecs: null }, f),
+    ).toBe(true);
+    expect(
+      isSetFilled({ weightKg: null, reps: null, durationSecs: null }, f),
+    ).toBe(false);
+  });
+  it("peso corporal: bastan las reps, el kg no cuenta", () => {
+    const f = setFields("reps");
+    expect(
+      isSetFilled({ weightKg: null, reps: 15, durationSecs: null }, f),
+    ).toBe(true);
+    expect(
+      isSetFilled({ weightKg: null, reps: null, durationSecs: null }, f),
+    ).toBe(false);
+  });
+  it("por tiempo: bastan los segundos", () => {
+    const f = setFields("time");
+    expect(
+      isSetFilled({ weightKg: null, reps: null, durationSecs: 45 }, f),
+    ).toBe(true);
+    expect(
+      isSetFilled({ weightKg: null, reps: null, durationSecs: null }, f),
+    ).toBe(false);
+  });
+  it("kilos + segundos: exige los dos", () => {
+    const f = setFields("weight_time");
+    expect(isSetFilled({ weightKg: 80, reps: null, durationSecs: 40 }, f)).toBe(
+      true,
+    );
+    expect(
+      isSetFilled({ weightKg: null, reps: null, durationSecs: 40 }, f),
+    ).toBe(false);
   });
 });
 
@@ -82,12 +155,16 @@ describe("isNoWeight", () => {
   it("todas sin kilos y alguna con reps", () => {
     expect(
       isNoWeight([
-        { weightKg: null, reps: 10 },
-        { weightKg: null, reps: null },
+        { weightKg: null, reps: 10, durationSecs: null },
+        { weightKg: null, reps: null, durationSecs: null },
       ]),
     ).toBe(true);
-    expect(isNoWeight([{ weightKg: 5, reps: 10 }])).toBe(false);
-    expect(isNoWeight([{ weightKg: null, reps: null }])).toBe(false);
+    expect(isNoWeight([{ weightKg: 5, reps: 10, durationSecs: null }])).toBe(
+      false,
+    );
+    expect(
+      isNoWeight([{ weightKg: null, reps: null, durationSecs: null }]),
+    ).toBe(false);
     expect(isNoWeight([])).toBe(false);
   });
 });
@@ -121,15 +198,17 @@ describe("formatPrevious", () => {
   it("fecha corta y series con marcas", () => {
     expect(
       formatPrevious("2026-09-26", [
-        { weightKg: 60, reps: 10 },
-        { weightKg: null, reps: null },
-        { weightKg: 55, reps: 8 },
+        { weightKg: 60, reps: 10, durationSecs: null },
+        { weightKg: null, reps: null, durationSecs: null },
+        { weightKg: 55, reps: 8, durationSecs: null },
       ]),
     ).toBe("sáb, 26/09: 60×10 · 55×8");
   });
   it("sin marcas no muestra nada", () => {
     expect(
-      formatPrevious("2026-09-26", [{ weightKg: null, reps: null }]),
+      formatPrevious("2026-09-26", [
+        { weightKg: null, reps: null, durationSecs: null },
+      ]),
     ).toBeNull();
   });
 });
@@ -138,15 +217,28 @@ describe("previousMarks", () => {
   it("indexa por setIndex: null donde no hay serie homóloga", () => {
     expect(
       previousMarks([
-        { setIndex: 0, weightKg: 60, reps: 10 },
-        { setIndex: 2, weightKg: 55, reps: 8 },
+        { setIndex: 0, weightKg: 60, reps: 10, durationSecs: null },
+        { setIndex: 2, weightKg: 55, reps: 8, durationSecs: null },
       ]),
-    ).toEqual([{ weightKg: 60, reps: 10 }, null, { weightKg: 55, reps: 8 }]);
-  });
-  it("una serie sin reps no ofrece valor", () => {
-    expect(previousMarks([{ setIndex: 0, weightKg: 60, reps: null }])).toEqual([
+    ).toEqual([
+      { weightKg: 60, reps: 10, durationSecs: null },
       null,
+      { weightKg: 55, reps: 8, durationSecs: null },
     ]);
+  });
+  it("una serie sin marcas no ofrece valor", () => {
+    expect(
+      previousMarks([
+        { setIndex: 0, weightKg: 60, reps: null, durationSecs: null },
+      ]),
+    ).toEqual([null]);
+  });
+  it("una serie por tiempo ofrece sus segundos", () => {
+    expect(
+      previousMarks([
+        { setIndex: 0, weightKg: null, reps: null, durationSecs: 45 },
+      ]),
+    ).toEqual([{ weightKg: null, reps: null, durationSecs: 45 }]);
   });
   it("sin series previas no hay nada que copiar", () => {
     expect(previousMarks([])).toEqual([]);
@@ -154,27 +246,65 @@ describe("previousMarks", () => {
 });
 
 describe("copiedMarks", () => {
-  const target = { weightKg: 40, reps: 6, done: true, touched: true };
+  const target = {
+    weightKg: 40,
+    reps: 6,
+    durationSecs: null,
+    done: true,
+    touched: true,
+  };
   it("copia reps y kilos y deja la serie desmarcada y sin editar", () => {
-    expect(copiedMarks(target, { weightKg: 60, reps: 10 }, false)).toEqual({
+    expect(
+      copiedMarks(
+        target,
+        { weightKg: 60, reps: 10, durationSecs: null },
+        false,
+      ),
+    ).toEqual({
       weightKg: 60,
       reps: 10,
+      durationSecs: null,
       done: false,
       touched: false,
     });
   });
   it("origen sin kilos: solo las reps, sin tocar los kilos puestos", () => {
-    expect(copiedMarks(target, { weightKg: null, reps: 12 }, false)).toEqual({
+    expect(
+      copiedMarks(
+        target,
+        { weightKg: null, reps: 12, durationSecs: null },
+        false,
+      ),
+    ).toEqual({
       weightKg: 40,
       reps: 12,
+      durationSecs: null,
       done: false,
       touched: false,
     });
   });
   it("con «sin peso» no escribe kilos", () => {
-    expect(copiedMarks(target, { weightKg: 60, reps: 12 }, true)).toEqual({
+    expect(
+      copiedMarks(target, { weightKg: 60, reps: 12, durationSecs: null }, true),
+    ).toEqual({
       weightKg: 40,
       reps: 12,
+      durationSecs: null,
+      done: false,
+      touched: false,
+    });
+  });
+  it("copia los segundos de un ejercicio por tiempo", () => {
+    expect(
+      copiedMarks(
+        { ...target, reps: null, weightKg: null },
+        { weightKg: null, reps: null, durationSecs: 45 },
+        false,
+      ),
+    ).toEqual({
+      weightKg: null,
+      reps: null,
+      durationSecs: 45,
       done: false,
       touched: false,
     });

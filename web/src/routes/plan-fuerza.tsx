@@ -63,6 +63,7 @@ import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
   type Exercise,
   type ExerciseKind,
+  type ExerciseMetric,
   KIND_LABELS,
   matchesExercise,
   targetSummary,
@@ -84,6 +85,7 @@ import {
   blocks,
   DEFAULT_SETS,
   normalizeSupersets,
+  setFields,
   weekProgress,
 } from "../lib/workout";
 
@@ -94,6 +96,8 @@ type DayRow = SessionItem & {
   exerciseId: number;
   exerciseName: string;
   kind: ExerciseKind;
+  /** Unidad de la serie (solo fuerza): decide los campos de objetivo. */
+  metric: ExerciseMetric;
 };
 
 function rowsFrom(session: PlanSession | null): DayRow[] {
@@ -103,6 +107,7 @@ function rowsFrom(session: PlanSession | null): DayRow[] {
     exerciseId: e.exerciseId,
     exerciseName: e.exerciseName,
     kind: e.kind,
+    metric: e.metric,
     targetSets: e.targetSets,
     targetRepsMin: e.targetRepsMin,
     targetRepsMax: e.targetRepsMax,
@@ -138,6 +143,7 @@ function expandTemplate(
       exerciseId: e.exerciseId,
       exerciseName: e.exerciseName,
       kind: e.kind,
+      metric: e.metric,
       targetSets: e.kind === "strength" ? (e.targetSets ?? DEFAULT_SETS) : null,
       targetRepsMin: e.targetRepsMin,
       targetRepsMax: e.targetRepsMax,
@@ -438,24 +444,29 @@ function DayRowItem({
               onPatch(row.key, { targetSets: intAt(e.target.value) })
             }
           />
-          <Target
-            label="Reps mín"
-            aria={`${row.exerciseName} reps mín`}
-            min={1}
-            value={row.targetRepsMin ?? ""}
-            onChange={(e) =>
-              onPatch(row.key, { targetRepsMin: intAt(e.target.value) })
-            }
-          />
-          <Target
-            label="Reps máx"
-            aria={`${row.exerciseName} reps máx`}
-            min={1}
-            value={row.targetRepsMax ?? ""}
-            onChange={(e) =>
-              onPatch(row.key, { targetRepsMax: intAt(e.target.value) })
-            }
-          />
+          {/* Los ejercicios por tiempo no se prescriben en repeticiones. */}
+          {setFields(row.metric).reps && (
+            <>
+              <Target
+                label="Reps mín"
+                aria={`${row.exerciseName} reps mín`}
+                min={1}
+                value={row.targetRepsMin ?? ""}
+                onChange={(e) =>
+                  onPatch(row.key, { targetRepsMin: intAt(e.target.value) })
+                }
+              />
+              <Target
+                label="Reps máx"
+                aria={`${row.exerciseName} reps máx`}
+                min={1}
+                value={row.targetRepsMax ?? ""}
+                onChange={(e) =>
+                  onPatch(row.key, { targetRepsMax: intAt(e.target.value) })
+                }
+              />
+            </>
+          )}
           {row.superset ? (
             <p className="min-h-12 text-body-m text-on-surface-variant">
               Sin descanso: va pegado a «{nextName}»
@@ -625,6 +636,7 @@ function SessionEditor({
         exerciseId: e.id,
         exerciseName: e.name,
         kind: e.kind,
+        metric: e.metric,
         targetSets: e.kind === "strength" ? DEFAULT_SETS : null,
         targetRepsMin: null,
         targetRepsMax: null,

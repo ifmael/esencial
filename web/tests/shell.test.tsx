@@ -33,6 +33,7 @@ const press: Exercise = {
   aliases: [],
   regions: [{ region: "chest-lower", role: "primary" }],
   kind: "strength",
+  metric: "weight_reps",
 };
 
 function renderAt(path: string) {

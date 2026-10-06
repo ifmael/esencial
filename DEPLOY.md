@@ -68,13 +68,27 @@ solo añade una tabla y dos columnas con valor por defecto, y 0017 rellena datos
 que la API vieja ignora (la lista de ingredientes cambia, pero sigue siendo
 texto, cantidad y unidad).
 
-**0022–0023 (alias de búsqueda y ejercicios de Barra Libre) también van ANTES
-del merge.** `0022` crea `exercise_aliases` y la API nueva la lee en cada
-`GET /api/exercises` (lista, ficha y selector): sin la tabla, 500.
+**0022–0024 (alias de búsqueda, ejercicios de Barra Libre y sus vídeos) también
+van ANTES del merge.** `0022` crea `exercise_aliases` y la API nueva la lee en
+cada `GET /api/exercises` (lista, ficha y selector): sin la tabla, 500.
 Además renombra a español 12 ejercicios y siembra los alias de los 91. `0023`
 añade los 17 ejercicios de Barra Libre con sus grupos, sub-regiones y alias.
 Las dos son aditivas (la API vieja no consulta la tabla y la fila nueva es un
 ejercicio más), así que la ventana entre aplicarlas y el deploy no rompe nada.
+`0024` va **después de 0023** y le pone a esos 17 el `technique_url` que les
+faltaba: un `UPDATE` por nombre, que sin las filas de `0023` no toca nada.
+
+**0025 (métrica de la serie) también va ANTES del merge.** Añade
+`exercises.metric` (con valor por defecto `weight_reps`) y
+`set_logs.duration_secs` (nula), así que es aditiva: la API vieja ignora las dos
+columnas y la ventana entre aplicarla y el deploy no rompe nada. Sin ella, la
+API nueva —que lee `metric` en cada `GET /api/exercises` y en los planes— daría
+500.
+
+**0026 (bloques encadenados) también va ANTES del merge.** Añade `superset`
+(0 por defecto) a `plan_session_exercises` y a `template_exercises`: aditiva, la
+API vieja la ignora, y sin ella la API nueva —que la lee en cada día, plantilla y
+registro— daría 500. Va **después** de `0025`.
 
 En local, la config de la API vive en `api/`, así que los scripts llevan
 `--persist-to .wrangler/state`: la base de desarrollo sigue en la raíz y no en

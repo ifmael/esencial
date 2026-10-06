@@ -99,6 +99,7 @@ import {
   blocks,
   DEFAULT_SETS,
   normalizeSupersets,
+  setFields,
 } from "../lib/workout";
 
 const toDraft = (t: Template): Draft => ({
@@ -108,6 +109,7 @@ const toDraft = (t: Template): Draft => ({
     exerciseId: e.exerciseId,
     exerciseName: e.exerciseName,
     kind: e.kind,
+    metric: e.metric,
     targetSets: e.targetSets,
     targetRepsMin: e.targetRepsMin,
     targetRepsMax: e.targetRepsMax,
@@ -460,12 +462,17 @@ function EntryRow({
             {target("Series", entry.targetSets, (v) => ({
               targetSets: intAt(v),
             }))}
-            {target("Reps mín", entry.targetRepsMin, (v) => ({
-              targetRepsMin: intAt(v),
-            }))}
-            {target("Reps máx", entry.targetRepsMax, (v) => ({
-              targetRepsMax: intAt(v),
-            }))}
+            {/* Los ejercicios por tiempo no se prescriben en repeticiones. */}
+            {setFields(entry.metric).reps && (
+              <>
+                {target("Reps mín", entry.targetRepsMin, (v) => ({
+                  targetRepsMin: intAt(v),
+                }))}
+                {target("Reps máx", entry.targetRepsMax, (v) => ({
+                  targetRepsMax: intAt(v),
+                }))}
+              </>
+            )}
             {entry.superset ? (
               <p className="min-h-12 text-body-m text-on-surface-variant">
                 Sin descanso: va pegado a «{nextName}»
@@ -614,6 +621,7 @@ function TemplateEditor({
         exerciseId: e.id,
         exerciseName: e.name,
         kind: e.kind,
+        metric: e.metric,
         targetSets: e.kind === "strength" ? DEFAULT_SETS : null,
         targetRepsMin: null,
         targetRepsMax: null,

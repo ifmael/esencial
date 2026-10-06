@@ -7,6 +7,8 @@
 export type DraftSetSnapshot = {
   weightKg: number | null;
   reps: number | null;
+  /** Segundos de la serie (métricas de tiempo); nulo en el resto. */
+  durationSecs: number | null;
   done: boolean;
   touched: boolean;
 };
@@ -26,7 +28,9 @@ export type DraftCardioSnapshot = {
 };
 
 export type DraftSnapshot = {
-  version: 1;
+  /** 2: las series llevan también sus segundos (métrica de tiempo). Un
+   *  borrador de la versión anterior se descarta, como cualquier otra versión. */
+  version: 2;
   exercises: DraftExerciseSnapshot[];
   cardio: DraftCardioSnapshot[];
   effort: number | null;
@@ -52,7 +56,7 @@ export function snapshotOf(
   note: string,
 ): DraftSnapshot {
   return {
-    version: 1,
+    version: 2,
     exercises: exercises.map((ex) => ({
       id: ex.se.id,
       noWeight: ex.noWeight,
@@ -81,6 +85,7 @@ function isSetSnapshot(value: unknown): value is DraftSetSnapshot {
   return (
     isNullOrNumber(s.weightKg) &&
     isNullOrNumber(s.reps) &&
+    isNullOrNumber(s.durationSecs) &&
     typeof s.done === "boolean" &&
     typeof s.touched === "boolean"
   );
@@ -119,7 +124,7 @@ export function parseSnapshot(raw: string | null): DraftSnapshot | null {
   }
   if (typeof value !== "object" || value === null) return null;
   const s = value as Record<string, unknown>;
-  if (s.version !== 1) return null;
+  if (s.version !== 2) return null;
   if (!Array.isArray(s.exercises) || !s.exercises.every(isExerciseSnapshot))
     return null;
   if (!Array.isArray(s.cardio) || !s.cardio.every(isCardioSnapshot))
@@ -127,7 +132,7 @@ export function parseSnapshot(raw: string | null): DraftSnapshot | null {
   if (!isNullOrNumber(s.effort)) return null;
   if (typeof s.note !== "string") return null;
   return {
-    version: 1,
+    version: 2,
     exercises: s.exercises,
     cardio: s.cardio,
     effort: s.effort,

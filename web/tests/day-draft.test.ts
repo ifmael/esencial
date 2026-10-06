@@ -23,8 +23,20 @@ describe("snapshotOf", () => {
             se: { id: 11 },
             noWeight: true,
             sets: [
-              { weightKg: 60, reps: 8, done: true, touched: true },
-              { weightKg: 60, reps: 6, done: false, touched: false },
+              {
+                weightKg: 60,
+                reps: 8,
+                durationSecs: null,
+                done: true,
+                touched: true,
+              },
+              {
+                weightKg: 60,
+                reps: 6,
+                durationSecs: null,
+                done: false,
+                touched: false,
+              },
             ],
           },
         ],
@@ -33,14 +45,26 @@ describe("snapshotOf", () => {
         "buena",
       ),
     ).toEqual({
-      version: 1,
+      version: 2,
       exercises: [
         {
           id: 11,
           noWeight: true,
           sets: [
-            { weightKg: 60, reps: 8, done: true, touched: true },
-            { weightKg: 60, reps: 6, done: false, touched: false },
+            {
+              weightKg: 60,
+              reps: 8,
+              durationSecs: null,
+              done: true,
+              touched: true,
+            },
+            {
+              weightKg: 60,
+              reps: 6,
+              durationSecs: null,
+              done: false,
+              touched: false,
+            },
           ],
         },
       ],
@@ -62,7 +86,7 @@ describe("parseSnapshot", () => {
     expect(
       parseSnapshot(
         JSON.stringify({
-          version: 2,
+          version: 3,
           exercises: [],
           cardio: [],
           effort: null,
@@ -74,7 +98,7 @@ describe("parseSnapshot", () => {
 
   it("una forma incompleta se descarta (series sin campos, esfuerzo no numérico)", () => {
     const empty = {
-      version: 1,
+      version: 2,
       exercises: [],
       cardio: [],
       effort: null,
@@ -102,7 +126,15 @@ describe("parseSnapshot", () => {
         {
           se: { id: 11 },
           noWeight: false,
-          sets: [{ weightKg: 60, reps: 8, done: false, touched: false }],
+          sets: [
+            {
+              weightKg: 60,
+              reps: 8,
+              durationSecs: null,
+              done: false,
+              touched: false,
+            },
+          ],
         },
       ],
       [],
@@ -119,14 +151,34 @@ describe("restoreExercises", () => {
       se: { id: 11 },
       noWeight: false,
       sets: [
-        { weightKg: 50, reps: 6, done: false, touched: false },
-        { weightKg: 50, reps: 6, done: false, touched: false },
+        {
+          weightKg: 50,
+          reps: 6,
+          durationSecs: null,
+          done: false,
+          touched: false,
+        },
+        {
+          weightKg: 50,
+          reps: 6,
+          durationSecs: null,
+          done: false,
+          touched: false,
+        },
       ],
     },
     {
       se: { id: 12 },
       noWeight: false,
-      sets: [{ weightKg: null, reps: null, done: false, touched: false }],
+      sets: [
+        {
+          weightKg: null,
+          reps: null,
+          durationSecs: null,
+          done: false,
+          touched: false,
+        },
+      ],
     },
   ];
 
@@ -136,19 +188,70 @@ describe("restoreExercises", () => {
         id: 11,
         noWeight: true,
         sets: [
-          { weightKg: 60, reps: 8, done: true, touched: true },
-          { weightKg: 62.5, reps: 6, done: false, touched: true },
+          {
+            weightKg: 60,
+            reps: 8,
+            durationSecs: null,
+            done: true,
+            touched: true,
+          },
+          {
+            weightKg: 62.5,
+            reps: 6,
+            durationSecs: null,
+            done: false,
+            touched: true,
+          },
         ],
       },
     ]);
     expect(restored[0].noWeight).toBe(true);
     expect(restored[0].sets).toEqual([
-      { weightKg: 60, reps: 8, done: true, touched: true },
-      { weightKg: 62.5, reps: 6, done: false, touched: true },
+      { weightKg: 60, reps: 8, durationSecs: null, done: true, touched: true },
+      {
+        weightKg: 62.5,
+        reps: 6,
+        durationSecs: null,
+        done: false,
+        touched: true,
+      },
     ]);
     // La del ejercicio sin nada guardado sigue igual.
     expect(restored[1].sets).toEqual([
-      { weightKg: null, reps: null, done: false, touched: false },
+      {
+        weightKg: null,
+        reps: null,
+        durationSecs: null,
+        done: false,
+        touched: false,
+      },
+    ]);
+  });
+
+  it("restaura los segundos de un ejercicio por tiempo", () => {
+    const restored = restoreExercises(current(), [
+      {
+        id: 12,
+        noWeight: false,
+        sets: [
+          {
+            weightKg: null,
+            reps: null,
+            durationSecs: 45,
+            done: true,
+            touched: true,
+          },
+        ],
+      },
+    ]);
+    expect(restored[1].sets).toEqual([
+      {
+        weightKg: null,
+        reps: null,
+        durationSecs: 45,
+        done: true,
+        touched: true,
+      },
     ]);
   });
 
@@ -157,13 +260,33 @@ describe("restoreExercises", () => {
       {
         id: 11,
         noWeight: true,
-        sets: [{ weightKg: 60, reps: 8, done: true, touched: true }],
+        sets: [
+          {
+            weightKg: 60,
+            reps: 8,
+            durationSecs: null,
+            done: true,
+            touched: true,
+          },
+        ],
       },
     ]);
     expect(restored[0].noWeight).toBe(false);
     expect(restored[0].sets).toEqual([
-      { weightKg: 50, reps: 6, done: false, touched: false },
-      { weightKg: 50, reps: 6, done: false, touched: false },
+      {
+        weightKg: 50,
+        reps: 6,
+        durationSecs: null,
+        done: false,
+        touched: false,
+      },
+      {
+        weightKg: 50,
+        reps: 6,
+        durationSecs: null,
+        done: false,
+        touched: false,
+      },
     ]);
   });
 
@@ -205,7 +328,7 @@ describe("almacén", () => {
     writeDraft("2026-09-02", snapshot);
     expect(readDraft("2026-09-02")).toEqual(snapshot);
     expect(window.localStorage.getItem(draftKey("2026-09-02"))).toContain(
-      '"version":1',
+      '"version":2',
     );
     clearDraft("2026-09-02");
     expect(readDraft("2026-09-02")).toBeNull();

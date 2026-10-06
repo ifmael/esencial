@@ -1,4 +1,4 @@
--- 0024: agrupar ejercicios en bloque (superseries, triseries, series gigantes).
+-- 0026: agrupar ejercicios en bloque (superseries, triseries, series gigantes).
 -- `superset = 1` en una fila significa «va pegado al siguiente ejercicio»: un
 -- bloque son dos o más filas seguidas marcadas y el último va sin marca (y es el
 -- único que lleva descansos: el de entre vueltas y el de acabar el bloque).

@@ -11,7 +11,7 @@ import m0005Sql from "../migrations/0005_exercise_steps.sql?raw";
 import m0016Sql from "../migrations/0016_alimentos.sql?raw";
 import m0018Sql from "../migrations/0018_descansos.sql?raw";
 import m0019Sql from "../migrations/0019_users.sql?raw";
-import m0024Sql from "../migrations/0024_supersets.sql?raw";
+import m0026Sql from "../migrations/0026_supersets.sql?raw";
 import schemaSql from "../schema.sql?raw";
 import app from "../src/index";
 
@@ -39,7 +39,7 @@ async function bootstrap(): Promise<void> {
     m0016Sql,
     m0018Sql,
     m0019Sql,
-    m0024Sql,
+    m0026Sql,
   ])
     await env.DB.batch(
       sql

@@ -17,6 +17,7 @@ const ex = (id: number, name: string): DraftEntry => ({
   exerciseId: id,
   exerciseName: name,
   kind: "strength",
+  metric: "weight_reps",
   targetSets: null,
   targetRepsMin: null,
   targetRepsMax: null,
