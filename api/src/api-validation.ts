@@ -130,6 +130,7 @@ export const templateExerciseSchema = z.object({
   targetDurationMin: z.number().int().min(0).optional().nullable(),
   restSecs: restSeconds,
   restAfterSecs: restSeconds,
+  superset: z.boolean().optional(),
 });
 
 export const templateSchema = z.object({
@@ -165,6 +166,7 @@ export const planSessionItemSchema = z.object({
   targetDurationMin: z.number().int().min(0).optional().nullable(),
   restSecs: restSeconds,
   restAfterSecs: restSeconds,
+  superset: z.boolean().optional(),
 });
 
 export const planSessionCreateSchema = z.object({

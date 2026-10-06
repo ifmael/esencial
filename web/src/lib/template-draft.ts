@@ -16,6 +16,8 @@ export type DraftEntry = {
   /** Descansos programados (segundos): entre series y al terminar el ejercicio. */
   restSecs: number | null;
   restAfterSecs: number | null;
+  /** `true` = va pegado a la entrada siguiente (bloque/superserie). */
+  superset: boolean;
 };
 
 export type Draft = {
@@ -32,6 +34,7 @@ export type Targets = Pick<
   | "targetDurationMin"
   | "restSecs"
   | "restAfterSecs"
+  | "superset"
 >;
 
 let keySeq = 0;
@@ -87,6 +90,7 @@ export type TemplateEntryPayload = {
   targetDurationMin: number | null;
   restSecs: number | null;
   restAfterSecs: number | null;
+  superset: boolean;
 };
 
 export type TemplatePayload = {
@@ -106,6 +110,7 @@ export function buildTemplatePayload(draft: Draft): TemplatePayload {
       targetDurationMin: e.targetDurationMin,
       restSecs: e.restSecs,
       restAfterSecs: e.restAfterSecs,
+      superset: e.superset,
     })),
   };
 }

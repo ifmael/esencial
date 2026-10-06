@@ -16,11 +16,18 @@ import { pushEscape } from "../lib/escape-stack";
 import { type ExerciseKind, KIND_LABELS } from "../lib/exercises";
 import { beep, startPauseAudio, stopPauseAudio } from "../lib/rest-audio";
 import { useWakeLock } from "../lib/wake-lock";
+import {
+  blockLabel,
+  blockRange,
+  blocks,
+  nextAfterSet,
+  type SessionStep,
+} from "../lib/workout";
 import { WavyProgress, WavyRing } from "./expressive";
 import { CheckIcon, ChevronDownIcon, CloseIcon } from "./icons";
 import { Dialog, OverlayHeader } from "./overlay";
 import { Stepper } from "./stepper";
-import { Button, Checkbox, cx, ScrollStrip, Switch } from "./ui";
+import { Button, Chain, Checkbox, cx, ScrollStrip, Switch } from "./ui";
 
 /** Un ejercicio del modo: fuerza con sus series, o cardio con «Hecho». */
 export type ModeItem = {
@@ -46,6 +53,8 @@ export type ModeItem = {
    *  descanso programado. */
   restSecs: number | null;
   restAfterSecs: number | null;
+  /** `true` = va pegado al ejercicio siguiente (bloque/superserie). */
+  superset: boolean;
 };
 
 type Pause = {
@@ -136,64 +145,66 @@ export function SessionMode({
     [],
   );
 
+  // Al acabar la pausa: la de entre series vuelve al primer miembro del bloque
+  // (una serie recta se queda donde está) y la de fin pasa al ejercicio que va
+  // después del bloque.
   const finishPause = useCallback(
-    (kind: Pause["kind"]) => {
+    (pause: Pause) => {
       if (finished.current) return;
       finished.current = true;
       stopPauseAudio();
       beep();
       setPause(null);
-      if (kind === "after") advance();
+      setActive((i) => {
+        const [start, end] = blockRange(items, i);
+        return pause.kind === "after"
+          ? Math.min(end + 1, items.length - 1)
+          : start;
+      });
     },
-    [advance],
+    [items],
   );
 
-  // Pausa al marcar: una serie (o el cardio) que pasa a hecha arranca la pausa
-  // que toca — la marques con la casilla o escribiendo sus marcas. Se compara
-  // contra el render anterior; el primer render y el cambio de ejercicio no
-  // cuentan.
-  const prevDone = useRef<{ id: number; sets: boolean[] | null } | null>(null);
+  // Pausa al marcar: una serie (o el cardio) que pasa a hecha da el paso que
+  // toca —la marques con la casilla o escribiendo las marcas—. En un bloque, a
+  // mitad de vuelta se salta al siguiente miembro sin pausa, y al cerrar la
+  // vuelta manda el descanso del último. Se compara contra el render anterior;
+  // el primer render y el cambio de ejercicio no cuentan.
+  const prevDone = useRef<{
+    id: number;
+    sets: boolean[] | null;
+    done: boolean | null;
+  } | null>(null);
   useEffect(() => {
     const sets = item.sets?.map((s) => s.done) ?? null;
     const prev = prevDone.current;
-    prevDone.current = { id: item.id, sets };
+    prevDone.current = { id: item.id, sets, done: item.done };
     if (!prev || prev.id !== item.id) return;
+    let step: SessionStep | null = null;
     if (sets) {
-      const idx = sets.reduce(
+      // La vuelta la define la serie que acaba de marcarse (la última si se
+      // marcaron varias de golpe).
+      const marked = sets.reduce(
         (acc, d, i) => (d && !(prev.sets?.[i] ?? false) ? i : acc),
         -1,
       );
-      if (idx === -1) return;
-      if (idx === sets.length - 1) {
-        // La última serie del último ejercicio no arranca nada: se acabó. Y la
-        // pausa que estuviera corriendo ya no pinta nada: se corta sin pitido.
-        if (last) {
-          finished.current = true;
-          stopPauseAudio();
-          setPause(null);
-          return;
-        }
-        if (item.restAfterSecs !== null)
-          startPause(item.restAfterSecs, "after", item.name);
-        else advance();
-      } else if (item.restSecs !== null) {
-        startPause(item.restSecs, "sets", item.name);
-      }
-      return;
+      if (marked !== -1) step = nextAfterSet(items, active, marked);
+    } else if (item.done === true && prev.done !== true) {
+      step = nextAfterSet(items, active, 0);
     }
-    if (item.done === true) {
-      // Igual con el cardio: si es el último, marcar no arranca cuenta atrás.
-      if (last) {
-        finished.current = true;
-        stopPauseAudio();
-        setPause(null);
-        return;
-      }
-      if (item.restAfterSecs !== null)
-        startPause(item.restAfterSecs, "after", item.name);
-      else advance();
+    if (!step) return;
+    if (step.kind === "end") {
+      // La última serie de la sesión no arranca nada: se acabó. Y la pausa que
+      // estuviera corriendo ya no pinta nada: se corta sin pitido.
+      finished.current = true;
+      stopPauseAudio();
+      setPause(null);
+    } else if (step.kind === "move") {
+      setActive(step.to);
+    } else if (step.kind === "pause") {
+      startPause(step.seconds, step.pause, items[step.owner].name);
     }
-  }, [item, last, advance, startPause]);
+  }, [item, items, active, startPause]);
 
   // El reloj de la pausa: tics para la cuenta atrás y, al llegar a `endsAt`,
   // el pitido. Al volver a la pestaña se resincroniza de inmediato — si el
@@ -203,7 +214,7 @@ export function SessionMode({
     if (!pause) return;
     const tick = () => {
       setNow(Date.now());
-      if (Date.now() >= pause.endsAt) finishPause(pause.kind);
+      if (Date.now() >= pause.endsAt) finishPause(pause);
     };
     const id = setInterval(tick, 250);
     const onVisible = () => {
@@ -220,9 +231,13 @@ export function SessionMode({
     if (!pause) return;
     finished.current = true; // saltar no pita
     stopPauseAudio();
-    const { kind } = pause;
     setPause(null);
-    if (kind === "after") advance();
+    setActive((i) => {
+      const [start, end] = blockRange(items, i);
+      return pause.kind === "after"
+        ? Math.min(end + 1, items.length - 1)
+        : start;
+    });
   };
 
   const remainingMs = pause ? Math.max(0, pause.endsAt - now) : 0;
@@ -254,6 +269,9 @@ export function SessionMode({
   const nearlyDone = item.sets
     ? item.sets.length > 0 && item.sets.slice(0, -1).every((s) => s.done)
     : item.done === true;
+  // El bloque en curso (él solo si va suelto): nombra la etiqueta del título.
+  const [blockStart, blockEnd] = blockRange(items, active);
+  const blockSize = blockEnd - blockStart + 1;
 
   return (
     <section
@@ -310,7 +328,10 @@ export function SessionMode({
           así que el scroll arranca en el principio. */}
       <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pb-2 text-center">
         <div className="my-auto flex w-full flex-col items-center gap-5">
-          <p className="section-label text-accent">{KIND_LABELS[item.kind]}</p>
+          <p className="section-label text-accent">
+            {KIND_LABELS[item.kind]}
+            {blockSize > 1 ? ` · ${blockLabel(blockSize)}` : null}
+          </p>
           <h2 className="text-display-s text-e">{item.name}</h2>
           {item.objective && (
             <p className="tabular text-title-m text-on-surface-variant">
@@ -391,13 +412,17 @@ export function SessionMode({
                   </li>
                 ))}
               </ul>
-              {item.restSecs === null && (
+              {item.superset ? (
+                <p className="text-body-s text-on-surface-variant">
+                  Encadenado con «{items[active + 1]?.name ?? ""}»
+                </p>
+              ) : item.restSecs === null ? (
                 <p className="text-body-s text-on-surface-variant">
                   {item.restAfterSecs === null
                     ? "Sin descansos programados"
                     : "Sin pausa entre series"}
                 </p>
-              )}
+              ) : null}
             </div>
           )}
 
@@ -500,36 +525,51 @@ export function SessionMode({
             onClose={() => setListing(false)}
           />
           <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto pb-6">
-            {items.map((it, i) => {
-              // Hecho = todas sus series (o el cardio marcado), el mismo
-              // criterio que el aro «N / M».
-              const isDone = it.sets
-                ? it.sets.length > 0 && it.sets.every((s) => s.done)
-                : it.done === true;
+            {/* Cada bloque va en su contenedor, con la caja cuando encadena:
+                en el listado se ve qué ejercicios se hacen de un tirón. */}
+            {blocks(items).map((block) => {
+              const row = (i: number) => {
+                const it = items[i];
+                // Hecho = todas sus series (o el cardio marcado), el mismo
+                // criterio que el aro «N / M».
+                const isDone = it.sets
+                  ? it.sets.length > 0 && it.sets.every((s) => s.done)
+                  : it.done === true;
+                return (
+                  <li key={it.id}>
+                    <Button
+                      variant="text"
+                      className="list-row w-full justify-start text-left"
+                      aria-label={`${it.name}, ${isDone ? "hecho" : "pendiente"}`}
+                      aria-pressed={i === active}
+                      onClick={() => {
+                        setActive(i);
+                        setListing(false);
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate text-title-m">
+                        {it.name}
+                      </span>
+                      <span aria-hidden="true" className="grid size-5 shrink-0">
+                        {isDone ? (
+                          <CheckIcon filled width={20} height={20} />
+                        ) : (
+                          <span className="size-5 rounded-full border-2 border-current" />
+                        )}
+                      </span>
+                    </Button>
+                  </li>
+                );
+              };
               return (
-                <li key={it.id}>
-                  <Button
-                    variant="text"
-                    className="list-row w-full justify-start text-left"
-                    aria-label={`${it.name}, ${isDone ? "hecho" : "pendiente"}`}
-                    aria-pressed={i === active}
-                    onClick={() => {
-                      setActive(i);
-                      setListing(false);
-                    }}
-                  >
-                    <span className="min-w-0 flex-1 truncate text-title-m">
-                      {it.name}
-                    </span>
-                    <span aria-hidden="true" className="grid size-5 shrink-0">
-                      {isDone ? (
-                        <CheckIcon filled width={20} height={20} />
-                      ) : (
-                        <span className="size-5 rounded-full border-2 border-current" />
-                      )}
-                    </span>
-                  </Button>
-                </li>
+                <Chain
+                  key={`c${items[block[0]].id}`}
+                  label={
+                    block.length > 1 ? blockLabel(block.length) : undefined
+                  }
+                >
+                  {block.map(row)}
+                </Chain>
               );
             })}
           </ul>

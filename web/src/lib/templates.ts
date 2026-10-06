@@ -17,6 +17,8 @@ export type TemplateExerciseRow = {
   /** Descansos programados (segundos): entre series y al terminar el ejercicio. */
   restSecs: number | null;
   restAfterSecs: number | null;
+  /** `true` = va pegado a la entrada siguiente (bloque/superserie). */
+  superset: boolean;
   exerciseName: string;
   kind: ExerciseKind;
 };

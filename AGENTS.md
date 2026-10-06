@@ -48,8 +48,9 @@ decisiones en `REDESIGN.md`). Tres capas, con un solo dueño cada una:
 Las pantallas consumen **las primitivas**:
 - `web/src/components/ui.tsx`: `Button`, `SplitButton`, `ConnectedGroup` y
   `ConnectedItem`, `Fab`, `Chip`, `Card` (elevated, filled, outlined, tonal),
-  `Field`, `Input`, `Textarea`, `Select`, `SearchBar`, `Checkbox`, `Switch`,
-  `Badge`, `Alert`, `Kbd`, `ScrollStrip`.
+  `Chain` (la caja de un bloque encadenado), `Field`, `Input`,
+  `Textarea`, `Select`, `SearchBar`, `Checkbox`, `Switch`, `Badge`, `Alert`,
+  `Kbd`, `ScrollStrip`.
 - `expressive.tsx`: `Shape`, `Loader`, `WavyProgress`, `WavyRing`, `CountUp`,
   `RewardSeal`, `EmptyState`, `Monogram`.
 - `overlay.tsx`: `Dialog`, `Sheet`, `OverlayHeader`, `useSnackbar`, `useTooltip`.
@@ -458,6 +459,65 @@ de los descansos; en una sesión registrada no cambian → 409),
 (el modo entero, con el doble de Web Audio de `web/tests/audio-fake.ts`),
 `web/tests/rest-audio.test.ts` y `e2e/tests/session-mode.spec.ts` (móvil, 390 px).
 
+### Bloques de ejercicios (superseries, 0024)
+
+Un día (o una plantilla) puede **encadenar un ejercicio con el siguiente**: la
+biserie, la triserie y la serie gigante del gimnasio. La marca vive en
+`plan_session_exercises.superset` / `template_exercises.superset` (migración
+aditiva **0024**, defecto 0) y significa «va pegado al de al lado»: un bloque son
+**dos o más filas seguidas marcadas** y el último va sin marca. No hay número de
+grupo (una marca que solo mira al vecino no puede dejar un bloque partido al
+reordenar).
+
+- **Solo fuerza**: el cardio no encadena —no tiene una «serie 1» que repetir en
+  una vuelta— y un bloque con cardio es 400 en `items`/`exercises`, igual que la
+  marca en la última fila. El cliente apaga las que no valen al borrar, reordenar
+  o cambiar de tipo (`normalizeSupersets`).
+- **Vueltas**: el bloque avanza por vueltas (una serie de cada miembro, saltando
+  al que ya agotó las suyas) y la vuelta la define **la serie que se marca**, no
+  lo que quede pendiente: con series desiguales (A 3 + B 2) la vuelta 3 es solo
+  de A.
+- **Descansos**: los lleva **solo el último miembro** —`rest_secs` es «entre
+  vueltas» y `rest_after_secs` «al acabar el bloque»—; los de en medio van
+  pegados y **sin descanso propio** (400 si llegan con descansos). El editor les
+  oculta los campos y renombra los del que cierra el bloque.
+- Las reglas puras (`blockRange`, `blocks`, `normalizeSupersets`, `blockLabel`,
+  `nextAfterSet`) viven en `web/src/lib/workout.ts`; la validación de la API es
+  `blockError` (`api/src/blocks.ts`).
+- **La caja**: cada lista de ejercicios se pinta **por bloques** (`blocks()`) y
+  cada bloque va en un `Chain` (piel `.chain`): fondo `accent-soft` y la
+  etiqueta del bloque arriba
+  (`blockLabel`: «Superserie», «Triserie», «Serie gigante»); el bloque de un
+  solo miembro es una fila suelta y no pinta caja. Así se ve de un tirón qué se
+  hace de un tirón, y el contenedor está en todas las superficies donde se
+  listan los ejercicios: el editor del día, la celda de la rejilla (donde cada
+  hueco se lleva el alto de sus miembros con `flexGrow`), el editor de
+  plantillas, la tarjeta desplegada de `/plantillas`, la página de la sesión
+  (borrador y registro) y el listado del modo sesión. La estructura es la
+  **misma** con y sin caja a propósito: encadenar y desencadenar no remonta las
+  filas, así que el chip que acabas de pulsar conserva el foco (y la lista no
+  pierde el suyo tras un arrastre con teclado). El registro no guarda la cadena
+  —`GET /api/workout-logs/:date` solo trae `session: {id, name}`—, así que ahí
+  los bloques salen del plan del día (`view.session.exercises`, que sí la trae).
+  Los cubren `web/tests/ui-primitives.test.tsx`, `plan-fuerza.test.tsx`,
+  `plantillas.test.tsx`, `sesion.test.tsx` y `e2e/tests/supersets.spec.ts` (la
+  caja en la celda y en el editor a 390 px, el tono, el borde y el arrastre).
+  **La tarjeta de la sesión de «Hoy» no la lleva**: su lista numerada sale de
+  `GET /api/day`, que no selecciona `superset` (añadirlo es una línea en
+  `api/src/routes/day.ts` + la caja en `dia.tsx`).
+- **Modo sesión**: a mitad de vuelta salta al siguiente miembro **sin pausa**; al
+  cerrarla arranca el descanso del bloque y vuelve al primero; al terminar el
+  bloque, el de fin y sigue. El título lleva el nombre del bloque («Superserie»,
+  «Triserie», «Serie gigante`) y el miembro encadenado avisa («Encadenado con
+  «X»»).
+- **Celda del calendario**: el bloque va en su caja tonal y la fila suelta,
+  sin ella (antes cada miembro llevaba una barra de acento; el tono de la caja
+  la sustituye).
+
+Lo cubren `api/tests/supersets.test.ts`, `web/tests/workout-blocks.test.ts`,
+`web/tests/plan-fuerza.test.tsx`, `web/tests/plantillas.test.tsx`,
+`web/tests/sesion.test.tsx` y `e2e/tests/supersets.spec.ts`.
+
 ### Historial (`/historial` y la ficha del ejercicio)
 
 `HistorialPage` (`web/src/routes/historial.tsx`) es hija de **Deporte** en el
@@ -818,6 +878,10 @@ catálogo recortado no la rompe.
 - `0023_ejercicios_barra_libre.sql` es **sembrado**: 17 ejercicios de «Barra
 Libre» con sus tags, sub-regiones (con grado) y alias. Tampoco va al bootstrap;
 la cubre `api/tests/barra-libre-migration.test.ts`.
+- `0024_supersets.sql` es **aditiva**: `superset` (0/1) en
+`plan_session_exercises` y `template_exercises` (los bloques de ejercicios:
+biserie, triserie, serie gigante). Sí va al bootstrap de tests. Como nace con
+defecto 0, se puede aplicar antes del merge sin romper el código desplegado.
 - En remoto el baseline ya está aplicado en la D1 de producción; cada delta
 nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
 histórico de planificación, justo después del deploy; **0013–0015, 0018 y

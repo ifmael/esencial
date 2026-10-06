@@ -921,6 +921,7 @@ function AddToTemplate({
             targetDurationMin: e.targetDurationMin,
             restSecs: e.restSecs,
             restAfterSecs: e.restAfterSecs,
+            superset: e.superset,
           })),
           {
             exerciseId: exercise.id,
@@ -931,6 +932,7 @@ function AddToTemplate({
             targetDurationMin: null,
             restSecs: null,
             restAfterSecs: null,
+            superset: false,
           },
         ],
       });

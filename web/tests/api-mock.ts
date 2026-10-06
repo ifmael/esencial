@@ -25,6 +25,9 @@ export type SessionExerciseRow = {
   targetDurationMin: number | null;
   restSecs: number | null;
   restAfterSecs: number | null;
+  /** `true` = va pegado al siguiente (bloque/superserie). Opcional en una
+   *  semilla (el mock lo rellena al hidratar un `items[]`), como lo admite la API. */
+  superset?: boolean;
 };
 
 export type PlanSessionRow = {
@@ -78,6 +81,8 @@ type RawItem = {
   targetDurationMin?: number | null;
   restSecs?: number | null;
   restAfterSecs?: number | null;
+  /** `true` = va pegado al siguiente (bloque/superserie). */
+  superset?: boolean;
 };
 
 export function mockApi(seed: Seed = {}): MockApi {
@@ -136,6 +141,7 @@ export function mockApi(seed: Seed = {}): MockApi {
         targetDurationMin: raw.targetDurationMin ?? null,
         restSecs: raw.restSecs ?? null,
         restAfterSecs: raw.restAfterSecs ?? null,
+        superset: raw.superset ?? false,
       };
     });
 
@@ -409,6 +415,7 @@ function hydrate(
     targetDurationMin: e.targetDurationMin ?? null,
     restSecs: e.restSecs ?? null,
     restAfterSecs: e.restAfterSecs ?? null,
+    superset: e.superset ?? false,
     exerciseName: ex?.name ?? "?",
     kind: ex?.kind ?? "strength",
   };

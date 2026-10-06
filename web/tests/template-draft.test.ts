@@ -24,6 +24,7 @@ const ex = (id: number, name: string): DraftEntry => ({
   targetDurationMin: null,
   restSecs: null,
   restAfterSecs: null,
+  superset: false,
 });
 
 const cardio = (id: number, name: string): DraftEntry => ({
@@ -127,6 +128,7 @@ describe("buildTemplatePayload", () => {
           targetDurationMin: null,
           restSecs: null,
           restAfterSecs: null,
+          superset: false,
         },
         {
           exerciseId: 9,
@@ -137,6 +139,7 @@ describe("buildTemplatePayload", () => {
           targetDurationMin: null,
           restSecs: null,
           restAfterSecs: null,
+          superset: false,
         },
         {
           exerciseId: 10,
@@ -147,6 +150,7 @@ describe("buildTemplatePayload", () => {
           targetDurationMin: null,
           restSecs: null,
           restAfterSecs: null,
+          superset: false,
         },
       ],
     });

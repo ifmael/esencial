@@ -36,6 +36,7 @@ import {
   Button,
   buttonClass,
   Card,
+  Chain,
   Checkbox,
   cx,
   Field,
@@ -62,6 +63,8 @@ import { isSessionComplete } from "../lib/reward";
 import { useCreateMorph } from "../lib/view-transition";
 import {
   addedSet,
+  blockLabel,
+  blocks,
   copiedMarks,
   defaultSetCount,
   EFFORT_LABELS,
@@ -288,6 +291,7 @@ function modeItems(v: Draft): ModeItem[] {
         noWeight: ex.noWeight,
         restSecs: ex.se.restSecs ?? null,
         restAfterSecs: ex.se.restAfterSecs ?? null,
+        superset: ex.se.superset,
       },
     })),
     ...v.cardio.map((c) => ({
@@ -302,6 +306,7 @@ function modeItems(v: Draft): ModeItem[] {
         noWeight: false,
         restSecs: null,
         restAfterSecs: c.se.restAfterSecs ?? null,
+        superset: false,
       },
     })),
   ];
@@ -892,6 +897,19 @@ function SesionView() {
       ) : (
         <span className="size-5 rounded-full border-2 border-outline" />
       );
+    // El registro no guarda la cadena; sí el plan del día (`view.session`), y
+    // los sets llegan en su orden (`position`), así que los bloques salen de ahí.
+    const entries = Object.entries(byExercise);
+    const planned = view.session?.exercises ?? [];
+    const groups = blocks(
+      entries.map(([seId]) => {
+        const se = planned.find((e) => e.id === Number(seId));
+        return {
+          superset: se?.superset ?? false,
+          kind: se?.kind ?? "strength",
+        };
+      }),
+    );
     return (
       <div className="pb-8">
         <Header
@@ -921,76 +939,85 @@ function SesionView() {
             <Stat value={`${log.effort}/5`} label="Esfuerzo" />
           </div>
         </section>
-        <div className="stagger flex flex-col gap-3">
-          {Object.entries(byExercise).map(([seId, sets], i) => (
-            <Card
-              key={seId}
-              className="flex flex-col gap-2"
-              style={{ ["--i" as string]: i }}
-            >
-              <h2 className="text-title-m">{sets[0].exerciseName}</h2>
-              <ul className="flex flex-col gap-1">
-                {sets.map((s) => (
-                  <li
-                    key={s.setIndex}
-                    className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3"
-                  >
-                    <span aria-hidden="true" className="grid size-5">
-                      {mark(s.done)}
-                    </span>
-                    <span className="w-16 text-body-m text-on-surface-variant">
-                      Serie {s.setIndex + 1}
-                    </span>
-                    <span
-                      className={cx(
-                        "text-title-m tabular",
-                        !s.done && "text-on-surface-variant",
-                      )}
-                    >
-                      {formatSetText(s)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
+        <ul className="stagger flex flex-col gap-3">
+          {/* Cada bloque en su contenedor, con la caja cuando el día venía
+              encadenado: el registro se lee igual que se hizo. */}
+          {groups.map((block, bi) => {
+            const card = (i: number) => {
+              const [seId, sets] = entries[i];
+              return (
+                <li key={seId}>
+                  <Card className="flex flex-col gap-2">
+                    <h2 className="text-title-m">{sets[0].exerciseName}</h2>
+                    <ul className="flex flex-col gap-1">
+                      {sets.map((s) => (
+                        <li
+                          key={s.setIndex}
+                          className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3"
+                        >
+                          <span aria-hidden="true" className="grid size-5">
+                            {mark(s.done)}
+                          </span>
+                          <span className="w-16 text-body-m text-on-surface-variant">
+                            Serie {s.setIndex + 1}
+                          </span>
+                          <span
+                            className={cx(
+                              "text-title-m tabular",
+                              !s.done && "text-on-surface-variant",
+                            )}
+                          >
+                            {formatSetText(s)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                </li>
+              );
+            };
+            return (
+              <Chain
+                key={`c${entries[block[0]][0]}`}
+                label={block.length > 1 ? blockLabel(block.length) : undefined}
+                style={{ ["--i" as string]: bi }}
+              >
+                {block.map(card)}
+              </Chain>
+            );
+          })}
           {log.cardio.map((c, i) => (
-            <Card
+            <li
               key={c.planSessionExerciseId}
-              className="flex flex-col gap-2"
-              style={{
-                ["--i" as string]: Object.keys(byExercise).length + i,
-              }}
+              style={{ ["--i" as string]: groups.length + i }}
             >
-              <h2 className="text-title-m">{c.exerciseName}</h2>
-              <p className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3">
-                <span aria-hidden="true" className="grid size-5">
-                  {mark(c.done)}
-                </span>
-                <span className="text-title-m tabular">
-                  {c.distanceKm === null && c.durationMin === null
-                    ? "Hecho sin marcas"
-                    : `${c.distanceKm ?? "—"} km · ${c.durationMin ?? "—"} min`}
-                </span>
-              </p>
-            </Card>
+              <Card className="flex flex-col gap-2">
+                <h2 className="text-title-m">{c.exerciseName}</h2>
+                <p className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3">
+                  <span aria-hidden="true" className="grid size-5">
+                    {mark(c.done)}
+                  </span>
+                  <span className="text-title-m tabular">
+                    {c.distanceKm === null && c.durationMin === null
+                      ? "Hecho sin marcas"
+                      : `${c.distanceKm ?? "—"} km · ${c.durationMin ?? "—"} min`}
+                  </span>
+                </p>
+              </Card>
+            </li>
           ))}
-          <Card
-            className="flex flex-col gap-3"
-            style={{
-              ["--i" as string]:
-                Object.keys(byExercise).length + log.cardio.length,
-            }}
-          >
-            <h2 className="text-title-m">Esfuerzo percibido</h2>
-            <EffortDots effort={log.effort} />
-            {log.note && (
-              <p className="rounded-m bg-surface-container-high p-3 text-body-l">
-                {log.note}
-              </p>
-            )}
-          </Card>
-        </div>
+          <li style={{ ["--i" as string]: groups.length + log.cardio.length }}>
+            <Card className="flex flex-col gap-3">
+              <h2 className="text-title-m">Esfuerzo percibido</h2>
+              <EffortDots effort={log.effort} />
+              {log.note && (
+                <p className="rounded-m bg-surface-container-high p-3 text-body-l">
+                  {log.note}
+                </p>
+              )}
+            </Card>
+          </li>
+        </ul>
       </div>
     );
   }
@@ -1041,6 +1068,9 @@ function SesionView() {
       day.expanded[ex.se.id] &&
       ex.sets.some((s) => !s.done && isSetFilled(s, ex.noWeight)),
   );
+  // Los bloques del día (encadenados) y su orden: agrupan las tarjetas y dan el
+  // turno del escalonado.
+  const groups = blocks(v.exercises.map((ex) => ex.se));
   return (
     <div className="pb-24">
       <Header
@@ -1064,294 +1094,307 @@ function SesionView() {
         <PlayIcon />
         Empezar
       </Button>
-      <div className="stagger flex flex-col gap-3">
-        {v.exercises.map((ex, idx) => {
-          const open = !!day.expanded[ex.se.id];
-          const helper = ex.previous ?? formatLast(ex.last);
-          const allDone = ex.sets.every((s) => s.done);
-          return (
-            <Card
-              key={ex.se.id}
-              className={doneCard(allDone)}
-              style={{ ["--i" as string]: idx }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-3">
-                  <RowMark done={allDone}>{idx + 1}</RowMark>
-                  <div className="flex min-w-0 flex-col">
-                    <Link
-                      to={`/ejercicios/${ex.se.exerciseId}`}
-                      className="text-title-m text-e underline-offset-4 hover:underline"
-                    >
-                      {ex.se.exerciseName}
-                    </Link>
-                    {helper && (
-                      <span className="tabular text-body-s text-on-surface-variant">
-                        {helper}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {/* En móvil, «Sin peso» y «Registrar series» caen juntos a una
+      <ul className="stagger flex flex-col gap-3">
+        {/* Cada bloque en su contenedor, con la caja cuando encadena más de un
+            miembro: montar el día y registrarlo se leen igual. */}
+        {groups.map((block, bi) => {
+          const card = (idx: number) => {
+            const ex = v.exercises[idx];
+            const open = !!day.expanded[ex.se.id];
+            const helper = ex.previous ?? formatLast(ex.last);
+            const allDone = ex.sets.every((s) => s.done);
+            return (
+              <li key={ex.se.id}>
+                <Card className={doneCard(allDone)}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <RowMark done={allDone}>{idx + 1}</RowMark>
+                      <div className="flex min-w-0 flex-col">
+                        <Link
+                          to={`/ejercicios/${ex.se.exerciseId}`}
+                          className="text-title-m text-e underline-offset-4 hover:underline"
+                        >
+                          {ex.se.exerciseName}
+                        </Link>
+                        {helper && (
+                          <span className="tabular text-body-s text-on-surface-variant">
+                            {helper}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* En móvil, «Sin peso» y «Registrar series» caen juntos a una
                     línea propia: van centrados, porque el resto de la tarjeta
                     (la marca, el nombre y la tira de casillas) empieza en el
                     margen izquierdo y el par quedaba pegado al borde derecho.
                     Desde `sm` la fila lleva también la tira y va al final, como
                     el resto de cabeceras M3. */}
-                <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-end">
-                  <span className="flex shrink-0 items-center gap-2 pr-2 text-label-l">
-                    <Switch
-                      aria-label={`Sin peso · ${ex.se.exerciseName}`}
-                      checked={ex.noWeight}
-                      onChange={() => day.toggleNoWeight(ex.se.id)}
-                    />
-                    Sin peso
-                  </span>
-                  {!open && (
-                    // Una sola línea: en móvil se lleva la suya (ancho completo)
-                    // y a partir de `sm` solo cae a otra si no cabe. El borde
-                    // desvanecido avisa de que hay más series.
-                    <ScrollStrip className="order-last flex w-full min-w-0 items-center gap-1 sm:order-none sm:w-auto">
-                      {ex.sets.map((s, i) => (
-                        <Checkbox
-                          key={i}
-                          className="shrink-0"
-                          aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
-                          checked={s.done}
-                          disabled={!s.done && !isSetFilled(s, ex.noWeight)}
-                          onChange={() => day.toggleDone(ex.se.id, i)}
+                    <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-end">
+                      <span className="flex shrink-0 items-center gap-2 pr-2 text-label-l">
+                        <Switch
+                          aria-label={`Sin peso · ${ex.se.exerciseName}`}
+                          checked={ex.noWeight}
+                          onChange={() => day.toggleNoWeight(ex.se.id)}
                         />
-                      ))}
-                    </ScrollStrip>
-                  )}
-                  <Button
-                    aria-label={`Series de ${ex.se.exerciseName}`}
-                    aria-expanded={open}
-                    variant="tonal"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => day.toggleExpand(ex.se.id)}
-                  >
-                    {open ? "Ocultar" : "Registrar series"}
-                    <ChevronDownIcon
-                      width={20}
-                      height={20}
-                      className={cx(
-                        "transition-transform motion-spatial-fast",
-                        open && "rotate-180",
-                      )}
-                    />
-                  </Button>
-                </div>
-              </div>
-              {open && (
-                <>
-                  <ul className="stagger mt-3 flex flex-col gap-2">
-                    {ex.sets.map((s, i) => {
-                      const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
-                      // La homóloga de la sesión anterior: solo si la hubo.
-                      const prev = ex.prevSets[i] ?? null;
-                      return (
-                        <li
-                          key={i}
-                          style={{ ["--i" as string]: i }}
-                          className={cx(
-                            "flex flex-col gap-2 rounded-l p-2 transition-colors motion-effects sm:flex-row sm:items-end",
-                            s.done
-                              ? "bg-surface-container-lowest"
-                              : "bg-surface-container-high",
-                          )}
-                        >
-                          <div className="flex items-center gap-1">
+                        Sin peso
+                      </span>
+                      {!open && (
+                        // Una sola línea: en móvil se lleva la suya (ancho completo)
+                        // y a partir de `sm` solo cae a otra si no cabe. El borde
+                        // desvanecido avisa de que hay más series.
+                        <ScrollStrip className="order-last flex w-full min-w-0 items-center gap-1 sm:order-none sm:w-auto">
+                          {ex.sets.map((s, i) => (
                             <Checkbox
-                              aria-label={ctx}
+                              key={i}
+                              className="shrink-0"
+                              aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
                               checked={s.done}
                               disabled={!s.done && !isSetFilled(s, ex.noWeight)}
                               onChange={() => day.toggleDone(ex.se.id, i)}
                             />
-                            <span className="w-14 text-label-l text-on-surface-variant">
-                              Serie {i + 1}
-                            </span>
-                            {prev && (
-                              // El valor de la serie homóloga y, a la vez, el
-                              // botón que la copia (reps y kilos, sin marcar).
-                              <Button
-                                variant="text"
-                                size="md"
-                                className="tabular shrink-0"
-                                aria-label={`Copiar ${formatSetText(prev)} de la sesión anterior a ${ctx}`}
-                                onClick={() => day.copyPrevious(ex.se.id, i)}
-                              >
-                                <CopyIcon width={18} height={18} />
-                                {formatSetText(prev)}
-                              </Button>
-                            )}
-                          </div>
-                          <div
-                            className={cx(
-                              "grid flex-1 gap-3",
-                              ex.noWeight ? "grid-cols-1" : "grid-cols-2",
-                            )}
-                          >
-                            {!ex.noWeight && (
-                              <Stepper
-                                caption="Peso (kg)"
-                                context={ctx}
-                                value={s.weightKg}
-                                step={2.5}
-                                onValue={(val) =>
-                                  day.setDraftValue(
-                                    ex.se.id,
-                                    i,
-                                    "weightKg",
-                                    val,
-                                  )
-                                }
-                                onStep={(d) =>
-                                  day.stepValue(ex.se.id, i, "weightKg", d)
-                                }
-                              />
-                            )}
-                            <Stepper
-                              caption="Reps"
-                              context={ctx}
-                              value={s.reps}
-                              step={1}
-                              onValue={(val) =>
-                                day.setDraftValue(ex.se.id, i, "reps", val)
-                              }
-                              onStep={(d) =>
-                                day.stepValue(ex.se.id, i, "reps", d)
-                              }
-                            />
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="tonal"
-                      aria-label={`Quitar serie a ${ex.se.exerciseName}`}
-                      disabled={ex.sets.length <= MIN_SETS}
-                      onClick={() => day.removeSet(ex.se.id)}
-                    >
-                      − Quitar serie
-                    </Button>
-                    <Button
-                      variant="tonal"
-                      aria-label={`Añadir serie a ${ex.se.exerciseName}`}
-                      disabled={ex.sets.length >= MAX_SETS}
-                      onClick={() => day.addSet(ex.se.id)}
-                    >
-                      + Añadir serie
-                    </Button>
+                          ))}
+                        </ScrollStrip>
+                      )}
+                      <Button
+                        aria-label={`Series de ${ex.se.exerciseName}`}
+                        aria-expanded={open}
+                        variant="tonal"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => day.toggleExpand(ex.se.id)}
+                      >
+                        {open ? "Ocultar" : "Registrar series"}
+                        <ChevronDownIcon
+                          width={20}
+                          height={20}
+                          className={cx(
+                            "transition-transform motion-spatial-fast",
+                            open && "rotate-180",
+                          )}
+                        />
+                      </Button>
+                    </div>
                   </div>
-                </>
-              )}
-            </Card>
+                  {open && (
+                    <>
+                      <ul className="stagger mt-3 flex flex-col gap-2">
+                        {ex.sets.map((s, i) => {
+                          const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
+                          // La homóloga de la sesión anterior: solo si la hubo.
+                          const prev = ex.prevSets[i] ?? null;
+                          return (
+                            <li
+                              key={i}
+                              style={{ ["--i" as string]: i }}
+                              className={cx(
+                                "flex flex-col gap-2 rounded-l p-2 transition-colors motion-effects sm:flex-row sm:items-end",
+                                s.done
+                                  ? "bg-surface-container-lowest"
+                                  : "bg-surface-container-high",
+                              )}
+                            >
+                              <div className="flex items-center gap-1">
+                                <Checkbox
+                                  aria-label={ctx}
+                                  checked={s.done}
+                                  disabled={
+                                    !s.done && !isSetFilled(s, ex.noWeight)
+                                  }
+                                  onChange={() => day.toggleDone(ex.se.id, i)}
+                                />
+                                <span className="w-14 text-label-l text-on-surface-variant">
+                                  Serie {i + 1}
+                                </span>
+                                {prev && (
+                                  // El valor de la serie homóloga y, a la vez, el
+                                  // botón que la copia (reps y kilos, sin marcar).
+                                  <Button
+                                    variant="text"
+                                    size="md"
+                                    className="tabular shrink-0"
+                                    aria-label={`Copiar ${formatSetText(prev)} de la sesión anterior a ${ctx}`}
+                                    onClick={() =>
+                                      day.copyPrevious(ex.se.id, i)
+                                    }
+                                  >
+                                    <CopyIcon width={18} height={18} />
+                                    {formatSetText(prev)}
+                                  </Button>
+                                )}
+                              </div>
+                              <div
+                                className={cx(
+                                  "grid flex-1 gap-3",
+                                  ex.noWeight ? "grid-cols-1" : "grid-cols-2",
+                                )}
+                              >
+                                {!ex.noWeight && (
+                                  <Stepper
+                                    caption="Peso (kg)"
+                                    context={ctx}
+                                    value={s.weightKg}
+                                    step={2.5}
+                                    onValue={(val) =>
+                                      day.setDraftValue(
+                                        ex.se.id,
+                                        i,
+                                        "weightKg",
+                                        val,
+                                      )
+                                    }
+                                    onStep={(d) =>
+                                      day.stepValue(ex.se.id, i, "weightKg", d)
+                                    }
+                                  />
+                                )}
+                                <Stepper
+                                  caption="Reps"
+                                  context={ctx}
+                                  value={s.reps}
+                                  step={1}
+                                  onValue={(val) =>
+                                    day.setDraftValue(ex.se.id, i, "reps", val)
+                                  }
+                                  onStep={(d) =>
+                                    day.stepValue(ex.se.id, i, "reps", d)
+                                  }
+                                />
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="tonal"
+                          aria-label={`Quitar serie a ${ex.se.exerciseName}`}
+                          disabled={ex.sets.length <= MIN_SETS}
+                          onClick={() => day.removeSet(ex.se.id)}
+                        >
+                          − Quitar serie
+                        </Button>
+                        <Button
+                          variant="tonal"
+                          aria-label={`Añadir serie a ${ex.se.exerciseName}`}
+                          disabled={ex.sets.length >= MAX_SETS}
+                          onClick={() => day.addSet(ex.se.id)}
+                        >
+                          + Añadir serie
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </Card>
+              </li>
+            );
+          };
+          return (
+            <Chain
+              key={`c${v.exercises[block[0]].se.id}`}
+              label={block.length > 1 ? blockLabel(block.length) : undefined}
+              style={{ ["--i" as string]: bi }}
+            >
+              {block.map(card)}
+            </Chain>
           );
         })}
 
         {v.cardio.map((c, i) => {
           const Icon = c.se.kind === "bike" ? BikeIcon : RunIcon;
           return (
-            <Card
-              key={c.se.id}
-              className={doneCard(c.done)}
-              style={{ ["--i" as string]: v.exercises.length + i }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-3">
-                  <RowMark done={c.done}>
-                    <Icon width={20} height={20} />
-                  </RowMark>
-                  <Link
-                    to={`/ejercicios/${c.se.exerciseId}`}
-                    className="text-title-m text-e underline-offset-4 hover:underline"
-                  >
-                    {c.se.exerciseName}
-                  </Link>
+            <li key={c.se.id} style={{ ["--i" as string]: groups.length + i }}>
+              <Card className={doneCard(c.done)}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <RowMark done={c.done}>
+                      <Icon width={20} height={20} />
+                    </RowMark>
+                    <Link
+                      to={`/ejercicios/${c.se.exerciseId}`}
+                      className="text-title-m text-e underline-offset-4 hover:underline"
+                    >
+                      {c.se.exerciseName}
+                    </Link>
+                  </div>
+                  <label className="flex cursor-pointer items-center pr-3 text-label-l">
+                    <Checkbox
+                      aria-label={`${c.se.exerciseName} hecho`}
+                      checked={c.done}
+                      onChange={() => day.toggleCardioDone(c.se.id)}
+                    />
+                    Hecho
+                  </label>
                 </div>
-                <label className="flex cursor-pointer items-center pr-3 text-label-l">
-                  <Checkbox
-                    aria-label={`${c.se.exerciseName} hecho`}
-                    checked={c.done}
-                    onChange={() => day.toggleCardioDone(c.se.id)}
+                <div className="mt-3 grid grid-cols-2 gap-3 rounded-l bg-surface-container-high p-2">
+                  <Stepper
+                    caption="Distancia (km)"
+                    context={c.se.exerciseName}
+                    value={c.distanceKm}
+                    step={1}
+                    onValue={(val) =>
+                      day.setCardioValue(c.se.id, "distanceKm", val)
+                    }
+                    onStep={(d) =>
+                      day.setCardioValue(
+                        c.se.id,
+                        "distanceKm",
+                        String(Math.max(0, (c.distanceKm ?? 0) + d)),
+                      )
+                    }
                   />
-                  Hecho
-                </label>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 rounded-l bg-surface-container-high p-2">
-                <Stepper
-                  caption="Distancia (km)"
-                  context={c.se.exerciseName}
-                  value={c.distanceKm}
-                  step={1}
-                  onValue={(val) =>
-                    day.setCardioValue(c.se.id, "distanceKm", val)
-                  }
-                  onStep={(d) =>
-                    day.setCardioValue(
-                      c.se.id,
-                      "distanceKm",
-                      String(Math.max(0, (c.distanceKm ?? 0) + d)),
-                    )
-                  }
-                />
-                <Stepper
-                  caption="Tiempo (min)"
-                  context={c.se.exerciseName}
-                  value={c.durationMin}
-                  step={5}
-                  onValue={(val) =>
-                    day.setCardioValue(c.se.id, "durationMin", val)
-                  }
-                  onStep={(d) =>
-                    day.setCardioValue(
-                      c.se.id,
-                      "durationMin",
-                      String(Math.max(0, (c.durationMin ?? 0) + d)),
-                    )
-                  }
-                />
-              </div>
-            </Card>
+                  <Stepper
+                    caption="Tiempo (min)"
+                    context={c.se.exerciseName}
+                    value={c.durationMin}
+                    step={5}
+                    onValue={(val) =>
+                      day.setCardioValue(c.se.id, "durationMin", val)
+                    }
+                    onStep={(d) =>
+                      day.setCardioValue(
+                        c.se.id,
+                        "durationMin",
+                        String(Math.max(0, (c.durationMin ?? 0) + d)),
+                      )
+                    }
+                  />
+                </div>
+              </Card>
+            </li>
           );
         })}
 
         {/* Justo tras la última fila: donde está la vista al marcarla. */}
         {complete && (
-          <div>
+          <li>
             <RewardSeal sets={progress.done} />
-          </div>
+          </li>
         )}
 
-        <Card
-          className="flex flex-col gap-4"
-          style={{ ["--i" as string]: v.exercises.length + v.cardio.length }}
-        >
-          <div className="flex flex-col gap-1">
-            <h2 className="text-title-m">Esfuerzo percibido</h2>
-            {v.effort === null && (
-              <p className="text-body-s text-on-surface-variant">
-                Elige cómo fue para poder cerrar la sesión.
-              </p>
-            )}
-          </div>
-          <EffortDots effort={v.effort} onSelect={day.setEffort} />
-          <Field label="Nota de la sesión">
-            {(a) => (
-              <Textarea
-                {...a}
-                className="min-h-24"
-                value={v.note}
-                onChange={(e) => day.setNote(e.target.value)}
-              />
-            )}
-          </Field>
-        </Card>
-      </div>
+        <li style={{ ["--i" as string]: groups.length + v.cardio.length }}>
+          <Card className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-title-m">Esfuerzo percibido</h2>
+              {v.effort === null && (
+                <p className="text-body-s text-on-surface-variant">
+                  Elige cómo fue para poder cerrar la sesión.
+                </p>
+              )}
+            </div>
+            <EffortDots effort={v.effort} onSelect={day.setEffort} />
+            <Field label="Nota de la sesión">
+              {(a) => (
+                <Textarea
+                  {...a}
+                  className="min-h-24"
+                  value={v.note}
+                  onChange={(e) => day.setNote(e.target.value)}
+                />
+              )}
+            </Field>
+          </Card>
+        </li>
+      </ul>
 
       <div
         role="toolbar"

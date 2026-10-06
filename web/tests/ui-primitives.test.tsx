@@ -2,13 +2,20 @@
 // cada variante, que `disabled` bloquee el click, el enlace etiqueta/ayuda/error
 // de los campos y el menú del botón dividido—, no el detalle de su piel.
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Dialog } from "../src/components/overlay";
 import {
   Badge,
   Button,
   Card,
+  Chain,
   Field,
   Input,
   SplitButton,
@@ -16,6 +23,26 @@ import {
 } from "../src/components/ui";
 
 afterEach(cleanup);
+
+describe("Chain", () => {
+  it("la caja del bloque nombra con su etiqueta la lista que lleva dentro", () => {
+    render(
+      <ul>
+        <Chain label="Triserie">
+          <li>Press banca</li>
+          <li>Remo</li>
+        </Chain>
+      </ul>,
+    );
+    const block = screen.getByRole("list", { name: "Triserie" });
+    expect(screen.getByText("Triserie")).toBeDefined();
+    expect(
+      within(block)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["Press banca", "Remo"]);
+  });
+});
 
 describe("scrollEdge", () => {
   it("sin contenido fuera no hay indicador", () => {
