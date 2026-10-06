@@ -508,6 +508,10 @@ de los descansos; en una sesión registrada no cambian → 409),
 
 ### Bloques de ejercicios (superseries, 0026)
 
+El **mapa de los tipos de sesión** (los tres ejes: agrupación, estructura de la
+serie y formatos por tiempo) y las decisiones cerradas de este bloque viven en
+`TODO-sesion-exercises.md`, con lo que ya cabe y lo que queda en backlog.
+
 Un día (o una plantilla) puede **encadenar un ejercicio con el siguiente**: la
 biserie, la triserie y la serie gigante del gimnasio. La marca vive en
 `plan_session_exercises.superset` / `template_exercises.superset` (migración
