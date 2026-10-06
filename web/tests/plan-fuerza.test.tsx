@@ -15,7 +15,7 @@ import type { Exercise } from "../src/lib/exercises";
 import type { SessionPayload } from "../src/lib/plan-week";
 import type { TemplatePayload } from "../src/lib/template-draft";
 import type { Template } from "../src/lib/templates";
-import { type MockApi, mockApi } from "./api-mock";
+import { type MockApi, mockApi, type SessionExerciseRow } from "./api-mock";
 
 const press: Exercise = {
   id: 7,
@@ -72,6 +72,7 @@ const tplA = (): Template => ({
       targetDurationMin: null,
       restSecs: 90,
       restAfterSecs: 150,
+      superset: false,
       exerciseName: "Press banca",
       kind: "strength",
       metric: "weight_reps",
@@ -87,6 +88,7 @@ const tplA = (): Template => ({
       targetDurationMin: null,
       restSecs: null,
       restAfterSecs: null,
+      superset: false,
       exerciseName: "Remo",
       kind: "strength",
       metric: "weight_reps",
@@ -102,6 +104,7 @@ const tplA = (): Template => ({
       targetDurationMin: 45,
       restSecs: null,
       restAfterSecs: null,
+      superset: false,
       exerciseName: "Running",
       kind: "running",
       metric: "weight_reps",
@@ -312,14 +315,15 @@ describe("plan screen", () => {
     expect(within(list).getByText("Press banca")).toBeDefined();
     expect(within(list).getByText("Remo")).toBeDefined();
 
-    // Los ejercicios llenan la columna: la lista se queda con la altura libre y
-    // cada fila se estira con ella (con un tope táctil por debajo).
+    // Los ejercicios llenan la columna: la lista se queda con la altura libre,
+    // cada bloque se lleva su parte (`flexGrow`) y la fila se estira dentro
+    // (con un tope táctil por debajo).
     expect(list.className).toContain("flex-1");
-    const rows = within(list).getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
-    for (const row of rows) {
-      expect(row.className).toContain("flex-1");
-      expect(row.className).toContain("min-h-11");
+    for (const name of ["Press banca", "Remo"]) {
+      const row = within(list).getByText(name).closest("li");
+      expect(row?.className).toContain("flex-1");
+      expect(row?.className).toContain("min-h-11");
+      expect(row?.parentElement?.parentElement?.style.flexGrow).toBe("1");
     }
   });
 
@@ -756,6 +760,7 @@ describe("editor del día (sesión) en modal", () => {
           targetDurationMin: null,
           restSecs: 90,
           restAfterSecs: 150,
+          superset: false,
         },
         {
           exerciseId: 8,
@@ -766,6 +771,7 @@ describe("editor del día (sesión) en modal", () => {
           targetDurationMin: null,
           restSecs: null,
           restAfterSecs: null,
+          superset: false,
         },
         {
           exerciseId: 10,
@@ -776,6 +782,7 @@ describe("editor del día (sesión) en modal", () => {
           targetDurationMin: 45,
           restSecs: null,
           restAfterSecs: null,
+          superset: false,
         },
       ],
     });
@@ -1072,5 +1079,209 @@ describe("editor del día (sesión) en modal", () => {
     );
     expect(api.state.sessions).toHaveLength(1);
     expect(mutations().map((c) => c.method)).toEqual(["POST"]);
+  });
+});
+
+describe("bloques (superseries) en el día", () => {
+  async function openDay() {
+    renderAt("/plan-fuerza?week=2026-W36");
+    await screen.findByText("2026-W36");
+    await waitFor(() =>
+      expect(api.calls.some((c) => c.url === "/api/plan-sessions")).toBe(true),
+    );
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: "+ añadir" }))[0],
+    );
+    return await screen.findByRole("dialog", {
+      name: /Nueva sesión · 2026-08-31/,
+    });
+  }
+
+  it("encadenar dos ejercicios: la marca viaja y los descansos los lleva el último", async () => {
+    const dialog = await openDay();
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
+    // Expandir A — Empuje deja Press banca + Remo (fuerza) + Running (cardio).
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Encadenar Press banca con el siguiente",
+      }),
+    );
+    // El encadenado ya no tiene descanso propio: lo dice.
+    expect(
+      within(dialog).queryByLabelText(/^press banca descanso entre series$/i),
+    ).toBeNull();
+    expect(within(dialog).getByText(/va pegado a «Remo»/)).toBeDefined();
+    // El que cierra el bloque lleva los tiempos, con su nombre de bloque.
+    expect(
+      within(dialog).getByText("Descanso entre vueltas (s)"),
+    ).toBeDefined();
+    expect(
+      within(dialog).getByText("Descanso al acabar el bloque (s)"),
+    ).toBeDefined();
+    // No se puede encadenar el cardio (ni, por tanto, hacia él).
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Encadenar Running con el siguiente",
+      }),
+    ).toHaveProperty("disabled", true);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(1));
+    const body = mutations()[0].body as unknown as {
+      items: {
+        superset?: boolean;
+        restSecs?: number | null;
+        restAfterSecs?: number | null;
+      }[];
+    };
+    expect(body.items.map((i) => i.superset)).toEqual([true, false, false]);
+    expect(body.items[0]).toMatchObject({
+      restSecs: null,
+      restAfterSecs: null,
+    });
+    // El que cierra el bloque conserva los suyos (la plantilla no traía).
+    expect(body.items[1]).toMatchObject({
+      restSecs: null,
+      restAfterSecs: null,
+    });
+  });
+
+  it("soltar una fila encadenada le devuelve los descansos por defecto", async () => {
+    const dialog = await openDay();
+    fireEvent.click(within(dialog).getByRole("button", { name: /A — Empuje/ }));
+    const chip = within(dialog).getByRole("button", {
+      name: "Encadenar Press banca con el siguiente",
+    });
+    fireEvent.click(chip);
+    fireEvent.click(chip);
+    expect(
+      within(dialog).getByLabelText(/^press banca descanso entre series$/i),
+    ).toHaveProperty("value", "120");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(api.state.sessions).toHaveLength(1));
+    const body = mutations()[0].body as unknown as {
+      items: { superset?: boolean }[];
+    };
+    expect(body.items.map((i) => i.superset)).toEqual([false, false, false]);
+  });
+
+  // La caja del bloque: los encadenados se ven juntos en cualquier superficie
+  // donde se listen (el editor del día y la celda de la rejilla).
+  const sentadilla: Exercise = {
+    id: 9,
+    name: "Sentadilla",
+    description: null,
+    setupCues: null,
+    techniqueUrl: null,
+    steps: null,
+    tags: ["pierna"],
+    aliases: [],
+    regions: [{ region: "quads", role: "primary" }],
+    kind: "strength",
+    metric: "weight_reps",
+  };
+  const dominadas: Exercise = {
+    id: 11,
+    name: "Dominadas",
+    description: null,
+    setupCues: null,
+    techniqueUrl: null,
+    steps: null,
+    tags: ["espalda"],
+    aliases: [],
+    regions: [{ region: "lats-mid", role: "primary" }],
+    kind: "strength",
+    metric: "weight_reps",
+  };
+
+  /** Fila de sesión sembrada, como la devuelve la API (wire). */
+  function sessionRow(
+    id: number,
+    ex: Exercise,
+    extra: { superset?: boolean } = {},
+  ): SessionExerciseRow {
+    return {
+      id,
+      exerciseId: ex.id,
+      exerciseName: ex.name,
+      kind: ex.kind,
+      metric: ex.metric,
+      position: id - 1,
+      targetSets: 3,
+      targetRepsMin: 8,
+      targetRepsMax: 10,
+      targetDistanceKm: null,
+      targetDurationMin: null,
+      restSecs: 120,
+      restAfterSecs: 120,
+      ...extra,
+    };
+  }
+
+  function seedDay(chained: number) {
+    vi.unstubAllGlobals();
+    const rows = [press, remo, sentadilla, dominadas].map((ex, i) =>
+      sessionRow(i + 1, ex, { superset: i < chained }),
+    );
+    api = mockApi({
+      exercises: [press, remo, sentadilla, dominadas],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: rows,
+        },
+      ],
+    });
+  }
+
+  it("el editor agrupa el bloque encadenado en su caja y deja fuera lo suelto", async () => {
+    seedDay(0);
+    renderAt("/plan-fuerza?week=2026-W36");
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /editar sesión del 2026-08-31/i,
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: /Editar sesión · 2026-08-31/,
+    });
+    // Sin nada encadenado no hay caja ninguna.
+    expect(within(dialog).queryByRole("list", { name: "Triserie" })).toBeNull();
+
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Encadenar Press banca con el siguiente",
+      }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Encadenar Remo con el siguiente",
+      }),
+    );
+    const block = within(dialog).getByRole("list", { name: "Triserie" });
+    expect(within(block).getAllByRole("listitem")).toHaveLength(3);
+    for (const name of ["Press banca", "Remo", "Sentadilla"])
+      expect(within(block).getByText(name)).toBeDefined();
+    expect(within(block).queryByText("Dominadas")).toBeNull();
+  });
+
+  it("la celda de la rejilla envuelve el bloque y deja suelta la fila sin encadenar", async () => {
+    seedDay(2);
+    renderAt("/plan-fuerza?week=2026-W36");
+    const cell = await screen.findByRole("list", {
+      name: "Ejercicios del 2026-08-31",
+    });
+    const block = within(cell).getByRole("list", { name: "Triserie" });
+    expect(within(block).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(block).queryByText("Dominadas")).toBeNull();
+    // Un solo bloque: la cuarta fila va suelta, en la celda pero fuera de la caja.
+    expect(
+      within(cell).getAllByRole("list", { name: "Triserie" }),
+    ).toHaveLength(1);
+    expect(within(cell).getByText("Dominadas")).toBeDefined();
   });
 });

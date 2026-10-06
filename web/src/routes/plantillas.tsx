@@ -56,6 +56,7 @@ import {
   Badge,
   Button,
   Card,
+  Chain,
   Chip,
   ConnectedGroup,
   ConnectedItem,
@@ -93,7 +94,13 @@ import {
 } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 import { morphFrom, useCreateMorph } from "../lib/view-transition";
-import { DEFAULT_SETS, setFields } from "../lib/workout";
+import {
+  blockLabel,
+  blocks,
+  DEFAULT_SETS,
+  normalizeSupersets,
+  setFields,
+} from "../lib/workout";
 
 const toDraft = (t: Template): Draft => ({
   name: t.name,
@@ -108,10 +115,14 @@ const toDraft = (t: Template): Draft => ({
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
-    // 120 s por defecto (lo que ve el borrador es lo que se guarda): vaciar el
-    // campo es lo que deja el ejercicio sin descanso programado.
-    restSecs: e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null),
-    restAfterSecs: e.restAfterSecs ?? DEFAULT_REST_SECS,
+    // Un miembro encadenado no lleva descanso propio: los tiempos del bloque
+    // los pone el último. El resto nace con 120 s (lo que ve el borrador es lo
+    // que se guarda): vaciar el campo es lo que deja el ejercicio sin descanso.
+    restSecs: e.superset
+      ? null
+      : (e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null)),
+    restAfterSecs: e.superset ? null : (e.restAfterSecs ?? DEFAULT_REST_SECS),
+    superset: e.superset,
   })),
 });
 
@@ -352,11 +363,21 @@ function ExercisePicker({
  *  teclado), objetivos de fuerza o cardio, y quitar. */
 function EntryRow({
   entry,
+  canChain,
+  closesBlock,
+  nextName,
   onPatch,
+  onToggleChain,
   onRemove,
 }: {
   entry: DraftEntry;
+  /** Puede encadenarse: fuerza con otra entrada de fuerza justo detrás. */
+  canChain: boolean;
+  /** Cierra un bloque: sus descansos son los del bloque. */
+  closesBlock: boolean;
+  nextName: string;
   onPatch: (key: string, targets: Partial<Targets>) => void;
+  onToggleChain: (key: string) => void;
   onRemove: (key: string) => void;
 }) {
   const {
@@ -412,6 +433,19 @@ function EntryRow({
         {entry.kind !== "strength" && (
           <Badge tone="pending">{KIND_LABELS[entry.kind]}</Badge>
         )}
+        <Chip
+          pressed={entry.superset}
+          disabled={!canChain}
+          aria-label={`Encadenar ${entry.exerciseName} con el siguiente`}
+          title={
+            canChain
+              ? "Encadenar con el siguiente (superserie)"
+              : "No se puede encadenar este ejercicio"
+          }
+          onClick={() => onToggleChain(entry.key)}
+        >
+          Encadenar
+        </Chip>
         <Button
           variant="text"
           size="icon"
@@ -439,17 +473,29 @@ function EntryRow({
                 }))}
               </>
             )}
-            {target(
-              "Descanso entre series (s)",
-              entry.restSecs,
-              (v) => ({ restSecs: restAt(v) }),
-              { placeholder: "120" },
-            )}
-            {target(
-              "Descanso al terminar (s)",
-              entry.restAfterSecs,
-              (v) => ({ restAfterSecs: restAt(v) }),
-              { placeholder: "120" },
+            {entry.superset ? (
+              <p className="min-h-12 text-body-m text-on-surface-variant">
+                Sin descanso: va pegado a «{nextName}»
+              </p>
+            ) : (
+              <>
+                {target(
+                  closesBlock
+                    ? "Descanso entre vueltas (s)"
+                    : "Descanso entre series (s)",
+                  entry.restSecs,
+                  (v) => ({ restSecs: restAt(v) }),
+                  { placeholder: "120" },
+                )}
+                {target(
+                  closesBlock
+                    ? "Descanso al acabar el bloque (s)"
+                    : "Descanso al terminar (s)",
+                  entry.restAfterSecs,
+                  (v) => ({ restAfterSecs: restAt(v) }),
+                  { placeholder: "120" },
+                )}
+              </>
             )}
           </>
         ) : (
@@ -538,8 +584,35 @@ function TemplateEditor({
     const from = draft.entries.findIndex((e) => e.key === active.id);
     const to = draft.entries.findIndex((e) => e.key === over.id);
     if (from < 0 || to < 0) return;
-    setDraft(moveEntry(draft, from, to));
+    const moved = moveEntry(draft, from, to);
+    setDraft({ ...moved, entries: normalizeSupersets(moved.entries) });
   };
+
+  /** Encadena o suelta una entrada. Encadenada va sin descanso propio; al
+   *  soltarla recupera los 120 s por defecto (lo que ve el borrador es lo que
+   *  se guarda). */
+  const toggleChain = (key: string) =>
+    setDraft({
+      ...draft,
+      entries: normalizeSupersets(
+        draft.entries.map((entry) => {
+          if (entry.key !== key) return entry;
+          if (entry.superset)
+            return {
+              ...entry,
+              superset: false,
+              restSecs: entry.kind === "strength" ? DEFAULT_REST_SECS : null,
+              restAfterSecs: DEFAULT_REST_SECS,
+            };
+          return {
+            ...entry,
+            superset: true,
+            restSecs: null,
+            restAfterSecs: null,
+          };
+        }),
+      ),
+    });
 
   const add = (e: Exercise) =>
     setDraft(
@@ -556,6 +629,7 @@ function TemplateEditor({
         targetDurationMin: null,
         restSecs: e.kind === "strength" ? DEFAULT_REST_SECS : null,
         restAfterSecs: DEFAULT_REST_SECS,
+        superset: false,
       }),
     );
 
@@ -649,16 +723,46 @@ function TemplateEditor({
                   aria-label="Ejercicios de la plantilla"
                   className="flex flex-col gap-2"
                 >
-                  {draft.entries.map((entry) => (
-                    <EntryRow
-                      key={entry.key}
-                      entry={entry}
-                      onPatch={(key, targets) =>
-                        setDraft(setTargets(draft, key, targets))
-                      }
-                      onRemove={(key) => setDraft(removeEntry(draft, key))}
-                    />
-                  ))}
+                  {/* Cada bloque en su contenedor: la caja cuando encadena
+                      más de un miembro (misma estructura al encadenar). */}
+                  {blocks(draft.entries).map((block) => {
+                    const row = (i: number) => (
+                      <EntryRow
+                        key={draft.entries[i].key}
+                        entry={draft.entries[i]}
+                        canChain={
+                          draft.entries[i].kind === "strength" &&
+                          draft.entries[i + 1] !== undefined &&
+                          draft.entries[i + 1].kind === "strength"
+                        }
+                        closesBlock={Boolean(draft.entries[i - 1]?.superset)}
+                        nextName={draft.entries[i + 1]?.exerciseName ?? ""}
+                        onPatch={(key, targets) =>
+                          setDraft(setTargets(draft, key, targets))
+                        }
+                        onToggleChain={toggleChain}
+                        onRemove={(key) => {
+                          const next = removeEntry(draft, key);
+                          setDraft({
+                            ...next,
+                            entries: normalizeSupersets(next.entries),
+                          });
+                        }}
+                      />
+                    );
+                    return (
+                      <Chain
+                        key={`c${draft.entries[block[0]].key}`}
+                        label={
+                          block.length > 1
+                            ? blockLabel(block.length)
+                            : undefined
+                        }
+                      >
+                        {block.map(row)}
+                      </Chain>
+                    );
+                  })}
                   {count === 0 && (
                     <li className="rounded-xl bg-surface-container">
                       <EmptyState title="Aún no hay ejercicios">
@@ -751,24 +855,35 @@ function TemplateCard({
 
       {expanded && (
         <ul className="flex flex-col gap-0.5 overflow-hidden rounded-l">
-          {template.exercises.map((e) => {
-            const info = targetSummary(e);
+          {blocks(template.exercises).map((block) => {
+            const row = (i: number) => {
+              const e = template.exercises[i];
+              const info = targetSummary(e);
+              return (
+                <li key={e.id} className="bg-surface-container-lowest">
+                  <button
+                    type="button"
+                    className="state flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left text-body-l"
+                    onPointerDown={ripple}
+                    onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}
+                  >
+                    <span className="truncate">{e.exerciseName}</span>
+                    {info ? (
+                      <span className="shrink-0 text-body-m text-on-surface-variant tabular">
+                        {info}
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            };
             return (
-              <li key={e.id} className="bg-surface-container-lowest">
-                <button
-                  type="button"
-                  className="state flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left text-body-l"
-                  onPointerDown={ripple}
-                  onClick={() => navigate(`/ejercicios/${e.exerciseId}`)}
-                >
-                  <span className="truncate">{e.exerciseName}</span>
-                  {info ? (
-                    <span className="shrink-0 text-body-m text-on-surface-variant tabular">
-                      {info}
-                    </span>
-                  ) : null}
-                </button>
-              </li>
+              <Chain
+                key={`c${template.exercises[block[0]].id}`}
+                label={block.length > 1 ? blockLabel(block.length) : undefined}
+              >
+                {block.map(row)}
+              </Chain>
             );
           })}
           {count === 0 && (

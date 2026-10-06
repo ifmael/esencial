@@ -34,6 +34,8 @@ export type SessionExercise = {
   /** Descansos programados (segundos): entre series y al terminar el ejercicio. */
   restSecs: number | null;
   restAfterSecs: number | null;
+  /** `true` = va pegado al ejercicio siguiente (bloque/superserie). */
+  superset: boolean;
 };
 
 /** Fila editable del editor del día (lo que viaja en items[]). */
@@ -46,6 +48,7 @@ export type SessionItem = {
   targetDurationMin?: number | null;
   restSecs?: number | null;
   restAfterSecs?: number | null;
+  superset?: boolean;
 };
 
 export type SessionPayload = {
@@ -70,6 +73,7 @@ export function planItems(
     targetDurationMin: e.targetDurationMin,
     restSecs: e.restSecs,
     restAfterSecs: e.restAfterSecs,
+    superset: e.superset,
   }));
 }
 

@@ -50,6 +50,8 @@ import {
   Alert,
   Badge,
   Button,
+  Chain,
+  Chip,
   cx,
   Field,
   Input,
@@ -78,7 +80,14 @@ import {
 import { DEFAULT_REST_SECS, intAt, numAt, restAt } from "../lib/template-draft";
 import { type Template, useTemplates } from "../lib/templates";
 import { runViewTransition } from "../lib/view-transition";
-import { DEFAULT_SETS, setFields, weekProgress } from "../lib/workout";
+import {
+  blockLabel,
+  blocks,
+  DEFAULT_SETS,
+  normalizeSupersets,
+  setFields,
+  weekProgress,
+} from "../lib/workout";
 
 // --- Editor del día (sesión) ------------------------------------------------
 
@@ -104,10 +113,14 @@ function rowsFrom(session: PlanSession | null): DayRow[] {
     targetRepsMax: e.targetRepsMax,
     targetDistanceKm: e.targetDistanceKm,
     targetDurationMin: e.targetDurationMin,
-    // 120 s por defecto (lo que ve el borrador es lo que se guarda): vaciar el
-    // campo es lo que deja el ejercicio sin descanso programado.
-    restSecs: e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null),
-    restAfterSecs: e.restAfterSecs ?? DEFAULT_REST_SECS,
+    // Un miembro encadenado no lleva descanso propio: los tiempos del bloque
+    // los pone el último. El resto nace con 120 s (lo que ve el borrador es lo
+    // que se guarda): vaciar el campo es lo que deja el ejercicio sin descanso.
+    restSecs: e.superset
+      ? null
+      : (e.restSecs ?? (e.kind === "strength" ? DEFAULT_REST_SECS : null)),
+    restAfterSecs: e.superset ? null : (e.restAfterSecs ?? DEFAULT_REST_SECS),
+    superset: e.superset,
   }));
 }
 
@@ -138,9 +151,10 @@ function expandTemplate(
       targetDurationMin: e.targetDurationMin,
       restSecs: e.restSecs,
       restAfterSecs: e.restAfterSecs,
+      superset: e.superset,
     });
   }
-  return { rows, skipped };
+  return { rows: normalizeSupersets(rows), skipped };
 }
 
 /** Aviso al expandir una plantilla: cuántos entran y cuántos ya estaban. */
@@ -341,12 +355,22 @@ function Target({
 function DayRowItem({
   row,
   index,
+  canChain,
+  closesBlock,
+  nextName,
   onPatch,
+  onToggleChain,
   onRemove,
 }: {
   row: DayRow;
   index: number;
+  /** Puede encadenarse: fuerza con otro ejercicio de fuerza justo detrás. */
+  canChain: boolean;
+  /** Cierra un bloque: sus descansos son los del bloque. */
+  closesBlock: boolean;
+  nextName: string;
   onPatch: (key: string, patch: Partial<DayRow>) => void;
+  onToggleChain: (key: string) => void;
   onRemove: (key: string) => void;
 }) {
   const {
@@ -385,6 +409,19 @@ function DayRowItem({
         {row.kind === "strength" ? null : (
           <Badge tone="pending">{KIND_LABELS[row.kind]}</Badge>
         )}
+        <Chip
+          pressed={Boolean(row.superset)}
+          disabled={!canChain}
+          aria-label={`Encadenar ${row.exerciseName} con el siguiente`}
+          title={
+            canChain
+              ? "Encadenar con el siguiente (superserie)"
+              : "No se puede encadenar este ejercicio"
+          }
+          onClick={() => onToggleChain(row.key)}
+        >
+          Encadenar
+        </Chip>
         <Button
           variant="text"
           size="icon"
@@ -430,26 +467,42 @@ function DayRowItem({
               />
             </>
           )}
-          <Target
-            label="Descanso entre series (s)"
-            aria={`${row.exerciseName} descanso entre series`}
-            min={1}
-            placeholder="120"
-            value={row.restSecs ?? ""}
-            onChange={(e) =>
-              onPatch(row.key, { restSecs: restAt(e.target.value) })
-            }
-          />
-          <Target
-            label="Descanso al terminar (s)"
-            aria={`${row.exerciseName} descanso al terminar`}
-            min={1}
-            placeholder="120"
-            value={row.restAfterSecs ?? ""}
-            onChange={(e) =>
-              onPatch(row.key, { restAfterSecs: restAt(e.target.value) })
-            }
-          />
+          {row.superset ? (
+            <p className="min-h-12 text-body-m text-on-surface-variant">
+              Sin descanso: va pegado a «{nextName}»
+            </p>
+          ) : (
+            <>
+              <Target
+                label={
+                  closesBlock
+                    ? "Descanso entre vueltas (s)"
+                    : "Descanso entre series (s)"
+                }
+                aria={`${row.exerciseName} descanso entre series`}
+                min={1}
+                placeholder="120"
+                value={row.restSecs ?? ""}
+                onChange={(e) =>
+                  onPatch(row.key, { restSecs: restAt(e.target.value) })
+                }
+              />
+              <Target
+                label={
+                  closesBlock
+                    ? "Descanso al acabar el bloque (s)"
+                    : "Descanso al terminar (s)"
+                }
+                aria={`${row.exerciseName} descanso al terminar`}
+                min={1}
+                placeholder="120"
+                value={row.restAfterSecs ?? ""}
+                onChange={(e) =>
+                  onPatch(row.key, { restAfterSecs: restAt(e.target.value) })
+                }
+              />
+            </>
+          )}
         </>
       ) : (
         <>
@@ -538,12 +591,33 @@ function SessionEditor({
     setRows((rs) => {
       const from = rs.findIndex((r) => r.key === active.id);
       const to = rs.findIndex((r) => r.key === over.id);
-      return from === -1 || to === -1 ? rs : arrayMove(rs, from, to);
+      return from === -1 || to === -1
+        ? rs
+        : normalizeSupersets(arrayMove(rs, from, to));
     });
   };
 
   const patchRow = (key: string, patch: Partial<DayRow>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+
+  /** Encadena o suelta una fila. Encadenada va sin descanso propio; al soltarla
+   *  recupera los 120 s por defecto (lo que ve el borrador es lo que se guarda). */
+  const toggleChain = (key: string) =>
+    setRows((rs) =>
+      normalizeSupersets(
+        rs.map((r) => {
+          if (r.key !== key) return r;
+          if (r.superset)
+            return {
+              ...r,
+              superset: false,
+              restSecs: r.kind === "strength" ? DEFAULT_REST_SECS : null,
+              restAfterSecs: DEFAULT_REST_SECS,
+            };
+          return { ...r, superset: true, restSecs: null, restAfterSecs: null };
+        }),
+      ),
+    );
 
   const pickTemplate = (t: Template) => {
     const { rows: next, skipped } = expandTemplate(t, rows);
@@ -570,6 +644,7 @@ function SessionEditor({
         targetDurationMin: null,
         restSecs: e.kind === "strength" ? DEFAULT_REST_SECS : null,
         restAfterSecs: DEFAULT_REST_SECS,
+        superset: false,
       },
     ]);
   };
@@ -588,6 +663,7 @@ function SessionEditor({
           targetDurationMin: r.targetDurationMin,
           restSecs: r.restSecs,
           restAfterSecs: r.restAfterSecs,
+          superset: r.superset ?? false,
         })),
       },
       andLog,
@@ -651,17 +727,41 @@ function SessionEditor({
                 aria-label="Ejercicios del día"
                 className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
               >
-                {rows.map((row, i) => (
-                  <DayRowItem
-                    key={row.key}
-                    row={row}
-                    index={i}
-                    onPatch={patchRow}
-                    onRemove={(key) =>
-                      setRows((rs) => rs.filter((r) => r.key !== key))
-                    }
-                  />
-                ))}
+                {/* Cada bloque va en su contenedor —la caja cuando encadena
+                    más de un miembro—: la estructura no cambia al encadenar. */}
+                {blocks(rows).map((block) => {
+                  const row = (i: number) => (
+                    <DayRowItem
+                      key={rows[i].key}
+                      row={rows[i]}
+                      index={i}
+                      canChain={
+                        rows[i].kind === "strength" &&
+                        rows[i + 1] !== undefined &&
+                        rows[i + 1].kind === "strength"
+                      }
+                      closesBlock={Boolean(rows[i - 1]?.superset)}
+                      nextName={rows[i + 1]?.exerciseName ?? ""}
+                      onPatch={patchRow}
+                      onToggleChain={toggleChain}
+                      onRemove={(key) =>
+                        setRows((rs) =>
+                          normalizeSupersets(rs.filter((r) => r.key !== key)),
+                        )
+                      }
+                    />
+                  );
+                  return (
+                    <Chain
+                      key={`c${rows[block[0]].key}`}
+                      label={
+                        block.length > 1 ? blockLabel(block.length) : undefined
+                      }
+                    >
+                      {block.map(row)}
+                    </Chain>
+                  );
+                })}
                 {rows.length === 0 && (
                   <li className="rounded-l bg-surface-container-low">
                     <EmptyState
@@ -924,7 +1024,7 @@ function SessionCell({
     const from = order.findIndex((e) => e.exerciseId === active.id);
     const to = order.findIndex((e) => e.exerciseId === over.id);
     if (from === -1 || to === -1) return;
-    onSaveItems(session, arrayMove(order, from, to));
+    onSaveItems(session, normalizeSupersets(arrayMove(order, from, to)));
   };
 
   return (
@@ -1007,16 +1107,31 @@ function SessionCell({
               aria-label={`Ejercicios del ${date}`}
               className="flex flex-1 flex-col gap-1"
             >
-              {order.map((e, i) => (
-                <CellRow
-                  key={e.exerciseId}
-                  exercise={e}
-                  index={i}
-                  sortable={!logged}
-                  removable={!logged}
-                  onRemove={() => onRemoveExercise(session, e)}
-                />
-              ))}
+              {/* Cada bloque es un hueco con el alto de sus miembros
+                  (`flexGrow`): la caja no cambia el reparto de la columna. */}
+              {blocks(order).map((block) => {
+                const row = (i: number) => (
+                  <CellRow
+                    key={order[i].exerciseId}
+                    exercise={order[i]}
+                    index={i}
+                    sortable={!logged}
+                    removable={!logged}
+                    onRemove={() => onRemoveExercise(session, order[i])}
+                  />
+                );
+                return (
+                  <Chain
+                    key={`c${order[block[0]].exerciseId}`}
+                    label={
+                      block.length > 1 ? blockLabel(block.length) : undefined
+                    }
+                    style={{ flexGrow: block.length, flexBasis: 0 }}
+                  >
+                    {block.map(row)}
+                  </Chain>
+                );
+              })}
             </ol>
           </SortableContext>
         </DndContext>
@@ -1246,7 +1361,9 @@ export function PlanFuerzaPage() {
     const before = session.exercises;
     const ok = await week.saveItems(
       session,
-      before.filter((x) => x.exerciseId !== exercise.exerciseId),
+      normalizeSupersets(
+        before.filter((x) => x.exerciseId !== exercise.exerciseId),
+      ),
     );
     if (!ok) return;
     snackbar({

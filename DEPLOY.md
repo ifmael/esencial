@@ -85,6 +85,11 @@ columnas y la ventana entre aplicarla y el deploy no rompe nada. Sin ella, la
 API nueva —que lee `metric` en cada `GET /api/exercises` y en los planes— daría
 500.
 
+**0026 (bloques encadenados) también va ANTES del merge.** Añade `superset`
+(0 por defecto) a `plan_session_exercises` y a `template_exercises`: aditiva, la
+API vieja la ignora, y sin ella la API nueva —que la lee en cada día, plantilla y
+registro— daría 500. Va **después** de `0025`.
+
 En local, la config de la API vive en `api/`, así que los scripts llevan
 `--persist-to .wrangler/state`: la base de desarrollo sigue en la raíz y no en
 `api/.wrangler/state`.

@@ -95,6 +95,7 @@ const tplA = (): Template => ({
       targetDurationMin: null,
       restSecs: 90,
       restAfterSecs: 150,
+      superset: false,
       exerciseName: "Press banca",
       kind: "strength",
       metric: "weight_reps",
@@ -110,6 +111,7 @@ const tplA = (): Template => ({
       targetDurationMin: null,
       restSecs: null,
       restAfterSecs: null,
+      superset: false,
       exerciseName: "Remo",
       kind: "strength",
       metric: "weight_reps",
@@ -125,6 +127,7 @@ const tplA = (): Template => ({
       targetDurationMin: 45,
       restSecs: null,
       restAfterSecs: null,
+      superset: false,
       exerciseName: "Running",
       kind: "running",
       metric: "weight_reps",
@@ -305,6 +308,7 @@ describe("template editor", () => {
         targetDurationMin: null,
         restSecs: 120,
         restAfterSecs: 120,
+        superset: false,
       },
     ]);
     await screen.findByText("D — Movilidad");
@@ -340,6 +344,7 @@ describe("template editor", () => {
         targetDurationMin: 55,
         restSecs: null,
         restAfterSecs: 120,
+        superset: false,
       },
     ]);
   });
@@ -470,6 +475,7 @@ describe("template editor", () => {
       targetDurationMin: null,
       restSecs: 90,
       restAfterSecs: 150,
+      superset: false,
     });
     await screen.findByText("4 series");
   });
@@ -758,5 +764,118 @@ describe("página de plantilla con URL propia", () => {
     renderAt("/plantillas/99/editar");
     await screen.findByText("B — Tirón");
     await waitFor(() => expect(window.location.pathname).toBe("/plantillas"));
+  });
+});
+
+describe("bloques (superseries) en la plantilla", () => {
+  it("encadenar dos entradas: la marca viaja y los descansos los lleva la última", async () => {
+    await openPlantillas();
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: "Editar" }),
+    );
+    await screen.findByLabelText("Nombre");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Encadenar Press banca con el siguiente",
+      }),
+    );
+    // Press banca ya no tiene descansos: avisa y los del bloque los lleva Remo.
+    expect(screen.queryByLabelText("Descanso entre series (s)")).toBeNull();
+    expect(screen.getByText(/va pegado a «Remo»/)).toBeDefined();
+    expect(screen.getByText("Descanso entre vueltas (s)")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(mutations().some((c) => c.method === "PUT")).toBe(true),
+    );
+    expect(payloadAt(0).exercises.map((e) => e.superset)).toEqual([
+      true,
+      false,
+      false,
+    ]);
+    expect(payloadAt(0).exercises[0]).toMatchObject({
+      restSecs: null,
+      restAfterSecs: null,
+    });
+    expect(payloadAt(0).exercises[1]).toMatchObject({
+      restSecs: 120,
+      restAfterSecs: 120,
+    });
+  });
+
+  /** Plantilla de tres de fuerza: da para una triserie (el cardio no encadena). */
+  const tplStrength = (): Template => ({
+    ...tplA(),
+    exercises: [
+      tplA().exercises[0],
+      tplA().exercises[1],
+      {
+        id: 14,
+        exerciseId: 9,
+        position: 2,
+        metric: "weight_reps",
+        targetSets: 3,
+        targetRepsMin: 8,
+        targetRepsMax: 8,
+        targetDistanceKm: null,
+        targetDurationMin: null,
+        restSecs: null,
+        restAfterSecs: null,
+        superset: false,
+        exerciseName: "Sentadilla",
+        kind: "strength",
+      },
+    ],
+  });
+
+  it("el editor agrupa lo encadenado en su caja y deja fuera lo suelto", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      templates: [tplStrength(), tplB(), tplC()],
+      exercises: [press, remo, sent, run],
+    });
+    renderAt("/plantillas/1/editar");
+    await screen.findByLabelText("Nombre");
+    const list = screen.getByRole("list", {
+      name: "Ejercicios de la plantilla",
+    });
+    // Sin encadenar no hay caja.
+    expect(within(list).queryByRole("list", { name: "Triserie" })).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Encadenar Press banca con el siguiente",
+      }),
+    );
+    const pair = within(list).getByRole("list", { name: "Superserie" });
+    expect(within(pair).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(pair).queryByText("Sentadilla")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Encadenar Remo con el siguiente" }),
+    );
+    const trio = within(list).getByRole("list", { name: "Triserie" });
+    expect(within(trio).getAllByRole("listitem")).toHaveLength(3);
+    for (const name of ["Press banca", "Remo", "Sentadilla"])
+      expect(within(trio).getByText(name)).toBeDefined();
+  });
+
+  it("la tarjeta de la lista enseña el bloque de la plantilla en su caja", async () => {
+    vi.unstubAllGlobals();
+    const chained = tplA();
+    chained.exercises[0].superset = true;
+    api = mockApi({
+      templates: [chained, tplB(), tplC()],
+      exercises: [press, remo, sent, run],
+    });
+    await openPlantillas();
+    fireEvent.click(
+      within(cardOf("A — Empuje")).getByRole("button", { name: /A — Empuje/ }),
+    );
+    const card = cardOf("A — Empuje");
+    const box = within(card).getByRole("list", { name: "Superserie" });
+    expect(within(box).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(box).queryByText("Running")).toBeNull();
+    expect(within(card).getByText("Running")).toBeDefined();
   });
 });

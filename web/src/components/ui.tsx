@@ -250,6 +250,49 @@ export function ConnectedItem({
   );
 }
 
+/** Contenedor de las filas de un bloque encadenado (biserie, triserie, serie
+ *  gigante). Con etiqueta es la caja —fondo tonal del acento— y su lista se
+ *  nombra con el nombre del bloque; sin ella, el bloque de un solo miembro es
+ *  una fila suelta y no pinta nada. La estructura es la MISMA en los dos casos
+ *  a propósito: encadenar y desencadenar no remonta las filas (si no, el foco
+ *  del chip que acabas de pulsar se iría al body). */
+export function Chain({
+  label,
+  className,
+  children,
+  ...rest
+}: ComponentProps<"li"> & { label?: string }) {
+  const id = useId();
+  return (
+    <li
+      className={cx("flex min-w-0 flex-col", label && "chain", className)}
+      {...rest}
+    >
+      {label ? <ChainLabel id={id}>{label}</ChainLabel> : null}
+      {/* Los miembros van en una lista propia, nombrada con el bloque. El
+          `role` explícito es a propósito: Safari le quita el papel de lista a un
+          `ul` sin viñetas (`list-style: none`) y la caja dejaría de anunciarse
+          (biome avisa de que es redundante en el resto de motores). */}
+      <ul
+        role="list"
+        className="chain-rows"
+        aria-labelledby={label ? id : undefined}
+      >
+        {children}
+      </ul>
+    </li>
+  );
+}
+
+/** Etiqueta del bloque (SUPERSERIE / TRISERIE / SERIE GIGANTE), dentro de la caja. */
+function ChainLabel({ id, children }: ComponentProps<"p">) {
+  return (
+    <p className="chain-label" id={id}>
+      {children}
+    </p>
+  );
+}
+
 /** FAB. `size="lg"` = 96 px (raíl expandido), `md` = 56, `sm` = 40. Con
  * `extended` lleva etiqueta. `aria-expanded` lo transforma (menú FAB). */
 export function Fab({

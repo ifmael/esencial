@@ -3,6 +3,7 @@
 // por defecto; no programa nada. PUT reemplaza las entradas ordenadas.
 import { Hono } from "hono";
 import { templateSchema } from "../api-validation";
+import { blockError } from "../blocks";
 import { type AppContext, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
 import { loadTemplate, row, rows } from "../repo";
@@ -17,6 +18,8 @@ type Entry = {
   targetDurationMin?: number | null;
   restSecs?: number | null;
   restAfterSecs?: number | null;
+  /** `true` = va pegado a la entrada siguiente (bloque/superserie). */
+  superset?: boolean;
 };
 
 /** Un ejercicio no puede repetirse dentro de la plantilla (mismo criterio que el día). */
@@ -29,6 +32,26 @@ function hasDuplicateExercise(entries: Entry[]): boolean {
   return false;
 }
 
+/** Duplicados y bloques mal formados son 400 en `exercises`. */
+async function exercisesError(
+  db: D1Database,
+  entries: Entry[],
+): Promise<string | null> {
+  if (hasDuplicateExercise(entries))
+    return "Ejercicio duplicado en la plantilla";
+  if (entries.length === 0) return null;
+  const marks = entries.map(() => "?").join(",");
+  const found = await rows(
+    db,
+    `SELECT id, kind FROM exercises WHERE id IN (${marks})`,
+    ...entries.map((e) => e.exerciseId),
+  );
+  return blockError(
+    entries,
+    found.map((r) => ({ id: Number(r.id), kind: String(r.kind) })),
+  );
+}
+
 // Ordered-entry INSERT builders (by-name subselect keeps POST atomic in one batch).
 function entriesForNewTemplate(
   name: string,
@@ -39,8 +62,8 @@ function entriesForNewTemplate(
   return entries.map((e, pos) =>
     db
       .prepare(
-        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
-         VALUES ((SELECT id FROM session_templates WHERE name = ? AND user_id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs, superset)
+         VALUES ((SELECT id FROM session_templates WHERE name = ? AND user_id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         name,
@@ -54,6 +77,7 @@ function entriesForNewTemplate(
         e.targetDurationMin ?? null,
         e.restSecs ?? null,
         e.restAfterSecs ?? null,
+        e.superset ? 1 : 0,
       ),
   );
 }
@@ -66,8 +90,8 @@ function entriesForTemplate(
   return entries.map((e, pos) =>
     db
       .prepare(
-        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO template_exercises (template_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs, superset)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         templateId,
@@ -80,6 +104,7 @@ function entriesForTemplate(
         e.targetDurationMin ?? null,
         e.restSecs ?? null,
         e.restAfterSecs ?? null,
+        e.superset ? 1 : 0,
       ),
   );
 }
@@ -106,8 +131,8 @@ export const templates = new Hono<AppContext>()
       const input = c.get("validated");
       const db = getDb(c.env);
       const user = c.get("user");
-      if (hasDuplicateExercise(input.exercises))
-        return fail("Ejercicio duplicado en la plantilla", "exercises");
+      const problem = await exercisesError(db, input.exercises);
+      if (problem) return fail(problem, "exercises");
       const name = input.name.trim();
       const results = await db.batch([
         db
@@ -147,8 +172,8 @@ export const templates = new Hono<AppContext>()
         ))
       )
         return fail("Not found", undefined, 404);
-      if (hasDuplicateExercise(input.exercises))
-        return fail("Ejercicio duplicado en la plantilla", "exercises");
+      const problem = await exercisesError(db, input.exercises);
+      if (problem) return fail(problem, "exercises");
       await db.batch([
         db
           .prepare(

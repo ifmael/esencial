@@ -355,17 +355,19 @@ export async function loadTemplate(
     userId,
   );
   if (!head) return null;
-  head.exercises = await rows(
-    db,
-    `SELECT te.id, te.exercise_id AS exerciseId, te.position,
+  head.exercises = (
+    await rows(
+      db,
+      `SELECT te.id, te.exercise_id AS exerciseId, te.position, te.superset AS superset,
             te.target_sets AS targetSets, te.target_reps_min AS targetRepsMin, te.target_reps_max AS targetRepsMax,
             te.target_distance_km AS targetDistanceKm, te.target_duration_min AS targetDurationMin,
             te.rest_secs AS restSecs, te.rest_after_secs AS restAfterSecs,
             e.name AS exerciseName, e.kind AS kind, e.metric AS metric
      FROM template_exercises te JOIN exercises e ON e.id = te.exercise_id
      WHERE te.template_id = ? ORDER BY te.position, te.id`,
-    id,
-  );
+      id,
+    )
+  ).map((e) => ({ ...e, superset: Boolean(e.superset) }));
   return head;
 }
 

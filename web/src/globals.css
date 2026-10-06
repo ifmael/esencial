@@ -593,6 +593,44 @@
     font-weight: 700;
   }
 
+  /* --- Bloque encadenado (biserie, triserie, serie gigante) -------------- */
+  /* Los ejercicios que se hacen encadenados van dentro de una caja con el tono
+     claro del acento: su etiqueta y el tono bastan para ver de un tirón que van
+     juntos (el borde de acento que llevó al principio sobraba). El tono es del
+     bloque; las filas de dentro no lo repiten. */
+  .chain {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: var(--radius-l);
+    background: var(--accent-soft);
+  }
+  .chain-label {
+    padding-inline-start: 0.5rem;
+    color: var(--on-accent-soft);
+    font-size: var(--text-label-m);
+    line-height: var(--text-label-m--line-height);
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    font-stretch: 112%;
+    text-transform: uppercase;
+  }
+  /* Los miembros: lista sin viñetas ni márgenes (la caja los pone). Ocupa el
+     alto del hueco que le da la pantalla (en la rejilla, las filas del bloque
+     se reparten el alto de la columna). */
+  .chain-rows {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
   /* --- Chips ------------------------------------------------------------- */
   .chip {
     display: inline-flex;

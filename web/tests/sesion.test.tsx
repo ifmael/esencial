@@ -131,6 +131,9 @@ function mockApi(opts: {
     date: string;
     name: string | null;
     status: string;
+    /** El plan del día con sus ejercicios: la vista del registro lee de aquí
+     *  qué iba encadenado (el log no lo guarda). */
+    exercises?: unknown[];
   }[];
   last?: Record<
     number,
@@ -1685,6 +1688,151 @@ describe("modo interactivo", () => {
     expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
     // Era «entre series»: al acabar no cambia de ejercicio.
     expect(opener("Remo con barra")).toBeDefined();
+  });
+});
+
+// Press banca encadenado con Remo con barra: los descansos los lleva Remo.
+const BLOCK_DETAIL = {
+  ...SESSION_DETAIL,
+  name: "Superserie de empuje",
+  exercises: [
+    {
+      ...SESSION_DETAIL.exercises[0],
+      superset: true,
+      restSecs: null,
+      restAfterSecs: null,
+    },
+    {
+      ...SESSION_DETAIL.exercises[1],
+      superset: false,
+      restSecs: 90,
+      restAfterSecs: 120,
+    },
+    SESSION_DETAIL.exercises[2],
+  ],
+};
+
+describe("bloques (superseries) en el modo sesión", () => {
+  async function enterBlockMode(): Promise<HTMLElement> {
+    mockApi({
+      last: {
+        21: { weightKg: 60, reps: 8, date: "2026-08-30" },
+        22: { weightKg: 40, reps: 10, date: "2026-08-30" },
+      },
+      detail: BLOCK_DETAIL,
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^empezar$/i }));
+    return await screen.findByRole("dialog", { name: /modo sesión/i });
+  }
+
+  it("el encabezado nombra la superserie y el primer miembro avisa de su pareja", async () => {
+    const mode = await enterBlockMode();
+    expect(within(mode).getByText(/superserie/i)).toBeDefined();
+    expect(
+      within(mode).getByText(/encadenado con «Remo con barra»/i),
+    ).toBeDefined();
+  });
+
+  it("a mitad de vuelta salta al segundo miembro sin pausa", async () => {
+    const mode = await enterBlockMode();
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    expect(
+      within(mode).getByRole("heading", { name: "Remo con barra" }),
+    ).toBeDefined();
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+  });
+
+  it("cerrar la vuelta arranca el descanso y vuelve al primer miembro", async () => {
+    const mode = await enterBlockMode();
+    fireEvent.click(within(mode).getByRole("button", { name: /^siguiente$/i }));
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Remo con barra serie 1" }),
+    );
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de remo con barra/i,
+      }),
+    ).toBeDefined();
+
+    const real = Date.now;
+    vi.spyOn(Date, "now").mockReturnValue(real() + 5 * 60_000);
+    await waitFor(() =>
+      expect(
+        within(mode).getByRole("heading", { name: "Press banca" }),
+      ).toBeDefined(),
+    );
+  });
+
+  it("el listado del modo sesión enseña el bloque dentro de su caja", async () => {
+    const mode = await enterBlockMode();
+    fireEvent.click(
+      within(mode).getByRole("button", { name: /^press banca$/i }),
+    );
+    const listing = await screen.findByRole("dialog", {
+      name: /^ejercicios$/i,
+    });
+    const box = within(listing).getByRole("list", { name: "Superserie" });
+    expect(within(box).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(box).getByText("Press banca")).toBeDefined();
+    expect(within(box).queryByText("Running")).toBeNull();
+    expect(
+      within(listing).getByRole("button", { name: /^Running/ }),
+    ).toBeDefined();
+  });
+});
+
+describe("bloques (superseries) en la página del día", () => {
+  it("el borrador agrupa el bloque en su caja y deja fuera lo suelto", async () => {
+    mockApi({ detail: BLOCK_DETAIL });
+    renderAt("/sesion/2026-09-02");
+    const box = await screen.findByRole("list", { name: "Superserie" });
+    expect(within(box).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(box).getByText("Press banca")).toBeDefined();
+    expect(within(box).getByText("Remo con barra")).toBeDefined();
+    expect(within(box).queryByText("Running")).toBeNull();
+    expect(screen.getByText("Running")).toBeDefined();
+  });
+
+  it("el registro también: la cadena la trae el plan del día", async () => {
+    mockApi({
+      sessions: [
+        {
+          id: 1,
+          date: "2026-09-02",
+          name: "Empuje A",
+          status: "logged",
+          exercises: BLOCK_DETAIL.exercises,
+        },
+      ],
+      log: loggedPayload([
+        {
+          planSessionExerciseId: SE_BENCH,
+          setIndex: 0,
+          weightKg: 60,
+          reps: 8,
+          done: true,
+        },
+        {
+          planSessionExerciseId: SE_ROW,
+          setIndex: 0,
+          weightKg: 40,
+          reps: 10,
+          done: true,
+        },
+      ]),
+    });
+    renderAt("/sesion/2026-09-02");
+    const box = await screen.findByRole("list", { name: "Superserie" });
+    // Los miembros de la caja son las dos tarjetas (sus series son listas
+    // propias dentro de cada una).
+    expect(box.children).toHaveLength(2);
+    expect(within(box).getByText("Press banca")).toBeDefined();
+    expect(within(box).getByText("Remo con barra")).toBeDefined();
   });
 });
 

@@ -8,6 +8,7 @@ import {
   planSessionCreateSchema,
   planSessionUpdateSchema,
 } from "../api-validation";
+import { blockError } from "../blocks";
 import { type AppContext, getDb } from "../db";
 import { fail, guard, json, parseId } from "../http";
 import { row, rows } from "../repo";
@@ -22,6 +23,8 @@ type Item = {
   targetDurationMin?: number | null;
   restSecs?: number | null;
   restAfterSecs?: number | null;
+  /** `true` = va pegado al ejercicio siguiente (bloque/superserie). */
+  superset?: boolean;
 };
 
 /** Sesión del usuario `userId` con sus ejercicios; un id ajeno es null (404). */
@@ -37,17 +40,19 @@ async function loadSession(
     userId,
   );
   if (!head) return null;
-  head.exercises = await rows(
-    db,
-    `SELECT pse.id, pse.exercise_id AS exerciseId, pse.position,
+  head.exercises = (
+    await rows(
+      db,
+      `SELECT pse.id, pse.exercise_id AS exerciseId, pse.position, pse.superset AS superset,
             pse.target_sets AS targetSets, pse.target_reps_min AS targetRepsMin, pse.target_reps_max AS targetRepsMax,
             pse.target_distance_km AS targetDistanceKm, pse.target_duration_min AS targetDurationMin,
             pse.rest_secs AS restSecs, pse.rest_after_secs AS restAfterSecs,
             e.name AS exerciseName, e.kind AS kind, e.metric AS metric
      FROM plan_session_exercises pse JOIN exercises e ON e.id = pse.exercise_id
      WHERE pse.plan_session_id = ? ORDER BY pse.position, pse.id`,
-    id,
-  );
+      id,
+    )
+  ).map((e) => ({ ...e, superset: Boolean(e.superset) }));
   return head;
 }
 
@@ -62,6 +67,7 @@ type CurrentItem = {
   targetDurationMin: number | null;
   restSecs: number | null;
   restAfterSecs: number | null;
+  superset: number;
 };
 
 /** Una sesión registrada solo admite cambiar el recuento de series: los mismos
@@ -78,12 +84,13 @@ function onlySetCountsChange(current: CurrentItem[], items: Item[]): boolean {
       cur.targetDistanceKm === (it.targetDistanceKm ?? null) &&
       cur.targetDurationMin === (it.targetDurationMin ?? null) &&
       cur.restSecs === (it.restSecs ?? null) &&
-      cur.restAfterSecs === (it.restAfterSecs ?? null)
+      cur.restAfterSecs === (it.restAfterSecs ?? null) &&
+      Boolean(cur.superset) === (it.superset ?? false)
     );
   });
 }
 
-/** Duplicados y ejercicios inexistentes son 400 en el campo `items`. */
+/** Duplicados, ejercicios inexistentes y bloques mal formados son 400 en `items`. */
 async function itemsError(
   db: D1Database,
   items: Item[],
@@ -94,10 +101,14 @@ async function itemsError(
   const marks = ids.map(() => "?").join(",");
   const found = await rows(
     db,
-    `SELECT id FROM exercises WHERE id IN (${marks})`,
+    `SELECT id, kind FROM exercises WHERE id IN (${marks})`,
     ...ids,
   );
-  return found.length === ids.length ? null : "Ejercicio desconocido";
+  if (found.length !== ids.length) return "Ejercicio desconocido";
+  return blockError(
+    items,
+    found.map((r) => ({ id: Number(r.id), kind: String(r.kind) })),
+  );
 }
 
 /** INSERT ordenado de los items; `where` resuelve el id de la sesión dentro del batch. */
@@ -109,8 +120,8 @@ function itemStatements(
   return items.map((it, pos) =>
     db
       .prepare(
-        `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
-         VALUES (${where.sql}, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs, superset)
+         VALUES (${where.sql}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         ...(where.args as never[]),
@@ -123,6 +134,7 @@ function itemStatements(
         it.targetDurationMin ?? null,
         it.restSecs ?? null,
         it.restAfterSecs ?? null,
+        it.superset ? 1 : 0,
       ),
   );
 }
@@ -214,7 +226,7 @@ export const planSessions = new Hono<AppContext>()
         `SELECT id, exercise_id AS exerciseId, target_sets AS targetSets,
                 target_reps_min AS targetRepsMin, target_reps_max AS targetRepsMax,
                 target_distance_km AS targetDistanceKm, target_duration_min AS targetDurationMin,
-                rest_secs AS restSecs, rest_after_secs AS restAfterSecs
+                rest_secs AS restSecs, rest_after_secs AS restAfterSecs, superset AS superset
          FROM plan_session_exercises WHERE plan_session_id = ?
          ORDER BY position, id`,
         id,
@@ -259,19 +271,20 @@ export const planSessions = new Hono<AppContext>()
             it.targetDurationMin ?? null,
             it.restSecs ?? null,
             it.restAfterSecs ?? null,
+            it.superset ? 1 : 0,
           ];
           const existing = kept.get(it.exerciseId);
           if (existing === undefined)
             return db
               .prepare(
-                `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO plan_session_exercises (plan_session_id, exercise_id, position, target_sets, target_reps_min, target_reps_max, target_distance_km, target_duration_min, rest_secs, rest_after_secs, superset)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               )
               .bind(id, it.exerciseId, ...targets);
           return db
             .prepare(
               `UPDATE plan_session_exercises
-               SET position = ?, target_sets = ?, target_reps_min = ?, target_reps_max = ?, target_distance_km = ?, target_duration_min = ?, rest_secs = ?, rest_after_secs = ?
+               SET position = ?, target_sets = ?, target_reps_min = ?, target_reps_max = ?, target_distance_km = ?, target_duration_min = ?, rest_secs = ?, rest_after_secs = ?, superset = ?
                WHERE id = ?`,
             )
             .bind(...targets, existing);

@@ -1,6 +1,139 @@
 // Pure helpers for the workout-day screen (E6 task 2.3). No React, no fetch.
-import type { ExerciseMetric } from "./exercises";
+import type { ExerciseKind, ExerciseMetric } from "./exercises";
 import type { ShapeName } from "./shapes";
+
+// --- Bloques (superseries) --------------------------------------------------
+
+/** Fila con la marca de bloque: lo mínimo que necesitan las reglas puras. */
+export type BlockRow = { superset?: boolean | null; kind: ExerciseKind };
+
+/** [inicio, fin] del bloque que contiene `index` (él solo si va suelto). */
+export function blockRange(
+  rows: readonly BlockRow[],
+  index: number,
+): [number, number] {
+  let start = index;
+  while (start > 0 && rows[start - 1].superset) start--;
+  let end = index;
+  while (end < rows.length - 1 && rows[end].superset) end++;
+  return [start, end];
+}
+
+/** Los bloques de la lista, en orden: los índices de cada uno (≥1). */
+export function blocks(rows: readonly BlockRow[]): number[][] {
+  const out: number[][] = [];
+  let i = 0;
+  while (i < rows.length) {
+    const [start, end] = blockRange(rows, i);
+    out.push(Array.from({ length: end - start + 1 }, (_, k) => start + k));
+    i = end + 1;
+  }
+  return out;
+}
+
+/** Quita las marcas que no pueden ser —solo une fuerza con fuerza y nunca la
+ *  última fila— y deja `superset` booleano en todas. */
+export function normalizeSupersets<T extends BlockRow>(
+  rows: readonly T[],
+): T[] {
+  return rows.map((row, i) => ({
+    ...row,
+    superset:
+      Boolean(row.superset) &&
+      row.kind === "strength" &&
+      rows[i + 1] !== undefined &&
+      rows[i + 1].kind === "strength",
+  }));
+}
+
+/** Nombre del bloque por su tamaño: 2 · 3 · 4 o más. */
+export function blockLabel(size: number): string {
+  if (size === 3) return "Triserie";
+  if (size >= 4) return "Serie gigante";
+  return "Superserie";
+}
+
+/** Lo que necesita la regla de avance del modo sesión (fuerza o cardio). */
+export type StepItem = {
+  kind: ExerciseKind;
+  /** `true` = va pegado al siguiente. */
+  superset: boolean;
+  /** Series del ejercicio; null en el cardio. */
+  sets: readonly { done: boolean }[] | null;
+  restSecs: number | null;
+  restAfterSecs: number | null;
+};
+
+/** Qué toca tras marcar una serie: `move` salta sin pausa, `pause` arranca la
+ *  cuenta (`owner` es el ejercicio que la nombra) y `end` cierra la sesión. */
+export type SessionStep =
+  | { kind: "stay" }
+  | { kind: "move"; to: number }
+  | { kind: "pause"; pause: "sets" | "after"; seconds: number; owner: number }
+  | { kind: "end" };
+
+/** Qué toca tras marcar la serie `marked` del ejercicio `index` (en un bloque,
+ *  la vuelta la define la serie marcada: no lo que quede pendiente). */
+export function nextAfterSet(
+  items: readonly StepItem[],
+  index: number,
+  marked: number,
+): SessionStep {
+  const last = items.length - 1;
+  const item = items[index];
+  const [start, end] = blockRange(items, index);
+
+  // Serie recta (o cardio, que no tiene series): el comportamiento de siempre.
+  if (start === end) {
+    const isLastSet = item.sets === null || marked === item.sets.length - 1;
+    if (!isLastSet) {
+      return item.restSecs !== null
+        ? { kind: "pause", pause: "sets", seconds: item.restSecs, owner: index }
+        : { kind: "stay" };
+    }
+    if (end === last) return { kind: "end" };
+    return item.restAfterSecs !== null
+      ? {
+          kind: "pause",
+          pause: "after",
+          seconds: item.restAfterSecs,
+          owner: index,
+        }
+      : { kind: "move", to: index + 1 };
+  }
+
+  // Bloque: ¿queda algún miembro que tenga que hacer ESTA serie (la vuelta)?
+  const inRound = (j: number) =>
+    (items[j].sets?.length ?? 0) > marked && !items[j].sets?.[marked]?.done;
+  for (let j = index + 1; j <= end; j++)
+    if (inRound(j)) return { kind: "move", to: j };
+
+  // Cerró la vuelta: si el bloque sigue vivo, vuelve al primero que tenga una
+  // serie más (el descanso, si lo hay, es el del último miembro).
+  const owner = items[end];
+  let first = -1;
+  for (let j = start; j <= end; j++)
+    if ((items[j].sets?.length ?? 0) > marked + 1) {
+      first = j;
+      break;
+    }
+  if (first !== -1) {
+    return owner.restSecs !== null
+      ? { kind: "pause", pause: "sets", seconds: owner.restSecs, owner: end }
+      : { kind: "move", to: first };
+  }
+
+  // Bloque terminado: descanso de fin (del último miembro) o al siguiente.
+  if (end === last) return { kind: "end" };
+  return owner.restAfterSecs !== null
+    ? {
+        kind: "pause",
+        pause: "after",
+        seconds: owner.restAfterSecs,
+        owner: end,
+      }
+    : { kind: "move", to: end + 1 };
+}
 
 /** Series con las que nace un ejercicio de fuerza sin recuento propio: al
  *  añadirlo a una sesión (o al expandir una plantilla) y al abrir su registro. */
