@@ -698,41 +698,48 @@ function Header({
   progress?: { done: number; total: number };
 }) {
   return (
-    <header className="relative mb-6 flex flex-col items-start gap-4 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-5 sm:flex-row sm:items-center md:p-6">
+    <header className="relative mb-6 flex flex-col gap-1 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low px-5 py-4 md:p-6">
       <Shape
         name="sunny"
         size={220}
         className="pointer-events-none absolute -top-20 -right-16 text-accent-container opacity-60"
       />
-      <div className="relative flex w-full min-w-0 flex-1 flex-col gap-2">
-        <div className="-ml-3 flex min-w-0 items-center gap-1">
-          <BackLink />
-          <h1 className="min-w-0 text-headline-m text-e first-letter:uppercase md:text-headline-l">
-            {formatDateEs(parseDateEs(date))}
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-title-l text-accent">{name}</span>
-          {logged && <Badge tone="done">Registrado</Badge>}
-        </div>
-      </div>
-      {progress && progress.total > 0 && (
-        <div className="relative rounded-full bg-surface-container-lowest p-1">
-          <WavyRing
-            value={progress.done}
-            max={progress.total}
-            label="Series hechas"
-          >
-            <CountUp
+      {/* Una sola fila —flecha, nombre y aro— con el día debajo como subtítulo.
+          Antes eran tres bloques apilados (fecha, nombre y aro) y el encabezado
+          se comía 284 px de los 844 del móvil. */}
+      <div className="relative -ml-3 flex min-w-0 items-center gap-1">
+        <BackLink />
+        <h1 className="min-w-0 flex-1 text-headline-m text-e first-letter:uppercase md:text-headline-l">
+          {name}
+        </h1>
+        {logged && <Badge tone="done">Registrado</Badge>}
+        {progress && progress.total > 0 && (
+          <div className="rounded-full bg-surface-container-lowest p-1">
+            <WavyRing
               value={progress.done}
-              className="block text-headline-m text-e leading-none text-on-surface"
-            />
-            <span className="tabular text-label-s text-on-surface-variant">
-              de {progress.total}
-            </span>
-          </WavyRing>
-        </div>
-      )}
+              max={progress.total}
+              label="Series hechas"
+              className="size-20"
+              // Sin círculo de fondo: a 0 series el aro no pinta nada y el arco
+              // va apareciendo según se marcan (como el del modo sesión).
+              waveOnly
+            >
+              <CountUp
+                value={progress.done}
+                className="block text-title-l text-e leading-none text-on-surface"
+              />
+              <span className="tabular text-label-s text-on-surface-variant">
+                de {progress.total}
+              </span>
+            </WavyRing>
+          </div>
+        )}
+      </div>
+      {/* `pl-10` son los 48 px de la flecha más los 4 del hueco menos los 12 del
+          `-ml-3`: así el día cae alineado con el nombre, no con la flecha. */}
+      <p className="relative pl-10 text-body-m text-on-surface-variant first-letter:uppercase">
+        {formatDateEs(parseDateEs(date))}
+      </p>
     </header>
   );
 }

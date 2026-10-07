@@ -306,8 +306,25 @@ describe("route states", () => {
     mockApi({});
     renderAt("/sesion/2026-09-02");
     await screen.findByText("Empuje A");
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(
-      /miércoles, 2 de septiembre/,
+    // El sujeto de la página es la sesión: va en el `h1`, junto a la flecha.
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(title.textContent).toBe("Empuje A");
+    // El día queda debajo, como subtítulo, dentro del mismo encabezado.
+    const header = title.closest("header") as HTMLElement;
+    expect(
+      within(header).getByText(/miércoles, 2 de septiembre/),
+    ).toBeDefined();
+  });
+
+  it("sin nombre, el título del encabezado dice «Sesión»", async () => {
+    // El nombre es ahora el `h1`: sin uno, la página necesita un título igual.
+    mockApi({
+      sessions: [{ id: 1, date: "2026-09-02", name: null, status: "planned" }],
+    });
+    renderAt("/sesion/2026-09-02");
+    await screen.findByText("Press banca");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "Sesión",
     );
   });
 

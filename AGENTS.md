@@ -303,6 +303,22 @@ móvil y las de escritorio simulan la consulta. Lo cubren
 
 `web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.
 
+- **La cabecera es una fila**: flecha, nombre de la sesión (el `h1`; sin nombre,
+  «Sesión») y el aro de progreso —las series del borrador, el mismo recuento que
+  el modo sesión y también `waveOnly`: sin círculo de fondo, a 0 series no pinta
+  nada y el arco crece con lo marcado— en la misma línea, y el día debajo como
+  subtítulo, con `pl-10`
+  para que caiga alineado con el nombre y no con la flecha (48 px de flecha + 4
+  de hueco − 12 del `-ml-3`). Antes eran tres bloques apilados y el encabezado
+  medía 284 px de los 844 del móvil; ahora 144 (el aro es `size-20` y el relleno
+  vertical del móvil `py-4`; `md:p-6` en escritorio, donde mide 160). El bloque
+  es el mismo en todos los anchos a propósito: la flecha no puede estar a la vez
+  junto a la fecha y junto al nombre, y duplicar la cabecera por breakpoint
+  serían dos ramas que se descompasan. Lo atan
+  `e2e/tests/session-mode.spec.ts` (mide las cajas —≤150 px de encabezado,
+  flecha antes del nombre, aro en su fila y día debajo y alineado— y el aro
+  avanzando al marcar una serie) y `web/tests/sesion.test.tsx` (el `h1` es el
+  nombre y, sin nombre, dice «Sesión»).
 - **Una serie se marca sola al editar sus marcas**: al teclear o al usar el
   stepper, la serie queda hecha si está completa (kilos y repeticiones, o solo
   repeticiones si va sin peso), y se desmarca al vaciar un campo. Cambiar «Sin
