@@ -30,12 +30,16 @@ import {
   blockLabel,
   blockRange,
   blocks,
+  formatSetText,
+  type HomologMarks,
+  MAX_SETS,
+  MIN_SETS,
   nextAfterSet,
   type SessionStep,
   setFields,
 } from "../lib/workout";
 import { WavyProgress, WavyRing } from "./expressive";
-import { CheckIcon, ChevronDownIcon, CloseIcon } from "./icons";
+import { CheckIcon, ChevronDownIcon, CloseIcon, CopyIcon } from "./icons";
 import { Dialog, OverlayHeader } from "./overlay";
 import { Stepper } from "./stepper";
 import { Button, Chain, Checkbox, cx, ScrollStrip, Switch } from "./ui";
@@ -58,6 +62,12 @@ export type ModeItem = {
         filled: boolean;
       }[]
     | null;
+  /** La serie homóloga de la sesión anterior, por índice (`null` donde no la
+   *  hay): el valor que copia su botón. El cardio va sin homólogas. */
+  prevSets: (HomologMarks | null)[];
+  /** Marcas del cardio (opcionales); `null` en los ejercicios de fuerza. */
+  distanceKm: number | null;
+  durationMin: number | null;
   done: boolean | null;
   /** Unidad de la serie (decide qué campos se piden). */
   metric: ExerciseMetric;
@@ -92,6 +102,11 @@ export function SessionMode({
   onStep,
   onToggleNoWeight,
   onToggleCardio,
+  onCardioValue,
+  onCardioStep,
+  onAddSet,
+  onRemoveSet,
+  onCopySet,
   onExit,
   onFinish,
   finishControl,
@@ -114,6 +129,22 @@ export function SessionMode({
   ) => void;
   onToggleNoWeight: (id: number) => void;
   onToggleCardio: (id: number) => void;
+  /** Distancia/tiempo del cardio: escribir una marca implica que se hizo. */
+  onCardioValue: (
+    id: number,
+    field: "distanceKm" | "durationMin",
+    raw: string,
+  ) => void;
+  onCardioStep: (
+    id: number,
+    field: "distanceKm" | "durationMin",
+    delta: number,
+  ) => void;
+  /** ➕/➖: las series del ejercicio del día (el plan sigue al borrador). */
+  onAddSet: (id: number) => void;
+  onRemoveSet: (id: number) => void;
+  /** Copia las marcas de la serie homóloga de la sesión anterior (sin marcarla). */
+  onCopySet: (id: number, index: number) => void;
   onExit: () => void;
   /** = «Guardar» de la sesión (lo ejecuta el padre). */
   onFinish: () => void;
@@ -129,6 +160,9 @@ export function SessionMode({
   const [confirmingExit, setConfirmingExit] = useState(false);
   // El botón del encabezado abre la lista de ejercicios de la sesión.
   const [listing, setListing] = useState(false);
+  // «Terminar» abre el cierre (esfuerzo y nota); el pie se queda ligero hasta
+  // que la persona decide cerrar.
+  const [finishing, setFinishing] = useState(false);
   // Un cierre de pausa solo dispara una vez (el tic y el regreso pueden
   // coincidir); saltarla lo marca para que no pite después.
   const finished = useRef(false);
@@ -277,21 +311,6 @@ export function SessionMode({
   };
 
   const remainingMs = pause ? Math.max(0, pause.endsAt - now) : 0;
-  // Progreso de la sesión: series hechas sobre el total, la misma cuenta que la
-  // barra de acciones del borrador (cada cardio cuenta como una).
-  const total = items.reduce((n, it) => n + (it.sets?.length ?? 1), 0);
-  const done = items.reduce(
-    (n, it) =>
-      n +
-      (it.sets
-        ? it.sets.filter((s) => s.done).length
-        : it.done === true
-          ? 1
-          : 0),
-    0,
-  );
-  // El esfuerzo (y con él «Terminar») solo tienen sentido con todo hecho.
-  const complete = total > 0 && done === total;
   // Ejercicios completos (todas sus series hechas, o el cardio hecho): el aro
   // empieza en 0 y sube al registrar cada uno.
   const doneItems = items.filter((it) =>
@@ -461,66 +480,134 @@ export function SessionMode({
             )}
           </div>
 
+          {/* Cardio: la distancia y el tiempo son opcionales y escribir una
+              marca implica que se hizo (las mismas reglas que el borrador). */}
+          {item.sets === null && item.done !== null && (
+            <div className="grid w-full max-w-sm grid-cols-2 gap-3 rounded-l bg-surface-container-high p-2 text-left">
+              <Stepper
+                caption="Distancia (km)"
+                context={item.name}
+                value={item.distanceKm}
+                step={1}
+                onValue={(v) => onCardioValue(item.id, "distanceKm", v)}
+                onStep={(d) => onCardioStep(item.id, "distanceKm", d)}
+              />
+              <Stepper
+                caption="Tiempo (min)"
+                context={item.name}
+                value={item.durationMin}
+                step={5}
+                onValue={(v) => onCardioValue(item.id, "durationMin", v)}
+                onStep={(d) => onCardioStep(item.id, "durationMin", d)}
+              />
+            </div>
+          )}
+
           {item.sets !== null && (
             <div className="flex w-full max-w-sm flex-col items-center gap-2">
               <ul className="flex w-full flex-col gap-2 text-left">
-                {item.sets.map((s, i) => (
-                  <li
-                    key={i}
-                    className={cx(
-                      "flex flex-col gap-2 rounded-l p-2",
-                      s.done
-                        ? "bg-surface-container-lowest"
-                        : "bg-surface-container-high",
-                    )}
-                  >
-                    <span className="text-label-l text-on-surface-variant">
-                      Serie {i + 1}
-                    </span>
-                    <div
+                {item.sets.map((s, i) => {
+                  const prev = item.prevSets[i] ?? null;
+                  const ctx = `${item.name} serie ${i + 1}`;
+                  return (
+                    <li
+                      key={i}
                       className={cx(
-                        "grid gap-3",
-                        fields.weight && (fields.reps || fields.time)
-                          ? "grid-cols-2"
-                          : "grid-cols-1",
+                        "flex flex-col gap-2 rounded-l p-2",
+                        s.done
+                          ? "bg-surface-container-lowest"
+                          : "bg-surface-container-high",
                       )}
                     >
-                      {fields.weight && (
-                        <Stepper
-                          caption="Peso (kg)"
-                          context={`${item.name} serie ${i + 1}`}
-                          value={s.weightKg}
-                          step={2.5}
-                          onValue={(v) => onSetValue(item.id, i, "weightKg", v)}
-                          onStep={(d) => onStep(item.id, i, "weightKg", d)}
-                        />
-                      )}
-                      {fields.reps && (
-                        <Stepper
-                          caption="Reps"
-                          context={`${item.name} serie ${i + 1}`}
-                          value={s.reps}
-                          step={1}
-                          onValue={(v) => onSetValue(item.id, i, "reps", v)}
-                          onStep={(d) => onStep(item.id, i, "reps", d)}
-                        />
-                      )}
-                      {fields.time && (
-                        <Stepper
-                          caption="Segundos"
-                          context={`${item.name} serie ${i + 1}`}
-                          value={s.durationSecs}
-                          step={5}
-                          onValue={(v) =>
-                            onSetValue(item.id, i, "durationSecs", v)
-                          }
-                          onStep={(d) => onStep(item.id, i, "durationSecs", d)}
-                        />
-                      )}
-                    </div>
-                  </li>
-                ))}
+                      <div className="flex flex-wrap items-center justify-between gap-1">
+                        <span className="text-label-l text-on-surface-variant">
+                          Serie {i + 1}
+                        </span>
+                        {prev && (
+                          // El valor de la serie homóloga de la sesión anterior
+                          // y, a la vez, el botón que lo copia (sus marcas, sin
+                          // marcar esta serie).
+                          <Button
+                            variant="text"
+                            className="shrink-0 tabular"
+                            aria-label={`Copiar ${formatSetText(prev)} de la sesión anterior a ${ctx}`}
+                            onClick={() => onCopySet(item.id, i)}
+                          >
+                            <CopyIcon width={18} height={18} />
+                            {formatSetText(prev)}
+                          </Button>
+                        )}
+                      </div>
+                      <div
+                        className={cx(
+                          "grid gap-3",
+                          fields.weight && (fields.reps || fields.time)
+                            ? "grid-cols-2"
+                            : "grid-cols-1",
+                        )}
+                      >
+                        {fields.weight && (
+                          <Stepper
+                            caption="Peso (kg)"
+                            context={ctx}
+                            value={s.weightKg}
+                            step={2.5}
+                            onValue={(v) =>
+                              onSetValue(item.id, i, "weightKg", v)
+                            }
+                            onStep={(d) => onStep(item.id, i, "weightKg", d)}
+                          />
+                        )}
+                        {fields.reps && (
+                          <Stepper
+                            caption="Reps"
+                            context={ctx}
+                            value={s.reps}
+                            step={1}
+                            onValue={(v) => onSetValue(item.id, i, "reps", v)}
+                            onStep={(d) => onStep(item.id, i, "reps", d)}
+                          />
+                        )}
+                        {fields.time && (
+                          <Stepper
+                            caption="Segundos"
+                            context={ctx}
+                            value={s.durationSecs}
+                            step={5}
+                            onValue={(v) =>
+                              onSetValue(item.id, i, "durationSecs", v)
+                            }
+                            onStep={(d) =>
+                              onStep(item.id, i, "durationSecs", d)
+                            }
+                          />
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
+              {/* ➕/➖ de las series del ejercicio: el plan del día sigue al
+                  borrador al guardar, así que el día de hoy puede llevar más
+                  series de las programadas. */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  variant="text"
+                  aria-label={`Quitar serie a ${item.name}`}
+                  disabled={item.sets.length <= MIN_SETS}
+                  onClick={() => onRemoveSet(item.id)}
+                >
+                  − Quitar serie
+                </Button>
+                <Button
+                  variant="text"
+                  aria-label={`Añadir serie a ${item.name}`}
+                  disabled={item.sets.length >= MAX_SETS}
+                  onClick={() => onAddSet(item.id)}
+                >
+                  + Añadir serie
+                </Button>
+              </div>
               {item.superset ? (
                 <p className="text-body-s text-on-surface-variant">
                   Encadenado con «{items[active + 1]?.name ?? ""}»
@@ -553,8 +640,12 @@ export function SessionMode({
         </div>
       </div>
 
+      {/* El cierre de la sesión (esfuerzo, nota y el guardado) vive aquí y lo
+          pide «Terminar»: mientras se entrena el pie se queda ligero —con un
+          ejercicio largo, el formulario siempre a la vista se comía el cuerpo—
+          y aun así se puede cerrar una sesión a medias. */}
       <footer className="relative flex flex-col gap-3 p-4 pb-6">
-        {complete && finishControl}
+        {finishing && finishControl}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="tonal"
@@ -575,9 +666,18 @@ export function SessionMode({
           >
             Siguiente
           </Button>
-          <Button disabled={!canFinish || saving} onClick={onFinish}>
-            {saving ? "Guardando…" : "Terminar"}
-          </Button>
+          {finishing ? (
+            <>
+              <Button variant="text" onClick={() => setFinishing(false)}>
+                Seguir
+              </Button>
+              <Button disabled={!canFinish || saving} onClick={onFinish}>
+                {saving ? "Guardando…" : "Terminar"}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setFinishing(true)}>Terminar</Button>
+          )}
         </div>
       </footer>
 

@@ -303,9 +303,20 @@ móvil y las de escritorio simulan la consulta. Lo cubren
 
 `web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.
 
+**La página es un resumen: aquí no se registra nada.** El registro vive solo en
+el modo sesión (ver «Modo interactivo de sesión»), así que esta pantalla pinta los
+ejercicios del día en filas inertes (`SummaryRows`: medallón con el turno, nombre
+—enlace a su ficha— y, en fuerza, «x/y» series hechas; el cardio lleva su objetivo
+del plan o sus marcas) y sus contadores —el aro de la cabecera y los de cada
+fila— salen del **borrador guardado**: marcar dentro del modo y salir los deja
+escritos. Sin sesión, con una fecha rara o si el API falla siguen sus estados de
+siempre (vacío, inválido, error). Un día **planificado** ofrece «Empezar» y un día
+**registrado** el mismo resumen con los contadores a tope, el esfuerzo y la nota,
+más «Editar»; los dos botones son tonales y a lo ancho.
+
 - **La cabecera es una fila**: flecha, nombre de la sesión (el `h1`; sin nombre,
-  «Sesión») y el aro de progreso —las series del borrador, el mismo recuento que
-  el modo sesión y también `waveOnly`: sin círculo de fondo, a 0 series no pinta
+  «Sesión») y el aro de progreso —las series del plan, el mismo recuento que el
+  modo sesión y también `waveOnly`: sin círculo de fondo, a 0 series no pinta
   nada y el arco crece con lo marcado— en la misma línea, y el día debajo como
   subtítulo, con `pl-10`
   para que caiga alineado con el nombre y no con la flecha (48 px de flecha + 4
@@ -319,63 +330,61 @@ móvil y las de escritorio simulan la consulta. Lo cubren
   flecha antes del nombre, aro en su fila y día debajo y alineado— y el aro
   avanzando al marcar una serie) y `web/tests/sesion.test.tsx` (el `h1` es el
   nombre y, sin nombre, dice «Sesión»).
-- **Una serie se marca sola al editar sus marcas**: al teclear o al usar el
-  stepper, la serie queda hecha si está completa (kilos y repeticiones, o solo
-  repeticiones si va sin peso), y se desmarca al vaciar un campo. Cambiar «Sin
-  peso» recalcula igual las series ya editadas (`touched`). La precarga (`/last`
-  o el registro al corregir) **no** marca nada.
+- **Día registrado**: la fila de marcas cuenta **solo lo marcado** (lo hecho es lo
+  marcado, como en el historial: las series que el borrador guardó sin marcar no
+  se anuncian). El mismo criterio de siempre: el registro no guarda la cadena del
+  ejercicio, así que las cajas de un bloque encadenado salen del plan del día
+  (`view.session.exercises`), que sí la trae.
+- **Una serie se marca sola al editar sus marcas** (dentro del modo): al teclear
+  o al usar el stepper, la serie queda hecha si está completa (kilos y
+  repeticiones, o solo repeticiones si va sin peso), y se desmarca al vaciar un
+  campo. Cambiar «Sin peso» recalcula igual las series ya editadas (`touched`). La
+  precarga (`/last` o el registro al corregir) **no** marca nada.
 - **Solo una serie completa puede estar hecha** (`isSetFilled`): la casilla va
-  deshabilitada mientras falten reps (o kilos, sin «Sin peso»), «Marcar todas»
-  salta las incompletas, vaciar un campo o quitar «Sin peso» a una serie sin
-  kilos la desmarca, y un registro antiguo hecho sin marcas se precarga sin
-  marcar. La API lo refuerza: `done: true` sin `reps` → 400
-  `{field:'sets.N.reps'}` (los kilos no, porque «sin peso» viaja con
+  deshabilitada mientras falten reps (o kilos, sin «Sin peso»), vaciar un campo o
+  quitar «Sin peso» a una serie sin kilos la desmarca, y un registro antiguo
+  hecho sin marcas se precarga sin marcar. La API lo refuerza: `done: true` sin
+  `reps` → 400 `{field:'sets.N.reps'}` (los kilos no, porque «sin peso» viaja con
   `weightKg: null`).
-- **«Sin peso» es de la sesión, por ejercicio** (un `Switch`): oculta los kilos,
-  basta con las repeticiones y el ejercicio viaja con `weightKg: null`. No hay
-  columna nueva: `set_logs.weight_kg` ya admite `null`. Arranca activado si lo
-  último registrado de ese ejercicio no llevaba kilos pero sí repeticiones (o,
-  al corregir, si todas sus series registradas van así: `isNoWeight`).
-- **Añadir y quitar series** (➕/➖; `addedSet`, `MIN_SETS` 1, `MAX_SETS` 20 en
-  `lib/workout.ts`): el ➕ añade una serie con las marcas de la última y el ➖
-  quita la última; los botones se apagan en 1 y en 20. Al «Guardar», el día del
-  plan sigue al borrador: `PUT /api/plan-sessions/:id` reescribe el
-  `targetSets` de cada item **antes** del POST/PUT del registro, conservando el
-  resto de objetivos y el id de los items que siguen (upsert: un reinsert
-  perdería las series, que cuelgan de `plan_session_exercises.id`).
-- **Las casillas de la tarjeta plegada van en una tira de una sola línea**
-  (`ScrollStrip`, piel `.scroll-x`): las series nunca envuelven el encabezado.
-  En móvil la tira se lleva su propia fila a ancho completo; cuando no caben
-  todas, el borde por el que queda contenido se desvanece (el indicador) y se
-  desplaza en horizontal. Medido a 390 px con 20 series: ~5 casillas a la vista,
-  ni la tarjeta ni la página se salen de ancho. Lo cubren
-  `ui-primitives.test.tsx` (el indicador) y `strength.spec.ts` (el layout).
+- **«Sin peso» es de la sesión, por ejercicio** (un `Switch` del modo): oculta los
+  kilos, basta con las repeticiones y el ejercicio viaja con `weightKg: null`. No
+  hay columna nueva: `set_logs.weight_kg` ya admite `null`. Arranca activado si lo
+  último registrado de ese ejercicio no llevaba kilos pero sí repeticiones (o, al
+  corregir, si todas sus series registradas van así: `isNoWeight`).
+- **Añadir y quitar series** (➕/➖ en el modo; `addedSet`, `MIN_SETS` 1,
+  `MAX_SETS` 20 en `lib/workout.ts`): el ➕ añade una serie con las marcas de la
+  última y el ➖ quita la última; los botones se apagan en 1 y en 20. Al cerrar la
+  sesión, el día del plan sigue al borrador: `PUT /api/plan-sessions/:id`
+  reescribe el `targetSets` de cada item **antes** del POST/PUT del registro,
+  conservando el resto de objetivos y el id de los items que siguen (upsert: un
+  reinsert perdería las series, que cuelgan de `plan_session_exercises.id`).
 - **Marcas de la sesión anterior**: la última sesión `logged` con **el mismo
   `name` no nulo** y fecha **anterior a la del día** (`previousSession`; una
-  sesión sin nombre nunca empareja). Sus series se muestran bajo el ejercicio
+  sesión sin nombre nunca empareja). En la fila del resumen se ven bajo el nombre
   («sáb, 26/09: 60×10 · 60×8»), emparejadas por `exerciseId` (lo devuelve
   `serialize` en `/api/workout-logs`), y sustituyen a «última: X×Y». Son solo
   informativas: la precarga sigue saliendo de `/last`.
-- **Valor de la serie homóloga, con copia**: en cada fila de serie de la tarjeta
-  desplegada, y solo ahí, se ve el valor de **esa misma serie** (por índice
-  estricto: sin homóloga no hay valor ni control) y el propio control la copia a
-  la serie actual: repeticiones siempre y kilos solo si la anterior los trae.
-  Copiar **nunca marca** la serie (`done` y `touched` quedan a `false`, así que
-  ni el conmutador «Sin peso» la re-marca después) y **nunca** conmuta «Sin
-  peso». El emparejamiento y el efecto son puros: `previousMarks` y `copiedMarks`
-  en `lib/workout.ts`. La tarjeta plegada no cambia (sigue con su tira de
-  casillas y la línea resumen), y la vista registrada no lo muestra.
+- **Valor de la serie homóloga, con copia**: en cada fila de serie del modo, y
+  solo ahí, se ve el valor de **esa misma serie** (por índice estricto: sin
+  homóloga no hay valor ni control) y el propio control la copia a la serie
+  actual: repeticiones siempre y kilos solo si la anterior los trae. Copiar
+  **nunca marca** la serie (`done` y `touched` quedan a `false`, así que ni el
+  conmutador «Sin peso» la re-marca después) y **nunca** conmuta «Sin peso». El
+  emparejamiento y el efecto son puros: `previousMarks` y `copiedMarks` en
+  `lib/workout.ts`. La vista registrada no lo muestra (solo las marcas de lo
+  hecho, en la línea de la fila).
 - `GET /api/exercises/:id/last?before=YYYY-MM-DD` limita el histórico a lo
   anterior a esa fecha. El borrador siempre lo pide con la fecha del día, así que
   registrar o corregir un día pasado no precarga marcas de días posteriores.
-- **Corregir un registro**: en la vista registrada, «Editar» reabre el mismo
-  borrador, precargado con lo registrado (series, esfuerzo, nota y cardio; no con
-  `/last`). «Guardar» manda `PUT /api/workout-logs/:date`, que en un solo batch
+- **Corregir un registro**: en el resumen registrado, «Editar» abre el modo
+  precargado con lo registrado (series, esfuerzo, nota y cardio; no con `/last`).
+  Al cerrar, «Terminar» manda `PUT /api/workout-logs/:date`, que en un solo batch
   reemplaza esfuerzo, nota, `set_logs` y `cardio_logs` (misma validación de
-  pertenencia y de tipo que el POST, 404 si no hay registro). «Cancelar» vuelve a
-  lo registrado sin llamar a la API. Los ejercicios de una sesión registrada
-  siguen sin poder cambiarse: `DELETE` de `/plan-sessions` → 409 y `PUT` con otra
-  lista también (el único `PUT` admitido es el recuento de series, ver arriba).
+  pertenencia y de tipo que el POST, 404 si no hay registro). Salir del modo (el
+  aspa, que pregunta) vuelve a lo registrado sin llamar a la API. Los ejercicios
+  de una sesión registrada siguen sin poder cambiarse: `DELETE` de
+  `/plan-sessions` → 409 y `PUT` con otra lista también (el único `PUT` admitido
+  es el recuento de series, ver arriba).
 - **Autoguardado del borrador** (`lib/day-draft.ts`): cada cambio de una sesión
   **planificada** —marcas de series, cardio, esfuerzo y nota— se escribe en
   `localStorage` bajo `esencial.borrador.<fecha>`, así que un refresco accidental
@@ -383,8 +392,9 @@ móvil y las de escritorio simulan la consulta. Lo cubren
   sesión o ya registrado; al **corregir** manda el registro y no se guarda. Al
   restaurar solo se aplica lo que sigue encajando con el plan (mismo item y mismo
   número de series); no viaja entre dispositivos. Lo cubren
-  `web/tests/day-draft.test.ts`, `web/tests/sesion.test.tsx` y
-  `e2e/tests/session-mode.spec.ts`.
+  `web/tests/day-draft.test.ts`, `web/tests/sesion.test.tsx`,
+  `e2e/tests/session-mode.spec.ts` y `e2e/tests/session-summary.spec.ts` (el
+  resumen refleja lo marcado sin registrar nada).
 
 ### Métrica de la serie (0025)
 
@@ -435,21 +445,27 @@ de fuerza declara su **unidad** en `exercises.metric` (migración aditiva
 
 ### Modo interactivo de sesión y descansos (0018)
 
+Es **la única superficie donde se registra**: la página del día solo resume (ver
+«Registro de una sesión»), así que aquí viven las marcas de las series, el cardio
+—con su distancia y su tiempo—, los ➕/➖ de series, la copia de la serie homóloga
+y el cierre con esfuerzo y nota.
+
 `/sesion/:date` tiene un botón «Empezar» (tonal, a lo ancho, bajo la cabecera)
 que abre el **modo sesión** (`components/session-mode.tsx`): una capa
 `fixed inset-0` que sustituye la página — `role="dialog"`, y el aspa (o Escape)
 piden **confirmación** antes de salir («¿Salir del modo sesión?»), sin tocar el
-borrador. El encabezado lleva a la izquierda el **aro de progreso**
+borrador (salir de una corrección vuelve al registro que se estaba corrigiendo).
+El encabezado lleva a la izquierda el **aro de progreso**
 (`WavyRing` con `waveOnly`: solo el arco que avanza, sin círculo de fondo) con
 «N / M» dentro — **empieza en 0** y sube al registrar cada ejercicio entero — y
 a la derecha el aspa. Un ejercicio
 a la vez en el orden del día: nombre, objetivo, «Sin peso» y **sus series
-editables** (los mismos `Stepper` —compartidos con el borrador—; se marca al
+editables** (los mismos `Stepper`; se marca al
 quedar completa y la pausa arranca al quedar hecha, la marques a mano o
 escribiendo sus marcas). Las **casillas de las series van en el encabezado del
-ejercicio**, en una sola tira de una línea (`ScrollStrip` + `Checkbox`, el mismo
-patrón de la tarjeta plegada del borrador) junto a «Sin peso»: cada fila de
-serie se queda con su número y sus steppers (a 390 px un checkbox de 48 px no
+ejercicio**, en una sola tira de una línea (`ScrollStrip` + `Checkbox`) junto a
+«Sin peso»: cada fila de serie se queda con su número, su botón de **copiar la
+serie homóloga** y sus steppers (a 390 px un checkbox de 48 px no
 comparte fila con dos steppers, así que ocupaba una línea por serie). Lo cubre
 `e2e/tests/session-mode.spec.ts` (a 390 px con doce series: la tira en el
 encabezado, ninguna casilla en las filas y la pausa que arranca la casilla que
@@ -474,6 +490,13 @@ mientras que los márgenes automáticos se anulan solos al desbordar y el scroll
 arranca en el principio. Lo cubre `e2e/tests/session-mode.spec.ts`, que mide la
 posición del nombre y los dos huecos del centrado (no una clase).
 
+- **Todo lo que se registra vive aquí**: las casillas de las series —una tira por
+  ejercicio—, los steppers de cada fila (kg, reps y/o segundos según la métrica),
+  «Sin peso», el **cardio** con sus dos steppers de distancia y tiempo
+  (opcionales; escribir una marca implica hecho, como antes en el borrador), los
+  **➕/➖ de series** (al cerrar, el plan del día sigue al borrador: ver «Añadir y
+  quitar series») y la **copia de la serie homóloga** de la sesión anterior. Lo
+  cubren `web/tests/sesion.test.tsx` y `e2e/tests/strength.spec.ts`.
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
   `rest_after_secs` (al terminar el ejercicio); columnas nulables en
   `template_exercises` y `plan_session_exercises` (migración aditiva **0018**,
@@ -537,9 +560,15 @@ posición del nombre y los dos huecos del centrado (no una clase).
   volver (resincronización por `endsAt`), nunca dos veces.
 - **Wake Lock** (`lib/wake-lock.ts`): pantalla encendida mientras el modo está
   visible; el navegador la suelta al ocultar la pestaña y se re-pide al volver.
-- Al **completar la sesión** (todas las series y cardios marcados) aparecen el
-  selector de esfuerzo en el pie y «Terminar», que es el «Guardar» de la sesión.
-  Salir sin terminar deja el borrador intacto.
+- **Cerrar la sesión**: «Terminar» abre el cierre en el pie —el selector de
+  esfuerzo y la nota de la sesión (`finishControl`, que pinta `sesion.tsx`)— y, con
+  el esfuerzo elegido, **vuelve a «Terminar»** para guardar (POST, o PUT al
+  corregir). El pie se queda ligero mientras se entrena: con el formulario siempre
+  a la vista, a 390 px un ejercicio de una sola serie dejaba el cuerpo en ~10 px
+  de hueco, así que el cierre **se pide, no se impone** (y «Seguir» lo esconde sin
+  perder la nota). Como el esfuerzo es lo único que la API exige, así también se
+  cierra una sesión **a medias** (la página ya no tiene barra de acciones: era el
+  único sitio donde se cerraba). Salir sin terminar deja el borrador intacto.
 
 Lo cubren `api/tests/templates.test.ts` y `plan-sessions.test.ts` (ida y vuelta
 de los descansos; en una sesión registrada no cambian → 409),
@@ -585,8 +614,8 @@ reordenar).
   hace de un tirón, y el contenedor está en todas las superficies donde se
   listan los ejercicios: el editor del día, la celda de la rejilla (donde cada
   hueco se lleva el alto de sus miembros con `flexGrow`), el editor de
-  plantillas, la tarjeta desplegada de `/plantillas`, la página de la sesión
-  (borrador y registro) y el listado del modo sesión. La estructura es la
+  plantillas, la tarjeta desplegada de `/plantillas`, el resumen de la sesión
+  (planificado y registrado) y el listado del modo sesión. La estructura es la
   **misma** con y sin caja a propósito: encadenar y desencadenar no remonta las
   filas, así que el chip que acabas de pulsar conserva el foco (y la lista no
   pierde el suyo tras un arrastre con teclado). El registro no guarda la cadena

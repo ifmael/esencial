@@ -492,7 +492,7 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
 
-    // «Salir» pregunta antes; al confirmar vuelve al borrador sin tocar nada.
+    // «Salir» pregunta antes; al confirmar vuelve al resumen sin tocar nada.
     await mode.getByRole("button", { name: "Salir del modo sesión" }).click();
     await page
       .getByRole("dialog", { name: "¿Salir del modo sesión?" })
@@ -501,7 +501,11 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(
       page.getByRole("dialog", { name: "Modo sesión" }),
     ).toBeHidden();
-    await expect(page.getByText("Esfuerzo percibido")).toBeVisible();
+    // Lo marcado queda en el borrador: el resumen lo enseña y «Empezar» sigue.
+    await expect(page.getByText("2/2")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Empezar", exact: true }),
+    ).toBeVisible();
   });
 
   test("el aviso previo suena a los 3 s y a los 2 s del pitido de fin (móvil)", async ({
@@ -691,21 +695,23 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/sesion/${date}`);
-    await page.getByRole("button", { name: "Series de Press banca" }).click();
-    await page.getByLabel(/^peso \(kg\) · press banca serie 1$/i).fill("55");
-    await page.getByLabel(/^reps · press banca serie 1$/i).fill("9");
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await mode.getByLabel(/^peso \(kg\) · press banca serie 1$/i).fill("55");
+    await mode.getByLabel(/^reps · press banca serie 1$/i).fill("9");
     // Completar las marcas marca la serie.
     await expect(
-      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+      mode.getByRole("checkbox", { name: "Press banca serie 1" }),
     ).toBeChecked();
 
-    // Un refresco accidental: al volver, el borrador está tal cual (la tarjeta
-    // arranca plegada, así que la casilla que se ve es la de la tira).
+    // Un refresco accidental: al volver, el resumen ya enseña la serie hecha y
+    // el borrador sigue tal cual dentro del modo.
     await page.reload();
+    await expect(page.getByText("1/2")).toBeVisible();
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
     await expect(
       page.getByRole("checkbox", { name: "Press banca serie 1" }),
     ).toBeChecked();
-    await page.getByRole("button", { name: "Series de Press banca" }).click();
     await expect(
       page.getByLabel(/^peso \(kg\) · press banca serie 1$/i),
     ).toHaveValue("55");
@@ -1477,9 +1483,14 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     await expect(ring).toHaveAttribute("aria-valuenow", "0");
     await expect(ring).toHaveAttribute("aria-valuemax", "6");
     expect(await paintedRingStrokes(page)).toBe(0);
-    await page.getByRole("button", { name: "Series de Press banca" }).click();
-    await page.getByLabel(/^peso \(kg\) · press banca serie 1$/i).fill("55");
-    await page.getByLabel(/^reps · press banca serie 1$/i).fill("8");
+    // El aro avanza con lo registrado: se marca una serie dentro del modo y, al
+    // volver al resumen, el arco ya está pintado.
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await mode.getByLabel(/^peso \(kg\) · press banca serie 1$/i).fill("55");
+    await mode.getByLabel(/^reps · press banca serie 1$/i).fill("8");
+    await mode.getByRole("button", { name: "Salir del modo sesión" }).click();
+    await page.getByRole("button", { name: "Salir", exact: true }).click();
     await expect(ring).toHaveAttribute("aria-valuenow", "1");
     expect(await paintedRingStrokes(page)).toBe(1);
   });

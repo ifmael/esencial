@@ -116,10 +116,41 @@ function loggedPayload(
   };
 }
 
+/** Cardio tal y como viaja al registro (camelCase tras la normalización). */
+type SentCardio = {
+  planSessionExerciseId: number;
+  distanceKm: number | null;
+  durationMin: number | null;
+  done: boolean;
+};
+
+/** Cuerpo del POST/PUT de un registro: lo que el mock guarda de cada envío. */
+type SentLog = {
+  effort: number;
+  note: string | null;
+  sets: SetItem[];
+  cardio: SentCardio[];
+};
+
+/** Ejercicio del día tal y como viaja al plan (PUT /api/plan-sessions/:id). */
+type SentPlanItem = {
+  exerciseId: number;
+  targetSets: number | null;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
+  targetDistanceKm: number | null;
+  targetDurationMin: number | null;
+  restSecs: number | null;
+  restAfterSecs: number | null;
+};
+
+/** Cuerpo del PUT del plan del día: el borrador reescribe sus series. */
+type SentPlan = { name: string | null; items: SentPlanItem[] };
+
 type Mock = {
-  posts: unknown[];
-  puts: unknown[];
-  planPuts: unknown[];
+  posts: SentLog[];
+  puts: SentLog[];
+  planPuts: SentPlan[];
   calls: string[];
   fetchCount: () => number;
   urls: string[];
@@ -152,9 +183,9 @@ function mockApi(opts: {
   detail?: unknown;
 }): Mock {
   let count = 0;
-  const posts: unknown[] = [];
-  const puts: unknown[] = [];
-  const planPuts: unknown[] = [];
+  const posts: SentLog[] = [];
+  const puts: SentLog[] = [];
+  const planPuts: SentPlan[] = [];
   const calls: string[] = [];
   const urls: string[] = [];
   const reply = (status: number, body: unknown) =>
@@ -216,14 +247,65 @@ function mockApi(opts: {
   return { posts, puts, planPuts, calls, urls, fetchCount: () => count };
 }
 
-/** El botón «Cerrar sesión» de la barra flotante de la sesión. */
-function primaryClose(): Promise<HTMLButtonElement> {
-  return waitFor(
-    () =>
-      within(
-        screen.getByRole("toolbar", { name: /acciones de la sesión/i }),
-      ).getByRole("button", { name: /cerrar sesión/i }) as HTMLButtonElement,
+/** Abre el modo sesión desde el resumen: la única superficie donde se registra. */
+async function openMode(): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("button", { name: /^empezar$/i }));
+  return screen.findByRole("dialog", { name: /modo sesión/i });
+}
+
+/** «Editar» un día registrado: el modo, precargado con lo registrado. */
+async function openEdit(): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+  return screen.findByRole("dialog", { name: /modo sesión/i });
+}
+
+/** El esfuerzo percibido del pie del modo: cerrar la sesión lo exige. */
+function pickEffort(mode: HTMLElement, value: number) {
+  fireEvent.click(
+    within(mode).getByRole("radio", {
+      name: new RegExp(`^esfuerzo ${value}:`, "i"),
+    }),
   );
+}
+
+/** Abre el cierre de la sesión: el pie del modo (esfuerzo y nota). */
+function openFinish(mode: HTMLElement) {
+  fireEvent.click(within(mode).getByRole("button", { name: /^terminar$/i }));
+}
+
+/** «Terminar» del cierre ya abierto: guarda (POST, o PUT al corregir). */
+function finishSession(mode: HTMLElement) {
+  fireEvent.click(within(mode).getByRole("button", { name: /^terminar$/i }));
+}
+
+/** Cierra la sesión: abre el cierre, elige el esfuerzo y «Terminar». */
+function saveSession(mode: HTMLElement, value: number) {
+  openFinish(mode);
+  pickEffort(mode, value);
+  finishSession(mode);
+}
+
+/** Avanza el modo (un ejercicio a la vez, en el orden del día) hasta el pedido:
+ *  «Saltar» corta la pausa que estuviera corriendo, «Siguiente» pasa de ejercicio. */
+function goToItem(mode: HTMLElement, name: string) {
+  for (let i = 0; i < 10; i += 1) {
+    if (within(mode).queryByRole("heading", { name })) return;
+    const skip = within(mode).queryByRole("button", { name: /^saltar$/i });
+    if (skip) {
+      fireEvent.click(skip);
+      continue;
+    }
+    fireEvent.click(within(mode).getByRole("button", { name: /^siguiente$/i }));
+  }
+  throw new Error(`No llegué a ${name} dentro del modo sesión`);
+}
+
+/** Sale del modo sin registrar: el aspa pregunta antes y el borrador se queda. */
+async function exitMode(mode: HTMLElement) {
+  fireEvent.click(
+    within(mode).getByRole("button", { name: /salir del modo sesión/i }),
+  );
+  fireEvent.click(await screen.findByRole("button", { name: /^salir$/i }));
 }
 function renderAt(path: string) {
   window.history.pushState({}, "", path);
@@ -242,9 +324,7 @@ describe("autoguardado del borrador", () => {
   it("guarda lo escrito en cada cambio y lo recupera al volver a la pantalla", async () => {
     mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
+    await openMode();
     fireEvent.change(screen.getByLabelText(/^reps · press banca serie 1$/i), {
       target: { value: "10" },
     });
@@ -259,13 +339,13 @@ describe("autoguardado del borrador", () => {
     );
     expect(savedDraft().exercises[0].id).toBe(SE_BENCH);
 
-    // Otro montaje, como un refresco: el borrador vuelve tal cual.
+    // Otro montaje, como un refresco: el resumen enseña la serie hecha y el
+    // borrador vuelve tal cual al abrir el modo.
     cleanup();
     mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
+    await screen.findByText("1/3");
+    await openMode();
     expect(
       (
         screen.getByLabelText(
@@ -281,20 +361,13 @@ describe("autoguardado del borrador", () => {
       last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
     });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
+    const mode = await openMode();
     fireEvent.click(boxOf("press banca", 1));
     await waitFor(() =>
       expect(window.localStorage.getItem(DRAFT_KEY)).not.toBeNull(),
     );
 
-    fireEvent.click(
-      within(
-        screen.getByRole("radiogroup", { name: /esfuerzo percibido/i }),
-      ).getByRole("radio", { name: /^esfuerzo 3:/i }),
-    );
-    fireEvent.click(await primaryClose());
+    saveSession(mode, 3);
     await waitFor(() => expect(api.posts).toHaveLength(1));
     await screen.findByRole("button", { name: /^editar$/i });
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
@@ -344,13 +417,11 @@ describe("route states", () => {
   });
 });
 
-describe("state A: editable", () => {
-  it("exercise rows in session order with per-set checkboxes (null → 3)", async () => {
+describe("resumen del día planificado", () => {
+  it("la lista va en el orden del día y las series nacen en 3 (targetSets nulo)", async () => {
     mockApi({ last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } } });
     renderAt("/sesion/2026-09-02");
-    const boxes = await screen.findAllByRole("checkbox");
-    expect(boxes.length).toBe(7); // 3 + 3 series + 1 checkbox de cardio
-    const rows = screen.getAllByRole("link", {
+    const rows = await screen.findAllByRole("link", {
       name: /press banca|remo con barra|running/i,
     });
     expect(rows.map((r) => r.textContent)).toEqual([
@@ -359,112 +430,101 @@ describe("state A: editable", () => {
       "Running",
     ]);
     expect(rows[0].getAttribute("href")).toBe("/ejercicios/21");
+    expect(screen.getAllByText("0/3")).toHaveLength(2); // 3 series, nulo → 3
+    // Dentro del modo, una casilla por serie del ejercicio activo (nulo → 3).
+    const mode = await openMode();
+    expect(within(mode).getAllByRole("checkbox")).toHaveLength(3);
+    goToItem(mode, "Remo con barra");
+    expect(within(mode).getAllByRole("checkbox")).toHaveLength(3);
   });
 
-  it("expanding shows steppers; increment is draft-only (no fetch)", async () => {
+  it("los steppers del modo cambian la marca sin llamar a la API", async () => {
     const api = mockApi({
       last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } },
     });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    const weight = await screen.findByLabelText(
+    const mode = await openMode();
+    const weight = within(mode).getByLabelText(
       /^peso \(kg\) · press banca serie 1$/i,
     );
     const before = api.fetchCount();
     fireEvent.click(
-      screen.getByRole("button", {
+      within(mode).getByRole("button", {
         name: /aumentar peso \(kg\) · press banca serie 1/i,
       }),
     );
-    expect((weight as HTMLInputElement).value).toBe("60"); // 57.5 → 60 (2.5kg steps)
+    expect((weight as HTMLInputElement).value).toBe("60"); // 57.5 → 60 (2,5 kg)
     expect(api.fetchCount()).toBe(before);
   });
 
   it("cada campo numérico lleva su nombre visible", async () => {
     mockApi({});
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    fireEvent.click(
-      screen.getByRole("button", { name: /series de remo con barra/i }),
-    );
-    expect(screen.getAllByText("Peso (kg)").length).toBe(6); // 3 series × 2 ejercicios
-    expect(screen.getAllByText("Reps").length).toBe(6);
-    expect(screen.getByText("Distancia (km)")).toBeDefined();
-    expect(screen.getByText("Tiempo (min)")).toBeDefined();
+    const mode = await openMode();
+    // Un ejercicio a la vez: sus series y los campos que pide su métrica.
+    expect(within(mode).getAllByText("Peso (kg)")).toHaveLength(3);
+    expect(within(mode).getAllByText("Reps")).toHaveLength(3);
+    goToItem(mode, "Running");
+    expect(within(mode).getByText("Distancia (km)")).toBeDefined();
+    expect(within(mode).getByText("Tiempo (min)")).toBeDefined();
+    expect(within(mode).queryAllByText("Peso (kg)")).toHaveLength(0);
   });
 
-  it("prefill: última helper + starting values; never-logged exercise has no helper", async () => {
+  it("prefill: «última» en el resumen y los valores de partida en el modo", async () => {
     mockApi({ last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } } });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
+    // El resumen dice de dónde viene el ejercicio; el que nunca se registró no.
     await screen.findByText("última: 57.5×8");
+    expect(screen.queryAllByText(/última/)).toHaveLength(1);
+    const mode = await openMode();
     expect(
       (
-        screen.getByLabelText(
+        within(mode).getByLabelText(
           /^peso \(kg\) · press banca serie 1$/i,
         ) as HTMLInputElement
       ).value,
     ).toBe("57.5");
     expect(
       (
-        screen.getByLabelText(
+        within(mode).getByLabelText(
           /^reps · press banca serie 1$/i,
         ) as HTMLInputElement
       ).value,
     ).toBe("8");
-    fireEvent.click(
-      screen.getByRole("button", { name: /series de remo con barra/i }),
-    );
-    await screen.findByLabelText(/^peso \(kg\) · remo con barra serie 1$/i);
-    expect(screen.queryAllByText(/última/).length).toBe(1);
   });
 
-  it("last-endpoint failure is non-blocking: warning + manual logging still possible", async () => {
+  it("sin histórico: aviso y el registro sigue siendo posible", async () => {
     mockApi({ lastFails: true });
     renderAt("/sesion/2026-09-02");
     await screen.findByText(/no se pudo cargar el histórico/i);
-    fireEvent.click(
-      screen.getByRole("button", { name: /series de press banca/i }),
-    );
+    expect(screen.queryAllByText(/última/)).toHaveLength(0);
+    const mode = await openMode();
     expect(
-      await screen.findByLabelText(/^peso \(kg\) · press banca serie 1$/i),
+      within(mode).getByLabelText(/^peso \(kg\) · press banca serie 1$/i),
     ).toBeDefined();
-    expect(screen.queryAllByText(/última/).length).toBe(0);
   });
 
   it("cardio: marcas opcionales; escribir distancia implica hecho", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
-    const distance = await screen.findByLabelText(
+    const mode = await openMode();
+    goToItem(mode, "Running");
+    const distance = within(mode).getByLabelText(
       /^distancia \(km\) · running$/i,
     );
-    const done = screen.getByRole("checkbox", { name: /running hecho/i });
+    const done = () =>
+      within(mode).getByRole("checkbox", {
+        name: /running hecho/i,
+      }) as HTMLInputElement;
     expect((distance as HTMLInputElement).value).toBe("");
-    expect((done as HTMLInputElement).checked).toBe(false);
+    expect(done().checked).toBe(false);
 
     fireEvent.change(distance, { target: { value: "8.5" } });
-    await waitFor(() =>
-      expect(
-        (
-          screen.getByRole("checkbox", {
-            name: /running hecho/i,
-          }) as HTMLInputElement
-        ).checked,
-      ).toBe(true),
-    );
+    await waitFor(() => expect(done().checked).toBe(true));
 
-    fireEvent.click(screen.getByRole("radio", { name: /4/ }));
-    const close = (await primaryClose()) as HTMLButtonElement;
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
-    await waitFor(() => expect(api.posts.length).toBe(1));
-    const body = api.posts[0] as { cardio: unknown[] };
+    saveSession(mode, 4);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    const body = api.posts[0];
     expect(body.cardio).toEqual([
       {
         planSessionExerciseId: SE_RUN,
@@ -478,16 +538,14 @@ describe("state A: editable", () => {
   it("cardio hecho sin marcas se envía con números null", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
-    const done = await screen.findByRole("checkbox", {
-      name: /running hecho/i,
-    });
-    fireEvent.click(done);
-    fireEvent.click(screen.getByRole("radio", { name: /4/ }));
-    const close = (await primaryClose()) as HTMLButtonElement;
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
-    await waitFor(() => expect(api.posts.length).toBe(1));
-    const body = api.posts[0] as { cardio: unknown[] };
+    const mode = await openMode();
+    goToItem(mode, "Running");
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: /running hecho/i }),
+    );
+    saveSession(mode, 4);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    const body = api.posts[0];
     expect(body.cardio).toEqual([
       {
         planSessionExerciseId: SE_RUN,
@@ -498,23 +556,22 @@ describe("state A: editable", () => {
     ]);
   });
 
-  it("Cerrar sesión disabled until effort; picking dot 4 posts effort 4 with camelCase sets", async () => {
+  it("el cierre exige esfuerzo: «Terminar» no guarda hasta elegirlo", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
-    const close = (await primaryClose()) as HTMLButtonElement;
-    expect(close.disabled).toBe(true);
-    fireEvent.click(screen.getByRole("radio", { name: /4/ }));
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
-    await waitFor(() => expect(api.posts.length).toBe(1));
-    const body = api.posts[0] as {
-      effort: number;
-      note?: string | null;
-      sets: SetItem[];
-      cardio: unknown[];
-    };
+    const mode = await openMode();
+    openFinish(mode);
+    const finish = within(mode).getByRole("button", {
+      name: /^terminar$/i,
+    }) as HTMLButtonElement;
+    expect(finish.disabled).toBe(true);
+    pickEffort(mode, 4);
+    await waitFor(() => expect(finish.disabled).toBe(false));
+    fireEvent.click(finish);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    const body = api.posts[0];
     expect(body.effort).toBe(4);
-    expect(body.note ?? null).toBeNull(); // blank note never sent as ""
+    expect(body.note ?? null).toBeNull(); // una nota vacía nunca viaja como ""
     expect(body.sets.length).toBe(6);
     expect(body.sets[0]).toEqual({
       planSessionExerciseId: SE_BENCH,
@@ -525,22 +582,26 @@ describe("state A: editable", () => {
       done: false,
     });
     expect(body.sets[0]).not.toHaveProperty("set_index");
-    expect(body.cardio).toEqual([]); // cardio sin tocar no viaja
+    expect(body.cardio).toEqual([]); // el cardio sin tocar no viaja
   });
 
-  it("double click sends exactly one POST; 201 flips to state B with badge", async () => {
+  it("doble clic en «Terminar» manda un solo POST; el 201 pasa al registro", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
-    const close = (await primaryClose()) as HTMLButtonElement;
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
-    fireEvent.click(close);
+    const mode = await openMode();
+    openFinish(mode);
+    pickEffort(mode, 3);
+    const finish = within(mode).getByRole("button", {
+      name: /^terminar$/i,
+    }) as HTMLButtonElement;
+    await waitFor(() => expect(finish.disabled).toBe(false));
+    fireEvent.click(finish);
+    fireEvent.click(finish);
     await waitFor(() => expect(screen.getByText("Registrado")).toBeDefined());
-    expect(api.posts.length).toBe(1);
+    expect(api.posts).toHaveLength(1);
   });
 
-  it("400 with field → banner names the field, draft stays editable", async () => {
+  it("400 con campo: el aviso lo nombra y el borrador se conserva", async () => {
     mockApi({
       last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
       postReply: {
@@ -549,25 +610,24 @@ describe("state A: editable", () => {
       },
     });
     renderAt("/sesion/2026-09-02");
-    const close = (await primaryClose()) as HTMLButtonElement;
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
+    const mode = await openMode();
     fireEvent.click(
-      screen.getByRole("checkbox", { name: /press banca serie 1/i }),
+      within(mode).getByRole("checkbox", { name: /press banca serie 1/i }),
     );
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
+    saveSession(mode, 3);
     await screen.findByText(/sets\.0\.setIndex/);
-    // draft preserved: checkbox still checked, still interactive
+    // El borrador se conserva: el resumen sigue y el modo guarda lo marcado.
+    const again = await openMode();
     expect(
       (
-        screen.getByRole("checkbox", {
+        within(again).getByRole("checkbox", {
           name: /press banca serie 1/i,
         }) as HTMLInputElement
       ).checked,
     ).toBe(true);
   });
 
-  it("marcar todas las series y el cardio muestra el sello; desmarcar una lo retira", async () => {
+  it("el sello aparece con el borrador completo y se retira al desmarcar una serie", async () => {
     mockApi({
       last: {
         21: { weightKg: 60, reps: 8, date: "2026-08-30" },
@@ -579,18 +639,30 @@ describe("state A: editable", () => {
       screen
         .queryAllByRole("status")
         .find((el) => /sesión completa/i.test(el.textContent ?? ""));
-    const boxes = await screen.findAllByRole("checkbox");
-    for (const box of boxes.slice(0, -1)) fireEvent.click(box);
-    expect(seal()).toBeUndefined(); // falta el cardio
-    fireEvent.click(boxes[boxes.length - 1]);
-    await waitFor(() => expect(seal()).toBeDefined());
+    const mode = await openMode();
+    for (const name of ["Press banca", "Remo con barra"]) {
+      goToItem(mode, name);
+      for (const box of within(mode).getAllByRole("checkbox")) {
+        fireEvent.click(box);
+      }
+    }
+    goToItem(mode, "Running");
     fireEvent.click(
-      screen.getByRole("checkbox", { name: /press banca serie 2/i }),
+      within(mode).getByRole("checkbox", { name: /running hecho/i }),
     );
+    exitMode(mode);
+    await waitFor(() => expect(seal()).toBeDefined());
+
+    const again = await openMode();
+    goToItem(again, "Press banca");
+    fireEvent.click(
+      within(again).getByRole("checkbox", { name: /press banca serie 2/i }),
+    );
+    exitMode(again);
     await waitFor(() => expect(seal()).toBeUndefined());
   });
 
-  it("409 → reload into read-only state B with persisted data", async () => {
+  it("409 → recarga al registro con lo persistido", async () => {
     mockApi({
       postReply: {
         status: 409,
@@ -611,12 +683,10 @@ describe("state A: editable", () => {
       ),
     });
     renderAt("/sesion/2026-09-02");
-    const close = (await primaryClose()) as HTMLButtonElement;
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
+    const mode = await openMode();
+    saveSession(mode, 3);
     await screen.findByText("Registrado");
-    expect(screen.getByText(/60×8/)).toBeDefined();
+    expect(screen.getByText("60×8")).toBeDefined();
     expect(screen.getByText("fuerte")).toBeDefined();
   });
 });
@@ -656,22 +726,18 @@ describe("state B: read-only", () => {
     });
     const { container } = renderAt("/sesion/2026-09-02");
     await screen.findByText("Registrado");
-    expect(screen.getByText(/60×8/)).toBeDefined();
+    // Lo anotado, en el resumen: marcas, contadores, esfuerzo y nota.
+    expect(screen.getByText("60×8")).toBeDefined();
     expect(screen.getByText("sesión floja")).toBeDefined();
-    expect(screen.getByText(/—/)).toBeDefined();
+    expect(screen.getByText("1/2")).toBeDefined();
     expect(screen.getByText("Running")).toBeDefined();
-    expect(screen.getByText(/5\.2 km · 32 min/)).toBeDefined();
+    expect(screen.getByText("5.2 km · 32 min")).toBeDefined();
     expect(container.querySelectorAll("input, textarea, select").length).toBe(
       0,
     );
-    // Sin barra de acciones ni botón de cerrar la sesión de entreno (el de
-    // salir del shell no está en main).
+    // Solo se consulta: la única acción es corregirlo en el modo sesión.
     expect(screen.queryByRole("toolbar")).toBeNull();
-    expect(
-      within(screen.getByRole("main")).queryByRole("button", {
-        name: /cerrar sesión/i,
-      }),
-    ).toBeNull();
+    expect(screen.getByRole("button", { name: /^editar$/i })).toBeDefined();
     // effort 2 of 5 filled
     const dots = screen.getAllByTestId("effort-dot");
     expect(
@@ -697,10 +763,7 @@ describe("auto-marcar la serie al escribir sus marcas", () => {
   it("la precarga no marca; completar kilos y reps marca; vaciar desmarca", async () => {
     mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    await screen.findByLabelText(/^peso \(kg\) · press banca serie 1$/i);
+    const mode = await openMode();
     expect(boxOf("press banca", 1).checked).toBe(false); // precarga ≠ hecho
 
     fireEvent.change(repsOf("press banca", 1), { target: { value: "10" } });
@@ -709,9 +772,9 @@ describe("auto-marcar la serie al escribir sus marcas", () => {
     fireEvent.change(weightOf("press banca", 1), { target: { value: "" } });
     await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(false));
 
-    // stepper también cuenta como edición
+    // El ± del stepper también cuenta como edición.
     fireEvent.click(
-      screen.getByRole("button", {
+      within(mode).getByRole("button", {
         name: /aumentar peso \(kg\) · press banca serie 1/i,
       }),
     );
@@ -721,10 +784,8 @@ describe("auto-marcar la serie al escribir sus marcas", () => {
   it("sin histórico: con solo reps no se marca hasta poner kilos", async () => {
     mockApi({});
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de remo con barra/i }),
-    );
-    await screen.findByLabelText(/^reps · remo con barra serie 1$/i);
+    const mode = await openMode();
+    goToItem(mode, "Remo con barra");
     fireEvent.change(repsOf("remo con barra", 1), { target: { value: "8" } });
     expect(boxOf("remo con barra", 1).checked).toBe(false);
     fireEvent.change(weightOf("remo con barra", 1), {
@@ -736,38 +797,17 @@ describe("auto-marcar la serie al escribir sus marcas", () => {
   it("una serie sin kilos no se marca a mano; con «sin peso» sí", async () => {
     mockApi({}); // reps del objetivo (6), kilos vacíos
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    await screen.findByLabelText(/^reps · press banca serie 1$/i);
+    const mode = await openMode();
     expect(boxOf("press banca", 1).disabled).toBe(true);
     fireEvent.click(boxOf("press banca", 1));
     expect(boxOf("press banca", 1).checked).toBe(false);
 
     fireEvent.click(
-      screen.getByRole("switch", { name: /sin peso · press banca/i }),
+      within(mode).getByRole("switch", { name: /sin peso · press banca/i }),
     );
     await waitFor(() => expect(boxOf("press banca", 1).disabled).toBe(false));
     fireEvent.click(boxOf("press banca", 1));
     await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
-  });
-
-  it("marcar todas solo marca las series completas", async () => {
-    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
-    renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    await screen.findByLabelText(/^peso \(kg\) · press banca serie 2$/i);
-    fireEvent.change(weightOf("press banca", 2), { target: { value: "" } });
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /marcar todas las series de press banca/i,
-      }),
-    );
-    await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
-    expect(boxOf("press banca", 2).checked).toBe(false);
-    expect(boxOf("press banca", 3).checked).toBe(true);
   });
 });
 
@@ -777,27 +817,21 @@ describe("ejercicio sin peso", () => {
       last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
     });
     renderAt("/sesion/2026-09-02");
-    const sw = (await screen.findByRole("switch", {
+    const mode = await openMode();
+    const sw = within(mode).getByRole("switch", {
       name: /sin peso · press banca/i,
-    })) as HTMLInputElement;
+    }) as HTMLInputElement;
     expect(sw.checked).toBe(false);
     fireEvent.click(sw);
-    fireEvent.click(
-      screen.getByRole("button", { name: /series de press banca/i }),
-    );
-    await screen.findByLabelText(/^reps · press banca serie 1$/i);
     expect(
       screen.queryByLabelText(/^peso \(kg\) · press banca serie 1$/i),
     ).toBeNull();
     fireEvent.change(repsOf("press banca", 1), { target: { value: "12" } });
     await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
 
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
-    const close = await primaryClose();
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
-    await waitFor(() => expect(api.posts.length).toBe(1));
-    const sets = (api.posts[0] as { sets: SetItem[] }).sets.filter(
+    saveSession(mode, 3);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    const sets = api.posts[0].sets.filter(
       (s) => s.planSessionExerciseId === SE_BENCH,
     );
     expect(sets.every((s) => s.weightKg === null)).toBe(true);
@@ -807,24 +841,28 @@ describe("ejercicio sin peso", () => {
   it("empieza activado si lo último registrado no llevaba peso", async () => {
     mockApi({ last: { 21: { weightKg: null, reps: 10, date: "2026-08-30" } } });
     renderAt("/sesion/2026-09-02");
-    const sw = (await screen.findByRole("switch", {
-      name: /sin peso · press banca/i,
-    })) as HTMLInputElement;
-    expect(sw.checked).toBe(true);
-    expect(screen.getByText("última: 10 reps")).toBeDefined();
+    // El resumen ya lo cuenta así, y el modo arranca con el conmutador puesto.
+    await screen.findByText("última: 10 reps");
+    const mode = await openMode();
+    expect(
+      (
+        within(mode).getByRole("switch", {
+          name: /sin peso · press banca/i,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
   });
 
   it("cambiar el conmutador recalcula las series editadas, no las precargadas", async () => {
     mockApi({}); // sin histórico: reps precargadas del objetivo (6), kilos vacíos
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    await screen.findByLabelText(/^reps · press banca serie 1$/i);
+    const mode = await openMode();
     fireEvent.change(repsOf("press banca", 1), { target: { value: "10" } });
     expect(boxOf("press banca", 1).checked).toBe(false); // faltan los kilos
 
-    const sw = screen.getByRole("switch", { name: /sin peso · press banca/i });
+    const sw = within(mode).getByRole("switch", {
+      name: /sin peso · press banca/i,
+    });
     fireEvent.click(sw);
     await waitFor(() => expect(boxOf("press banca", 1).checked).toBe(true));
     expect(boxOf("press banca", 2).checked).toBe(false); // precargada: intacta
@@ -835,26 +873,30 @@ describe("ejercicio sin peso", () => {
 });
 
 describe("registrar y después corregir en la misma visita", () => {
-  it("Editar abre el borrador plegado aunque antes se desplegara un ejercicio", async () => {
-    mockApi({});
-    renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    await screen.findByLabelText(/^reps · press banca serie 1$/i);
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
-    const close = await primaryClose();
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
-    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
-    const toggle = await screen.findByRole("button", {
-      name: /series de press banca/i,
+  it("tras registrar, «Editar» reabre el modo con lo registrado y guarda con PUT", async () => {
+    const api = mockApi({
+      last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } },
     });
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    fireEvent.click(toggle);
-    expect(
-      await screen.findByLabelText(/^reps · press banca serie 1$/i),
-    ).toBeDefined();
+    renderAt("/sesion/2026-09-02");
+    const mode = await openMode();
+    fireEvent.click(boxOf("press banca", 1));
+    saveSession(mode, 3);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    await screen.findByText("Registrado");
+
+    const again = await openEdit();
+    expect(boxOf("press banca", 1).checked).toBe(true);
+    fireEvent.change(
+      within(again).getByLabelText(/^reps · press banca serie 1$/i),
+      { target: { value: "9" } },
+    );
+    openFinish(again);
+    finishSession(again);
+    await waitFor(() => expect(api.puts).toHaveLength(1));
+    expect(api.puts[0].sets[0]).toMatchObject({
+      reps: 9,
+      done: true,
+    });
   });
 });
 
@@ -910,7 +952,7 @@ describe("marcas de la sesión anterior con el mismo nombre", () => {
       logs: { "2026-08-28": prevLog("2026-08-28", 60) },
     });
     renderAt("/sesion/2026-09-02");
-    await screen.findByRole("button", { name: /series de press banca/i });
+    await screen.findByRole("button", { name: /^empezar$/i });
     expect(api.urls).not.toContain("/api/workout-logs/2026-08-28");
     expect(screen.queryByText(/28\/08/)).toBeNull();
   });
@@ -936,15 +978,8 @@ describe("copiar la serie homóloga de la sesión anterior", () => {
     { id: 1, date: "2026-09-02", name: "Empuje A", status: "planned" },
   ];
 
-  const expandBench = async () => {
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
-    await screen.findByLabelText(/^peso \(kg\) · press banca serie 1$/i);
-  };
-
-  const chip = (n: number, value: string) =>
-    screen.getByRole("button", {
+  const chip = (mode: HTMLElement, n: number, value: string) =>
+    within(mode).getByRole("button", {
       name: new RegExp(
         `^copiar ${value} de la sesión anterior a press banca serie ${n}$`,
         "i",
@@ -965,12 +1000,12 @@ describe("copiar la serie homóloga de la sesión anterior", () => {
       },
     });
     renderAt("/sesion/2026-09-02");
-    await expandBench();
-    expect(chip(1, "60×10")).toBeDefined();
-    expect(chip(2, "55×8")).toBeDefined();
+    const mode = await openMode();
+    expect(chip(mode, 1, "60×10")).toBeDefined();
+    expect(chip(mode, 2, "55×8")).toBeDefined();
     // el borrador tiene 3 series y la anterior solo 2: la tercera no copia nada
     expect(
-      screen.queryByRole("button", {
+      within(mode).queryByRole("button", {
         name: /de la sesión anterior a press banca serie 3/i,
       }),
     ).toBeNull();
@@ -992,10 +1027,10 @@ describe("copiar la serie homóloga de la sesión anterior", () => {
       },
     });
     renderAt("/sesion/2026-09-02");
-    await expandBench();
+    const mode = await openMode();
     expect(boxOf("press banca", 1).checked).toBe(false);
 
-    fireEvent.click(chip(1, "60×10"));
+    fireEvent.click(chip(mode, 1, "60×10"));
     await waitFor(() => expect(weightOf("press banca", 1).value).toBe("60"));
     expect(repsOf("press banca", 1).value).toBe("10");
     expect(boxOf("press banca", 1).checked).toBe(false); // copiar no marca
@@ -1003,12 +1038,9 @@ describe("copiar la serie homóloga de la sesión anterior", () => {
     expect(weightOf("press banca", 2).value).toBe("40");
     expect(repsOf("press banca", 2).value).toBe("6");
 
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
-    const close = await primaryClose();
-    await waitFor(() => expect(close.disabled).toBe(false));
-    fireEvent.click(close);
-    await waitFor(() => expect(api.posts.length).toBe(1));
-    const sets = (api.posts[0] as { sets: SetItem[] }).sets.filter(
+    saveSession(mode, 3);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    const sets = api.posts[0].sets.filter(
       (s) => s.planSessionExerciseId === SE_BENCH,
     );
     expect(sets[0]).toMatchObject({
@@ -1027,14 +1059,14 @@ describe("copiar la serie homóloga de la sesión anterior", () => {
       logs: { "2026-08-28": prevPayload([[null, 12]], "2026-08-28") },
     });
     renderAt("/sesion/2026-09-02");
-    await expandBench();
+    const mode = await openMode();
     const sw = () =>
-      screen.getByRole("switch", {
+      within(mode).getByRole("switch", {
         name: /sin peso · press banca/i,
       }) as HTMLInputElement;
     expect(sw().checked).toBe(false);
 
-    fireEvent.click(chip(1, "12 reps"));
+    fireEvent.click(chip(mode, 1, "12 reps"));
     await waitFor(() => expect(repsOf("press banca", 1).value).toBe("12"));
     expect(weightOf("press banca", 1).value).toBe("40"); // kilos intactos
     expect(boxOf("press banca", 1).checked).toBe(false);
@@ -1079,7 +1111,7 @@ const logged = loggedPayload(
 );
 
 describe("corregir una sesión registrada", () => {
-  it("Editar precarga el registro (series, sin peso, esfuerzo, nota) y Guardar hace PUT", async () => {
+  it("«Editar» precarga el registro (series, sin peso, esfuerzo, nota) y «Terminar» hace PUT", async () => {
     const api = mockApi({
       sessions: LOGGED,
       log: logged,
@@ -1087,23 +1119,20 @@ describe("corregir una sesión registrada", () => {
       last: { 22: { weightKg: 80, reps: 5, date: "2026-09-20" } },
     });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
+    const mode = await openEdit();
     expect(weightOf("press banca", 2).value).toBe("60");
     expect(repsOf("press banca", 2).value).toBe("6");
+    fireEvent.change(repsOf("press banca", 2), { target: { value: "7" } });
+
+    goToItem(mode, "Remo con barra");
     expect(
       (
-        screen.getByRole("switch", {
+        within(mode).getByRole("switch", {
           name: /sin peso · remo con barra/i,
         }) as HTMLInputElement
       ).checked,
     ).toBe(true);
-    expect(
-      (screen.getByLabelText(/nota de la sesión/i) as HTMLTextAreaElement)
-        .value,
-    ).toBe("bien");
+    goToItem(mode, "Running");
     expect(
       (
         screen.getByLabelText(
@@ -1112,25 +1141,25 @@ describe("corregir una sesión registrada", () => {
       ).value,
     ).toBe("5");
 
-    fireEvent.change(repsOf("press banca", 2), { target: { value: "7" } });
-    fireEvent.click(screen.getByRole("radio", { name: /4/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^guardar$/i }));
-    await waitFor(() => expect(api.puts.length).toBe(1));
-    expect(api.posts.length).toBe(0);
-    const body = api.puts[0] as {
-      effort: number;
-      note: string;
-      sets: SetItem[];
-      cardio: unknown[];
-    };
+    // El cierre (el esfuerzo y la nota del registro) lo abre «Terminar».
+    openFinish(mode);
+    expect(
+      (screen.getByLabelText(/nota de la sesión/i) as HTMLTextAreaElement)
+        .value,
+    ).toBe("bien");
+    pickEffort(mode, 4);
+    finishSession(mode);
+    await waitFor(() => expect(api.puts).toHaveLength(1));
+    expect(api.posts).toHaveLength(0);
+    const body = api.puts[0];
     expect(body.effort).toBe(4);
     expect(body.note).toBe("bien");
-    expect(body.sets.length).toBe(3); // mismo número de series que el registro
+    expect(body.sets).toHaveLength(3); // mismo número de series que el registro
     expect(body.sets[1]).toMatchObject({ weightKg: 60, reps: 7, done: true });
     expect(body.sets[2]).toMatchObject({ weightKg: null, reps: 12 });
-    expect(body.cardio.length).toBe(1);
+    expect(body.cardio).toHaveLength(1);
     await screen.findByText("Registrado");
-    expect(screen.getByText("60×7")).toBeDefined();
+    expect(screen.getByText("60×8 · 60×7")).toBeDefined();
   });
 
   it("una serie registrada como hecha sin marcas se precarga sin marcar", async () => {
@@ -1148,48 +1177,46 @@ describe("corregir una sesión registrada", () => {
       ]),
     });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
+    const mode = await openEdit();
     expect(boxOf("press banca", 3).checked).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: /^guardar$/i }));
-    await waitFor(() => expect(api.puts.length).toBe(1));
-    expect((api.puts[0] as { sets: SetItem[] }).sets[2].done).toBe(false);
+    openFinish(mode);
+    finishSession(mode);
+    await waitFor(() => expect(api.puts).toHaveLength(1));
+    expect(api.puts[0].sets[2].done).toBe(false);
   });
 
-  it("Cancelar vuelve al registro sin llamar a la API", async () => {
+  it("salir de la corrección vuelve al registro sin llamar a la API", async () => {
     const api = mockApi({ sessions: LOGGED, log: logged });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
-    const cancel = await screen.findByRole("button", { name: /^cancelar$/i });
+    const mode = await openEdit();
     const before = api.fetchCount();
-    fireEvent.click(cancel);
+    await exitMode(mode);
     await screen.findByText("Registrado");
     expect(api.fetchCount()).toBe(before);
-    expect(api.puts.length).toBe(0);
+    expect(api.puts).toHaveLength(0);
   });
 });
 
 describe("añadir y quitar series", () => {
   const openBench = async () => {
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de press banca/i }),
-    );
+    const mode = await openMode();
     return {
-      add: screen.getByRole("button", {
-        name: /añadir serie a press banca/i,
-      }),
-      remove: screen.getByRole("button", {
-        name: /quitar serie a press banca/i,
-      }) as HTMLButtonElement,
+      mode,
+      add: () =>
+        within(mode).getByRole("button", {
+          name: /añadir serie a press banca/i,
+        }) as HTMLButtonElement,
+      remove: () =>
+        within(mode).getByRole("button", {
+          name: /quitar serie a press banca/i,
+        }) as HTMLButtonElement,
     };
   };
 
-  it("las series van en una sola tira (no sueltan la línea del encabezado)", async () => {
+  it("las casillas de las series van en una sola tira", async () => {
     mockApi({});
     renderAt("/sesion/2026-09-02");
-    await screen.findByRole("button", { name: /series de press banca/i });
+    await openMode();
 
     const first = boxOf("press banca", 1);
     const last = boxOf("press banca", 3);
@@ -1201,17 +1228,12 @@ describe("añadir y quitar series", () => {
   it("el ➕ se apaga al llegar a 20 series", async () => {
     mockApi({});
     renderAt("/sesion/2026-09-02");
-    await openBench();
-    const addNow = () =>
-      screen.getByRole("button", {
-        name: /añadir serie a press banca/i,
-      }) as HTMLButtonElement;
+    const { mode, add } = await openBench();
     // 3 por defecto; el 18.º sobra si el tope no corta.
-    for (let i = 0; i < 30 && !addNow().disabled; i++)
-      fireEvent.click(addNow());
+    for (let i = 0; i < 30 && !add().disabled; i++) fireEvent.click(add());
 
-    expect(addNow().disabled).toBe(true);
-    expect(screen.queryByLabelText(/press banca serie 21$/i)).toBeNull();
+    expect(add().disabled).toBe(true);
+    expect(within(mode).getAllByRole("checkbox")).toHaveLength(20);
   });
 
   it("el ➕ copia las marcas de la última serie y el ➖ quita la última (suelo 1)", async () => {
@@ -1219,31 +1241,27 @@ describe("añadir y quitar series", () => {
     renderAt("/sesion/2026-09-02");
     const { add, remove } = await openBench();
 
-    fireEvent.click(add);
+    fireEvent.click(add());
     expect(weightOf("press banca", 4).value).toBe("57.5");
     expect(repsOf("press banca", 4).value).toBe("8");
     expect(boxOf("press banca", 4).checked).toBe(false);
 
-    fireEvent.click(remove);
-    fireEvent.click(remove);
-    fireEvent.click(remove);
+    fireEvent.click(remove());
+    fireEvent.click(remove());
+    fireEvent.click(remove());
     expect(screen.queryByLabelText(/press banca serie 2$/i)).toBeNull();
-    const last = screen.getByRole("button", {
-      name: /quitar serie a press banca/i,
-    }) as HTMLButtonElement;
-    expect(last.disabled).toBe(true);
+    expect(remove().disabled).toBe(true);
   });
 
   it("Guardar reescribe el plan con las series del borrador y después cierra la sesión", async () => {
     const api = mockApi({});
     renderAt("/sesion/2026-09-02");
-    const { add } = await openBench();
-    fireEvent.click(add);
-    fireEvent.click(add);
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
-    fireEvent.click(await primaryClose());
+    const { mode, add } = await openBench();
+    fireEvent.click(add());
+    fireEvent.click(add());
+    saveSession(mode, 3);
 
-    await waitFor(() => expect(api.posts.length).toBe(1));
+    await waitFor(() => expect(api.posts).toHaveLength(1));
     expect(api.planPuts).toEqual([
       {
         name: "Empuje A",
@@ -1290,16 +1308,18 @@ describe("añadir y quitar series", () => {
   it("corregir un registro reescribe el plan antes del PUT del registro", async () => {
     const api = mockApi({ sessions: LOGGED, log: logged });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
-    const { remove } = await openBench();
-    fireEvent.click(remove);
-    fireEvent.click(screen.getByRole("button", { name: /^guardar$/i }));
+    const mode = await openEdit();
+    fireEvent.click(
+      within(mode).getByRole("button", { name: /quitar serie a press banca/i }),
+    );
+    openFinish(mode);
+    finishSession(mode);
 
-    await waitFor(() => expect(api.puts.length).toBe(1));
-    const planPut = api.planPuts[0] as {
-      items: { exerciseId: number; targetSets: number }[];
-    };
-    expect(planPut.items[0]).toMatchObject({ exerciseId: 21, targetSets: 1 });
+    await waitFor(() => expect(api.puts).toHaveLength(1));
+    expect(api.planPuts[0].items[0]).toMatchObject({
+      exerciseId: 21,
+      targetSets: 1,
+    });
     expect(api.calls).toEqual([
       "PUT /api/plan-sessions/1",
       "PUT /api/workout-logs/2026-09-02",
@@ -1383,10 +1403,10 @@ describe("modo interactivo", () => {
     );
     expect(screen.getByRole("dialog", { name: /modo sesión/i })).toBeDefined();
 
-    // «Salir» sí: vuelve al borrador.
+    // «Salir» sí: vuelve al resumen del día, que sigue sin registrar.
     exitMode(mode);
     expect(screen.queryByRole("dialog", { name: /modo sesión/i })).toBeNull();
-    expect(screen.getByText("Esfuerzo percibido")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^empezar$/i })).toBeDefined();
   });
 
   it("la cabecera del ejercicio va en una fila: «Sin peso» junto a las casillas", async () => {
@@ -1707,9 +1727,9 @@ describe("modo interactivo", () => {
       }),
     ).toBeDefined();
 
-    // Las marcas van al borrador subyacente: al salir, la serie queda hecha.
+    // Las marcas van al borrador subyacente: el resumen enseña la serie hecha.
     exitMode(mode);
-    expect(boxOf("press banca", 1)).toHaveProperty("checked", true);
+    await waitFor(() => expect(screen.getByText("1/3")).toBeDefined());
   });
 
   it("completar la sesión muestra el esfuerzo; la última marca no arranca cuenta atrás", async () => {
@@ -1717,7 +1737,8 @@ describe("modo interactivo", () => {
     renderAt("/sesion/2026-09-02");
     fireEvent.click(await screen.findByRole("button", { name: /^empezar$/i }));
     const mode = await screen.findByRole("dialog", { name: /modo sesión/i });
-    // Mientras queda faena, el esfuerzo no aparece.
+    // El pie se queda ligero mientras se entrena: el cierre (esfuerzo y nota)
+    // lo abre «Terminar».
     expect(
       within(mode).queryByRole("radiogroup", { name: /esfuerzo percibido/i }),
     ).toBeNull();
@@ -1742,15 +1763,12 @@ describe("modo interactivo", () => {
       within(mode).queryByRole("progressbar", { name: /pausa/i }),
     ).toBeNull();
     expect(within(mode).getByText("3 / 3")).toBeDefined();
-    // Sesión completa: aparece el esfuerzo; sin él, «Terminar» no cierra.
-    expect(
-      within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
-    ).toBeDefined();
+    // «Terminar» abre el cierre; sin esfuerzo no guarda.
+    fireEvent.click(within(mode).getByRole("button", { name: /^terminar$/i }));
     const terminar = within(mode).getByRole("button", {
       name: /^terminar$/i,
-    });
-    // Sin esfuerzo no se cierra, igual que «Guardar» en el borrador.
-    expect(terminar).toHaveProperty("disabled", true);
+    }) as HTMLButtonElement;
+    expect(terminar.disabled).toBe(true);
     fireEvent.click(within(mode).getByRole("radio", { name: /^esfuerzo 3:/i }));
     fireEvent.click(terminar);
     await waitFor(() => expect(api.posts).toHaveLength(1));
@@ -1818,6 +1836,8 @@ describe("modo interactivo", () => {
       audio.oscillators.some((o) => o.frequency.value === 60 && o.stopped),
     ).toBe(true);
     expect(within(mode).getByText("3 / 3")).toBeDefined();
+    // El cierre lo abre «Terminar» (y ya está la sesión entera hecha).
+    fireEvent.click(within(mode).getByRole("button", { name: /^terminar$/i }));
     expect(
       within(mode).getByRole("radiogroup", { name: /esfuerzo percibido/i }),
     ).toBeDefined();
@@ -2059,28 +2079,27 @@ describe("ejercicio por tiempo (metric: time)", () => {
       ],
     });
     renderAt("/sesion/2026-09-02");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /series de plancha/i }),
-    );
+    const mode = await openMode();
 
-    expect((await screen.findAllByText("Segundos")).length).toBe(2);
-    expect(screen.queryAllByText("Peso (kg)")).toHaveLength(0);
-    expect(screen.queryAllByText("Reps")).toHaveLength(0);
+    expect(within(mode).getAllByText("Segundos")).toHaveLength(2);
+    expect(within(mode).queryAllByText("Peso (kg)")).toHaveLength(0);
+    expect(within(mode).queryAllByText("Reps")).toHaveLength(0);
     // Sin kg no hay conmutador «Sin peso».
-    expect(screen.queryByRole("switch")).toBeNull();
+    expect(within(mode).queryByRole("switch")).toBeNull();
 
     // Escribir los segundos de la primera serie la marca sola.
-    fireEvent.change(screen.getByLabelText(/^segundos · plancha serie 1$/i), {
-      target: { value: "45" },
+    fireEvent.change(
+      within(mode).getByLabelText(/^segundos · plancha serie 1$/i),
+      { target: { value: "45" } },
+    );
+    const first = within(mode).getByRole("checkbox", {
+      name: "Plancha serie 1",
     });
-    const first = screen.getByRole("checkbox", { name: "Plancha serie 1" });
     await waitFor(() => expect((first as HTMLInputElement).checked).toBe(true));
 
-    fireEvent.click(screen.getByRole("radio", { name: /3/ }));
-    fireEvent.click(await primaryClose());
-    await waitFor(() => expect(api.posts.length).toBe(1));
-    const body = api.posts[0] as { sets: SetItem[] };
-    expect(body.sets[0]).toEqual({
+    saveSession(mode, 3);
+    await waitFor(() => expect(api.posts).toHaveLength(1));
+    expect(api.posts[0].sets[0]).toEqual({
       planSessionExerciseId: 31,
       setIndex: 0,
       weightKg: null,
@@ -2122,20 +2141,233 @@ describe("ejercicio por tiempo (metric: time)", () => {
       },
     });
     renderAt("/sesion/2026-09-02");
+    const mode = await openMode();
     fireEvent.click(
-      await screen.findByRole("button", { name: /series de plancha/i }),
-    );
-    fireEvent.click(
-      await screen.findByRole("button", {
+      within(mode).getByRole("button", {
         name: /copiar 60 s de la sesión anterior a plancha serie 1/i,
       }),
     );
     expect(
       (
-        screen.getByLabelText(
+        within(mode).getByLabelText(
           /^segundos · plancha serie 1$/i,
         ) as HTMLInputElement
       ).value,
     ).toBe("60");
+  });
+});
+
+describe("resumen de la sesión", () => {
+  it("día planificado: aro, Empezar y la lista inerte con sus contadores", async () => {
+    mockApi({ last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+
+    // El aro de la cabecera: las series del plan, todavía sin marcar.
+    const ring = await screen.findByRole("progressbar", {
+      name: "Series hechas",
+    });
+    expect(ring.getAttribute("aria-valuenow")).toBe("0");
+    expect(ring.getAttribute("aria-valuemax")).toBe("7"); // 3 + 3 + el cardio
+
+    // El botón que abre el registro; el modo sesión es la única vía.
+    expect(screen.getByRole("button", { name: /^empezar$/i })).toBeDefined();
+
+    // La lista, en el orden del día y con lo que ya se sabe de cada ejercicio.
+    const rows = screen.getAllByRole("link", {
+      name: /press banca|remo con barra|running/i,
+    });
+    expect(rows.map((r) => r.textContent)).toEqual([
+      "Press banca",
+      "Remo con barra",
+      "Running",
+    ]);
+    expect(rows[0].getAttribute("href")).toBe("/ejercicios/21");
+    expect(screen.getAllByText("0/3")).toHaveLength(2); // los dos de fuerza
+    expect(screen.getByText(/última: 57\.5×8/)).toBeDefined();
+    expect(screen.getByText("5 km · 30 min")).toBeDefined(); // el cardio del plan
+  });
+
+  it("no queda ningún control de registro en la página", async () => {
+    mockApi({ last: { 21: { weightKg: 60, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    await screen.findByRole("button", { name: /^empezar$/i });
+
+    // Nada con lo que registrar: el registro vive en el modo sesión.
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    expect(screen.queryAllByRole("spinbutton")).toHaveLength(0);
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
+    expect(screen.queryByRole("toolbar")).toBeNull();
+    expect(screen.queryByRole("button", { name: /series de /i })).toBeNull();
+    expect(screen.queryByText(/peso \(kg\)/i)).toBeNull();
+  });
+
+  it("con el borrador a medias, el aro y la fila lo reflejan", async () => {
+    mockApi({ last: { 21: { weightKg: 57.5, reps: 8, date: "2026-08-30" } } });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^empezar$/i }));
+    const mode = screen.getByRole("dialog", { name: /modo sesión/i });
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: /press banca serie 1/i }),
+    );
+    // Salir: el aspa pregunta antes y el borrador no se pierde.
+    fireEvent.click(
+      within(mode).getByRole("button", { name: /salir del modo sesión/i }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /^salir$/i }));
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("progressbar", { name: "Series hechas" })
+          .getAttribute("aria-valuenow"),
+      ).toBe("1"),
+    );
+    expect(screen.getByText("1/3")).toBeDefined();
+    // Volver a entrar conserva lo marcado: el borrador guardado manda.
+    fireEvent.click(screen.getByRole("button", { name: /^empezar$/i }));
+    expect(
+      (
+        within(screen.getByRole("dialog", { name: /modo sesión/i })).getByRole(
+          "checkbox",
+          {
+            name: /press banca serie 1/i,
+          },
+        ) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+  });
+
+  it("día registrado: el mismo resumen, con el esfuerzo y la nota", async () => {
+    mockApi({
+      sessions: LOGGED,
+      log: loggedPayload(
+        [
+          {
+            planSessionExerciseId: SE_BENCH,
+            setIndex: 0,
+            weightKg: 60,
+            reps: 8,
+            done: true,
+          },
+          {
+            planSessionExerciseId: SE_BENCH,
+            setIndex: 1,
+            weightKg: 60,
+            reps: 8,
+            done: true,
+          },
+          {
+            planSessionExerciseId: SE_BENCH,
+            setIndex: 2,
+            weightKg: 60,
+            reps: 8,
+            done: true,
+          },
+          {
+            planSessionExerciseId: SE_ROW,
+            setIndex: 0,
+            weightKg: 40,
+            reps: 10,
+            done: false,
+          },
+        ],
+        4,
+        "fuerte",
+      ),
+    });
+    renderAt("/sesion/2026-09-02");
+
+    await screen.findByText("Registrado");
+    const ring = screen.getByRole("progressbar", { name: "Series hechas" });
+    expect(ring.getAttribute("aria-valuenow")).toBe("3");
+    expect(ring.getAttribute("aria-valuemax")).toBe("4");
+    expect(screen.getByText("3/3")).toBeDefined();
+    expect(screen.getByText("0/1")).toBeDefined();
+    expect(screen.getByText("60×8 · 60×8 · 60×8")).toBeDefined();
+    expect(screen.getByText("fuerte")).toBeDefined();
+    const dots = screen.getAllByTestId("effort-dot");
+    expect(dots.filter((d) => d.dataset.filled === "true").length).toBe(4);
+    expect(screen.getByRole("button", { name: /^editar$/i })).toBeDefined();
+    // Tampoco aquí hay nada que registrar: se corrige desde el modo sesión.
+    expect(screen.queryAllByRole("spinbutton")).toHaveLength(0);
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
+  });
+
+  it("«Editar» abre el modo sesión precargado y Guardar hace PUT", async () => {
+    const api = mockApi({
+      sessions: LOGGED,
+      log: loggedPayload(
+        [
+          {
+            planSessionExerciseId: SE_BENCH,
+            setIndex: 0,
+            weightKg: 60,
+            reps: 8,
+            done: true,
+          },
+        ],
+        2,
+        "fuerte",
+      ),
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+
+    const mode = await screen.findByRole("dialog", { name: /modo sesión/i });
+    expect(
+      (
+        within(mode).getByLabelText(
+          /^peso \(kg\) · press banca serie 1$/i,
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("60");
+    expect(
+      (
+        within(mode).getByRole("checkbox", {
+          name: /press banca serie 1/i,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+
+    openFinish(mode);
+    fireEvent.click(within(mode).getByRole("button", { name: /^terminar$/i }));
+    await waitFor(() => expect(api.puts.length).toBe(1));
+    expect(api.posts).toHaveLength(0);
+    expect(api.puts[0].note).toBe("fuerte");
+    await screen.findByText("Registrado");
+    expect(screen.queryByRole("dialog", { name: /modo sesión/i })).toBeNull();
+  });
+
+  it("salir de la edición vuelve al registro sin llamar a la API", async () => {
+    const api = mockApi({
+      sessions: LOGGED,
+      log: loggedPayload(
+        [
+          {
+            planSessionExerciseId: SE_BENCH,
+            setIndex: 0,
+            weightKg: 60,
+            reps: 8,
+            done: true,
+          },
+        ],
+        2,
+        "fuerte",
+      ),
+    });
+    renderAt("/sesion/2026-09-02");
+    fireEvent.click(await screen.findByRole("button", { name: /^editar$/i }));
+    fireEvent.click(
+      await within(
+        await screen.findByRole("dialog", { name: /modo sesión/i }),
+      ).findByRole("button", { name: /salir del modo sesión/i }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /^salir$/i }));
+
+    await screen.findByText("Registrado");
+    expect(screen.getByRole("button", { name: /^editar$/i })).toBeDefined();
+    expect(api.calls).toEqual([]);
   });
 });

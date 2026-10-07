@@ -1,10 +1,11 @@
 import {
   type APIRequestContext,
   expect,
+  type Locator,
   type Page,
   test,
 } from "@playwright/test";
-import { apiRequest, apiUrl, seededExercise } from "./helpers";
+import { apiRequest, apiUrl, finishSession, seededExercise } from "./helpers";
 
 type ItemPayload = {
   exerciseId: number;
@@ -65,6 +66,21 @@ async function settle(page: Page) {
           a.effect?.getTiming().iterations === Number.POSITIVE_INFINITY,
       ),
   );
+}
+
+/** Avanza el modo sesión hasta el ejercicio pedido (uno a uno, saltando la
+ *  pausa que estuviera corriendo): el mismo camino que sigue la persona. */
+async function goToItem(mode: Locator, name: string) {
+  for (let i = 0; i < 8; i += 1) {
+    if ((await mode.getByRole("heading", { name }).count()) > 0) return;
+    const skip = mode.getByRole("button", { name: "Saltar" });
+    if ((await skip.count()) > 0) {
+      await skip.click();
+      continue;
+    }
+    await mode.getByRole("button", { name: "Siguiente" }).click();
+  }
+  throw new Error(`No llegué a ${name} dentro del modo sesión`);
 }
 
 test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
@@ -290,37 +306,31 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     await page.goto(`/sesion/${date}`);
     await expect(page.getByText(session).first()).toBeVisible();
+    // El resumen no registra; se hace todo dentro del modo sesión.
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
 
     // Fuerza: la primera serie se marca al completar kilos y reps.
-    await page
-      .getByRole("button", { name: /Series de / })
-      .first()
-      .click();
     // La base es compartida: «Sin peso» sale de lo último registrado.
-    await page
+    await mode
       .getByRole("switch", { name: "Sin peso · Press banca" })
       .uncheck();
-    await page
+    await mode
       .getByLabel("Peso (kg) · Press banca serie 1", { exact: true })
       .fill("60");
-    await page
+    await mode
       .getByLabel("Reps · Press banca serie 1", { exact: true })
       .fill("8");
     await expect(
-      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+      mode.getByRole("checkbox", { name: "Press banca serie 1" }),
     ).toBeChecked();
 
     // Cardio: marcar Hecho sin marcas.
-    await page
-      .getByRole("checkbox", { name: /hecho$/i })
-      .first()
-      .check();
+    await goToItem(mode, "Bici estática");
+    await mode.getByRole("checkbox", { name: "Bici estática hecho" }).check();
 
-    await page.getByText("Moderado", { exact: true }).click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
+    await finishSession(mode);
     await expect(page.getByText("Registrado")).toBeVisible();
     await expect(page.getByText("Hecho sin marcas")).toBeVisible();
 
@@ -434,27 +444,21 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     );
 
     await page.goto(`/sesion/${date}`);
-    await page
-      .getByRole("button", { name: /Series de / })
-      .first()
-      .click();
-    await page
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await mode
       .getByRole("switch", { name: "Sin peso · Press banca" })
       .uncheck();
-    await page
+    await mode
       .getByLabel("Peso (kg) · Press banca serie 1", { exact: true })
       .fill("60");
-    await page
+    await mode
       .getByLabel("Reps · Press banca serie 1", { exact: true })
       .fill("8");
     await expect(
-      page.getByRole("checkbox", { name: "Press banca serie 1" }),
+      mode.getByRole("checkbox", { name: "Press banca serie 1" }),
     ).toBeChecked();
-    await page.getByText("Moderado", { exact: true }).click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
+    await finishSession(mode);
     await expect(page.getByText("Registrado")).toBeVisible();
 
     await page.goto(`/plan-fuerza?week=${weekOf(42)}`);
@@ -999,14 +1003,13 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await page.goto(`/sesion/${date}`);
     await expect(page.getByText(/: 60×10 · 60×8$/)).toBeVisible();
 
-    await page
-      .getByRole("button", { name: "Series de Press banca", exact: true })
-      .click();
-    const box1 = page.getByRole("checkbox", { name: "Press banca serie 1" });
-    const reps1 = page.getByLabel("Reps · Press banca serie 1", {
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    const box1 = mode.getByRole("checkbox", { name: "Press banca serie 1" });
+    const reps1 = mode.getByLabel("Reps · Press banca serie 1", {
       exact: true,
     });
-    const weight1 = page.getByLabel("Peso (kg) · Press banca serie 1", {
+    const weight1 = mode.getByLabel("Peso (kg) · Press banca serie 1", {
       exact: true,
     });
     await expect(box1).not.toBeChecked(); // la precarga no marca
@@ -1016,36 +1019,26 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await expect(box1).not.toBeChecked(); // vaciar desmarca
 
     // Con reps y sin kilos, pasar a «sin peso» completa la serie.
-    await page.getByRole("switch", { name: "Sin peso · Press banca" }).check();
+    await mode.getByRole("switch", { name: "Sin peso · Press banca" }).check();
     await expect(weight1).toHaveCount(0);
     await expect(box1).toBeChecked();
     await reps1.fill("12");
     await expect(box1).toBeChecked();
 
-    await page.getByText("Moderado", { exact: true }).click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
+    await finishSession(mode);
     await expect(page.getByText("Registrado")).toBeVisible();
     await expect(page.getByText("12 reps")).toBeVisible();
 
-    // Corregir el registro: el borrador sale de lo registrado y guarda con PUT.
+    // Corregir el registro: el modo sale de lo registrado y guarda con PUT.
     await page.getByRole("button", { name: "Editar" }).click();
-    const expand = page.getByRole("button", {
-      name: "Series de Press banca",
-      exact: true,
-    });
-    await expect(expand).toHaveAttribute("aria-expanded", "false");
-    await expand.click();
+    const edit = page.getByRole("dialog", { name: "Modo sesión" });
     await expect(
-      page.getByRole("switch", { name: "Sin peso · Press banca" }),
+      edit.getByRole("switch", { name: "Sin peso · Press banca" }),
     ).toBeChecked();
-    await reps1.fill("15");
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Guardar" })
-      .click();
+    await edit
+      .getByLabel("Reps · Press banca serie 1", { exact: true })
+      .fill("15");
+    await finishSession(edit);
     await expect(page.getByText("Registrado")).toBeVisible();
     await expect(page.getByText("15 reps")).toBeVisible();
     await page.reload();
@@ -1069,30 +1062,29 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     );
 
     await page.goto(`/sesion/${date}`);
-    await page
-      .getByRole("button", { name: "Series de Press banca", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
     // La base es compartida: «Sin peso» sale de lo último registrado.
-    await page
+    await mode
       .getByRole("switch", { name: "Sin peso · Press banca" })
       .uncheck();
 
-    const reps3 = page.getByLabel("Reps · Press banca serie 3", {
+    const reps3 = mode.getByLabel("Reps · Press banca serie 3", {
       exact: true,
     });
     const lastMarks = await reps3.inputValue();
-    const addButton = page.getByRole("button", {
+    const addButton = mode.getByRole("button", {
       name: "Añadir serie a Press banca",
     });
     await addButton.click();
     // El ➕ nace con las marcas de la última serie.
     await expect(
-      page.getByLabel("Reps · Press banca serie 4", { exact: true }),
+      mode.getByLabel("Reps · Press banca serie 4", { exact: true }),
     ).toHaveValue(lastMarks);
 
-    // Móvil: los dos botones caben en la tarjeta (48 px de alto, sin desborde).
+    // Móvil: los dos botones caben (objetivo táctil de 48 px, sin desborde).
     await page.setViewportSize({ width: 390, height: 844 });
-    const removeButton = page.getByRole("button", {
+    const removeButton = mode.getByRole("button", {
       name: "Quitar serie a Press banca",
     });
     await expect(removeButton).toBeVisible();
@@ -1100,13 +1092,12 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     if (!box) throw new Error("el ➕ no tiene caja");
     expect(box.x + box.width).toBeLessThanOrEqual(390);
     expect(box.height).toBeGreaterThanOrEqual(48);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
     await page.setViewportSize({ width: 1280, height: 720 });
 
-    await page.getByText("Moderado", { exact: true }).click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
+    await finishSession(mode);
     await expect(page.getByText("Registrado")).toBeVisible();
 
     // El plan del día sigue al borrador: 4 series en los dos sitios.
@@ -1126,16 +1117,11 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     // Corregir: quitar la última serie también reescribe el plan.
     await page.getByRole("button", { name: "Editar" }).click();
-    await page
-      .getByRole("button", { name: "Series de Press banca", exact: true })
-      .click();
-    await page
+    const edit = page.getByRole("dialog", { name: "Modo sesión" });
+    await edit
       .getByRole("button", { name: "Quitar serie a Press banca" })
       .click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Guardar" })
-      .click();
+    await finishSession(edit);
     await expect(page.getByText("Registrado")).toBeVisible();
 
     const after = await apiRequest<Planned>(
@@ -1182,29 +1168,28 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     );
 
     await page.goto(`/sesion/${date}`);
-    await page
-      .getByRole("button", { name: "Series de Press banca", exact: true })
-      .click();
-    const box1 = page.getByRole("checkbox", { name: "Press banca serie 1" });
-    const reps1 = page.getByLabel("Reps · Press banca serie 1", {
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    const box1 = mode.getByRole("checkbox", { name: "Press banca serie 1" });
+    const reps1 = mode.getByLabel("Reps · Press banca serie 1", {
       exact: true,
     });
-    const weight1 = page.getByLabel("Peso (kg) · Press banca serie 1", {
+    const weight1 = mode.getByLabel("Peso (kg) · Press banca serie 1", {
       exact: true,
     });
 
     // El valor es el de la serie homóloga, y solo donde la había: la 3 no.
-    const chip1 = page.getByRole("button", {
+    const chip1 = mode.getByRole("button", {
       name: "Copiar 60×10 de la sesión anterior a Press banca serie 1",
     });
     await expect(chip1).toBeVisible();
     await expect(
-      page.getByRole("button", {
+      mode.getByRole("button", {
         name: "Copiar 55×6 de la sesión anterior a Press banca serie 2",
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /a Press banca serie 3$/ }),
+      mode.getByRole("button", { name: /a Press banca serie 3$/ }),
     ).toHaveCount(0);
 
     await chip1.click();
@@ -1213,7 +1198,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     await expect(box1).not.toBeChecked(); // copiar no marca la serie
     // Solo esa serie: la 2 sigue con lo precargado por /last (55×6).
     await expect(
-      page.getByLabel("Reps · Press banca serie 2", { exact: true }),
+      mode.getByLabel("Reps · Press banca serie 2", { exact: true }),
     ).toHaveValue("6");
 
     // En móvil el botón cabe en la fila, mide lo que un objetivo táctil y ni la
@@ -1229,11 +1214,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     ).toBeLessThanOrEqual(390);
     await page.setViewportSize({ width: 1280, height: 720 });
 
-    await page.getByText("Moderado", { exact: true }).click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
+    await finishSession(mode);
     await expect(page.getByText("Registrado")).toBeVisible();
 
     type Logged = {
@@ -1273,12 +1254,16 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/sesion/${date}`);
+    // El resumen no lleva casillas: la tira vive en el modo.
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
     await expect(
-      page.getByRole("checkbox", { name: "Press banca serie 1", exact: true }),
+      mode.getByRole("checkbox", { name: "Press banca serie 1", exact: true }),
     ).toBeVisible();
 
     // Una sola línea: las 20 casillas comparten altura.
-    const tops = await page
+    const tops = await mode
       .getByRole("checkbox")
       .evaluateAll((els) =>
         els.map((el) => Math.round(el.getBoundingClientRect().top)),
@@ -1286,21 +1271,23 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     expect(tops).toHaveLength(20);
     expect(new Set(tops).size).toBe(1);
 
-    // Ni la tarjeta ni la página se salen: lo que sobra se desplaza.
-    const strip = page.locator("[data-edge]");
+    // Ni la tira ni la página se salen: lo que sobra se desplaza.
+    const strip = mode.locator("[data-edge]");
     const width = await strip.evaluate((el) => ({
       content: el.scrollWidth,
       visible: el.clientWidth,
     }));
     expect(width.content).toBeGreaterThan(width.visible);
-    // Se lleva su propia fila y un ancho útil (≈4 casillas de las 20).
-    expect(width.visible).toBeGreaterThan(200);
-    const buttonBox = await page
-      .getByRole("button", { name: "Series de Press banca", exact: true })
-      .boundingBox();
+    // Se lleva su propia parte de la fila del encabezado y un ancho útil
+    // (unas cuatro casillas de las 20).
+    expect(width.visible).toBeGreaterThan(150);
     const stripBox = await strip.boundingBox();
-    if (!stripBox || !buttonBox) throw new Error("sin caja que medir");
-    expect(stripBox.y).toBeGreaterThanOrEqual(buttonBox.y + buttonBox.height);
+    const modeBox = await mode.boundingBox();
+    if (!stripBox || !modeBox) throw new Error("sin caja que medir");
+    expect(stripBox.x).toBeGreaterThanOrEqual(modeBox.x);
+    expect(stripBox.x + stripBox.width).toBeLessThanOrEqual(
+      modeBox.x + modeBox.width,
+    );
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
