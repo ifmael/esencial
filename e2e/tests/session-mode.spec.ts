@@ -188,6 +188,67 @@ async function measureSetStrip(page: Page) {
   });
 }
 
+/** Geometría de la cabecera del ejercicio en el modo: el bloque entero (de la
+ *  etiqueta del tipo a la fila de debajo del nombre) y si esa fila cae en una
+ *  sola línea. Vale para fuerza (la tira de casillas, con «Sin peso» al lado) y
+ *  para cardio (el objetivo junto a su «Hecho»). Se miden las cajas reales, no
+ *  las clases. */
+async function measureExerciseHeader(page: Page) {
+  return page.evaluate(() => {
+    const section = document.querySelector<HTMLElement>(
+      'section[aria-label="Modo sesión"]',
+    );
+    if (!section) throw new Error("El modo sesión no está abierto");
+    const content = section.querySelector<HTMLElement>("div.my-auto");
+    if (!content)
+      throw new Error("El modo no pinta el contenido del ejercicio");
+    const label = content.querySelector<HTMLElement>("p.section-label");
+    const heading = section.querySelector<HTMLElement>("h2");
+    // La fila es lo último del bloque de la cabecera: bajo el nombre.
+    const row = label?.parentElement?.lastElementChild as HTMLElement | null;
+    if (!label || !heading || !row)
+      throw new Error("El modo no pinta la cabecera del ejercicio");
+    const boxes = [
+      ...content.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    ].filter((b) => / serie \d+$/.test(b.getAttribute("aria-label") ?? ""));
+    // La tira: el ancestro de la casilla que desplaza en horizontal.
+    let strip: HTMLElement | null = null;
+    if (boxes.length > 0) {
+      strip = boxes[0].parentElement as HTMLElement;
+      while (
+        strip !== section &&
+        getComputedStyle(strip).overflowX !== "auto"
+      ) {
+        strip = strip.parentElement as HTMLElement;
+      }
+    }
+    const rowBox = row.getBoundingClientRect();
+    const pieces = [...row.children].map((c) => c.getBoundingClientRect());
+    const nameStyle = getComputedStyle(heading);
+    return {
+      sets: boxes.length,
+      headerHeight: rowBox.bottom - label.getBoundingClientRect().top,
+      rowHeight: rowBox.height,
+      nameFontSize: Number.parseFloat(nameStyle.fontSize),
+      nameLines: Math.round(
+        heading.getBoundingClientRect().height /
+          Number.parseFloat(nameStyle.lineHeight),
+      ),
+      // Una sola línea: lo que va bajo el nombre se solapa en vertical.
+      onOneRow:
+        pieces.length > 0 &&
+        Math.max(...pieces.map((b) => b.top)) <
+          Math.min(...pieces.map((b) => b.bottom)),
+      // El recuento de series no se repite: las casillas ya lo dicen.
+      countLine: [...content.querySelectorAll("p, span")].some((el) =>
+        /^\d+ series?$/.test((el.textContent ?? "").trim()),
+      ),
+      stripHeight: strip ? strip.getBoundingClientRect().height : 0,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+}
+
 /** ISO week ("YYYY-Www") de una fecha (misma convención que la app). */
 function isoWeekOf(date: string): string {
   const t = new Date(`${date}T12:00:00Z`);
@@ -692,6 +753,69 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
         name: "Pausa al terminar Press banca",
       }),
     ).toBeVisible();
+  });
+
+  test("la cabecera del ejercicio cabe en una fila y en la mitad de alto (móvil)", async ({
+    page,
+  }, testInfo) => {
+    // El caso peor: nombre largo (que partía en dos líneas) y doce series (la
+    // tira no cabe y desplaza). Con el nombre en `display-s`, el recuento de
+    // series en su propia línea y «Sin peso» en otra, el bloque medía 280 px
+    // (medido); ahora mide 108 (38 % de aquel).
+    const pistol = await seededExercise(
+      page.request,
+      "Sentadilla a una pierna",
+    );
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const cinta = await apiRequest<{ id: number }>(
+      page.request,
+      "POST",
+      "/api/exercises",
+      { name: uniqueName("Cinta cabecera"), tags: ["cardio"], kind: "running" },
+    );
+    const date = mondayFrom(448 + testInfo.retry * 14);
+    await resetPlanned(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [
+        { exerciseId: pistol.id, targetSets: 12, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 1, targetRepsMin: 10 },
+        { exerciseId: cinta.id, targetDistanceKm: 5, targetDurationMin: 30 },
+      ],
+      "Cabecera",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await expect(
+      mode.getByRole("heading", { name: "Sentadilla a una pierna" }),
+    ).toBeVisible();
+
+    const geo = await measureExerciseHeader(page);
+    expect(geo).toMatchObject({
+      sets: 12,
+      onOneRow: true,
+      nameLines: 1,
+      countLine: false,
+    });
+    // Mitad del encabezado anterior (280 px) y un nombre ya pequeño (antes 36).
+    expect(geo.headerHeight).toBeLessThanOrEqual(140);
+    expect(geo.rowHeight).toBeLessThanOrEqual(56);
+    expect(geo.nameFontSize).toBeLessThanOrEqual(24);
+    expect(geo.pageWidth).toBeLessThanOrEqual(390);
+
+    // Y el cardio, que no tiene tira: el objetivo del día y su «Hecho» van en
+    // esa misma fila (antes eran dos).
+    await page.getByRole("button", { name: "Siguiente" }).click();
+    await page.getByRole("button", { name: "Siguiente" }).click();
+    await expect(mode.getByRole("checkbox", { name: / hecho$/ })).toBeVisible();
+    const cardio = await measureExerciseHeader(page);
+    expect(cardio).toMatchObject({ sets: 0, onOneRow: true, countLine: false });
+    expect(cardio.rowHeight).toBeLessThanOrEqual(56);
+    expect(cardio.headerHeight).toBeLessThanOrEqual(140);
   });
 
   test("«A continuación» bajo la lista cuando solo queda la última serie (móvil)", async ({

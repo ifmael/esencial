@@ -1360,6 +1360,40 @@ describe("modo interactivo", () => {
     expect(screen.getByText("Esfuerzo percibido")).toBeDefined();
   });
 
+  it("la cabecera del ejercicio va en una fila: «Sin peso» junto a las casillas", async () => {
+    const mode = await enterMode({ last: { 21: benchLast } });
+    // El recuento no se repite: las casillas ya dicen cuántas series hay (y
+    // cada fila de la lista lleva su «Serie N»).
+    expect(within(mode).queryByText("3 series")).toBeNull();
+    // «Sin peso» y la tira de las casillas comparten contenedor, así que caen
+    // en la misma fila.
+    const noWeight = within(mode).getByRole("switch", { name: /sin peso/i });
+    const strip = within(mode)
+      .getByRole("checkbox", { name: "Press banca serie 1" })
+      .closest("[data-edge]");
+    expect(strip).not.toBeNull();
+    expect(noWeight.closest("[data-edge]")).toBeNull();
+    expect(noWeight.parentElement?.parentElement).toBe(strip?.parentElement);
+  });
+
+  it("en cardio el objetivo y «Hecho» van en la misma fila", async () => {
+    const mode = await enterMode({ last: { 21: benchLast, 22: rowLast } });
+    for (let i = 0; i < 2; i++)
+      fireEvent.click(
+        within(mode).getByRole("button", { name: /^siguiente$/i }),
+      );
+    const hecho = within(mode).getByRole("checkbox", {
+      name: "Running hecho",
+    });
+    const objetivo = within(mode).getByText("5 km · 30 min");
+    // El objetivo y el «Hecho» (con su casilla) cuelgan de la misma fila, y de
+    // esa fila no cuelga nada más: en el encabezado no queda una línea por
+    // cosa.
+    const fila = objetivo.parentElement;
+    expect(fila?.contains(hecho)).toBe(true);
+    expect(fila?.children).toHaveLength(2);
+  });
+
   it("marcar una serie intermedia arranca la pausa entre series; al agotarse pita", async () => {
     const mode = await enterMode({ last: { 21: benchLast } });
     fireEvent.click(

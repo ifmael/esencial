@@ -337,48 +337,69 @@ export function SessionMode({
           así que el scroll arranca en el principio. */}
       <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pb-2 text-center">
         <div className="my-auto flex w-full flex-col items-center gap-5">
-          <p className="section-label text-accent">
-            {KIND_LABELS[item.kind]}
-            {blockSize > 1 ? ` · ${blockLabel(blockSize)}` : null}
-          </p>
-          <h2 className="text-display-s text-e">{item.name}</h2>
-          {item.objective && (
-            <p className="tabular text-title-m text-on-surface-variant">
-              {item.objective}
+          {/* Cabecera del ejercicio, apretada: la etiqueta del tipo (y del
+              bloque), el nombre y, en UNA sola fila, lo que decide la serie.
+              El nombre va en `title-l` — en `display-s` un nombre largo como
+              «Sentadilla a una pierna» se comía dos líneas — y el recuento de
+              series no se repite: las casillas ya lo dicen. */}
+          <div className="flex w-full flex-col items-center gap-2">
+            <p className="section-label text-accent">
+              {KIND_LABELS[item.kind]}
+              {blockSize > 1 ? ` · ${blockLabel(blockSize)}` : null}
             </p>
-          )}
+            <h2 className="text-title-l text-e">{item.name}</h2>
 
-          {item.sets !== null && (
-            <div className="flex w-full max-w-sm min-w-0 flex-col items-center gap-3">
-              {/* «Sin peso» solo donde el kg es opcional (`weight_reps`). */}
-              {item.metric === "weight_reps" && (
-                <div className="flex items-center gap-2 text-label-l text-on-surface-variant">
-                  <Switch
-                    aria-label={`Sin peso · ${item.name}`}
-                    checked={item.noWeight}
-                    onChange={() => onToggleNoWeight(item.id)}
-                  />
-                  Sin peso
-                </div>
-              )}
-              {/* Las casillas de todas las series van en el encabezado, en una
-                  sola tira que desplaza (el patrón de la tarjeta plegada del
-                  borrador): cada fila de serie se queda con su número y sus
-                  steppers y el ejercicio ahorra alto. */}
-              <ScrollStrip className="flex w-full min-w-0 items-center gap-1">
-                {item.sets.map((s, i) => (
+            {item.sets !== null && (
+              <div className="flex w-full max-w-sm min-w-0 items-center justify-center gap-4">
+                {/* «Sin peso» solo donde el kg es opcional (`weight_reps`). */}
+                {item.metric === "weight_reps" && (
+                  <div className="flex shrink-0 items-center gap-2 text-label-l text-on-surface-variant">
+                    <Switch
+                      aria-label={`Sin peso · ${item.name}`}
+                      checked={item.noWeight}
+                      onChange={() => onToggleNoWeight(item.id)}
+                    />
+                    Sin peso
+                  </div>
+                )}
+                {/* Las casillas de todas las series, en una sola tira que
+                    desplaza (el patrón de la tarjeta plegada del borrador):
+                    cada fila de serie se queda con su número y sus steppers. */}
+                <ScrollStrip className="flex w-full min-w-0 items-center gap-1">
+                  {item.sets.map((s, i) => (
+                    <Checkbox
+                      key={i}
+                      className="shrink-0"
+                      aria-label={`${item.name} serie ${i + 1}`}
+                      checked={s.done}
+                      disabled={!s.done && !s.filled}
+                      onChange={() => onToggleSet(item.id, i)}
+                    />
+                  ))}
+                </ScrollStrip>
+              </div>
+            )}
+
+            {/* Cardio (sin series): el objetivo del día y su «Hecho», en la
+                misma fila. */}
+            {item.done !== null && (
+              <div className="flex items-center gap-3">
+                {item.objective && (
+                  <span className="tabular text-title-m text-on-surface-variant">
+                    {item.objective}
+                  </span>
+                )}
+                <div className="flex items-center gap-2 text-title-m">
                   <Checkbox
-                    key={i}
-                    className="shrink-0"
-                    aria-label={`${item.name} serie ${i + 1}`}
-                    checked={s.done}
-                    disabled={!s.done && !s.filled}
-                    onChange={() => onToggleSet(item.id, i)}
+                    aria-label={`${item.name} hecho`}
+                    checked={item.done}
+                    onChange={() => onToggleCardio(item.id)}
                   />
-                ))}
-              </ScrollStrip>
-            </div>
-          )}
+                  Hecho
+                </div>
+              </div>
+            )}
+          </div>
 
           {item.sets !== null && (
             <div className="flex w-full max-w-sm flex-col items-center gap-2">
@@ -451,17 +472,6 @@ export function SessionMode({
                     : "Sin pausa entre series"}
                 </p>
               ) : null}
-            </div>
-          )}
-
-          {item.done !== null && (
-            <div className="flex items-center gap-2 text-title-m">
-              <Checkbox
-                aria-label={`${item.name} hecho`}
-                checked={item.done}
-                onChange={() => onToggleCardio(item.id)}
-              />
-              Hecho
             </div>
           )}
 

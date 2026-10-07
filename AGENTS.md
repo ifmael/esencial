@@ -439,6 +439,17 @@ comparte fila con dos steppers, así que ocupaba una línea por serie). Lo cubre
 encabezado, ninguna casilla en las filas y la pausa que arranca la casilla que
 se pulsa).
 
+Esa cabecera va **apretada y en una sola fila** (medido a 390 px con «Sentadilla
+a una pierna» y doce series: 108 px, antes 280): el nombre en `text-title-l`
+—en `display-s` (36 px) un nombre largo partía en dos líneas—, y debajo,
+juntos en una fila, «Sin peso» y la tira de casillas (`items-center`). **El
+recuento de series no se repite**: `objective` solo lo pinta el cardio, que no
+tiene tira (ahí va en la misma fila que su «Hecho»); en fuerza lo dicen las
+casillas y cada fila de la lista lleva su «Serie N». Lo cubre
+`measureExerciseHeader` en `e2e/tests/session-mode.spec.ts` (una fila, nombre de
+una línea y `font-size` ≤ 24 px, el bloque ≤ 140 px y sin texto de recuento) y
+`web/tests/sesion.test.tsx`.
+
 El cuerpo (bajo el encabezado, con scroll) centra su contenido con **márgenes
 automáticos** —un bloque interno con `my-auto`—, nunca con `justify-center` en
 el contenedor: con más series de las que caben, el centrado deja el desborde de
