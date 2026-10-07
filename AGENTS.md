@@ -494,7 +494,15 @@ posición del nombre y los dos huecos del centrado (no una clase).
   ejercicio no arranca nada y corta la pausa que estuviera corriendo** (sin
   pitido): la sesión ya se acabó. «Descanso» la arranca a
   mano, «Saltar» la corta (sin pitido) y
-  «Siguiente» pasa de ejercicio. La cuenta es por marca de tiempo (`endsAt`), no
+  «Siguiente» pasa de ejercicio. La barra y su cuenta atrás van **pegadas al
+  encabezado** (con el «Saltar» debajo), no al fondo del contenido: con una
+  lista de series que desborda el pie quedaba fuera de la pantalla justo cuando
+  es lo único que importa. Ocupan su propio hueco entre el encabezado y el
+  cuerpo, así que se ven sin desplazar nada y el scroll del cuerpo no las mueve.
+  Lo ata `e2e/tests/session-mode.spec.ts` (la fila de la barra arranca a ≤16 px
+  del encabezado, el bloque entero dentro del viewport y su sitio intacto tras
+  desplazar el cuerpo, a 390 px y a 1280 con ocho series). La cuenta es por marca
+  de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
 - **«A continuación: …»**: bajo la lista de series (o del «Hecho» del cardio), el
   nombre del siguiente ejercicio **por orden** —el de al lado en el día, no el
@@ -502,8 +510,8 @@ posición del nombre y los dos huecos del centrado (no una clase).
   (marcada la última también, que es lo que pasa mientras corre la pausa de fin
   de ejercicio) o el cardio está hecho; si no queda ninguno detrás, dice
   «Último ejercicio». Un ejercicio de una sola serie lo anuncia desde que se
-  abre. Va antes del bloque de la pausa, así que sigue a la vista durante la de
-  fin. Lo cubre `e2e/tests/session-mode.spec.ts`.
+  abre. Es lo último del cuerpo, y la pausa —que vive bajo el encabezado— no le
+  quita el sitio. Lo cubre `e2e/tests/session-mode.spec.ts`.
 - **El encabezado lleva el ejercicio en curso** y, al pulsarlo, un `Dialog`
   (`mobile="sheet"`) con **todos** los ejercicios de la sesión en su orden: cada
   fila lleva el nombre y un ✓ si está hecho —todas sus series, o el cardio

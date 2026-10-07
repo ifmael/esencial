@@ -145,6 +145,111 @@ async function measurePauseRow(page: Page) {
   });
 }
 
+/** Dónde cae el bloque de la pausa (la fila de la barra con su cuenta atrás y
+ *  el «Saltar»): pegado al encabezado y a la vista, no al pie. Se miden cajas
+ *  porque es el sitio lo que se prueba, y se comprueba además si el cuerpo
+ *  desborda (el caso en el que el pie quedaba fuera de la pantalla). */
+async function measurePausePlacement(page: Page) {
+  return page.evaluate(() => {
+    const section = document.querySelector<HTMLElement>(
+      'section[aria-label="Modo sesión"]',
+    );
+    if (!section) throw new Error("El modo sesión no está abierto");
+    const header = section.querySelector<HTMLElement>(":scope > header");
+    const bar = section.querySelector<HTMLElement>(
+      '[role="progressbar"][aria-label^="Pausa"]',
+    );
+    const heading = section.querySelector<HTMLElement>("h2");
+    if (!header || !bar || !heading) {
+      throw new Error("Al modo le falta encabezado, barra de pausa o nombre");
+    }
+    const skip = [...section.querySelectorAll<HTMLElement>("button")].find(
+      (b) => b.textContent?.trim() === "Saltar",
+    );
+    if (!skip) throw new Error("La pausa no tiene «Saltar»");
+    let scroller = heading.parentElement as HTMLElement;
+    while (scroller !== section) {
+      const { overflowY } = getComputedStyle(scroller);
+      if (overflowY === "auto" || overflowY === "scroll") break;
+      scroller = scroller.parentElement as HTMLElement;
+    }
+    const h = header.getBoundingClientRect();
+    // La fila de la barra: es la caja que abre el bloque.
+    const row = bar.parentElement!.getBoundingClientRect();
+    const s = skip.getBoundingClientRect();
+    const body = scroller.getBoundingClientRect();
+    return {
+      headerBottom: h.bottom,
+      rowTop: row.top,
+      blockBottom: s.bottom,
+      bodyTop: body.top,
+      overflows: scroller.scrollHeight > scroller.clientHeight + 1,
+      scrollTop: scroller.scrollTop,
+      viewportHeight: window.innerHeight,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+}
+
+/** Cuántos trazos pinta el aro del borrador. A 0 series no debe pintar ninguno
+ *  (no hay círculo de fondo) y el arco tiene que aparecer al marcar; se cuentan
+ *  los elementos con trazo y opacidad, no las clases. */
+async function paintedRingStrokes(page: Page) {
+  return page.evaluate(() => {
+    const ring = document.querySelector('header [role="progressbar"]');
+    if (!ring) throw new Error("El borrador no pinta el aro");
+    return [...ring.querySelectorAll("circle, path")].filter((el) => {
+      const style = getComputedStyle(el);
+      return style.stroke !== "none" && Number(style.opacity) > 0;
+    }).length;
+  });
+}
+
+/** Geometría del encabezado del borrador —flecha, nombre y aro en una fila, y
+ *  el día debajo— más lo que ocupa de la primera pantalla. Se miden las cajas
+ *  (no las clases) porque lo que se prueba es dónde cae cada pieza; el texto del
+ *  día se mide con un rango porque su `p` lleva el relleno que lo alinea. */
+async function measureDraftHeader(page: Page) {
+  return page.evaluate(() => {
+    const header = document.querySelector<HTMLElement>("header");
+    if (!header) throw new Error("El borrador no pinta su encabezado");
+    const back = header.querySelector<HTMLElement>("a");
+    const name = header.querySelector<HTMLElement>("h1");
+    const ring = header.querySelector<HTMLElement>('[role="progressbar"]');
+    const day = header.querySelector<HTMLElement>("p");
+    const empezar = [...document.querySelectorAll<HTMLElement>("button")].find(
+      (b) => b.textContent?.trim() === "Empezar",
+    );
+    if (!back || !name || !ring || !day || !empezar) {
+      throw new Error("Al borrador le falta flecha, nombre, aro o «Empezar»");
+    }
+    const text = document.createRange();
+    text.selectNodeContents(day);
+    const head = header.getBoundingClientRect();
+    const backBox = back.getBoundingClientRect();
+    const circle = ring.getBoundingClientRect();
+    const dayBox = text.getBoundingClientRect();
+    const empezarBox = empezar.getBoundingClientRect();
+    const title = name.getBoundingClientRect();
+    return {
+      headerHeight: head.height,
+      titleText: name.textContent?.trim() ?? "",
+      dayText: day.textContent?.trim() ?? "",
+      arrowThenName: backBox.right <= title.left,
+      ringRightOfName: circle.left >= title.right - 1,
+      ringOnNameRow:
+        Math.abs(
+          (circle.top + circle.bottom) / 2 - (title.top + title.bottom) / 2,
+        ) <= 4,
+      dayBelowName: dayBox.top >= title.bottom - 1,
+      dayAlignedWithName: Math.abs(dayBox.left - title.left) <= 2,
+      empezarBottom: empezarBox.bottom,
+      viewportHeight: window.innerHeight,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+}
+
 /** Geometría del encabezado del ejercicio en el modo: la tira que contiene las
  *  casillas de las series (el ancestro más cercano que desplaza en horizontal),
  *  dónde cae respecto a la lista de series y qué casillas quedan dentro de cada
@@ -660,6 +765,100 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     expect((await measurePauseRow(page)).pageWidth).toBeLessThanOrEqual(390);
   });
 
+  test("la pausa va pegada al encabezado, a la vista con el cuerpo desbordado", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const past = mondayFrom(427 + testInfo.retry * 14);
+    const date = mondayFrom(434 + testInfo.retry * 14);
+    await resetPlanned(page.request, past);
+    await resetPlanned(page.request, date);
+    // Una sesión previa que llene las ocho series: sin marcas, la casilla de
+    // una serie no se puede marcar.
+    await logPast(
+      page.request,
+      past,
+      [
+        { exerciseId: press.id, targetSets: 8, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 1, targetRepsMin: 10 },
+      ],
+      [
+        {
+          exerciseId: press.id,
+          sets: Array.from({ length: 8 }, () => ({ weightKg: 60, reps: 8 })),
+        },
+        { exerciseId: remo.id, sets: [{ weightKg: 40, reps: 10 }] },
+      ],
+    );
+    await createSession(
+      page.request,
+      date,
+      [
+        {
+          exerciseId: press.id,
+          targetSets: 8,
+          targetRepsMin: 8,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+        {
+          exerciseId: remo.id,
+          targetSets: 1,
+          targetRepsMin: 10,
+          restSecs: 60,
+          restAfterSecs: 60,
+        },
+      ],
+      "Bajo el encabezado",
+    );
+
+    // Móvil y escritorio: el sitio del bloque no depende del ancho.
+    for (const [i, viewport] of [
+      { width: 390, height: 844 },
+      { width: 1280, height: 800 },
+    ].entries()) {
+      // El autoguardado del borrador vive en `localStorage`: se limpia para que
+      // la segunda vuelta no arranque con la serie de la primera ya marcada.
+      if (i > 0) await page.evaluate(() => localStorage.clear());
+      await page.setViewportSize(viewport);
+      await page.goto(`/sesion/${date}`);
+      await page.getByRole("button", { name: "Empezar", exact: true }).click();
+      const mode = page.getByRole("dialog", { name: "Modo sesión" });
+      await expect(
+        mode.getByRole("heading", { name: "Press banca" }),
+      ).toBeVisible();
+
+      await mode.getByRole("checkbox", { name: "Press banca serie 1" }).check();
+      await expect(
+        mode.getByRole("progressbar", {
+          name: "Pausa entre series de Press banca",
+        }),
+      ).toBeVisible();
+
+      const geo = await measurePausePlacement(page);
+      // Ocho series: el cuerpo desborda, que es cuando el pie quedaba fuera.
+      expect(geo.overflows).toBe(true);
+      // La pausa abre el hueco bajo el encabezado, pegada a él…
+      expect(geo.rowTop).toBeGreaterThanOrEqual(geo.headerBottom - 1);
+      expect(geo.rowTop - geo.headerBottom).toBeLessThanOrEqual(16);
+      // …y entra entera en la pantalla, con el ejercicio por debajo.
+      expect(geo.blockBottom).toBeLessThanOrEqual(geo.viewportHeight);
+      expect(geo.bodyTop).toBeGreaterThanOrEqual(geo.blockBottom);
+      expect(geo.pageWidth).toBeLessThanOrEqual(viewport.width);
+
+      // Y no se va con el scroll del cuerpo: es lo primero que se ve.
+      await mode.getByRole("heading", { name: "Press banca" }).hover();
+      await page.mouse.wheel(0, 400);
+      await expect
+        .poll(async () => (await measurePausePlacement(page)).scrollTop)
+        .toBeGreaterThan(0);
+      const scrolled = await measurePausePlacement(page);
+      expect(Math.abs(scrolled.rowTop - geo.rowTop)).toBeLessThanOrEqual(1);
+      expect(scrolled.blockBottom).toBeLessThanOrEqual(scrolled.viewportHeight);
+    }
+  });
+
   test("las casillas de las series van en una tira del encabezado, no una por fila (móvil)", async ({
     page,
   }, testInfo) => {
@@ -1148,5 +1347,58 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
+  });
+
+  test("el encabezado del borrador va en una fila y cabe en la primera pantalla (móvil)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const remo = await seededExercise(page.request, "Remo con barra");
+    const date = mondayFrom(350 + testInfo.retry * 14);
+    await resetPlanned(page.request, date);
+    await createSession(
+      page.request,
+      date,
+      [
+        { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
+        { exerciseId: remo.id, targetSets: 3, targetRepsMin: 10 },
+      ],
+      "Piernas",
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await expect(
+      page.getByRole("heading", { name: "Piernas", exact: true }),
+    ).toBeVisible();
+
+    const geo = await measureDraftHeader(page);
+    // El sujeto de la página es la sesión, junto a la flecha; el día, debajo y
+    // alineado con el nombre (no con la flecha).
+    expect(geo.titleText).toBe("Piernas");
+    expect(geo.dayText).toMatch(/\d+ de \w+/);
+    expect(geo.arrowThenName).toBe(true);
+    expect(geo.ringRightOfName).toBe(true);
+    expect(geo.ringOnNameRow).toBe(true);
+    expect(geo.dayBelowName).toBe(true);
+    expect(geo.dayAlignedWithName).toBe(true);
+
+    // Y el bloque entero cabe en la primera pantalla: el encabezado se queda en
+    // 150 px (apilado medía 284) y «Empezar» entra sin desplazar la página.
+    expect(geo.headerHeight).toBeLessThanOrEqual(150);
+    expect(geo.empezarBottom).toBeLessThanOrEqual(geo.viewportHeight);
+    expect(geo.pageWidth).toBeLessThanOrEqual(390);
+
+    // El aro cuenta las series del día y avanza con el borrador. A 0 no pinta
+    // nada —sin círculo de fondo—, y al marcar aparece el arco.
+    const ring = page.getByRole("progressbar", { name: "Series hechas" });
+    await expect(ring).toHaveAttribute("aria-valuenow", "0");
+    await expect(ring).toHaveAttribute("aria-valuemax", "6");
+    expect(await paintedRingStrokes(page)).toBe(0);
+    await page.getByRole("button", { name: "Series de Press banca" }).click();
+    await page.getByLabel(/^peso \(kg\) · press banca serie 1$/i).fill("55");
+    await page.getByLabel(/^reps · press banca serie 1$/i).fill("8");
+    await expect(ring).toHaveAttribute("aria-valuenow", "1");
+    expect(await paintedRingStrokes(page)).toBe(1);
   });
 });

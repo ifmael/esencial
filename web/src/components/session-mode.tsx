@@ -330,6 +330,39 @@ export function SessionMode({
         </Button>
       </header>
 
+      {/* La pausa vive pegada al encabezado, no al fondo del contenido: con una
+          lista de series que desborda, su barra y su cuenta atrás quedaban fuera
+          de la pantalla justo cuando es lo único que importa. Aquí abre su
+          hueco entre el encabezado y el cuerpo, así que se ve sin desplazar
+          nada (y no se va con el scroll del cuerpo). */}
+      {pause && (
+        <div className="flex w-full shrink-0 justify-center px-6 pt-2 pb-3">
+          <div className="flex w-full max-w-sm flex-col items-center gap-2">
+            {/* Barra y tiempo en una sola fila: la barra se queda el ancho que
+                sobra (`flex-1`) y el `mm:ss` va al final, a su derecha. */}
+            <div className="flex w-full items-center gap-3">
+              <WavyProgress
+                className="min-w-0 flex-1"
+                waveOnly
+                value={pause.durationMs - remainingMs}
+                max={pause.durationMs}
+                label={
+                  pause.kind === "sets"
+                    ? `Pausa entre series de ${pause.name}`
+                    : `Pausa al terminar ${pause.name}`
+                }
+              />
+              <span className="tabular text-display-m">
+                {formatCountdown(remainingMs)}
+              </span>
+            </div>
+            <Button variant="tonal" onClick={skipPause}>
+              Saltar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* El centrado va en los márgenes automáticos del contenido, no en
           `justify-center`: con contenido más alto que la pantalla el centrado
           deja el desborde de arriba inaccesible (el nombre salía cortado bajo
@@ -489,32 +522,6 @@ export function SessionMode({
                 "Último ejercicio"
               )}
             </p>
-          )}
-
-          {pause && (
-            <div className="flex w-full max-w-sm flex-col items-center gap-2">
-              {/* Barra y tiempo en una sola fila: la barra se queda el ancho
-                  que sobra (`flex-1`) y el `mm:ss` va al final, a su derecha. */}
-              <div className="flex w-full items-center gap-3">
-                <WavyProgress
-                  className="min-w-0 flex-1"
-                  waveOnly
-                  value={pause.durationMs - remainingMs}
-                  max={pause.durationMs}
-                  label={
-                    pause.kind === "sets"
-                      ? `Pausa entre series de ${pause.name}`
-                      : `Pausa al terminar ${pause.name}`
-                  }
-                />
-                <span className="tabular text-display-m">
-                  {formatCountdown(remainingMs)}
-                </span>
-              </div>
-              <Button variant="tonal" onClick={skipPause}>
-                Saltar
-              </Button>
-            </div>
           )}
         </div>
       </div>
