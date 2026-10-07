@@ -1321,6 +1321,18 @@ describe("modo interactivo", () => {
     vi.restoreAllMocks();
   });
 
+  /** Los tonos del aviso previo (660 Hz), sin el keep-alive (60 Hz). */
+  const warns = () =>
+    audio.oscillators.filter((o) => o.frequency.value === 660);
+
+  /** Un tic de la pausa, como el que dispara el regreso a la pestaña: el reloj
+   *  va con `Date.now` simulado y aquí se sincroniza de inmediato. */
+  const tick = () => fireEvent(document, new Event("visibilitychange"));
+
+  /** Deja la pausa a `ms` del final (arrancó con `Date.now` real). */
+  const endsIn = (real: typeof Date.now, ms: number, total = 90_000) =>
+    vi.spyOn(Date, "now").mockReturnValue(real() + total - ms);
+
   // Marcas de la última sesión: sin ellas las casillas nacen incompletas y no
   // se pueden marcar (como en el borrador normal).
   const benchLast = { weightKg: 60, reps: 8, date: "2026-08-30" };
@@ -1501,6 +1513,131 @@ describe("modo interactivo", () => {
     ).toBe(true);
   });
 
+  it("avisa a los 3 s y a los 2 s del final, una vez cada uno", async () => {
+    const mode = await enterMode({ last: { 21: benchLast } });
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
+    // La pausa dura 90 s: recién arrancada no hay nada que avisar.
+    expect(warns()).toHaveLength(0);
+
+    const real = Date.now;
+    endsIn(real, 4_000);
+    tick();
+    expect(warns()).toHaveLength(0);
+
+    // Al cruzar cada marca suena un tono, y uno solo: los tics que caen entre
+    // marcas no repiten.
+    endsIn(real, 3_000);
+    tick();
+    expect(warns()).toHaveLength(1);
+    endsIn(real, 2_500);
+    tick();
+    expect(warns()).toHaveLength(1);
+
+    endsIn(real, 2_000);
+    tick();
+    expect(warns()).toHaveLength(2);
+    endsIn(real, 1_500);
+    tick();
+    expect(warns()).toHaveLength(2);
+
+    // Al agotarse la pausa pita el de fin, y no suena ningún aviso más.
+    endsIn(real, -1_000);
+    tick();
+    expect(
+      within(mode).queryByRole("progressbar", { name: /pausa/i }),
+    ).toBeNull();
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
+    expect(warns()).toHaveLength(2);
+  });
+
+  it("un salto del reloj que cruza las dos marcas avisa una sola vez", async () => {
+    const mode = await enterMode({ last: { 21: benchLast } });
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    // La pestaña estuvo en segundo plano y el reloj vuelve con 1 s por delante:
+    // las dos marcas caen en el mismo tic, y suenan como un solo aviso (no en
+    // ráfaga).
+    endsIn(Date.now, 1_000);
+    tick();
+    expect(warns()).toHaveLength(1);
+  });
+
+  it("«Saltar» tras el aviso previo no lo repite ni pita", async () => {
+    const mode = await enterMode({ last: { 21: benchLast } });
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    const real = Date.now;
+    endsIn(real, 3_000);
+    tick();
+    expect(warns()).toHaveLength(1);
+
+    fireEvent.click(within(mode).getByRole("button", { name: /^saltar$/i }));
+    endsIn(real, -10_000);
+    tick();
+    expect(warns()).toHaveLength(1);
+    expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(
+      false,
+    );
+  });
+
+  it("una pausa más corta que el aviso no avisa, y la de fin sí", async () => {
+    // Press banca con el descanso entre series por debajo del aviso (2 s), para
+    // que no se solapen; el de fin se queda en 90 s.
+    const detail = {
+      ...SESSION_DETAIL,
+      exercises: [
+        { ...SESSION_DETAIL.exercises[0], restSecs: 2, restAfterSecs: 90 },
+        { ...SESSION_DETAIL.exercises[1], position: 1 },
+      ],
+    };
+    const mode = await enterMode({ detail, last: { 21: benchLast } });
+    const pause = (name: RegExp) =>
+      within(mode).queryByRole("progressbar", { name });
+    // El reloj se queda quieto en `t0`: así cada pausa arranca en el offset que
+    // se le da a `at` y la cuenta sale a mano.
+    const real = Date.now;
+    const t0 = real();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(t0);
+    const at = (offsetMs: number) => clock.mockReturnValue(t0 + offsetMs);
+
+    // La pausa entre series dura 2 s: ni de lejos avisa.
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
+    );
+    expect(pause(/pausa entre series de press banca/i)).toBeDefined();
+    at(1_000); // queda 1 s de los 2
+    tick();
+    expect(warns()).toHaveLength(0);
+    at(2_000); // se agotó
+    tick();
+    expect(pause(/pausa/i)).toBeNull();
+
+    // La otra serie tampoco: y la de fin (90 s) sí avisa a los 3 s.
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 2" }),
+    );
+    at(3_000); // arrancó en 2_000: queda 1 s de los 2
+    tick();
+    expect(warns()).toHaveLength(0);
+
+    fireEvent.click(
+      within(mode).getByRole("checkbox", { name: "Press banca serie 3" }),
+    );
+    expect(pause(/pausa al terminar press banca/i)).toBeDefined();
+    at(91_000); // arrancó en 4_000 + 90_000: quedan 3 s
+    tick();
+    expect(warns()).toHaveLength(1);
+  });
+
   it("al volver a la pestaña la pausa se resincroniza: terminada y con pitido", async () => {
     const mode = await enterMode({ last: { 21: benchLast } });
     fireEvent.click(
@@ -1675,6 +1812,8 @@ describe("modo interactivo", () => {
     expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(
       false,
     );
+    // Ni se queda un aviso previo a medias: la pausa se cortó, no terminó.
+    expect(warns()).toHaveLength(0);
     expect(
       audio.oscillators.some((o) => o.frequency.value === 60 && o.stopped),
     ).toBe(true);

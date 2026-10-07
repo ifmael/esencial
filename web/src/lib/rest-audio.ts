@@ -7,7 +7,19 @@
 
 const KEEP_HZ = 60;
 const KEEP_GAIN = 0.0008;
-const BEEP_HZ = [880, 1175] as const;
+/** Los tonos del pitido de fin, de grave a agudo. */
+const BEEP_HZ = [880, 1175, 1568] as const;
+/** El aviso previo: un solo tono, más grave que cualquiera del fin. */
+const WARN_HZ = 660;
+/** Las marcas del aviso (ms que quedan), de mayor a menor: suena un tono al
+ *  cruzar cada una. */
+export const WARN_LEADS_MS: readonly number[] = [3000, 2000];
+/** Lo que dura un tono del pitido de fin, y el del aviso previo (más corto). */
+const TONE_MS = 120;
+const WARN_MS = 100;
+/** Ataque y caída de cada tono, y pausa entre los del pitido. */
+const FADE = 0.02;
+const BEEP_GAP = 0.16;
 
 let cached: AudioContext | null = null;
 
@@ -53,23 +65,36 @@ export function stopPauseAudio(): void {
   keep = null;
 }
 
-/** El pitido de fin de pausa: dos tonos cortos. */
+/** Un tono de `ms`, con ataque y caída cortos, programado en `at`. */
+function tone(ctx: AudioContext, hz: number, at: number, ms: number): void {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.frequency.value = hz;
+  osc.connect(gain).connect(ctx.destination);
+  const end = at + ms / 1000;
+  gain.gain.setValueAtTime(0, at);
+  gain.gain.linearRampToValueAtTime(0.25, at + FADE);
+  gain.gain.setValueAtTime(0.25, end - FADE);
+  gain.gain.linearRampToValueAtTime(0, end);
+  osc.start(at);
+  osc.stop(end);
+}
+
+/** El aviso previo al final de la pausa: un solo tono, corto y más grave. */
+export function warnAhead(): void {
+  const ctx = context();
+  if (!ctx) return;
+  void ctx.resume().catch(() => {});
+  tone(ctx, WARN_HZ, ctx.currentTime, WARN_MS);
+}
+
+/** El pitido de fin de pausa: tres tonos cortos. */
 export function beep(): void {
   const ctx = context();
   if (!ctx) return;
   void ctx.resume().catch(() => {});
   BEEP_HZ.forEach((hz, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "square";
-    osc.frequency.value = hz;
-    osc.connect(gain).connect(ctx.destination);
-    const at = ctx.currentTime + i * 0.16;
-    gain.gain.setValueAtTime(0, at);
-    gain.gain.linearRampToValueAtTime(0.25, at + 0.01);
-    gain.gain.setValueAtTime(0.25, at + 0.08);
-    gain.gain.linearRampToValueAtTime(0, at + 0.1);
-    osc.start(at);
-    osc.stop(at + 0.12);
+    tone(ctx, hz, ctx.currentTime + i * BEEP_GAP, TONE_MS);
   });
 }

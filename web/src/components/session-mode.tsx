@@ -18,7 +18,13 @@ import {
   type ExerciseMetric,
   KIND_LABELS,
 } from "../lib/exercises";
-import { beep, startPauseAudio, stopPauseAudio } from "../lib/rest-audio";
+import {
+  beep,
+  startPauseAudio,
+  stopPauseAudio,
+  WARN_LEADS_MS,
+  warnAhead,
+} from "../lib/rest-audio";
 import { useWakeLock } from "../lib/wake-lock";
 import {
   blockLabel,
@@ -126,6 +132,10 @@ export function SessionMode({
   // Un cierre de pausa solo dispara una vez (el tic y el regreso pueden
   // coincidir); saltarla lo marca para que no pite después.
   const finished = useRef(false);
+  // Las marcas de aviso ya gastadas en esta pausa: cada una suena una sola vez.
+  // Al arrancar nace con las que la pausa ya deja atrás (una pausa más corta que
+  // la marca avisaría nada más empezar, pegada al pitido de fin).
+  const warned = useRef<number[]>([]);
 
   const askExit = useCallback(() => setConfirmingExit(true), []);
 
@@ -146,8 +156,10 @@ export function SessionMode({
   const startPause = useCallback(
     (seconds: number, kind: Pause["kind"], name: string) => {
       finished.current = false;
-      startPauseAudio();
       const durationMs = seconds * 1000;
+      // Una marca que la pausa ya trae pasada no suena: avisaría al arrancar.
+      warned.current = WARN_LEADS_MS.filter((ms) => ms >= durationMs);
+      startPauseAudio();
       setPause({ kind, durationMs, endsAt: Date.now() + durationMs, name });
       setNow(Date.now());
     },
@@ -215,15 +227,30 @@ export function SessionMode({
     }
   }, [item, items, active, startPause]);
 
-  // El reloj de la pausa: tics para la cuenta atrás y, al llegar a `endsAt`,
-  // el pitido. Al volver a la pestaña se resincroniza de inmediato — si el
-  // navegador ralentizó o suspendió los timers en segundo plano, el pitido
-  // suena tarde, o aquí si nunca llegó a sonar.
+  // El reloj de la pausa: tics para la cuenta atrás, un aviso al cruzar cada
+  // marca (`WARN_LEADS_MS`) y, al llegar a `endsAt`, el pitido. Al volver a la
+  // pestaña se resincroniza de inmediato — si el navegador ralentizó o suspendió
+  // los timers en segundo plano, el pitido suena tarde, o aquí si nunca llegó a
+  // sonar.
   useEffect(() => {
     if (!pause) return;
     const tick = () => {
-      setNow(Date.now());
-      if (Date.now() >= pause.endsAt) finishPause(pause);
+      const now = Date.now();
+      const remaining = pause.endsAt - now;
+      if (remaining <= 0) {
+        finishPause(pause);
+        return;
+      }
+      // Las marcas recién cruzadas: si el reloj saltó por varias (el regreso a
+      // la pestaña), suenan todas como una, no en ráfaga.
+      const crossed = WARN_LEADS_MS.filter(
+        (ms) => ms >= remaining && !warned.current.includes(ms),
+      );
+      if (crossed.length > 0) {
+        warned.current.push(...crossed);
+        warnAhead();
+      }
+      setNow(now);
     };
     const id = setInterval(tick, 250);
     const onVisible = () => {

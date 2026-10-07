@@ -11,6 +11,16 @@ import {
 } from "@playwright/test";
 import { apiRequest, apiUrl, seededExercise, uniqueName } from "./helpers";
 
+/** Un tono de los que suenan en la pestaña, con el momento en que se arrancó. */
+type RecordedTone = { hz: number; at: number };
+
+declare global {
+  interface Window {
+    /** Lo deja el `addInitScript` de la prueba del aviso previo. */
+    __tones?: RecordedTone[];
+  }
+}
+
 type ItemPayload = {
   exerciseId: number;
   targetSets?: number | null;
@@ -492,6 +502,78 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
       page.getByRole("dialog", { name: "Modo sesión" }),
     ).toBeHidden();
     await expect(page.getByText("Esfuerzo percibido")).toBeVisible();
+  });
+
+  test("el aviso previo suena a los 3 s y a los 2 s del pitido de fin (móvil)", async ({
+    page,
+  }, testInfo) => {
+    const press = await seededExercise(page.request, "Press banca");
+    const past = mondayFrom(455 + testInfo.retry * 14);
+    const date = mondayFrom(462 + testInfo.retry * 14);
+    await resetPlanned(page.request, past);
+    await resetPlanned(page.request, date);
+    await logPast(
+      page.request,
+      past,
+      [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 8 }],
+      [{ exerciseId: press.id, sets: [{ weightKg: 60, reps: 8 }] }],
+    );
+    // Un descanso entre series de 6 s: cabe entero en el test y pasa del aviso.
+    await createSession(
+      page.request,
+      date,
+      [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 8, restSecs: 6 }],
+      "Aviso",
+    );
+
+    // Los tonos los graba el Web Audio de la propia página: se prueba el sonido
+    // de verdad, con el reloj de verdad (los unitarios simulan los dos).
+    await page.addInitScript(() => {
+      const tones: { hz: number; at: number }[] = [];
+      Object.assign(window, { __tones: tones });
+      const proto = AudioContext.prototype;
+      const create = proto.createOscillator;
+      proto.createOscillator = function (this: AudioContext) {
+        const osc = create.call(this);
+        const start = osc.start.bind(osc);
+        osc.start = (when?: number) => {
+          tones.push({ hz: osc.frequency.value, at: performance.now() });
+          start(when);
+        };
+        return osc;
+      };
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/sesion/${date}`);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await mode.getByRole("checkbox", { name: "Press banca serie 1" }).check();
+    await expect(
+      mode.getByRole("progressbar", {
+        name: "Pausa entre series de Press banca",
+      }),
+    ).toBeVisible();
+
+    // La pausa se agota sola; para entonces ha sonado todo, en este orden: el
+    // keep-alive del arranque, los dos avisos y los tres tonos del fin, cada uno
+    // una sola vez (ninguno se repite, ni se cuela un tono de más).
+    await expect(
+      mode.getByRole("progressbar", { name: /pausa entre series/i }),
+    ).toBeHidden({ timeout: 10_000 });
+    const recorded = await page.evaluate(() => window.__tones ?? []);
+    expect(recorded.map((t) => t.hz)).toEqual([60, 660, 660, 880, 1175, 1568]);
+
+    // El primer aviso llega ~3 s antes del pitido de fin, y el segundo un
+    // segundo después (el tic es de 250 ms).
+    const warnAt = recorded.filter((t) => t.hz === 660).map((t) => t.at);
+    expect(warnAt).toHaveLength(2);
+    const [first = 0, second = 0] = warnAt;
+    const end = recorded.find((t) => t.hz === 880)?.at ?? 0;
+    expect(end - first).toBeGreaterThan(2600);
+    expect(end - first).toBeLessThan(3400);
+    expect(second - first).toBeGreaterThan(600);
+    expect(second - first).toBeLessThan(1400);
   });
 
   test("sin descanso programado no hay pausa: la casilla se marca directa", async ({

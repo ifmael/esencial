@@ -523,11 +523,18 @@ posición del nombre y los dos huecos del centrado (no una clase).
   ejercicio avanza desde donde estés. El nombre del encabezado se recorta: con
   nombres largos la fila no crece. Lo cubren `web/tests/sesion.test.tsx` y
   `e2e/tests/session-mode.spec.ts` (390 px).
-- **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): dos tonos al
-  terminar; mientras corre una pausa suena un keep-alive casi inaudible (60 Hz,
-  gain 0.0008) que mantiene la pestaña «sonando» para que el navegador no la
-  congele en segundo plano. Best effort: si la suspende o ralentiza, el pitido
-  suena tarde o al volver (resincronización por `endsAt`), nunca dos veces.
+- **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): un **aviso previo**
+  al cruzar cada marca (`WARN_LEADS_MS`: quedando 3 s y 2 s, un solo tono de
+  660 Hz, `warnAhead`) y **tres tonos** al terminar; mientras corre una pausa
+  suena un keep-alive casi inaudible (60 Hz, gain 0.0008) que mantiene la
+  pestaña «sonando» para que el navegador no la congele en segundo plano. Cada
+  marca suena una vez por pausa y solo si la pausa dura más que la marca (una de
+  2 s se las trae pasadas: avisaría al arrancar, pegada al pitido de fin), las
+  dispara el reloj de la pausa (`session-mode.tsx`) y **no** suenan tras
+  «Saltar» ni al cortarla la última serie de la sesión; si el reloj cruza las dos
+  de golpe (el regreso a la pestaña), suenan como una, no en ráfaga. Best effort:
+  si el navegador suspende o ralentiza la pestaña, el pitido suena tarde o al
+  volver (resincronización por `endsAt`), nunca dos veces.
 - **Wake Lock** (`lib/wake-lock.ts`): pantalla encendida mientras el modo está
   visible; el navegador la suelta al ocultar la pestaña y se re-pide al volver.
 - Al **completar la sesión** (todas las series y cardios marcados) aparecen el
