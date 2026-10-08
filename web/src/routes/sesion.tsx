@@ -1139,6 +1139,7 @@ function SesionView() {
     return (
       <SessionMode
         items={modeItems(v)}
+        sessionName={v.session.name ?? "Sesión"}
         onToggleSet={(id, index) => day.toggleDone(id, index)}
         onSetValue={(id, index, field, raw) =>
           day.setDraftValue(id, index, field, raw)

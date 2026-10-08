@@ -166,9 +166,11 @@ test.describe("RESUMEN DE SESIÓN — la pantalla de bienvenida solo resume", ()
       page.getByRole("progressbar", { name: "Series hechas" }),
     ).toHaveAttribute("aria-valuenow", "2");
 
-    // Corregir: el modo sale de lo registrado y guarda con PUT.
+    // Corregir: el modo sale de lo registrado y guarda con PUT. Pinta la serie
+    // en curso (la 1), así que se llega a la 2 con la flecha.
     await page.getByRole("button", { name: "Editar" }).click();
     const mode = page.getByRole("dialog", { name: "Modo sesión" });
+    await mode.getByRole("button", { name: "Serie siguiente" }).click();
     await expect(
       mode.getByLabel("Reps · Press banca serie 2", { exact: true }),
     ).toHaveValue("8");

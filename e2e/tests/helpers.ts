@@ -1,11 +1,26 @@
-import type { APIRequestContext, Locator } from "@playwright/test";
+import { type APIRequestContext, expect, type Locator } from "@playwright/test";
 
 /** Cierra la sesión desde el modo sesión: «Terminar» abre el cierre (esfuerzo y
- *  nota), se elige el esfuerzo y «Terminar» lo guarda (POST o PUT). */
+ *  nota) —antes, si queda algo pendiente, el aviso «Series sin completar», que
+ *  hay que aceptar—, se elige el esfuerzo y «Terminar» lo guarda (POST o PUT). */
 export async function finishSession(mode: Locator, effort = "Moderado") {
-  await mode.getByRole("button", { name: "Terminar" }).click();
+  await mode.getByRole("button", { name: "Terminar", exact: true }).click();
+  const effortDots = mode.getByRole("radiogroup", {
+    name: "Esfuerzo percibido",
+  });
+  const warning = mode
+    .page()
+    .getByRole("dialog", { name: "Series sin completar" });
+  // Con series pendientes el cierre no se abre hasta aceptar el aviso.
+  await expect(effortDots.or(warning)).toBeVisible();
+  if (await warning.isVisible()) {
+    await warning
+      .getByRole("button", { name: "Terminar", exact: true })
+      .click();
+    await expect(effortDots).toBeVisible();
+  }
   await mode.getByText(effort, { exact: true }).click();
-  await mode.getByRole("button", { name: "Terminar" }).click();
+  await mode.getByRole("button", { name: "Terminar", exact: true }).click();
 }
 
 /** B' (dos despliegues): la API es su propio Worker y en e2e escucha aquí
