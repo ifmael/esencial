@@ -1,4 +1,12 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, Locator } from "@playwright/test";
+
+/** Cierra la sesión desde el modo sesión: «Terminar» abre el cierre (esfuerzo y
+ *  nota), se elige el esfuerzo y «Terminar» lo guarda (POST o PUT). */
+export async function finishSession(mode: Locator, effort = "Moderado") {
+  await mode.getByRole("button", { name: "Terminar" }).click();
+  await mode.getByText(effort, { exact: true }).click();
+  await mode.getByRole("button", { name: "Terminar" }).click();
+}
 
 /** B' (dos despliegues): la API es su propio Worker y en e2e escucha aquí
  *  (ver playwright.config.ts). Las peticiones directas de los tests van a esta

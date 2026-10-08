@@ -22,14 +22,11 @@ import {
   BackIcon,
   BikeIcon,
   CheckIcon,
-  ChevronDownIcon,
-  CopyIcon,
   EditIcon,
   PlayIcon,
   RunIcon,
 } from "../components/icons";
 import { type ModeItem, SessionMode } from "../components/session-mode";
-import { Stepper } from "../components/stepper";
 import {
   Alert,
   Badge,
@@ -37,11 +34,8 @@ import {
   buttonClass,
   Card,
   Chain,
-  Checkbox,
   cx,
   Field,
-  ScrollStrip,
-  Switch,
   Textarea,
 } from "../components/ui";
 import { ApiError, apiGet, apiSend } from "../lib/api";
@@ -53,7 +47,11 @@ import {
   snapshotOf,
   writeDraft,
 } from "../lib/day-draft";
-import { type ExerciseMetric, targetSummary } from "../lib/exercises";
+import {
+  type ExerciseKind,
+  type ExerciseMetric,
+  targetSummary,
+} from "../lib/exercises";
 import {
   type PlanSession,
   planItems,
@@ -295,7 +293,8 @@ const loadError = (err: unknown): View => ({
 });
 
 /** Elementos del modo interactivo: el borrador en el orden del día — fuerza
- *  con sus series y marcas, cardio con su «Hecho» — para ir uno a uno. */
+ *  con sus series y marcas, cardio con su «Hecho» — para ir uno a uno. Es la
+ *  única superficie donde se registra: la página solo resume. */
 function modeItems(v: Draft): ModeItem[] {
   const rows = [
     ...v.exercises.map((ex) => ({
@@ -312,6 +311,9 @@ function modeItems(v: Draft): ModeItem[] {
           done: s.done,
           filled: isSetFilled(s, setFields(ex.metric, ex.noWeight)),
         })),
+        prevSets: ex.prevSets,
+        distanceKm: null,
+        durationMin: null,
         done: null,
         metric: ex.metric,
         noWeight: ex.noWeight,
@@ -328,6 +330,9 @@ function modeItems(v: Draft): ModeItem[] {
         kind: c.se.kind,
         objective: targetSummary(c.se),
         sets: null,
+        prevSets: [],
+        distanceKm: c.distanceKm,
+        durationMin: c.durationMin,
         done: c.done,
         metric: c.se.metric,
         noWeight: false,
@@ -344,7 +349,6 @@ function modeItems(v: Draft): ModeItem[] {
 
 export function useWorkoutDay(date: string) {
   const [view, setView] = useState<View>({ kind: "loading" });
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   // La lista de la última carga: de ahí sale la sesión anterior al corregir.
   const sessionsRef = useRef<PlanSession[]>([]);
 
@@ -374,24 +378,27 @@ export function useWorkoutDay(date: string) {
     }
   }, [date]);
 
-  /** «Editar» un registro: el mismo borrador, precargado con lo registrado. Parte
-   * plegado: lo desplegado al registrar ya no corresponde a este borrador. */
+  /** «Editar» un registro: el mismo borrador, precargado con lo registrado. Lo
+   * abre el modo sesión, que es donde se corrige (y guarda con PUT). */
   const startEdit = () => {
     if (view.kind !== "logged" || !view.session) return;
     const { session, log } = view;
-    setExpanded({});
     setView({ kind: "loading" });
     buildDraft(date, session, sessionsRef.current, log).then(setView, (err) =>
       setView(loadError(err)),
     );
   };
 
-  const cancelEdit = () =>
-    setView((v) =>
-      v.kind === "draft" && v.editing
-        ? { kind: "logged", session: v.session, log: v.editing }
-        : v,
-    );
+  /** Salir de la corrección: vuelve al registro tal cual estaba, sin tocar nada. */
+  const cancelEdit = useCallback(
+    () =>
+      setView((v) =>
+        v.kind === "draft" && v.editing
+          ? { kind: "logged", session: v.session, log: v.editing }
+          : v,
+      ),
+    [],
+  );
 
   useEffect(() => {
     void load();
@@ -520,21 +527,6 @@ export function useWorkoutDay(date: string) {
       ),
     }));
 
-  const completeExercise = (seId: number) =>
-    patchDraft((v) => ({
-      exercises: v.exercises.map((ex) => {
-        if (ex.se.id !== seId) return ex;
-        const fields = setFields(ex.metric, ex.noWeight);
-        return {
-          ...ex,
-          sets: ex.sets.map((s) => ({
-            ...s,
-            done: s.done || isSetFilled(s, fields),
-          })),
-        };
-      }),
-    }));
-
   const mutateCardio = (seId: number, patch: (c: CardioDraft) => CardioDraft) =>
     patchDraft((v) => ({
       cardio: v.cardio.map((c) => (c.se.id === seId ? patch(c) : c)),
@@ -559,8 +551,6 @@ export function useWorkoutDay(date: string) {
 
   const setEffort = (effort: number) => patchDraft(() => ({ effort }));
   const setNote = (note: string) => patchDraft(() => ({ note }));
-  const toggleExpand = (seId: number) =>
-    setExpanded((m) => ({ ...m, [seId]: !m[seId] }));
 
   /** Cerrar sesión (POST) o guardar la corrección (PUT): single in-flight;
    * 2xx→B, 409 del POST→refetch into B, 400→banner + draft. */
@@ -651,7 +641,6 @@ export function useWorkoutDay(date: string) {
 
   return {
     view,
-    expanded,
     setEffort,
     setNote,
     setDraftValue,
@@ -661,10 +650,8 @@ export function useWorkoutDay(date: string) {
     toggleNoWeight,
     addSet,
     removeSet,
-    completeExercise,
     setCardioValue,
     toggleCardioDone,
-    toggleExpand,
     close,
     startEdit,
     cancelEdit,
@@ -698,41 +685,48 @@ function Header({
   progress?: { done: number; total: number };
 }) {
   return (
-    <header className="relative mb-6 flex flex-col items-start gap-4 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low p-5 sm:flex-row sm:items-center md:p-6">
+    <header className="relative mb-6 flex flex-col gap-1 overflow-hidden rounded-xl rounded-tr-xxl bg-surface-container-low px-5 py-4 md:p-6">
       <Shape
         name="sunny"
         size={220}
         className="pointer-events-none absolute -top-20 -right-16 text-accent-container opacity-60"
       />
-      <div className="relative flex w-full min-w-0 flex-1 flex-col gap-2">
-        <div className="-ml-3 flex min-w-0 items-center gap-1">
-          <BackLink />
-          <h1 className="min-w-0 text-headline-m text-e first-letter:uppercase md:text-headline-l">
-            {formatDateEs(parseDateEs(date))}
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-title-l text-accent">{name}</span>
-          {logged && <Badge tone="done">Registrado</Badge>}
-        </div>
-      </div>
-      {progress && progress.total > 0 && (
-        <div className="relative rounded-full bg-surface-container-lowest p-1">
-          <WavyRing
-            value={progress.done}
-            max={progress.total}
-            label="Series hechas"
-          >
-            <CountUp
+      {/* Una sola fila —flecha, nombre y aro— con el día debajo como subtítulo.
+          Antes eran tres bloques apilados (fecha, nombre y aro) y el encabezado
+          se comía 284 px de los 844 del móvil. */}
+      <div className="relative -ml-3 flex min-w-0 items-center gap-1">
+        <BackLink />
+        <h1 className="min-w-0 flex-1 text-headline-m text-e first-letter:uppercase md:text-headline-l">
+          {name}
+        </h1>
+        {logged && <Badge tone="done">Registrado</Badge>}
+        {progress && progress.total > 0 && (
+          <div className="rounded-full bg-surface-container-lowest p-1">
+            <WavyRing
               value={progress.done}
-              className="block text-headline-m text-e leading-none text-on-surface"
-            />
-            <span className="tabular text-label-s text-on-surface-variant">
-              de {progress.total}
-            </span>
-          </WavyRing>
-        </div>
-      )}
+              max={progress.total}
+              label="Series hechas"
+              className="size-20"
+              // Sin círculo de fondo: a 0 series el aro no pinta nada y el arco
+              // va apareciendo según se marcan (como el del modo sesión).
+              waveOnly
+            >
+              <CountUp
+                value={progress.done}
+                className="block text-title-l text-e leading-none text-on-surface"
+              />
+              <span className="tabular text-label-s text-on-surface-variant">
+                de {progress.total}
+              </span>
+            </WavyRing>
+          </div>
+        )}
+      </div>
+      {/* `pl-10` son los 48 px de la flecha más los 4 del hueco menos los 12 del
+          `-ml-3`: así el día cae alineado con el nombre, no con la flecha. */}
+      <p className="relative pl-10 text-body-m text-on-surface-variant first-letter:uppercase">
+        {formatDateEs(parseDateEs(date))}
+      </p>
     </header>
   );
 }
@@ -836,12 +830,176 @@ const doneCard = (done: boolean) =>
     done && "bg-accent-container text-on-accent-container",
   );
 
-const Stat = ({ value, label }: { value: string; label: string }) => (
-  <div className="flex flex-col">
-    <span className="text-display-s text-e tabular">{value}</span>
-    <span className="text-label-m">{label}</span>
-  </div>
-);
+// --- Resumen de la sesión (la página solo lee: se registra en el modo sesión) --
+
+/** Una fila del resumen: el ejercicio del día, lo hecho y lo que se sabe de él. */
+type SummaryRow = {
+  id: number;
+  name: string;
+  /** Ficha del ejercicio; un cardio de un registro antiguo puede no tenerla. */
+  href: string | null;
+  kind: ExerciseKind;
+  /** Todo hecho: todas sus series, o el cardio. */
+  done: boolean;
+  /** Series hechas sobre las del día; `null` en el cardio (no tiene series). */
+  counts: { done: number; total: number } | null;
+  /** Línea de contexto: la sesión anterior, «última: …» o las marcas del cardio. */
+  info: string | null;
+  superset: boolean;
+  position: number;
+};
+
+/** El día planificado, en el orden en que se va a hacer. */
+function draftRows(v: Draft): SummaryRow[] {
+  const rows: SummaryRow[] = [
+    ...v.exercises.map((ex) => ({
+      id: ex.se.id,
+      name: ex.se.exerciseName,
+      href: `/ejercicios/${ex.se.exerciseId}`,
+      kind: ex.se.kind,
+      done: ex.sets.length > 0 && ex.sets.every((s) => s.done),
+      counts: {
+        done: ex.sets.filter((s) => s.done).length,
+        total: ex.sets.length,
+      },
+      // La sesión anterior con el mismo nombre manda sobre «última: X×Y».
+      info: ex.previous ?? formatLast(ex.last),
+      superset: ex.se.superset,
+      position: ex.se.position,
+    })),
+    ...v.cardio.map((c) => ({
+      id: c.se.id,
+      name: c.se.exerciseName,
+      href: `/ejercicios/${c.se.exerciseId}`,
+      kind: c.se.kind,
+      done: c.done,
+      counts: null,
+      info: targetSummary(c.se),
+      superset: false,
+      position: c.se.position,
+    })),
+  ];
+  return rows.sort((a, b) => a.position - b.position);
+}
+
+/** El día registrado: lo anotado, con la cadena que trae el plan del día. */
+function loggedRows(log: LoggedDay, plan: PlanSession | null): SummaryRow[] {
+  // Los sets llegan en el orden del día (`position`), así que el grupo por
+  // ejercicio conserva su orden de inserción.
+  const byExercise = log.sets.reduce<Record<number, SetLogItem[]>>((acc, s) => {
+    acc[s.planSessionExerciseId] ??= [];
+    acc[s.planSessionExerciseId].push(s);
+    return acc;
+  }, {});
+  const planned = (seId: number) =>
+    plan?.exercises?.find((e) => e.id === seId) ?? null;
+  const rows: SummaryRow[] = [];
+  for (const [key, sets] of Object.entries(byExercise)) {
+    const seId = Number(key);
+    const se = planned(seId);
+    // Lo hecho es lo marcado: una serie que no se marcó no se anuncia aquí.
+    const marks = sets
+      .filter((s) => s.done)
+      .map(formatSetText)
+      .filter((t) => t !== "—");
+    rows.push({
+      id: seId,
+      name: sets[0].exerciseName,
+      href: `/ejercicios/${sets[0].exerciseId}`,
+      kind: "strength",
+      done: sets.every((s) => s.done),
+      counts: {
+        done: sets.filter((s) => s.done).length,
+        total: sets.length,
+      },
+      info: marks.length > 0 ? marks.join(" · ") : null,
+      superset: se?.superset ?? false,
+      position: se?.position ?? rows.length,
+    });
+  }
+  for (const c of log.cardio) {
+    const se = planned(c.planSessionExerciseId);
+    rows.push({
+      id: c.planSessionExerciseId,
+      name: c.exerciseName,
+      href: se ? `/ejercicios/${se.exerciseId}` : null,
+      kind: se?.kind ?? "running",
+      done: c.done,
+      counts: null,
+      info:
+        c.distanceKm === null && c.durationMin === null
+          ? "Hecho sin marcas"
+          : `${c.distanceKm ?? "—"} km · ${c.durationMin ?? "—"} min`,
+      superset: false,
+      position: se?.position ?? Number.MAX_SAFE_INTEGER,
+    });
+  }
+  return rows.sort((a, b) => a.position - b.position);
+}
+
+/** La lista del resumen: medallón con el turno, nombre y su «x/y». Inerte: no
+ *  hay nada que pulsar más allá del enlace a la ficha del ejercicio. */
+function SummaryRows({ rows }: { rows: SummaryRow[] }) {
+  const groups = blocks(rows);
+  return (
+    <ul className="stagger flex flex-col gap-3">
+      {groups.map((block, bi) => (
+        <Chain
+          key={`c${rows[block[0]].id}`}
+          label={block.length > 1 ? blockLabel(block.length) : undefined}
+          style={{ ["--i" as string]: bi }}
+        >
+          {block.map((i) => {
+            const row = rows[i];
+            const Icon = row.kind === "bike" ? BikeIcon : RunIcon;
+            return (
+              <li key={row.id}>
+                <Card className={doneCard(row.done)}>
+                  <div className="flex items-center gap-3">
+                    <RowMark done={row.done}>
+                      {row.kind === "strength" ? (
+                        <span className="tabular">{i + 1}</span>
+                      ) : (
+                        <Icon width={20} height={20} />
+                      )}
+                    </RowMark>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      {row.href ? (
+                        <Link
+                          to={row.href}
+                          className="text-title-m text-e underline-offset-4 hover:underline"
+                        >
+                          {row.name}
+                        </Link>
+                      ) : (
+                        <span className="text-title-m text-e">{row.name}</span>
+                      )}
+                      {row.info && (
+                        <span className="tabular text-body-s text-on-surface-variant">
+                          {row.info}
+                        </span>
+                      )}
+                    </div>
+                    {row.counts && (
+                      <span className="shrink-0 tabular text-title-m">
+                        <span aria-hidden="true">
+                          {row.counts.done}/{row.counts.total}
+                        </span>
+                        <span className="sr-only">
+                          {row.counts.done} de {row.counts.total} series hechas
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                </Card>
+              </li>
+            );
+          })}
+        </Chain>
+      ))}
+    </ul>
+  );
+}
 
 // --- Page ---------------------------------------------------------------------
 
@@ -860,8 +1018,13 @@ function SesionView() {
   const day = useWorkoutDay(date);
   const { view } = day;
   const [mode, setMode] = useState(false);
-  // Identidad estable: el modo la usa como dependencia del efecto de Escape.
-  const exitMode = useCallback(() => setMode(false), []);
+  // Salir del modo vuelve al resumen; si se estaba corrigiendo un registro,
+  // «Cancelar» lo deja como estaba (sin llamar a la API).
+  const { cancelEdit } = day;
+  const exitMode = useCallback(() => {
+    setMode(false);
+    cancelEdit();
+  }, [cancelEdit]);
 
   if (view.kind === "invalid")
     return (
@@ -917,151 +1080,61 @@ function SesionView() {
 
   if (view.kind === "logged") {
     const { log } = view;
-    const byExercise = log.sets.reduce<Record<number, SetLogItem[]>>(
-      (acc, s) => {
-        acc[s.planSessionExerciseId] ??= [];
-        acc[s.planSessionExerciseId].push(s);
-        return acc;
-      },
-      {},
-    );
-    const progress = setsProgress(log.sets, log.cardio);
-    const mark = (done: boolean) =>
-      done ? (
-        <CheckIcon filled width={20} height={20} className="text-accent" />
-      ) : (
-        <span className="size-5 rounded-full border-2 border-outline" />
-      );
-    // El registro no guarda la cadena; sí el plan del día (`view.session`), y
-    // los sets llegan en su orden (`position`), así que los bloques salen de ahí.
-    const entries = Object.entries(byExercise);
-    const planned = view.session?.exercises ?? [];
-    const groups = blocks(
-      entries.map(([seId]) => {
-        const se = planned.find((e) => e.id === Number(seId));
-        return {
-          superset: se?.superset ?? false,
-          kind: se?.kind ?? "strength",
-        };
-      }),
-    );
     return (
       <div className="pb-8">
         <Header
           date={date}
           name={log.session?.name ?? view.session?.name ?? "Sesión"}
           logged
+          progress={setsProgress(log.sets, log.cardio)}
         />
+        {/* Un día registrado se consulta aquí y se corrige desde el modo
+            sesión, precargado con lo registrado (y guardado con PUT). */}
         {view.session && (
-          <Button variant="tonal" className="mb-4" onClick={day.startEdit}>
+          <Button
+            variant="tonal"
+            className="mb-3 w-full"
+            onClick={() => {
+              day.startEdit();
+              setMode(true);
+            }}
+          >
             <EditIcon width={20} height={20} /> Editar
           </Button>
         )}
-        <section
-          aria-label="Resumen"
-          className="relative mb-4 overflow-hidden rounded-xl rounded-tr-xxl bg-accent-container p-6 text-on-accent-container"
-        >
-          <Shape
-            name="sunny"
-            size={160}
-            className="absolute -top-12 -right-12 text-accent opacity-20"
-          />
-          <div className="relative flex flex-wrap gap-x-10 gap-y-4">
-            <Stat
-              value={`${progress.done}/${progress.total}`}
-              label="Series hechas"
-            />
-            <Stat value={`${log.effort}/5`} label="Esfuerzo" />
-          </div>
-        </section>
-        <ul className="stagger flex flex-col gap-3">
-          {/* Cada bloque en su contenedor, con la caja cuando el día venía
-              encadenado: el registro se lee igual que se hizo. */}
-          {groups.map((block, bi) => {
-            const card = (i: number) => {
-              const [seId, sets] = entries[i];
-              return (
-                <li key={seId}>
-                  <Card className="flex flex-col gap-2">
-                    <h2 className="text-title-m">{sets[0].exerciseName}</h2>
-                    <ul className="flex flex-col gap-1">
-                      {sets.map((s) => (
-                        <li
-                          key={s.setIndex}
-                          className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3"
-                        >
-                          <span aria-hidden="true" className="grid size-5">
-                            {mark(s.done)}
-                          </span>
-                          <span className="w-16 text-body-m text-on-surface-variant">
-                            Serie {s.setIndex + 1}
-                          </span>
-                          <span
-                            className={cx(
-                              "text-title-m tabular",
-                              !s.done && "text-on-surface-variant",
-                            )}
-                          >
-                            {formatSetText(s)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </Card>
-                </li>
-              );
-            };
-            return (
-              <Chain
-                key={`c${entries[block[0]][0]}`}
-                label={block.length > 1 ? blockLabel(block.length) : undefined}
-                style={{ ["--i" as string]: bi }}
-              >
-                {block.map(card)}
-              </Chain>
-            );
-          })}
-          {log.cardio.map((c, i) => (
-            <li
-              key={c.planSessionExerciseId}
-              style={{ ["--i" as string]: groups.length + i }}
-            >
-              <Card className="flex flex-col gap-2">
-                <h2 className="text-title-m">{c.exerciseName}</h2>
-                <p className="flex min-h-10 items-center gap-3 rounded-m bg-surface-container-high px-3">
-                  <span aria-hidden="true" className="grid size-5">
-                    {mark(c.done)}
-                  </span>
-                  <span className="text-title-m tabular">
-                    {c.distanceKm === null && c.durationMin === null
-                      ? "Hecho sin marcas"
-                      : `${c.distanceKm ?? "—"} km · ${c.durationMin ?? "—"} min`}
-                  </span>
-                </p>
-              </Card>
-            </li>
-          ))}
-          <li style={{ ["--i" as string]: groups.length + log.cardio.length }}>
-            <Card className="flex flex-col gap-3">
-              <h2 className="text-title-m">Esfuerzo percibido</h2>
-              <EffortDots effort={log.effort} />
-              {log.note && (
-                <p className="rounded-m bg-surface-container-high p-3 text-body-l">
-                  {log.note}
-                </p>
-              )}
-            </Card>
-          </li>
-        </ul>
+        <SummaryRows rows={loggedRows(log, view.session)} />
+        <Card className="mt-3 flex flex-col gap-3">
+          <h2 className="text-title-m">Esfuerzo percibido</h2>
+          <EffortDots effort={log.effort} />
+          {log.note && (
+            <p className="rounded-m bg-surface-container-high p-3 text-body-l">
+              {log.note}
+            </p>
+          )}
+        </Card>
       </div>
     );
   }
 
-  // state A — editable draft
+  // estado A — el resumen del día planificado. El registro vive en el modo
+  // sesión, que ocupa la pantalla y sustituye la página; el borrador sigue
+  // debajo, intacto («Salir» vuelve a él y «Terminar» es «Guardar»).
   const v = view;
+  // El ± de la distancia/tiempo del cardio parte de lo que haya y escribe la
+  // marca, que implica hecho (lo mismo que teclearla).
+  const stepCardio = (
+    id: number,
+    field: "distanceKm" | "durationMin",
+    delta: number,
+  ) => {
+    const cardio = v.cardio.find((c) => c.se.id === id);
+    day.setCardioValue(
+      id,
+      field,
+      String(Math.max(0, (cardio?.[field] ?? 0) + delta)),
+    );
+  };
 
-  // Modo interactivo: ocupa la pantalla y sustituye la página; el borrador
-  // sigue debajo, intacto («Salir» vuelve a él y «Terminar» es «Guardar»).
   if (mode)
     return (
       <SessionMode
@@ -1075,6 +1148,11 @@ function SesionView() {
         }
         onToggleNoWeight={(id) => day.toggleNoWeight(id)}
         onToggleCardio={(id) => day.toggleCardioDone(id)}
+        onCardioValue={day.setCardioValue}
+        onCardioStep={stepCardio}
+        onAddSet={(id) => day.addSet(id)}
+        onRemoveSet={(id) => day.removeSet(id)}
+        onCopySet={(id, index) => day.copyPrevious(id, index)}
         onExit={exitMode}
         onFinish={() => {
           setMode(false);
@@ -1082,12 +1160,31 @@ function SesionView() {
         }}
         canFinish={v.effort !== null}
         saving={v.pending}
+        // El esfuerzo y la nota cierran la sesión, así que van aquí: es lo
+        // último que se hace dentro del modo.
         finishControl={
-          <div className="flex flex-col gap-2">
-            <p className="text-center text-label-l text-on-surface-variant">
-              Esfuerzo percibido
-            </p>
-            <EffortDots effort={v.effort} onSelect={day.setEffort} />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <p className="text-center text-label-l text-on-surface-variant">
+                Esfuerzo percibido
+              </p>
+              {v.effort === null && (
+                <p className="text-center text-body-s text-on-surface-variant">
+                  Elige cómo fue para poder cerrar la sesión.
+                </p>
+              )}
+              <EffortDots effort={v.effort} onSelect={day.setEffort} />
+            </div>
+            <Field label="Nota de la sesión">
+              {(a) => (
+                <Textarea
+                  {...a}
+                  className="min-h-16"
+                  value={v.note}
+                  onChange={(e) => day.setNote(e.target.value)}
+                />
+              )}
+            </Field>
           </div>
         }
       />
@@ -1097,19 +1194,8 @@ function SesionView() {
     v.exercises.flatMap((ex) => ex.sets),
     v.cardio,
   );
-  const complete = isSessionComplete(v.exercises, v.cardio);
-  const openPending = v.exercises.find(
-    (ex) =>
-      day.expanded[ex.se.id] &&
-      ex.sets.some(
-        (s) => !s.done && isSetFilled(s, setFields(ex.metric, ex.noWeight)),
-      ),
-  );
-  // Los bloques del día (encadenados) y su orden: agrupan las tarjetas y dan el
-  // turno del escalonado.
-  const groups = blocks(v.exercises.map((ex) => ex.se));
   return (
-    <div className="pb-24">
+    <div className="pb-8">
       <Header
         date={date}
         name={v.session.name ?? "Sesión"}
@@ -1118,8 +1204,8 @@ function SesionView() {
       />
       {v.historyFailed && (
         <Alert tone="info" className="mb-3">
-          No se pudo cargar el histórico de últimos pesos; puedes registrarlo
-          igualmente a mano.
+          No se pudo cargar el histórico de últimos pesos: el registro empezará
+          sin esas marcas.
         </Alert>
       )}
       {v.submitError && <Alert className="mb-3">{v.submitError}</Alert>}
@@ -1129,388 +1215,14 @@ function SesionView() {
         onClick={() => setMode(true)}
       >
         <PlayIcon />
-        Empezar
+        {v.editing ? "Editar" : "Empezar"}
       </Button>
-      <ul className="stagger flex flex-col gap-3">
-        {/* Cada bloque en su contenedor, con la caja cuando encadena más de un
-            miembro: montar el día y registrarlo se leen igual. */}
-        {groups.map((block, bi) => {
-          const card = (idx: number) => {
-            const ex = v.exercises[idx];
-            const open = !!day.expanded[ex.se.id];
-            const helper = ex.previous ?? formatLast(ex.last);
-            const allDone = ex.sets.every((s) => s.done);
-            const fields = setFields(ex.metric, ex.noWeight);
-            return (
-              <li key={ex.se.id}>
-                <Card className={doneCard(allDone)}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <RowMark done={allDone}>{idx + 1}</RowMark>
-                      <div className="flex min-w-0 flex-col">
-                        <Link
-                          to={`/ejercicios/${ex.se.exerciseId}`}
-                          className="text-title-m text-e underline-offset-4 hover:underline"
-                        >
-                          {ex.se.exerciseName}
-                        </Link>
-                        {helper && (
-                          <span className="tabular text-body-s text-on-surface-variant">
-                            {helper}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {/* En móvil, «Sin peso» y «Registrar series» caen juntos a una
-                    línea propia: van centrados, porque el resto de la tarjeta
-                    (la marca, el nombre y la tira de casillas) empieza en el
-                    margen izquierdo y el par quedaba pegado al borde derecho.
-                    Desde `sm` la fila lleva también la tira y va al final, como
-                    el resto de cabeceras M3. */}
-                    <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-1 sm:justify-end">
-                      {/* «Sin peso» solo tiene sentido donde el kg es opcional
-                      (`weight_reps`): en `reps`/`time` no hay kilos y en
-                      `weight_time` la carga es parte del ejercicio. */}
-                      {ex.metric === "weight_reps" && (
-                        <span className="flex shrink-0 items-center gap-2 pr-2 text-label-l">
-                          <Switch
-                            aria-label={`Sin peso · ${ex.se.exerciseName}`}
-                            checked={ex.noWeight}
-                            onChange={() => day.toggleNoWeight(ex.se.id)}
-                          />
-                          Sin peso
-                        </span>
-                      )}
-                      {!open && (
-                        // Una sola línea: en móvil se lleva la suya (ancho completo)
-                        // y a partir de `sm` solo cae a otra si no cabe. El borde
-                        // desvanecido avisa de que hay más series.
-                        <ScrollStrip className="order-last flex w-full min-w-0 items-center gap-1 sm:order-none sm:w-auto">
-                          {ex.sets.map((s, i) => (
-                            <Checkbox
-                              key={i}
-                              className="shrink-0"
-                              aria-label={`${ex.se.exerciseName} serie ${i + 1}`}
-                              checked={s.done}
-                              disabled={!s.done && !isSetFilled(s, fields)}
-                              onChange={() => day.toggleDone(ex.se.id, i)}
-                            />
-                          ))}
-                        </ScrollStrip>
-                      )}
-                      <Button
-                        aria-label={`Series de ${ex.se.exerciseName}`}
-                        aria-expanded={open}
-                        variant="tonal"
-                        size="sm"
-                        className="shrink-0"
-                        onClick={() => day.toggleExpand(ex.se.id)}
-                      >
-                        {open ? "Ocultar" : "Registrar series"}
-                        <ChevronDownIcon
-                          width={20}
-                          height={20}
-                          className={cx(
-                            "transition-transform motion-spatial-fast",
-                            open && "rotate-180",
-                          )}
-                        />
-                      </Button>
-                    </div>
-                  </div>
-                  {open && (
-                    <>
-                      <ul className="stagger mt-3 flex flex-col gap-2">
-                        {ex.sets.map((s, i) => {
-                          const ctx = `${ex.se.exerciseName} serie ${i + 1}`;
-                          // La homóloga de la sesión anterior: solo si la hubo.
-                          const prev = ex.prevSets[i] ?? null;
-                          return (
-                            <li
-                              key={i}
-                              style={{ ["--i" as string]: i }}
-                              className={cx(
-                                "flex flex-col gap-2 rounded-l p-2 transition-colors motion-effects sm:flex-row sm:items-end",
-                                s.done
-                                  ? "bg-surface-container-lowest"
-                                  : "bg-surface-container-high",
-                              )}
-                            >
-                              <div className="flex items-center gap-1">
-                                <Checkbox
-                                  aria-label={ctx}
-                                  checked={s.done}
-                                  disabled={!s.done && !isSetFilled(s, fields)}
-                                  onChange={() => day.toggleDone(ex.se.id, i)}
-                                />
-                                <span className="w-14 text-label-l text-on-surface-variant">
-                                  Serie {i + 1}
-                                </span>
-                                {prev && (
-                                  // El valor de la serie homóloga y, a la vez, el
-                                  // botón que la copia (sus marcas, sin marcar).
-                                  <Button
-                                    variant="text"
-                                    size="md"
-                                    className="tabular shrink-0"
-                                    aria-label={`Copiar ${formatSetText(prev)} de la sesión anterior a ${ctx}`}
-                                    onClick={() =>
-                                      day.copyPrevious(ex.se.id, i)
-                                    }
-                                  >
-                                    <CopyIcon width={18} height={18} />
-                                    {formatSetText(prev)}
-                                  </Button>
-                                )}
-                              </div>
-                              <div
-                                className={cx(
-                                  "grid flex-1 gap-3",
-                                  fields.weight && (fields.reps || fields.time)
-                                    ? "grid-cols-2"
-                                    : "grid-cols-1",
-                                )}
-                              >
-                                {fields.weight && (
-                                  <Stepper
-                                    caption="Peso (kg)"
-                                    context={ctx}
-                                    value={s.weightKg}
-                                    step={2.5}
-                                    onValue={(val) =>
-                                      day.setDraftValue(
-                                        ex.se.id,
-                                        i,
-                                        "weightKg",
-                                        val,
-                                      )
-                                    }
-                                    onStep={(d) =>
-                                      day.stepValue(ex.se.id, i, "weightKg", d)
-                                    }
-                                  />
-                                )}
-                                {fields.reps && (
-                                  <Stepper
-                                    caption="Reps"
-                                    context={ctx}
-                                    value={s.reps}
-                                    step={1}
-                                    onValue={(val) =>
-                                      day.setDraftValue(
-                                        ex.se.id,
-                                        i,
-                                        "reps",
-                                        val,
-                                      )
-                                    }
-                                    onStep={(d) =>
-                                      day.stepValue(ex.se.id, i, "reps", d)
-                                    }
-                                  />
-                                )}
-                                {fields.time && (
-                                  <Stepper
-                                    caption="Segundos"
-                                    context={ctx}
-                                    value={s.durationSecs}
-                                    step={5}
-                                    onValue={(val) =>
-                                      day.setDraftValue(
-                                        ex.se.id,
-                                        i,
-                                        "durationSecs",
-                                        val,
-                                      )
-                                    }
-                                    onStep={(d) =>
-                                      day.stepValue(
-                                        ex.se.id,
-                                        i,
-                                        "durationSecs",
-                                        d,
-                                      )
-                                    }
-                                  />
-                                )}
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <Button
-                          variant="tonal"
-                          aria-label={`Quitar serie a ${ex.se.exerciseName}`}
-                          disabled={ex.sets.length <= MIN_SETS}
-                          onClick={() => day.removeSet(ex.se.id)}
-                        >
-                          − Quitar serie
-                        </Button>
-                        <Button
-                          variant="tonal"
-                          aria-label={`Añadir serie a ${ex.se.exerciseName}`}
-                          disabled={ex.sets.length >= MAX_SETS}
-                          onClick={() => day.addSet(ex.se.id)}
-                        >
-                          + Añadir serie
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </Card>
-              </li>
-            );
-          };
-          return (
-            <Chain
-              key={`c${v.exercises[block[0]].se.id}`}
-              label={block.length > 1 ? blockLabel(block.length) : undefined}
-              style={{ ["--i" as string]: bi }}
-            >
-              {block.map(card)}
-            </Chain>
-          );
-        })}
-
-        {v.cardio.map((c, i) => {
-          const Icon = c.se.kind === "bike" ? BikeIcon : RunIcon;
-          return (
-            <li key={c.se.id} style={{ ["--i" as string]: groups.length + i }}>
-              <Card className={doneCard(c.done)}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <RowMark done={c.done}>
-                      <Icon width={20} height={20} />
-                    </RowMark>
-                    <Link
-                      to={`/ejercicios/${c.se.exerciseId}`}
-                      className="text-title-m text-e underline-offset-4 hover:underline"
-                    >
-                      {c.se.exerciseName}
-                    </Link>
-                  </div>
-                  <label className="flex cursor-pointer items-center pr-3 text-label-l">
-                    <Checkbox
-                      aria-label={`${c.se.exerciseName} hecho`}
-                      checked={c.done}
-                      onChange={() => day.toggleCardioDone(c.se.id)}
-                    />
-                    Hecho
-                  </label>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-3 rounded-l bg-surface-container-high p-2">
-                  <Stepper
-                    caption="Distancia (km)"
-                    context={c.se.exerciseName}
-                    value={c.distanceKm}
-                    step={1}
-                    onValue={(val) =>
-                      day.setCardioValue(c.se.id, "distanceKm", val)
-                    }
-                    onStep={(d) =>
-                      day.setCardioValue(
-                        c.se.id,
-                        "distanceKm",
-                        String(Math.max(0, (c.distanceKm ?? 0) + d)),
-                      )
-                    }
-                  />
-                  <Stepper
-                    caption="Tiempo (min)"
-                    context={c.se.exerciseName}
-                    value={c.durationMin}
-                    step={5}
-                    onValue={(val) =>
-                      day.setCardioValue(c.se.id, "durationMin", val)
-                    }
-                    onStep={(d) =>
-                      day.setCardioValue(
-                        c.se.id,
-                        "durationMin",
-                        String(Math.max(0, (c.durationMin ?? 0) + d)),
-                      )
-                    }
-                  />
-                </div>
-              </Card>
-            </li>
-          );
-        })}
-
-        {/* Justo tras la última fila: donde está la vista al marcarla. */}
-        {complete && (
-          <li>
-            <RewardSeal sets={progress.done} />
-          </li>
-        )}
-
-        <li style={{ ["--i" as string]: groups.length + v.cardio.length }}>
-          <Card className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-title-m">Esfuerzo percibido</h2>
-              {v.effort === null && (
-                <p className="text-body-s text-on-surface-variant">
-                  Elige cómo fue para poder cerrar la sesión.
-                </p>
-              )}
-            </div>
-            <EffortDots effort={v.effort} onSelect={day.setEffort} />
-            <Field label="Nota de la sesión">
-              {(a) => (
-                <Textarea
-                  {...a}
-                  className="min-h-24"
-                  value={v.note}
-                  onChange={(e) => day.setNote(e.target.value)}
-                />
-              )}
-            </Field>
-          </Card>
-        </li>
-      </ul>
-
-      <div
-        role="toolbar"
-        aria-label="Acciones de la sesión"
-        className="toolbar fixed inset-x-0 bottom-24 z-30 mx-auto flex w-fit items-center gap-2 p-2 lg:bottom-6"
-      >
-        <Button
-          variant="text"
-          size="icon"
-          aria-label={
-            openPending
-              ? `Marcar todas las series de ${openPending.se.exerciseName}`
-              : "Marcar todo el ejercicio abierto"
-          }
-          disabled={!openPending}
-          onClick={() => openPending && day.completeExercise(openPending.se.id)}
-        >
-          <CheckIcon />
-        </Button>
-        <span className="px-2 text-title-m text-e">
-          <span aria-hidden="true" className="tabular">
-            {progress.done}/{progress.total}
-          </span>
-          <span className="sr-only">
-            {progress.done} de {progress.total} series hechas
-          </span>
-        </span>
-        {v.editing && (
-          <Button variant="text" disabled={v.pending} onClick={day.cancelEdit}>
-            Cancelar
-          </Button>
-        )}
-        <Button disabled={v.effort === null || v.pending} onClick={day.close}>
-          {v.editing
-            ? v.pending
-              ? "Guardando…"
-              : "Guardar"
-            : v.pending
-              ? "Cerrando…"
-              : "Cerrar sesión"}
-        </Button>
-      </div>
+      <SummaryRows rows={draftRows(v)} />
+      {isSessionComplete(v.exercises, v.cardio) && (
+        <div className="mt-3">
+          <RewardSeal sets={progress.done} />
+        </div>
+      )}
     </div>
   );
 }

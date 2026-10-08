@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { apiRequest, seededExercise } from "./helpers";
+import { apiRequest, finishSession, seededExercise } from "./helpers";
 
 /** Fecha futura propia del spec (las sesiones son UNIQUE por fecha): un offset
  *  grande para no chocar con las semanas que usan strength.spec.ts. */
@@ -23,35 +23,34 @@ test.describe("MÉTRICA — los ejercicios por tiempo se registran en segundos",
 
     await page.goto(`/sesion/${date}`);
     await expect(page.getByText("Core métrica").first()).toBeVisible();
+    // El resumen solo resume: se registra dentro del modo sesión.
+    await expect(page.getByLabel("Segundos · Plancha serie 1")).toHaveCount(0);
+    await page.getByRole("button", { name: "Empezar", exact: true }).click();
+    const mode = page.getByRole("dialog", { name: "Modo sesión" });
 
-    await page.getByRole("button", { name: "Series de Plancha" }).click();
     await expect(
-      page.getByLabel("Segundos · Plancha serie 1", { exact: true }),
+      mode.getByLabel("Segundos · Plancha serie 1", { exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByLabel("Peso (kg) · Plancha serie 1", { exact: true }),
+      mode.getByLabel("Peso (kg) · Plancha serie 1", { exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByLabel("Reps · Plancha serie 1", { exact: true }),
+      mode.getByLabel("Reps · Plancha serie 1", { exact: true }),
     ).toHaveCount(0);
     // Sin kg no hay conmutador «Sin peso» en un ejercicio por tiempo.
     await expect(
-      page.getByRole("switch", { name: "Sin peso · Plancha" }),
+      mode.getByRole("switch", { name: "Sin peso · Plancha" }),
     ).toHaveCount(0);
 
     // Escribir los segundos marca la serie sola y el registro la guarda.
-    await page
+    await mode
       .getByLabel("Segundos · Plancha serie 1", { exact: true })
       .fill("45");
     await expect(
-      page.getByRole("checkbox", { name: "Plancha serie 1" }),
+      mode.getByRole("checkbox", { name: "Plancha serie 1" }),
     ).toBeChecked();
 
-    await page.getByText("Moderado", { exact: true }).click();
-    await page
-      .getByRole("main")
-      .getByRole("button", { name: "Cerrar sesión" })
-      .click();
+    await finishSession(mode);
     await expect(page.getByText("Registrado")).toBeVisible();
     await expect(page.getByText("45 s")).toBeVisible();
   });

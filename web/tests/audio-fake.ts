@@ -6,6 +6,8 @@ export type FakeOscillator = {
   frequency: { value: number };
   started: boolean;
   stopped: boolean;
+  /** Cuándo se programa el final (`stop(when)`): mide la duración del tono. */
+  stopAt: number | null;
 };
 
 export type FakeAudio = {
@@ -37,6 +39,7 @@ export function createFakeAudio(): FakeAudio {
     frequency = new FakeParam();
     started = false;
     stopped = false;
+    stopAt: number | null = null;
     constructor() {
       oscillators.push(this);
     }
@@ -47,8 +50,9 @@ export function createFakeAudio(): FakeAudio {
     start() {
       this.started = true;
     }
-    stop() {
+    stop(when?: number) {
       this.stopped = true;
+      this.stopAt = when ?? 0;
     }
   }
 

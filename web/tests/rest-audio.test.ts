@@ -1,11 +1,19 @@
 // Pitido y keep-alive del modo sesión: sin Web Audio no rompe y, con él, el
-// keep-alive corre mientras la pausa está en marcha y el pitido arranca sus
-// dos tonos.
+// keep-alive corre mientras la pausa está en marcha, el aviso previo es un solo
+// tono corto y el pitido de fin arranca sus tres tonos.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { beep, startPauseAudio, stopPauseAudio } from "../src/lib/rest-audio";
+import {
+  beep,
+  startPauseAudio,
+  stopPauseAudio,
+  warnAhead,
+} from "../src/lib/rest-audio";
 import { createFakeAudio } from "./audio-fake";
 
 const audio = createFakeAudio();
+
+/** Los tonos que no son el keep-alive (60 Hz). */
+const tones = () => audio.oscillators.filter((o) => o.frequency.value !== 60);
 
 beforeEach(() => {
   audio.reset();
@@ -19,6 +27,7 @@ describe("rest-audio", () => {
   it("sin Web Audio no rompe ni suena", () => {
     expect(() => {
       startPauseAudio();
+      warnAhead();
       beep();
       stopPauseAudio();
     }).not.toThrow();
@@ -34,11 +43,28 @@ describe("rest-audio", () => {
     expect(keep?.stopped).toBe(true);
   });
 
-  it("el pitido arranca sus dos tonos", () => {
+  it("el pitido de fin arranca sus tres tonos", () => {
     vi.stubGlobal("AudioContext", audio.Ctor);
     beep();
-    expect(audio.oscillators.map((o) => o.frequency.value)).toEqual([
-      880, 1175,
-    ]);
+    expect(tones().map((o) => o.frequency.value)).toEqual([880, 1175, 1568]);
+  });
+
+  it("el aviso previo es un solo tono, distinto y más corto que los del fin", () => {
+    vi.stubGlobal("AudioContext", audio.Ctor);
+    warnAhead();
+    const [warn] = tones();
+    expect(tones()).toHaveLength(1);
+    expect(warn.frequency.value).not.toBe(60);
+
+    audio.reset();
+    beep();
+    const beeps = tones();
+    expect(beeps).toHaveLength(3);
+    // Distinto de todos los del fin…
+    expect(beeps.map((o) => o.frequency.value)).not.toContain(
+      warn.frequency.value,
+    );
+    // …y cada tono del fin dura más que el aviso.
+    for (const t of beeps) expect(warn.stopAt).toBeLessThan(t.stopAt ?? 0);
   });
 });
