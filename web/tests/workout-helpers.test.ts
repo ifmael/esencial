@@ -12,6 +12,8 @@ import {
   isValidDateStr,
   noteOrNull,
   parseDateEs,
+  pendingItems,
+  pendingLabel,
   previousMarks,
   previousSession,
   setFields,
@@ -344,6 +346,51 @@ describe("setsProgress", () => {
   });
   it("sin nada planificado es 0 de 0", () => {
     expect(setsProgress([], [])).toEqual({ done: 0, total: 0 });
+  });
+});
+
+describe("pendingItems", () => {
+  it("lista las series sin marcar (1-based) y salta los ejercicios completos", () => {
+    expect(
+      pendingItems([
+        {
+          id: 1,
+          name: "Press banca",
+          sets: [{ done: true }, { done: false }, { done: false }],
+          done: null,
+        },
+        {
+          id: 2,
+          name: "Remo",
+          sets: [{ done: true }, { done: true }],
+          done: null,
+        },
+      ]),
+    ).toEqual([{ id: 1, name: "Press banca", sets: [2, 3] }]);
+  });
+  it("el cardio sin marcar va sin series; el hecho no aparece", () => {
+    expect(
+      pendingItems([
+        { id: 3, name: "Cinta", sets: null, done: false },
+        { id: 4, name: "Bici", sets: null, done: true },
+      ]),
+    ).toEqual([{ id: 3, name: "Cinta", sets: [] }]);
+  });
+  it("sin nada pendiente devuelve la lista vacía", () => {
+    expect(
+      pendingItems([
+        { id: 5, name: "Press banca", sets: [{ done: true }], done: null },
+      ]),
+    ).toEqual([]);
+  });
+});
+
+describe("pendingLabel", () => {
+  it("nombra las series que faltan", () => {
+    expect(pendingLabel([1, 3])).toBe("Series 1, 3");
+  });
+  it("sin series es el cardio sin hacer", () => {
+    expect(pendingLabel([])).toBe("Sin hacer");
   });
 });
 

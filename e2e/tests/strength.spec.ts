@@ -68,6 +68,30 @@ async function settle(page: Page) {
   );
 }
 
+/** El contrato de «cabe entero» del modo sesión: ni el `section`, ni el cuerpo
+ *  que puede desplazar, ni la página desbordan su caja. `scrollHeight` reales. */
+async function modeScroll(page: Page) {
+  return page.evaluate(() => {
+    const section = document.querySelector<HTMLElement>(
+      'section[aria-label="Modo sesión"]',
+    );
+    if (!section) throw new Error("El modo sesión no está abierto");
+    const body = [...section.children].find((el) => {
+      const { overflowY } = getComputedStyle(el as HTMLElement);
+      return overflowY === "auto" || overflowY === "scroll";
+    }) as HTMLElement | undefined;
+    return {
+      sectionScroll: section.scrollHeight,
+      sectionClient: section.clientHeight,
+      bodyScroll: body?.scrollHeight ?? 0,
+      bodyClient: body?.clientHeight ?? 0,
+      documentScroll: document.documentElement.scrollHeight,
+      viewport: window.innerHeight,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+}
+
 /** Avanza el modo sesión hasta el ejercicio pedido (uno a uno, saltando la
  *  pausa que estuviera corriendo): el mismo camino que sigue la persona. */
 async function goToItem(mode: Locator, name: string) {
@@ -78,7 +102,7 @@ async function goToItem(mode: Locator, name: string) {
       await skip.click();
       continue;
     }
-    await mode.getByRole("button", { name: "Siguiente" }).click();
+    await mode.getByRole("button", { name: "Ejercicio siguiente" }).click();
   }
   throw new Error(`No llegué a ${name} dentro del modo sesión`);
 }
@@ -1069,25 +1093,37 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       .getByRole("switch", { name: "Sin peso · Press banca" })
       .uncheck();
 
+    // El modo pinta la serie en curso: se llega a la última con la flecha.
+    const nextSeries = mode.getByRole("button", { name: "Serie siguiente" });
+    await nextSeries.click();
+    await nextSeries.click();
     const reps3 = mode.getByLabel("Reps · Press banca serie 3", {
       exact: true,
     });
+    // Una marca en la última serie para ver de verdad qué copia el ➕ (sin
+    // marcarla: solo se escribe una de las dos marcas que pide la serie).
+    await reps3.fill("12");
     const lastMarks = await reps3.inputValue();
-    const addButton = mode.getByRole("button", {
+
+    // ➕/➖ viven en el menú flotante del ejercicio, que abre el botón de series.
+    const openMenu = mode.getByRole("button", {
+      name: "Series de Press banca",
+    });
+    const addButton = mode.getByRole("menuitem", {
       name: "Añadir serie a Press banca",
     });
-    await addButton.click();
-    // El ➕ nace con las marcas de la última serie.
-    await expect(
-      mode.getByLabel("Reps · Press banca serie 4", { exact: true }),
-    ).toHaveValue(lastMarks);
-
-    // Móvil: los dos botones caben (objetivo táctil de 48 px, sin desborde).
-    await page.setViewportSize({ width: 390, height: 844 });
-    const removeButton = mode.getByRole("button", {
+    const removeButton = mode.getByRole("menuitem", {
       name: "Quitar serie a Press banca",
     });
+
+    // Móvil: los dos items del menú caben (objetivo táctil de 48 px, sin
+    // desborde) y la página no se sale de ancho.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openMenu.click();
     await expect(removeButton).toBeVisible();
+    // La entrada del menú es una animación: hasta que no acaba, su caja aún
+    // está escalada y mide menos de lo que mide en reposo.
+    await settle(page);
     const box = await addButton.boundingBox();
     if (!box) throw new Error("el ➕ no tiene caja");
     expect(box.x + box.width).toBeLessThanOrEqual(390);
@@ -1095,6 +1131,13 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
+
+    // El ➕ nace con las marcas de la última serie (y cierra el menú).
+    await addButton.click();
+    await nextSeries.click();
+    await expect(
+      mode.getByLabel("Reps · Press banca serie 4", { exact: true }),
+    ).toHaveValue(lastMarks);
     await page.setViewportSize({ width: 1280, height: 720 });
 
     await finishSession(mode);
@@ -1118,8 +1161,9 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     // Corregir: quitar la última serie también reescribe el plan.
     await page.getByRole("button", { name: "Editar" }).click();
     const edit = page.getByRole("dialog", { name: "Modo sesión" });
+    await edit.getByRole("button", { name: "Series de Press banca" }).click();
     await edit
-      .getByRole("button", { name: "Quitar serie a Press banca" })
+      .getByRole("menuitem", { name: "Quitar serie a Press banca" })
       .click();
     await finishSession(edit);
     await expect(page.getByText("Registrado")).toBeVisible();
@@ -1178,28 +1222,39 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
       exact: true,
     });
 
-    // El valor es el de la serie homóloga, y solo donde la había: la 3 no.
+    // El valor es el de la serie homóloga, y solo donde la había: la 3 no. El
+    // modo pinta la serie en curso, así que se recorre con las flechas.
+    const nextSeries = mode.getByRole("button", { name: "Serie siguiente" });
+    const prevSeries = mode.getByRole("button", { name: "Serie anterior" });
     const chip1 = mode.getByRole("button", {
       name: "Copiar 60×10 de la sesión anterior a Press banca serie 1",
     });
     await expect(chip1).toBeVisible();
+    await nextSeries.click();
     await expect(
       mode.getByRole("button", {
         name: "Copiar 55×6 de la sesión anterior a Press banca serie 2",
       }),
     ).toBeVisible();
+    await nextSeries.click();
     await expect(
       mode.getByRole("button", { name: /a Press banca serie 3$/ }),
     ).toHaveCount(0);
+    // Vuelta a la primera serie para copiar la suya.
+    await prevSeries.click();
+    await prevSeries.click();
+    await expect(chip1).toBeVisible();
 
     await chip1.click();
     await expect(reps1).toHaveValue("10");
     await expect(weight1).toHaveValue("60");
     await expect(box1).not.toBeChecked(); // copiar no marca la serie
     // Solo esa serie: la 2 sigue con lo precargado por /last (55×6).
+    await nextSeries.click();
     await expect(
       mode.getByLabel("Reps · Press banca serie 2", { exact: true }),
     ).toHaveValue("6");
+    await prevSeries.click();
 
     // En móvil el botón cabe en la fila, mide lo que un objetivo táctil y ni la
     // tarjeta ni la página se salen de ancho.
@@ -1238,7 +1293,7 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
     });
   });
 
-  test("en móvil las series caben en una línea, con scroll e indicador", async ({
+  test("con veinte series el modo cabe entero y pinta solo la serie en curso (móvil)", async ({
     page,
   }, testInfo) => {
     const press = await seededExercise(page.request, "Press banca");
@@ -1254,48 +1309,76 @@ test.describe("STRENGTH — sesión del día con plantillas y cardio", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/sesion/${date}`);
-    // El resumen no lleva casillas: la tira vive en el modo.
+    // El resumen no lleva casillas: el modo pinta solo la serie en curso.
     await expect(page.getByRole("checkbox")).toHaveCount(0);
     await page.getByRole("button", { name: "Empezar", exact: true }).click();
     const mode = page.getByRole("dialog", { name: "Modo sesión" });
     await expect(
       mode.getByRole("checkbox", { name: "Press banca serie 1", exact: true }),
     ).toBeVisible();
+    // La base es compartida: «Sin peso» sale de lo último registrado, así que
+    // se apaga para poder escribir los kilos de la última serie.
+    await mode
+      .getByRole("switch", { name: "Sin peso · Press banca" })
+      .uncheck();
 
-    // Una sola línea: las 20 casillas comparten altura.
-    const tops = await mode
-      .getByRole("checkbox")
-      .evaluateAll((els) =>
-        els.map((el) => Math.round(el.getBoundingClientRect().top)),
-      );
-    expect(tops).toHaveLength(20);
-    expect(new Set(tops).size).toBe(1);
+    // Una sola casilla —la de la serie en curso— y nada que desplace en
+    // horizontal: la tira de veinte casillas del encabezado ya no existe.
+    await expect(
+      mode.getByRole("checkbox", { name: / serie \d+$/ }),
+    ).toHaveCount(1);
+    const strips = await mode.evaluate(
+      (section) =>
+        [...section.querySelectorAll<HTMLElement>("*")].filter((el) => {
+          const { overflowX } = getComputedStyle(el);
+          return (
+            (overflowX === "auto" || overflowX === "scroll") &&
+            el.scrollWidth > el.clientWidth + 1
+          );
+        }).length,
+    );
+    expect(strips).toBe(0);
 
-    // Ni la tira ni la página se salen: lo que sobra se desplaza.
-    const strip = mode.locator("[data-edge]");
-    const width = await strip.evaluate((el) => ({
-      content: el.scrollWidth,
-      visible: el.clientWidth,
-    }));
-    expect(width.content).toBeGreaterThan(width.visible);
-    // Se lleva su propia parte de la fila del encabezado y un ancho útil
-    // (unas cuatro casillas de las 20).
-    expect(width.visible).toBeGreaterThan(150);
-    const stripBox = await strip.boundingBox();
-    const modeBox = await mode.boundingBox();
-    if (!stripBox || !modeBox) throw new Error("sin caja que medir");
-    expect(stripBox.x).toBeGreaterThanOrEqual(modeBox.x);
-    expect(stripBox.x + stripBox.width).toBeLessThanOrEqual(
-      modeBox.x + modeBox.width,
+    // Veinte series caben enteras: ni el modo, ni su cuerpo, ni la página
+    // tienen scroll vertical (antes la tira desplazaba y el pie se caía).
+    const fits = await modeScroll(page);
+    expect(fits.sectionScroll).toBeLessThanOrEqual(fits.sectionClient);
+    expect(fits.bodyScroll).toBeLessThanOrEqual(fits.bodyClient);
+    expect(fits.documentScroll).toBeLessThanOrEqual(fits.viewport);
+    expect(fits.pageWidth).toBeLessThanOrEqual(390);
+
+    // Se recorren las veinte con la flecha: el contador del nombre y el de la
+    // fila van juntos y la última serie apaga la flecha de la derecha.
+    const next = mode.getByRole("button", { name: "Serie siguiente" });
+    for (let n = 1; n < 20; n += 1) await next.click();
+    await expect(
+      mode.getByRole("heading", { name: "Serie 20/20", exact: true }),
+    ).toBeVisible();
+    await expect(mode.getByText("20/20", { exact: true })).toBeVisible();
+    await expect(next).toBeDisabled();
+
+    // La vigésima se puede registrar (marcas completas) y cierra la sesión: es
+    // el único ejercicio y su última serie.
+    await mode
+      .getByLabel("Peso (kg) · Press banca serie 20", { exact: true })
+      .fill("50");
+    await mode
+      .getByLabel("Reps · Press banca serie 20", { exact: true })
+      .fill("5");
+    await expect(
+      mode.getByRole("checkbox", { name: "Press banca serie 20", exact: true }),
+    ).toBeChecked();
+    // El ejercicio solo cuenta en el aro con TODAS sus series hechas (solo hay
+    // una marcada), y sin descanso programado no arranca ninguna pausa.
+    await expect(
+      mode.getByRole("progressbar", { name: "0 de 1 ejercicios hechos" }),
+    ).toBeVisible();
+    await expect(mode.getByRole("progressbar", { name: /^Pausa/ })).toHaveCount(
+      0,
     );
     expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
-    ).toBeLessThanOrEqual(390);
-    // El indicador: al principio avisa por la derecha…
-    await expect(strip).toHaveAttribute("data-edge", "end");
-    // …y al llegar al final, por la izquierda.
-    await strip.evaluate((el) => el.scrollTo(el.scrollWidth, 0));
-    await expect(strip).toHaveAttribute("data-edge", "start");
+      await page.evaluate(() => document.documentElement.scrollHeight),
+    ).toBeLessThanOrEqual(844);
   });
 
   /** Lunes de la semana ISO (espejo de week-grid.tsx). */

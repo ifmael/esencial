@@ -455,46 +455,50 @@ que abre el **modo sesión** (`components/session-mode.tsx`): una capa
 `fixed inset-0` que sustituye la página — `role="dialog"`, y el aspa (o Escape)
 piden **confirmación** antes de salir («¿Salir del modo sesión?»), sin tocar el
 borrador (salir de una corrección vuelve al registro que se estaba corrigiendo).
-El encabezado lleva a la izquierda el **aro de progreso**
-(`WavyRing` con `waveOnly`: solo el arco que avanza, sin círculo de fondo) con
-«N / M» dentro — **empieza en 0** y sube al registrar cada ejercicio entero — y
-a la derecha el aspa. Un ejercicio
-a la vez en el orden del día: nombre, objetivo, «Sin peso» y **sus series
-editables** (los mismos `Stepper`; se marca al
-quedar completa y la pausa arranca al quedar hecha, la marques a mano o
-escribiendo sus marcas). Las **casillas de las series van en el encabezado del
-ejercicio**, en una sola tira de una línea (`ScrollStrip` + `Checkbox`) junto a
-«Sin peso»: cada fila de serie se queda con su número, su botón de **copiar la
-serie homóloga** y sus steppers (a 390 px un checkbox de 48 px no
-comparte fila con dos steppers, así que ocupaba una línea por serie). Lo cubre
-`e2e/tests/session-mode.spec.ts` (a 390 px con doce series: la tira en el
-encabezado, ninguna casilla en las filas y la pausa que arranca la casilla que
-se pulsa).
+**Todo el modo cabe en la ventana: no hay scroll vertical** (medido a 390×844 y
+a 1280×800 con un ejercicio de doce series y con el cierre abierto:
+`scrollHeight === clientHeight` en la sección). De ahí la disposición: tres
+filas de cabecera y **una sola serie en pantalla**, que se recorre con flechas.
 
-Esa cabecera va **apretada y en una sola fila** (medido a 390 px con «Sentadilla
-a una pierna» y doce series: 108 px, antes 280): el nombre en `text-title-l`
-—en `display-s` (36 px) un nombre largo partía en dos líneas—, y debajo,
-juntos en una fila, «Sin peso» y la tira de casillas (`items-center`). **El
-recuento de series no se repite**: `objective` solo lo pinta el cardio, que no
-tiene tira (ahí va en la misma fila que su «Hecho»); en fuerza lo dicen las
-casillas y cada fila de la lista lleva su «Serie N». Lo cubre
-`measureExerciseHeader` en `e2e/tests/session-mode.spec.ts` (una fila, nombre de
-una línea y `font-size` ≤ 24 px, el bloque ≤ 140 px y sin texto de recuento) y
+- **Encabezado** (una fila): a la izquierda el **aro de progreso** (`WavyRing`
+  con `waveOnly`: solo el arco que avanza, sin círculo de fondo) con «N / M»
+  dentro — **empieza en 0** y sube al registrar cada ejercicio entero —, en
+  medio el **ejercicio en curso** (al pulsarlo, el listado de la sesión para
+  saltar a cualquiera) y a la derecha el aspa. Debajo va el **nombre de la
+  sesión** (`sessionName`; sin nombre, «Sesión»).
+- **Fila del ejercicio**: `‹ nombre m/n ⊕ ›` — las flechas
+  (`aria-label` «Ejercicio anterior»/«Ejercicio siguiente») van al de delante y
+  al de detrás en el orden del día, `m/n` son la serie en curso y las totales
+  de ese ejercicio, y el botón de al lado abre un **menú flotante** (`role="menu"`,
+  la piel `.menu`) con «Añadir serie» (copia las marcas de la última) y
+  «Quitar serie» (la última; se apagan en 20 y en 1). Se cierra con Escape (el
+  foco vuelve a su botón) o con un toque fuera.
+- **Fila de la serie**: `‹ Serie m/n ›` navega por las series del ejercicio y su
+  `Checkbox` (`aria-label="{ejercicio} serie {i}"`) marca/desmarca **la que se
+  está viendo** — las mismas reglas de siempre: se marca sola al quedar
+  completa, y va deshabilitada mientras le falten marcas.
+- Debajo, los campos de esa serie: «Sin peso» (solo `weight_reps`), los
+  `Stepper` que pida la métrica (kg, reps y/o segundos) y el botón de **copiar
+  la serie homóloga**, que ahora es el de la serie en curso. El cardio va sin
+  fila de serie: su objetivo, su «Hecho» y sus dos steppers (distancia y
+  tiempo).
+
+La tira de casillas del encabezado (`ScrollStrip` + una casilla por serie) ya no
+existe: con una serie en pantalla sobran las casillas y el recuento de series
+vive en los dos `m/n`. Antes el cuerpo tenía scroll y centraba su contenido con
+márgenes automáticos (`my-auto`, nunca `justify-center`: con más series de las
+que caben, el centrado deja el desborde de arriba inaccesible); el patrón sigue
+en el bloque interno, pero ya no hay nada que desborde. Lo cubren
+`e2e/tests/session-mode.spec.ts` (las dos anchuras: cero scroll vertical,
+encabezado en una fila, la navegación de ejercicio y de serie, el menú de
+series, el play/pausa del descanso y el cierre con aviso) y
 `web/tests/sesion.test.tsx`.
 
-El cuerpo (bajo el encabezado, con scroll) centra su contenido con **márgenes
-automáticos** —un bloque interno con `my-auto`—, nunca con `justify-center` en
-el contenedor: con más series de las que caben, el centrado deja el desborde de
-arriba inaccesible (el nombre del ejercicio salía cortado bajo la cabecera),
-mientras que los márgenes automáticos se anulan solos al desbordar y el scroll
-arranca en el principio. Lo cubre `e2e/tests/session-mode.spec.ts`, que mide la
-posición del nombre y los dos huecos del centrado (no una clase).
-
-- **Todo lo que se registra vive aquí**: las casillas de las series —una tira por
-  ejercicio—, los steppers de cada fila (kg, reps y/o segundos según la métrica),
-  «Sin peso», el **cardio** con sus dos steppers de distancia y tiempo
-  (opcionales; escribir una marca implica hecho, como antes en el borrador), los
-  **➕/➖ de series** (al cerrar, el plan del día sigue al borrador: ver «Añadir y
+- **Todo lo que se registra vive aquí**: la casilla de la serie en curso, los
+  steppers de esa serie (kg, reps y/o segundos según la métrica), «Sin peso», el
+  **cardio** con sus dos steppers de distancia y tiempo (opcionales; escribir una
+  marca implica hecho, como antes en el borrador), el **menú ➕/➖ de series** (al
+  cerrar, el plan del día sigue al borrador: ver «Añadir y
   quitar series») y la **copia de la serie homóloga** de la sesión anterior. Lo
   cubren `web/tests/sesion.test.tsx` y `e2e/tests/strength.spec.ts`.
 - **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
@@ -516,24 +520,26 @@ posición del nombre y los dos huecos del centrado (no una clase).
   series» si solo falta la de entre series). La **última serie del último
   ejercicio no arranca nada y corta la pausa que estuviera corriendo** (sin
   pitido): la sesión ya se acabó. «Descanso» la arranca a
-  mano, «Saltar» la corta (sin pitido) y
-  «Siguiente» pasa de ejercicio. La barra y su cuenta atrás van **pegadas al
-  encabezado** (con el «Saltar» debajo), no al fondo del contenido: con una
-  lista de series que desborda el pie quedaba fuera de la pantalla justo cuando
-  es lo único que importa. Ocupan su propio hueco entre el encabezado y el
-  cuerpo, así que se ven sin desplazar nada y el scroll del cuerpo no las mueve.
-  Lo ata `e2e/tests/session-mode.spec.ts` (la fila de la barra arranca a ≤16 px
-  del encabezado, el bloque entero dentro del viewport y su sitio intacto tras
-  desplazar el cuerpo, a 390 px y a 1280 con ocho series). La cuenta es por marca
+  mano, «Saltar» la corta (sin pitido) y las flechas del ejercicio pasan de uno a
+  otro. La barra va en el cuerpo, bajo los campos de la serie, con el **play/pausa**
+  al principio y **los segundos que quedan al final**: el play/pausa congela el
+  reloj (y el keep-alive) y lo reanuda desde lo que quedaba. Como el modo no
+  desplaza —todo cabe en la ventana—, la pausa ya no necesita ir pegada al
+  encabezado: se ve entera sin mover nada. Lo ata `e2e/tests/session-mode.spec.ts`
+  (el bloque visible dentro del viewport y sin scroll, a 390 px y a 1280). La
+  pausa de entre series **deja el cursor en la serie siguiente** a la marcada
+  (`cursorSet`), así que el descanso no devuelve a la serie ya hecha; la de fin
+  lo deja en la primera del ejercicio que entra y la pedida a mano donde estabas. La
+  cuenta es por marca
   de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
-- **«A continuación: …»**: bajo la lista de series (o del «Hecho» del cardio), el
+- **«A continuación: …»**: bajo la serie en curso (o del «Hecho» del cardio), el
   nombre del siguiente ejercicio **por orden** —el de al lado en el día, no el
   siguiente pendiente— cuando al ejercicio activo solo le queda su última serie
   (marcada la última también, que es lo que pasa mientras corre la pausa de fin
   de ejercicio) o el cardio está hecho; si no queda ninguno detrás, dice
   «Último ejercicio». Un ejercicio de una sola serie lo anuncia desde que se
-  abre. Es lo último del cuerpo, y la pausa —que vive bajo el encabezado— no le
+  abre. Es lo último del cuerpo, y la pausa —que vive ahí mismo, encima— no le
   quita el sitio. Lo cubre `e2e/tests/session-mode.spec.ts`.
 - **El encabezado lleva el ejercicio en curso** y, al pulsarlo, un `Dialog`
   (`mobile="sheet"`) con **todos** los ejercicios de la sesión en su orden: cada
@@ -543,7 +549,9 @@ posición del nombre y los dos huecos del centrado (no una clase).
   el listado y salta a ese ejercicio. El **salto no toca la pausa** que esté
   corriendo: sigue la misma —la pausa guarda el nombre del ejercicio con el que
   nació, así que un salto no la renombra— y pita al agotarse, y en una de fin de
-  ejercicio avanza desde donde estés. El nombre del encabezado se recorta: con
+  ejercicio avanza desde donde estés. Cualquier cambio de ejercicio (las flechas,
+  el listado) vuelve a su primera serie; dentro de un bloque se mantiene la vuelta
+  que se acaba de marcar. El nombre del encabezado se recorta: con
   nombres largos la fila no crece. Lo cubren `web/tests/sesion.test.tsx` y
   `e2e/tests/session-mode.spec.ts` (390 px).
 - **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): un **aviso previo**
@@ -563,9 +571,12 @@ posición del nombre y los dos huecos del centrado (no una clase).
 - **Cerrar la sesión**: «Terminar» abre el cierre en el pie —el selector de
   esfuerzo y la nota de la sesión (`finishControl`, que pinta `sesion.tsx`)— y, con
   el esfuerzo elegido, **vuelve a «Terminar»** para guardar (POST, o PUT al
-  corregir). El pie se queda ligero mientras se entrena: con el formulario siempre
-  a la vista, a 390 px un ejercicio de una sola serie dejaba el cuerpo en ~10 px
-  de hueco, así que el cierre **se pide, no se impone** (y «Seguir» lo esconde sin
+  corregir). Con algo pendiente, antes **avisa**: un `Dialog` («Series sin
+  completar») lista, ejercicio a ejercicio, lo que queda —sus series sin marcar
+  (`pendingItems`/`pendingLabel`, en `lib/workout.ts`; el cardio sin hacer sale
+  como «Sin hacer»)— y se puede seguir entrenando o cerrar igual. El pie se queda
+  ligero mientras se entrena: el cierre **se pide, no se impone** (y «Seguir» lo
+  esconde sin
   perder la nota). Como el esfuerzo es lo único que la API exige, así también se
   cierra una sesión **a medias** (la página ya no tiene barra de acciones: era el
   único sitio donde se cerraba). Salir sin terminar deja el borrador intacto.

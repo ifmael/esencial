@@ -369,6 +369,36 @@ export function setsProgress(
   return { done: all.filter((s) => s.done).length, total: all.length };
 }
 
+/** Lo que hace falta para saber qué queda pendiente de una sesión. */
+export type PendingItem = {
+  id: number;
+  name: string;
+  /** Series del ejercicio; null en el cardio. */
+  sets: readonly { done: boolean }[] | null;
+  done: boolean | null;
+};
+
+/** Lo pendiente por ejercicio, para el aviso de «Terminar»: las series sin
+ *  marcar (1-based) o el cardio sin hacer (lista vacía). Los ejercicios
+ *  completos no aparecen. */
+export function pendingItems(
+  items: readonly PendingItem[],
+): { id: number; name: string; sets: number[] }[] {
+  return items.flatMap((it) => {
+    if (!it.sets)
+      return it.done === true ? [] : [{ id: it.id, name: it.name, sets: [] }];
+    const missing = it.sets.flatMap((s, i) => (s.done ? [] : [i + 1]));
+    return missing.length === 0
+      ? []
+      : [{ id: it.id, name: it.name, sets: missing }];
+  });
+}
+
+/** «Series 1, 3» o «Sin hacer» (el cardio sin marcar). */
+export function pendingLabel(sets: readonly number[]): string {
+  return sets.length === 0 ? "Sin hacer" : `Series ${sets.join(", ")}`;
+}
+
 /** Sesiones registradas sobre las planificadas de la semana. */
 export function weekProgress(sessions: readonly { status: string }[]): {
   logged: number;
