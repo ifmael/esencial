@@ -724,6 +724,10 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] Módulo `state`: estados, transiciones válidas y estado en
       `~/.orquestator/ESN-123/state.json` (host); escritura atómica, cerrojo y
       comandos `status`/`block`/`resume` con `--dry-run` (2026-10-22).
+- [x] `start`: leer la issue (exige `Ready`), mantener el espejo bare, clonar sin
+      remoto con `--local --no-hardlinks`, crear la rama `ESN-NNN-slug`, escribir
+      `brief.md` y los artefactos, pasar a In Progress y comentar la rama; tests con
+      HTTP simulado y git real; `--dry-run` sin efectos (2026-10-22).
 - [ ] Lock de migraciones: en `check`, la primera vez que el diff toca
       `api/migrations/**`, bloquea si otra tarea tiene una migración abierta; la reserva
       vive en el estado del host (no en `start`).
@@ -910,6 +914,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | CLI con estado, `status`/`block`/`resume` y `start` (Linear + clon + rama + brief); 38 tests y `--dry-run` | El espejo bare necesita el refspec de `remote.origin.fetch` para actualizarse | `check` y `container` |
 | 2026-10-22 | M1 | **M1 cerrado**: imagen con pnpm, Chromium, Hermes v0.22.4 y store; smoke offline (624 tests, 89 e2e) y límites validados; proxy con la clave de nan | Hermes se instala como `node` y usa `/opt/hermes/home`; corepack no sirve sin red | M2: CLI |
 
 ## Preguntas abiertas

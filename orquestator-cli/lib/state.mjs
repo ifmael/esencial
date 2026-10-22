@@ -81,12 +81,12 @@ export function statePath(key) {
   return path.join(dirFor(key), "state.json");
 }
 
-export function taskDir(key) {
-  return path.join(dirFor(key), "task");
+export function taskDir(key, base = home()) {
+  return path.join(dirFor(key, base), "task");
 }
 
-export function repoDir(key) {
-  return path.join(dirFor(key), "repo");
+export function repoDir(key, base = home()) {
+  return path.join(dirFor(key, base), "repo");
 }
 
 function now() {

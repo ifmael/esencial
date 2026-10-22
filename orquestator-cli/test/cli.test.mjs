@@ -66,6 +66,22 @@ test("resume devuelve al estado anterior", async () => {
   assert.equal(load("ESN-9").state, "In Progress");
 });
 
+test("start --dry-run no escribe estado ni clon", async () => {
+  const r = await run(["start", "ESN-1", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /dry-run/);
+  assert.match(r.out, /In Progress/);
+  assert.equal(load("ESN-1"), null);
+  assert.equal(fs.existsSync(path.join(dir, "ESN-1")), false);
+});
+
+test("start se niega si la tarea ya está empezada", async () => {
+  save("ESN-1", transition(createState("ESN-1"), "In Progress"));
+  const r = await run(["start", "ESN-1"]);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /ya está empezada/);
+});
+
 test("--dry-run no escribe nada", async () => {
   save("ESN-9", transition(createState("ESN-9"), "In Progress"));
   const r = await run(["block", "ESN-9", "x", "--dry-run"]);

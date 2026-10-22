@@ -1,3 +1,5 @@
+import { git } from "./checkout.mjs";
+import { linearKey } from "./config.mjs";
 import {
   assertKey,
   block,
@@ -10,11 +12,13 @@ import {
   taskDir,
   withLock,
 } from "./state.mjs";
+import { mirrorPath, startTask } from "./task.mjs";
 
 export const USAGE = `orquestator — flujo de tareas de Esencial
 
 Uso:
-  orquestator status [ESN-123]   estado de una tarea (o de todas)
+  orquestator start ESN-123       abre la tarea: clon, rama y brief
+  orquestator status [ESN-123]    estado de una tarea (o de todas)
   orquestator block ESN-123 <pregunta>
   orquestator resume ESN-123
 
@@ -53,6 +57,47 @@ export async function main(argv, io = {}) {
 
   try {
     switch (command) {
+      case "start": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        if (dryRun) {
+          line(
+            stdout,
+            `[dry-run] ${key}: leer la issue en Linear (debe estar en Ready)`,
+          );
+          line(stdout, `[dry-run] espejo ${mirrorPath()} (crear o actualizar)`);
+          line(
+            stdout,
+            `[dry-run] clonar en ${repoDir(key)} y crear la rama ${key}-<slug>`,
+          );
+          line(
+            stdout,
+            `[dry-run] escribir ${taskDir(key)}/brief.md y los artefactos`,
+          );
+          line(
+            stdout,
+            `[dry-run] Linear: In Progress y comentario con la rama`,
+          );
+          return 0;
+        }
+        if (load(key))
+          throw new Error(`${key} ya está empezada; usa status o resume`);
+        let source;
+        try {
+          source = git(["remote", "get-url", "origin"], { cwd: process.cwd() });
+        } catch {
+          throw new Error(
+            "Ejecuta el CLI desde el repo (no encuentro el remoto origin)",
+          );
+        }
+        const state = await startTask(key, {
+          apiKey: linearKey(),
+          source,
+          out: (text) => line(stdout, text),
+        });
+        describe(stdout, state);
+        return 0;
+      }
       case "status": {
         if (!rest[0]) {
           const tasks = list();
