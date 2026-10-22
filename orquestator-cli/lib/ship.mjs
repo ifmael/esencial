@@ -2,6 +2,7 @@ import { artifactPath, listArtifacts, readArtifact } from "./artifacts.mjs";
 import {
   commentArgs,
   editArgs,
+  reviewArgs,
   runGh,
   statusArgs,
   viewArgs,
@@ -49,9 +50,12 @@ export function ship(
   const filled = new Map(
     listArtifacts(key, base).map((a) => [a.name, a.filled]),
   );
-  for (const name of ["checks.md", "review.md"]) {
-    if (filled.get(name))
-      ghRun(commentArgs(pr.number, artifactPath(key, name, base)));
+  if (filled.get("checks.md")) {
+    ghRun(commentArgs(pr.number, artifactPath(key, "checks.md", base)));
+  }
+  // review.md va como review (gh pr review --comment), no como comentario suelto.
+  if (filled.get("review.md")) {
+    ghRun(reviewArgs(pr.number, artifactPath(key, "review.md", base)));
   }
 
   const description = guard.needsApproval ? "aprobado" : "sin rutas protegidas";

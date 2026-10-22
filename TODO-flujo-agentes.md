@@ -752,11 +752,10 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] Cobertura: `pnpm test:coverage` en `api` (istanbul; v8 no funciona en el pool de
       workers) y `web` (v8), con `coverage.thresholds` —api 95/90/99/97 y web
       86/85/86/88—, paso en CI y en `check` (2026-10-22).
-- [x] `pr` base: push de la rama a `origin` desde el checkout principal, PR con
-      `pr-body.md` (crear o editar si ya existe), status `guard` sobre el SHA y
-      bloqueo sin aprobación; solo publica `guard`, nunca `migracion` (2026-10-22).
-- [ ] `pr` resto: `gh pr review` y el filtrado de comentarios por autor (van con
-      `pr-review`).
+- [x] `pr`: push de la rama a `origin` desde el checkout principal, PR con
+      `pr-body.md` (crear o editar), `gh pr review --comment` con `review.md`,
+      `checks.md` como comentario, status `guard` sobre el SHA y bloqueo sin
+      aprobación; solo publica `guard`, nunca `migracion` (2026-10-22).
 - [x] `ship`: editar el cuerpo de la PR, comentar `checks.md` y `review.md` si tienen
       contenido y reponer el status `guard` sobre el SHA de la PR si la aprobación sigue
       valiendo (2026-10-22).
@@ -931,6 +930,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | `review.md` se publica como review de GitHub (no como comentario) | El filtrado por autor ya estaba en `fix --humano` | M3: perfiles |
 | 2026-10-22 | M2 | Sonda RED con worktree de main, heurísticas de tests debilitados y `approve --pr`; 115 tests | Un test que pasa contra main se anota, no bloquea | M3: perfiles |
 | 2026-10-22 | M2 | `spec` crea la issue en `Spec review`; M2 queda cerrado salvo lo que depende de agentes | Se crea con el cuerpo de un fichero (`--cuerpo`), sin plantilla propia | M3: perfiles |
 | 2026-10-22 | M2 | `fix`: rondas por origen, `--humano` filtrado por autor y `Blocked` al agotar; 100 tests | Las rondas humanas no gastan las del agente | M3: perfiles |

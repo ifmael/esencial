@@ -59,3 +59,7 @@ export function viewArgs(branch) {
 export function commentArgs(pr, bodyFile) {
   return ["pr", "comment", String(pr), "--body-file", bodyFile];
 }
+
+export function reviewArgs(pr, bodyFile) {
+  return ["pr", "review", String(pr), "--comment", "--body-file", bodyFile];
+}

@@ -106,7 +106,8 @@ test("ship edita el body, comenta review/checks y publica el status", () => {
   assert.equal(result.sha, "sha9");
   const kinds = calls.map((a) => a[1]);
   assert.ok(kinds.includes("edit"));
-  assert.equal(kinds.filter((k) => k === "comment").length, 2);
+  assert.equal(kinds.filter((k) => k === "comment").length, 1);
+  assert.equal(kinds.filter((k) => k === "review").length, 1);
   const status = calls.find((a) => a[0] === "api");
   assert.ok(status[1].endsWith("/sha9"));
 });
@@ -123,6 +124,7 @@ test("ship omite los comentarios vacíos y el dry-run no hace nada", () => {
   };
   ship(KEY, { main, ghRun });
   assert.equal(calls.filter((a) => a[1] === "comment").length, 0);
+  assert.equal(calls.filter((a) => a[1] === "review").length, 0);
   calls.length = 0;
   ship(KEY, { main, ghRun, dryRun: true, out: () => {} });
   assert.deepEqual(calls, []);

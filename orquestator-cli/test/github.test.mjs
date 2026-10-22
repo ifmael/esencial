@@ -5,6 +5,7 @@ import {
   commentArgs,
   createArgs,
   editArgs,
+  reviewArgs,
   statusArgs,
   viewArgs,
 } from "../lib/github.mjs";
@@ -54,6 +55,17 @@ test("editArgs, viewArgs y commentArgs apuntan a la rama o la PR", () => {
     "pr",
     "comment",
     "ESN-7-algo",
+    "--body-file",
+    "/tmp/r.md",
+  ]);
+});
+
+test("reviewArgs publica review.md como review", () => {
+  assert.deepEqual(reviewArgs(9, "/tmp/r.md"), [
+    "pr",
+    "review",
+    "9",
+    "--comment",
     "--body-file",
     "/tmp/r.md",
   ]);
