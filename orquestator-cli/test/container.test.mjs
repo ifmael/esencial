@@ -4,12 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
-import {
-  dockerArgs,
-  ensureArtifacts,
-  PHASES,
-  runPhase,
-} from "../lib/container.mjs";
+import { ensureArtifactsAt } from "../lib/artifacts.mjs";
+import { dockerArgs, PHASES, runPhase } from "../lib/container.mjs";
 
 let dir;
 beforeEach(() => {
@@ -45,7 +41,7 @@ test("cada fase monta en escritura solo sus ficheros", () => {
   assert.deepEqual(PHASES.reviewer.rw, ["review.md"]);
   assert.deepEqual(PHASES["pr-review"].rw, ["pr-review.md"]);
   for (const phase of Object.keys(PHASES)) {
-    ensureArtifacts(paths().task);
+    ensureArtifactsAt(paths().task);
     const args = dockerArgs({ phase, ...paths() }).join(" ");
     for (const name of PHASES[phase].rw) {
       assert.match(args, new RegExp(`task/${name}:/work/\\.task/${name}`));
@@ -67,10 +63,10 @@ test("check va sin red; las fases de agente van por la red interna", () => {
 });
 
 test("ensureArtifacts crea los ficheros que faltan sin pisar los llenos", () => {
-  ensureArtifacts(paths().task);
+  ensureArtifactsAt(paths().task);
   assert.ok(fs.existsSync(path.join(paths().task, "checks.md")));
   fs.writeFileSync(path.join(paths().task, "checks.md"), "hola");
-  ensureArtifacts(paths().task);
+  ensureArtifactsAt(paths().task);
   assert.equal(
     fs.readFileSync(path.join(paths().task, "checks.md"), "utf8"),
     "hola",

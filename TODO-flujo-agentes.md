@@ -756,11 +756,12 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       bloqueo sin aprobación; solo publica `guard`, nunca `migracion` (2026-10-22).
 - [ ] `pr` resto: `gh pr review` y el filtrado de comentarios por autor (van con
       `pr-review`).
-- [ ] `ship`: publicar el body, subir `review.md`/`checks.md` como comentarios y, tras
-      el push, publicar el status `guard` si el hash aprobado sigue valiendo.
-- [ ] Módulo `artifacts`: escribir/leer `~/.orquestator/ESN-123/task/*` con las
-      plantillas, pre-crear vacíos los ficheros y publicar desde el host; el estado y las
-      aprobaciones no se escriben en el clon.
+- [x] `ship`: editar el cuerpo de la PR, comentar `checks.md` y `review.md` si tienen
+      contenido y reponer el status `guard` sobre el SHA de la PR si la aprobación sigue
+      valiendo (2026-10-22).
+- [x] Módulo `artifacts`: leer/escribir los `task/*` con nombres validados (sin rutas
+      fuera), pre-crear vacíos, listar qué está lleno; el estado y las aprobaciones viven
+      solo en el host (2026-10-22).
 - [x] `guard` local: lista en `orquestator-cli/protected-paths.txt` leída de
       `origin/main`, diff desde el checkout principal (el clon se importa por el espejo
       con los hooks neutralizados), hash del diff y `approve` (TTY, motivo);
@@ -921,6 +922,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | `artifacts` y `ship`: artefactos validados, body + comentarios y status `guard` repuesto; 78 tests | Un artefacto vacío no se publica; el host nunca escribe estado en el clon | `inspect` y `run` |
 | 2026-10-22 | M2 | `pr`: push, PR con body, status `guard` y bloqueo sin aprobación; 70 tests | El título sale de la issue, guardado en `start` | `ship` y `artifacts` |
 | 2026-10-22 | M2 | `guard` local: rutas protegidas, hash y `approve`; `check` bloquea sin aprobación y el clon malicioso no ejecuta nada; 61 tests | Se importa la rama por el espejo, nunca con un `fetch` del clon | `pr` y status remoto |
 | 2026-10-22 | M2 | `container` (montajes ro/rw por fase, red, límites) y `check` base con `checks.md`; 52 tests | Las fases de agente usan la red interna y el home de Hermes de la imagen | `pr`, `guard` |

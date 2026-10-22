@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { ensureArtifacts, runPhase } from "./container.mjs";
+import { ensureArtifactsAt } from "./artifacts.mjs";
+import { runPhase } from "./container.mjs";
 import { imageTag } from "./image.mjs";
 import { home, load, repoDir, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
@@ -44,7 +45,7 @@ export function checkTask(
     throw new Error(`No se comprueba una tarea en ${state.state}`);
   }
   const task = taskDir(key, base);
-  ensureArtifacts(task);
+  ensureArtifactsAt(task);
   const result = runner({
     phase: "check",
     image,

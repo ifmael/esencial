@@ -4,6 +4,7 @@ import { linearKey } from "./config.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import { publish } from "./pr.mjs";
+import { ship } from "./ship.mjs";
 import {
   assertKey,
   block,
@@ -24,6 +25,7 @@ Uso:
   orquestator start ESN-123       abre la tarea: clon, rama y brief
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
   orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
+  orquestator ship ESN-123        actualiza el body y comenta checks/review
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
   orquestator status [ESN-123]    estado de una tarea (o de todas)
@@ -136,6 +138,20 @@ export async function main(argv, io = {}) {
           out: (text) => line(stdout, text),
         });
         line(stdout, `PR #${result.number}: ${result.url}`);
+        return 0;
+      }
+      case "ship": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        if (dryRun) {
+          ship(key, { dryRun, out: (text) => line(stdout, text) });
+          return 0;
+        }
+        const result = ship(key, { out: (text) => line(stdout, text) });
+        line(
+          stdout,
+          `PR #${result.number} actualizada (${result.sha.slice(0, 7)})`,
+        );
         return 0;
       }
       case "guard": {

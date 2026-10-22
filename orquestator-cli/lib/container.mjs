@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { ARTIFACTS } from "./task.mjs";
+import { ensureArtifactsAt } from "./artifacts.mjs";
 
 export const NETWORK = "esencial-workers";
 
@@ -13,14 +13,6 @@ export const PHASES = {
   reviewer: { rw: ["review.md"], network: "model" },
   "pr-review": { rw: ["pr-review.md"], network: "model" },
 };
-
-export function ensureArtifacts(task) {
-  fs.mkdirSync(task, { recursive: true });
-  for (const name of ARTIFACTS) {
-    const file = path.join(task, name);
-    if (!fs.existsSync(file)) fs.writeFileSync(file, "");
-  }
-}
 
 function exists(label, target) {
   if (!fs.existsSync(target)) throw new Error(`Falta ${label}: ${target}`);
@@ -85,7 +77,7 @@ export function runPhase({
   dryRun,
   out = () => {},
 }) {
-  ensureArtifacts(task);
+  ensureArtifactsAt(task);
   const args = dockerArgs({ phase, image, repo, task, upstream });
   const argv = [...args, "bash", "-lc", command];
   if (dryRun) {

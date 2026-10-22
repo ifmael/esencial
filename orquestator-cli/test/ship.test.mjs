@@ -1,0 +1,129 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, test } from "node:test";
+
+import { writeArtifact } from "../lib/artifacts.mjs";
+import { approveState, guardTask } from "../lib/guard.mjs";
+import { ship } from "../lib/ship.mjs";
+import { createState, load, save, transition } from "../lib/state.mjs";
+
+const KEY = "ESN-7";
+const RULES = "AGENTS.md\n";
+
+let dir;
+let main;
+let base;
+let task;
+
+function gitIn(cwd, ...args) {
+  return execFileSync(
+    "git",
+    ["-c", "user.email=t@test", "-c", "user.name=Test", ...args],
+    {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  ).trim();
+}
+
+function commit(cwd, file, text) {
+  fs.mkdirSync(path.dirname(path.join(cwd, file)), { recursive: true });
+  fs.writeFileSync(path.join(cwd, file), text);
+  gitIn(cwd, "add", ".");
+  gitIn(cwd, "commit", "-q", "-m", `edit ${file}`);
+}
+
+beforeEach(() => {
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), "orquestator-ship-"));
+  main = path.join(dir, "main");
+  base = path.join(dir, "home");
+  const origin = path.join(dir, "origin.git");
+  gitIn(dir, "init", "-q", "--bare", origin);
+  gitIn(dir, "clone", "-q", origin, main);
+  gitIn(main, "switch", "-q", "-c", "main");
+  commit(main, "orquestator-cli/protected-paths.txt", RULES);
+  commit(main, "README.md", "hola");
+  gitIn(main, "push", "-q", "origin", "main");
+
+  task = path.join(base, KEY, "repo");
+  fs.mkdirSync(path.join(base, KEY), { recursive: true });
+  gitIn(base, "clone", "-q", main, task);
+  gitIn(task, "switch", "-q", "-c", `${KEY}-algo`);
+  commit(task, "AGENTS.md", "reglas cambiadas");
+  gitIn(base, "clone", "-q", "--bare", origin, path.join(base, "upstream.git"));
+  process.env.ORQUESTATOR_HOME = base;
+  save(
+    KEY,
+    transition(
+      {
+        ...createState(KEY),
+        branch: `${KEY}-algo`,
+        issueTitle: "Algo",
+        pr: { number: 9, url: "u" },
+      },
+      "In Progress",
+    ),
+    base,
+  );
+});
+
+afterEach(() => {
+  delete process.env.ORQUESTATOR_HOME;
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+function approve(hash) {
+  save(
+    KEY,
+    approveState(load(KEY, base), { hash, reason: "ok", isTTY: true }),
+    base,
+  );
+}
+
+test("ship se niega sin PR, sin body o sin aprobación", () => {
+  assert.throws(() => ship(KEY, { main, ghRun: () => "" }), /pr-body/);
+  writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
+  assert.throws(() => ship(KEY, { main, ghRun: () => "" }), /approve/);
+});
+
+test("ship edita el body, comenta review/checks y publica el status", () => {
+  writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
+  writeArtifact(KEY, "checks.md", "PASS");
+  writeArtifact(KEY, "review.md", "sin hallazgos");
+  approve(guardTask(KEY, { base, main }).hash);
+  const calls = [];
+  const ghRun = (args) => {
+    calls.push(args);
+    if (args[1] === "view")
+      return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
+    return "";
+  };
+  const result = ship(KEY, { main, ghRun });
+  assert.equal(result.sha, "sha9");
+  const kinds = calls.map((a) => a[1]);
+  assert.ok(kinds.includes("edit"));
+  assert.equal(kinds.filter((k) => k === "comment").length, 2);
+  const status = calls.find((a) => a[0] === "api");
+  assert.ok(status[1].endsWith("/sha9"));
+});
+
+test("ship omite los comentarios vacíos y el dry-run no hace nada", () => {
+  writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
+  approve(guardTask(KEY, { base, main }).hash);
+  const calls = [];
+  const ghRun = (args) => {
+    calls.push(args);
+    if (args[1] === "view")
+      return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
+    return "";
+  };
+  ship(KEY, { main, ghRun });
+  assert.equal(calls.filter((a) => a[1] === "comment").length, 0);
+  calls.length = 0;
+  ship(KEY, { main, ghRun, dryRun: true, out: () => {} });
+  assert.deepEqual(calls, []);
+});

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
-
+import { writeArtifact } from "../lib/artifacts.mjs";
 import { main } from "../lib/cli.mjs";
 import { createState, load, save, transition } from "../lib/state.mjs";
 
@@ -107,6 +107,20 @@ test("pr --dry-run enseña el plan sin tocar nada", async () => {
   assert.equal(r.code, 0);
   assert.match(r.out, /dry-run/);
   assert.match(r.out, /ESN-9-x/);
+});
+
+test("ship --dry-run exige PR y body pero no llama a gh", async () => {
+  save(
+    "ESN-9",
+    transition({ ...createState("ESN-9"), branch: "ESN-9-x" }, "In Progress"),
+  );
+  assert.equal((await run(["ship", "ESN-9", "--dry-run"])).code, 1);
+  writeArtifact("ESN-9", "pr-body.md", "Fixes ESN-9\n");
+  const state = load("ESN-9");
+  save("ESN-9", { ...state, pr: { number: 3, url: "u" } });
+  const r = await run(["ship", "ESN-9", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /PR #3/);
 });
 
 test("approve solo desde una terminal", async () => {

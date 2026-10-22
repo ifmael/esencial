@@ -1,6 +1,6 @@
-import fs from "node:fs";
 import path from "node:path";
 
+import { ensureArtifacts, writeArtifact } from "./artifacts.mjs";
 import { cloneTask, ensureMirror } from "./checkout.mjs";
 import { comment, getIssue, setState } from "./linear.mjs";
 import {
@@ -11,17 +11,6 @@ import {
   taskDir,
   transition,
 } from "./state.mjs";
-
-/** Ficheros que se pre-crean vacíos; cada fase escribe solo el suyo. */
-export const ARTIFACTS = [
-  "brief.md",
-  "impl.md",
-  "checks.md",
-  "review.md",
-  "pr-review.md",
-  "pr-body.md",
-  "human-feedback.md",
-];
 
 export function slugify(title) {
   return title
@@ -55,17 +44,9 @@ export async function startTask(key, options = {}) {
   ensureMirror({ mirror, source });
   cloneTask({ mirror, repo, branch });
 
-  const dir = taskDir(key, base);
-  fs.mkdirSync(dir, { recursive: true });
+  ensureArtifacts(key, base);
   const brief = `# ${issue.identifier} — ${issue.title}\n\n${issue.description ?? ""}\n`;
-  fs.writeFileSync(
-    path.join(dir, "brief.md"),
-    brief.replace(/\n{3,}/g, "\n\n"),
-  );
-  for (const name of ARTIFACTS) {
-    const file = path.join(dir, name);
-    if (!fs.existsSync(file)) fs.writeFileSync(file, "");
-  }
+  writeArtifact(key, "brief.md", brief.replace(/\n{3,}/g, "\n\n"), base);
 
   await setState(apiKey, issue, "In Progress", fetchImpl);
   await comment(apiKey, issue, `Rama: \`${branch}\``, fetchImpl);

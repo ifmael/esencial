@@ -4,8 +4,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
+import { ARTIFACTS } from "../lib/artifacts.mjs";
 import { load } from "../lib/state.mjs";
-import { ARTIFACTS, slugify, startTask } from "../lib/task.mjs";
+import { slugify, startTask } from "../lib/task.mjs";
 
 let dir;
 let source;

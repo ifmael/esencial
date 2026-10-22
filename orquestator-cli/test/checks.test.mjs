@@ -3,10 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
-
+import { ARTIFACTS } from "../lib/artifacts.mjs";
 import { CHECK_COMMAND, checkTask } from "../lib/checks.mjs";
 import { createState, save, transition } from "../lib/state.mjs";
-import { ARTIFACTS } from "../lib/task.mjs";
 
 let dir;
 let task;
