@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+.wrangler
+web/dist
+coverage
+e2e/.state
+e2e/.state-web
+test-results
+playwright-report
+.task
+wireframes
+docs
