@@ -54,7 +54,7 @@ bloquea M0 ni M1.
   un commit status.
 - ★ **Solución:** separar las dos fases del control:
   1. **En local (antes de `check` y de `ship`):** lo que exige el CLI es el **hash
-     aprobado en `~/.orquestator/ESQ-123/state.json`** (puesto por `approve` en
+     aprobado en `~/.orquestator/ESN-123/state.json`** (puesto por `approve` en
      TTY).
   2. **En remoto (en `ship` y en cada push de `fix`):** justo después del `git push`,
      si el hash aprobado sigue coincidiendo con el diff protegido, el CLI publica el
@@ -73,10 +73,10 @@ bloquea M0 ni M1.
      `implementer` en `fix --humano`), el diff de la PR que recibe el `pr-reviewer`
      (l.238, 730) y `brief.md`/`checks.md` como lectura del `pr-reviewer`.
 - ★ **Solución:**
-  1. Guardar los artefactos en el host en `~/.orquestator/ESQ-123/task/` (junto a
+  1. Guardar los artefactos en el host en `~/.orquestator/ESN-123/task/` (junto a
      `state.json`, fuera del clon). Antes de lanzar cada contenedor, el CLI
      pre-crea vacíos los ficheros que aún no existan.
-  2. Montar `~/.orquestator/ESQ-123/task/` como directorio en **`:ro`** sobre
+  2. Montar `~/.orquestator/ESN-123/task/` como directorio en **`:ro`** sobre
      `<clon>/.task`, y montar encima en **`:rw`** únicamente los ficheros que
      escribe esa fase. Así ningún contenedor puede crear, borrar ni renombrar
      ficheros ajenos en `.task/`.
@@ -95,7 +95,7 @@ bloquea M0 ni M1.
 |---|---|---|
 | 10 | `Última actualización: 2026-10-21 (revisión v2).` | `Última actualización: 2026-10-21 (revisión v3).` |
 | 243 | `orquestator-cli status [--watch]` | `orquestator-cli status [--watch (M5b)]` (como `spec (M5b)` en l.228) |
-| 536 | `Todos viven en .task/ dentro del clon y están en .gitignore.` | Con A3: viven en `~/.orquestator/ESQ-123/task/`, se montan en `<clon>/.task/` y `.task/` sigue en `.gitignore` |
+| 536 | `Todos viven en .task/ dentro del clon y están en .gitignore.` | Con A3: viven en `~/.orquestator/ESN-123/task/`, se montan en `<clon>/.task/` y `.task/` sigue en `.gitignore` |
 | 896 | `.github/workflows/ci.yml`: paso de cobertura. | `.github/workflows/ci.yml`: paso de cobertura, job `migracion` (M0) y job `guard` (M5b). |
 
 ## Pendiente de verificar (sin cambios respecto a la v3)

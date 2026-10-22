@@ -6,8 +6,8 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 
 ## Ramas y PR
 
-- Rama `ESQ-123-slug` desde `main`. El CLI **nunca** empuja a `main` ni usa `--force`.
-- Título de la PR: `ESQ-123 <título>`. En el cuerpo, `Fixes ESQ-123`: al mergear,
+- Rama `ESN-123-slug` desde `main`. El CLI **nunca** empuja a `main` ni usa `--force`.
+- Título de la PR: `ESN-123 <título>`. En el cuerpo, `Fixes ESN-123`: al mergear,
   Linear cierra la issue y enlaza la PR por la rama.
 - La PR lleva resumen, criterios cubiertos, plan de pruebas, riesgos y un diagrama
   Mermaid (`.task/pr-body.md`). El merge siempre lo hace una persona.
@@ -26,7 +26,7 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 
 ## Artefactos
 
-Viven en `~/.orquestator/ESQ-123/task/` (host) y se montan en `<clon>/.task/`
+Viven en `~/.orquestator/ESN-123/task/` (host) y se montan en `<clon>/.task/`
 (ignorado por git). Cada fase escribe solo el suyo:
 
 | Fichero | Lo escribe |
@@ -39,7 +39,7 @@ Viven en `~/.orquestator/ESQ-123/task/` (host) y se montan en `<clon>/.task/`
 | `pr-body.md` | implementer |
 | `human-feedback.md` | host (solo tus comentarios, filtrados por autor) |
 
-El estado interno y el hash de `approve` viven en `~/.orquestator/ESQ-123/state.json`,
+El estado interno y el hash de `approve` viven en `~/.orquestator/ESN-123/state.json`,
 en el host. El agente no puede tocarlos.
 
 ## Comprobaciones

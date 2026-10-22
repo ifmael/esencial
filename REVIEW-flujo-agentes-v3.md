@@ -60,7 +60,7 @@ viven hoy:
   el propio informe no es grave, pero falsear «RED no verificado» sí envenena tu
   decisión.
 
-- ★ El estado y las aprobaciones pasan al host: `~/.orquestator/ESQ-123/state.json`.
+- ★ El estado y las aprobaciones pasan al host: `~/.orquestator/ESN-123/state.json`.
   Cada contenedor de fase monta solo lo que esa fase escribe: el implementer ve el
   brief y los informes anteriores en **solo lectura**, y su `.task` escribible se
   limita a lo suyo. `run` (host) es el dueño del estado. ~30 min de diseño; cambia
