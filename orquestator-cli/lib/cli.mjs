@@ -2,6 +2,7 @@ import { git } from "./checkout.mjs";
 import { checkTask } from "./checks.mjs";
 import { clean } from "./clean.mjs";
 import { linearKey } from "./config.mjs";
+import { fixTask } from "./fix.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import { inspect } from "./inspect.mjs";
@@ -31,6 +32,7 @@ Uso:
   orquestator ship ESN-123        actualiza el body y comenta checks/review
   orquestator inspect ESN-123     estado, brief, diff, artefactos y CI
   orquestator clean ESN-123 [--force]
+  orquestator fix ESN-123 [--from checks|review|pr-review|conflicto] [--humano]
   orquestator run ESN-123 [--dry-run]
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
@@ -167,6 +169,27 @@ export async function main(argv, io = {}) {
           out: (text) => line(stdout, text),
         });
         line(stdout, `PR #${result.number}: ${result.url}`);
+        return 0;
+      }
+      case "fix": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const at = rest.indexOf("--from");
+        const origin = rest.includes("--humano")
+          ? "humano"
+          : at === -1
+            ? "checks"
+            : rest[at + 1];
+        const result = fixTask(key, {
+          origin,
+          dryRun,
+          out: (text) => line(stdout, text),
+        });
+        if (result.dryRun) return 0;
+        if (result.blocked) {
+          line(stdout, result.state.question);
+          return 1;
+        }
         return 0;
       }
       case "inspect": {

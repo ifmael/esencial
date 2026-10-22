@@ -123,6 +123,21 @@ test("ship --dry-run exige PR y body pero no llama a gh", async () => {
   assert.match(r.out, /PR #3/);
 });
 
+test("fix --dry-run cuenta la ronda sin escribir", async () => {
+  save("ESN-9", transition(createState("ESN-9"), "In Progress"));
+  const r = await run(["fix", "ESN-9", "--from", "review", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /ronda de review/);
+  assert.equal(load("ESN-9").rounds.review, 0);
+});
+
+test("fix con un origen desconocido sale con 1", async () => {
+  save("ESN-9", transition(createState("ESN-9"), "In Progress"));
+  const r = await run(["fix", "ESN-9", "--from", "nada"]);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /Origen desconocido/);
+});
+
 test("run --dry-run recorre la cadena", async () => {
   const r = await run(["run", "ESN-9", "--dry-run"]);
   assert.equal(r.code, 0);
