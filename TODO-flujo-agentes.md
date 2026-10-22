@@ -780,7 +780,8 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       reanudar sin abrir el clon (2026-10-22).
 - [ ] Token de GitHub fino solo en el entorno del CLI; push HTTPS con credential helper;
       `Commit statuses` de escritura, sin `Workflows`; tests de que el token no aparece en
-      logs.
+      logs. **Hoy se usa el remoto SSH del host y la sesión de `gh`**; el token fino se
+      decide en M5b, cuando el CLI corra sin tu sesión.
 - [ ] `pr-review`: bajar `gh pr diff` a `~/.orquestator/ESN-123/task/pr-diff.patch` en el
       host, lanzar el revisor en contenedor con el clon ro y **red interna (solo el proxy
       de modelo)**, publicar los comentarios desde `pr-review.md`; esperar `ci` y `lint`;
@@ -793,6 +794,8 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       `--dry-run`.
 - [x] `run --dry-run`: recorre `start → check → review → ship → pr-review` según el
       estado, sin efectos; tests para los tres puntos de partida (2026-10-22).
+- [x] `spec`: crea la issue en Linear (título y cuerpo de un fichero) y la deja en
+      `Spec review`; `--dry-run` sin llamadas (2026-10-22).
 - [x] `fix`: rondas por origen (checks 2, review 3, pr-review 2, conflicto 2),
       vuelta a `In Progress` desde `In validation`, `--humano` con los comentarios del
       dueño en `human-feedback.md` y `Blocked` al agotar (2026-10-22).
@@ -925,6 +928,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | `spec` crea la issue en `Spec review`; M2 queda cerrado salvo lo que depende de agentes | Se crea con el cuerpo de un fichero (`--cuerpo`), sin plantilla propia | M3: perfiles |
 | 2026-10-22 | M2 | `fix`: rondas por origen, `--humano` filtrado por autor y `Blocked` al agotar; 100 tests | Las rondas humanas no gastan las del agente | M3: perfiles |
 | 2026-10-22 | M2 | Cobertura con umbrales: api 95/90/99/97 (istanbul) y web 86/85/86/88 (v8); `test:coverage` en CI y `check` | v8 no ve workerd; istanbul sí instrumenta al transformar | `fix` y `run` real (M3) |
 | 2026-10-22 | M2 | Lock de migraciones (reserva global, `Blocked` con la otra tarea) y `clean` con las comprobaciones de deploy; 93 tests | El lock se libera en `clean`; una tarea abandonada se limpia con `clean --force` | `fix` y la cobertura |

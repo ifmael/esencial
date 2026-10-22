@@ -1,4 +1,6 @@
+import fs from "node:fs";
 import { git } from "./checkout.mjs";
+
 import { checkTask } from "./checks.mjs";
 import { clean } from "./clean.mjs";
 import { linearKey } from "./config.mjs";
@@ -9,6 +11,7 @@ import { inspect } from "./inspect.mjs";
 import { publish } from "./pr.mjs";
 import { runFlow } from "./run.mjs";
 import { ship } from "./ship.mjs";
+import { createIssue } from "./spec.mjs";
 import {
   assertKey,
   block,
@@ -26,6 +29,7 @@ import { mirrorPath, startTask } from "./task.mjs";
 export const USAGE = `orquestator — flujo de tareas de Esencial
 
 Uso:
+  orquestator spec --titulo "…" [--cuerpo fichero.md]
   orquestator start ESN-123       abre la tarea: clon, rama y brief
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
   orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
@@ -76,6 +80,21 @@ export async function main(argv, io = {}) {
 
   try {
     switch (command) {
+      case "spec": {
+        const at = rest.indexOf("--titulo");
+        const title = at === -1 ? "" : (rest[at + 1] ?? "");
+        if (!title.trim()) throw new Error('spec necesita --titulo "…"');
+        const bodyAt = rest.indexOf("--cuerpo");
+        const file = bodyAt === -1 ? "" : (rest[bodyAt + 1] ?? "");
+        const body = file ? fs.readFileSync(file, "utf8") : "";
+        if (dryRun) {
+          line(stdout, `[dry-run] crear "${title}" en Spec review`);
+          return 0;
+        }
+        const issue = await createIssue(linearKey(), { title, body });
+        line(stdout, `${issue.identifier}: ${issue.url}`);
+        return 0;
+      }
       case "start": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;

@@ -123,6 +123,12 @@ test("ship --dry-run exige PR y body pero no llama a gh", async () => {
   assert.match(r.out, /PR #3/);
 });
 
+test("spec --dry-run no llama a Linear", async () => {
+  const r = await run(["spec", "--titulo", "Exportar", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /Exportar/);
+});
+
 test("fix --dry-run cuenta la ronda sin escribir", async () => {
   save("ESN-9", transition(createState("ESN-9"), "In Progress"));
   const r = await run(["fix", "ESN-9", "--from", "review", "--dry-run"]);
