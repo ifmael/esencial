@@ -68,3 +68,19 @@ review. La cobertura de `api` y `web` se mide y sus umbrales solo suben (objetiv
 - La clave real de nan solo vive en el proxy de modelo; los agentes usan una dummy.
 - El host no ejecuta agentes ni `pnpm` del repo; push y PR los hace el CLI. Sin
   credenciales de git dentro del contenedor.
+
+## Imagen del worker (M1)
+
+```bash
+orquestator-cli/build.sh         # construye e imprime la etiqueta
+docker run --rm -v "$PWD:/work" -w /work --network none "<etiqueta>" pnpm test
+```
+
+- Base `node:24-bookworm` (el Node del CI), pnpm 12.4.2, Chromium de Playwright y
+  Hermes v0.22.4 fijado por commit (`HERMES_COMMIT` en el Dockerfile).
+- La etiqueta es el hash del Dockerfile y de `pnpm-lock.yaml`: un cambio en
+  cualquiera de los dos produce una imagen nueva.
+- El store de pnpm y los navegadores viven en la imagen; el clon de la tarea
+  instala con `pnpm install --offline`.
+- `HERMES_HOME` se monta por fase (M2); el valor del Dockerfile es el de la
+  instalación.
