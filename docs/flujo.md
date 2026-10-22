@@ -85,3 +85,25 @@ docker run --rm -v "$PWD:/work" -w /work --network none "<etiqueta>" pnpm test
   `pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store`.
 - `HERMES_HOME` se monta por fase (M2); el valor del Dockerfile es el de la
   instalación.
+
+## Proxy de modelo
+
+La clave real de nan vive solo en el proxy; el worker usa `dummy` y no tiene
+salida propia a internet (red interna).
+
+```bash
+docker network inspect esencial-workers >/dev/null 2>&1 || docker network create --internal esencial-workers
+source ~/.config/orquestator/env
+docker run -d --name esencial-proxy --restart unless-stopped -e NAN_API_KEY \
+  -p 127.0.0.1:8799:8080 \
+  -v "$PWD/orquestator-cli/proxy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+  caddy:2-alpine
+docker network connect esencial-workers esencial-proxy
+```
+
+Prueba del proxy y una consulta del agente con la clave dummy:
+
+```bash
+curl -s http://127.0.0.1:8799/v1/models -H "Authorization: Bearer dummy" | head -c 200
+docker run --rm --network esencial-workers "<etiqueta>" bash -lc 'HERMES_HOME=/tmp/hermes hermes chat --oneshot -Q --safe-mode --provider custom --base-url http://esencial-proxy:8080/v1 --api-key dummy --model qwen3.6 -q "Responde solo: ok"'
+```
