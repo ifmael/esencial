@@ -41,9 +41,7 @@ RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
  && cp /root/.local/bin/hermes /usr/local/bin/hermes \
  && chmod -R a+rX /opt/hermes /usr/local/bin/hermes
 
-RUN useradd --create-home --uid 1000 worker \
- && mkdir -p /work \
- && chown worker:worker /work
+RUN mkdir -p /work && chown node:node /work
 
-USER worker
+USER node
 WORKDIR /work
