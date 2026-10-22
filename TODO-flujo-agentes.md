@@ -33,8 +33,8 @@ Convención de marcado:
 | Fase | Estado | Siguiente acción |
 |---|---|---|
 | M0 — Base | En curso | Token de edición + env y workspace de Linear |
-| M1 — Imagen del worker | Pendiente | Escribir `orquestator-cli/Dockerfile` |
-| M2 — CLI `orquestator-cli` | Pendiente | Esqueleto, máquina de estados y `run` |
+| M1 — Imagen del worker | Hecho (2026-10-22) | — |
+| M2 — CLI `orquestator-cli` | En curso | Esqueleto, máquina de estados y `run` |
 | M3 — Perfiles de fase | Pendiente | Elegir modelos de nan por perfil |
 | M4 — Piloto | Pendiente | Elegir la feature del backlog |
 | M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
@@ -676,32 +676,37 @@ Hecho cuando: una issue de prueba se crea en Linear, se lee con `curl` a la API 
 
 Objetivo: entorno reproducible con todo lo que necesitan las fases. Depende de: M0.
 
-- [ ] Escribir `orquestator-cli/Dockerfile` sobre `node:24-bookworm` (el node del CI).
-- [ ] Instalar pnpm (corepack) y dejar un store caliente con `pnpm fetch` desde el
-      lockfile del repo.
-- [ ] Instalar dependencias de Chromium y Playwright (`playwright install --with-deps
-      chromium`), con la versión que use el repo.
-- [ ] Instalar Hermes dentro de la imagen (pipx/pip) con versión fijada.
-- [ ] Copiar o instalar el binario de omp como plan B (opcional en M1).
-- [ ] Construir la imagen y etiquetarla por hash del Dockerfile **y del
-      `pnpm-lock.yaml`**.
-- [ ] Smoke test con un clon montado: `pnpm install --offline`, `pnpm test` (con
-      cobertura), `pnpm e2e`, con `--network none` para las comprobaciones y
-      `WRANGLER_SEND_METRICS=false`.
-- [ ] Verificar Hermes dentro del contenedor con config mínima: sin memoria, sin
-      autolearn, sin extensiones, `HERMES_HOME` por fase y clave **dummy** del proxy.
-- [ ] Configurar el provider `nan` en el Hermes del contenedor apuntando al proxy
-      (`https://api.nan.builders/v1`, clave dummy) y probar una consulta one-shot;
-      anotar el comando.
-- [ ] Verificar que no se escribe nada fuera del mount y que el e2e usa su propio
-      estado.
-- [ ] Proxy de modelo (Caddy/nginx) en contenedor: clave real solo ahí, reenvío a
-      `api.nan.builders`, enlace a 127.0.0.1 y a la red interna.
-- [ ] Red interna (`internal: true`) para el worker; store de pnpm horneado y
-      `pnpm install --offline`.
-- [ ] Límites y hardening: `--cpus`, `--memory`, `--pids-limit`, no-root, `cap-drop=ALL`,
-      `no-new-privileges`; validar Playwright con root FS read-only si se usa.
-- [ ] Documentar el comando de build y de run en `docs/flujo.md`.
+- [x] `orquestator-cli/Dockerfile` sobre `node:24-bookworm` (2026-10-22).
+- [x] pnpm 12.4.2 instalado con npm y store caliente con
+      `pnpm install --store-dir /opt/pnpm-store`; corepack intentaba descargar pnpm en
+      cada contenedor y sin red fallaba (2026-10-22).
+- [x] Chromium de Playwright con la versión del lockfile (1.63 desde `^1.55`) y
+      `--with-deps` (2026-10-22).
+- [x] Hermes v0.22.4 fijado por commit e **instalado como el usuario `node`**; su home
+      preparado queda en `/opt/hermes/home` y es el `HERMES_HOME` del contenedor; uno
+      vacío obliga a descargar dependencias y sin red falla (2026-10-22).
+- [-] omp en la imagen: no se incluye (plan B opcional; se añade si Hermes falla).
+- [x] Imagen etiquetada por hash del Dockerfile y del `pnpm-lock.yaml`
+      (`orquestator-cli/build.sh`) (2026-10-22).
+- [x] Smoke test sobre un clon limpio y `--network none`: `pnpm install --offline`,
+      624 tests y 89 e2e; sin cobertura todavía (los thresholds son de M2)
+      (2026-10-22).
+- [x] Hermes sin memoria, skills, plugins ni MCP con `--safe-mode`; el aislamiento por
+      fase lo da el contenedor efímero (2026-10-22).
+- [x] Provider `nan` apuntando al proxy con clave dummy; one-shot `hermes chat
+      --oneshot -Q --safe-mode --provider custom --base-url
+      http://esencial-proxy:8080/v1 --api-key dummy --model qwen3.6` responde
+      (2026-10-22).
+- [x] Solo `/work` está montado; el resto (home de Hermes, temporales) es capa efímera
+      del contenedor. El e2e usa su propio estado dentro del clon (2026-10-22).
+- [x] Proxy Caddy con `NAN_API_KEY` (solo ahí), `/v1/*` reenviado y 404 para el resto,
+      publicado en `127.0.0.1:8799` y en la red interna (2026-10-22).
+- [x] Red `esencial-workers` (`--internal`) para el worker; store horneado y
+      `pnpm install --offline` (2026-10-22).
+- [x] Límites: `--cpus 4`, `--memory 8g`, `--pids-limit 2048`, usuario `node` (UID
+      1000, el del host), `--cap-drop=ALL` y `no-new-privileges`; Playwright validado
+      con todo eso. Sin root FS read-only: Hermes escribe en su home (2026-10-22).
+- [x] Comandos de build, proxy y run documentados en `docs/flujo.md` (2026-10-22).
 
 Hecho cuando: las comprobaciones completas pasan dentro del contenedor sobre un clon limpio.
 
