@@ -83,8 +83,9 @@ docker run --rm -v "$PWD:/work" -w /work --network none "<etiqueta>" pnpm test
 - El store de pnpm (`--store-dir /opt/pnpm-store`) y los navegadores viven en la
   imagen; el clon de la tarea instala con
   `pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store`.
-- `HERMES_HOME` se monta por fase (M2); el valor del Dockerfile es el de la
-  instalación.
+- Hermes queda instalado con su home preparado en `/opt/hermes/home`: **ese** es
+  el `HERMES_HOME` (uno vacío obliga a descargar dependencias y sin red falla).
+  Cada fase corre en un contenedor nuevo, así que el home sigue aislado.
 
 ## Proxy de modelo
 
@@ -105,5 +106,11 @@ Prueba del proxy y una consulta del agente con la clave dummy:
 
 ```bash
 curl -s http://127.0.0.1:8799/v1/models -H "Authorization: Bearer dummy" | head -c 200
-docker run --rm --network esencial-workers "<etiqueta>" bash -lc 'HERMES_HOME=/tmp/hermes hermes chat --oneshot -Q --safe-mode --provider custom --base-url http://esencial-proxy:8080/v1 --api-key dummy --model qwen3.6 -q "Responde solo: ok"'
+docker run --rm --init --network esencial-workers \
+  --cpus 4 --memory 8g --pids-limit 2048 \
+  --cap-drop=ALL --security-opt=no-new-privileges \
+  "<etiqueta>" bash -lc 'HERMES_HOME=/opt/hermes/home \
+  hermes chat --oneshot -Q --safe-mode --provider custom \
+    --base-url http://esencial-proxy:8080/v1 --api-key dummy \
+    --model qwen3.6 -q "Responde solo: ok"'
 ```
