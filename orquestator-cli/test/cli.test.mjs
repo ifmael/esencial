@@ -123,6 +123,17 @@ test("ship --dry-run exige PR y body pero no llama a gh", async () => {
   assert.match(r.out, /PR #3/);
 });
 
+test("block sin clave de Linear avisa pero no falla", async () => {
+  save(
+    "ESN-9",
+    transition({ ...createState("ESN-9"), issueId: "uuid-9" }, "In Progress"),
+  );
+  const r = await run(["block", "ESN-9", "falta"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /no se pudo avisar/);
+  assert.equal(load("ESN-9").state, "Blocked");
+});
+
 test("spec --dry-run no llama a Linear", async () => {
   const r = await run(["spec", "--titulo", "Exportar", "--dry-run"]);
   assert.equal(r.code, 0);

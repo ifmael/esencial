@@ -746,8 +746,9 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] `check` base: `pnpm install --offline && lint && typecheck && test && e2e` en el
       contenedor, salida capturada en `checks.md` y comando con `--dry-run`
       (2026-10-22).
-- [ ] `checks` completo: cobertura, prueba RED contra `main` y heurísticas de tests
-      debilitados.
+- [x] `checks` completo: cobertura, prueba RED (worktree de `origin/main` con los tests
+      de la rama; si pasan, se anota en `checks.md`) y heurísticas de tests debilitados
+      (skip/only nuevos, menos tests, menos `expect`) (2026-10-22).
 - [x] Cobertura: `pnpm test:coverage` en `api` (istanbul; v8 no funciona en el pool de
       workers) y `web` (v8), con `coverage.thresholds` —api 95/90/99/97 y web
       86/85/86/88—, paso en CI y en `check` (2026-10-22).
@@ -767,8 +768,9 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       con los hooks neutralizados), hash del diff y `approve` (TTY, motivo);
       `.github/workflows/` no es aprobable; `check` exige la aprobación; test con
       `diff.external` y `pre-push` maliciosos (2026-10-22).
-- [ ] `guard` remoto: status `guard` en GitHub, reposición tras cada push y
-      `approve --pr N` para PRs manuales.
+- [x] `guard` remoto: status `guard` en GitHub tras `pr`/`ship` y `approve --pr N` para
+      PRs manuales (hash del diff de la PR, sin workflows). El job de CI que lo lee es de
+      M5b (2026-10-22).
 - [ ] Módulo `migrate` (solo si la feature del piloto lleva migración; si no, M5b):
       detectar `api/migrations/**`, listar pendientes en remoto, aplicar las aprobadas tras
       `approve --migracion` con
@@ -801,8 +803,9 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       dueño en `human-feedback.md` y `Blocked` al agotar (2026-10-22).
 - [ ] `run` real: encadenar las fases de agente (M3), `fix` con rondas, migración y
       `mergeable`, parando en `Blocked`/`In validation`.
-- [ ] Tests: tabla de transiciones, rechazo de saltos, `--dry-run` sin efectos, `guard`
-      con `diff.external` malicioso y fetch del espejo (`uploadpack.packObjectsHook`).
+- [x] Tests: tabla de transiciones, rechazo de saltos, `--dry-run` sin efectos, `guard`
+      con `diff.external`, `pre-push` y `uploadpack.packObjectsHook` maliciosos
+      (2026-10-22).
 - [x] `clean`: tras el merge (o `--force`) borra la tarea y libera la migración; corre
       las dos comprobaciones fiables del §7 de `DEPLOY.md` y sugiere `wrangler rollback`
       si fallan (2026-10-22).
@@ -928,6 +931,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | Sonda RED con worktree de main, heurísticas de tests debilitados y `approve --pr`; 115 tests | Un test que pasa contra main se anota, no bloquea | M3: perfiles |
 | 2026-10-22 | M2 | `spec` crea la issue en `Spec review`; M2 queda cerrado salvo lo que depende de agentes | Se crea con el cuerpo de un fichero (`--cuerpo`), sin plantilla propia | M3: perfiles |
 | 2026-10-22 | M2 | `fix`: rondas por origen, `--humano` filtrado por autor y `Blocked` al agotar; 100 tests | Las rondas humanas no gastan las del agente | M3: perfiles |
 | 2026-10-22 | M2 | Cobertura con umbrales: api 95/90/99/97 (istanbul) y web 86/85/86/88 (v8); `test:coverage` en CI y `check` | v8 no ve workerd; istanbul sí instrumenta al transformar | `fix` y `run` real (M3) |

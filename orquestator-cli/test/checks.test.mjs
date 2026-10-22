@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -99,6 +100,61 @@ test("checkTask reserva la migración y choca con otra tarea", () => {
         runner: () => ({ status: 0 }),
       }),
     (error) => error.code === "MIGRATION_LOCKED" && /ESN-1/.test(error.message),
+  );
+});
+
+test("checkTask integra la sonda RED y la escribe en checks.md", () => {
+  started();
+  const git = (...args) =>
+    execFileSync(
+      "git",
+      ["-c", "user.email=t@test", "-c", "user.name=Test", ...args],
+      {
+        cwd: dir,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    ).trim();
+  git("init", "-q", "--bare", path.join(dir, "origin.git"));
+  git("clone", "-q", path.join(dir, "origin.git"), path.join(dir, "main"));
+  const mainRepo = path.join(dir, "main");
+  execFileSync("git", ["-C", mainRepo, "switch", "-q", "-c", "main"]);
+  fs.mkdirSync(path.join(mainRepo, "api", "tests"), { recursive: true });
+  fs.writeFileSync(
+    path.join(mainRepo, "api", "tests", "a.test.ts"),
+    'test("a", () => {});\n',
+  );
+  execFileSync("git", ["-C", mainRepo, "add", "."]);
+  execFileSync("git", ["-C", mainRepo, "commit", "-q", "-m", "base"]);
+  execFileSync("git", ["-C", mainRepo, "push", "-q", "origin", "main"]);
+
+  const repo = path.join(dir, "ESN-7", "repo");
+  execFileSync("git", ["clone", "-q", mainRepo, repo]);
+  execFileSync("git", ["-C", repo, "switch", "-q", "-c", "ESN-7-x"]);
+  fs.writeFileSync(
+    path.join(repo, "api", "tests", "a.test.ts"),
+    'test("a", () => { expect(1).toBe(1); });\n',
+  );
+  execFileSync("git", ["-C", repo, "add", "."]);
+  execFileSync("git", ["-C", repo, "commit", "-q", "-m", "test"]);
+
+  const calls = [];
+  const result = checkTask("ESN-7", {
+    base: dir,
+    main: mainRepo,
+    files: ["api/tests/a.test.ts"],
+    runner: (options) => {
+      calls.push(options.repo);
+      return options.repo === repo
+        ? { status: 0, stdout: "verde", stderr: "" }
+        : { status: 1, stdout: "", stderr: "rojo" };
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 2);
+  assert.match(
+    fs.readFileSync(path.join(task, "checks.md"), "utf8"),
+    /falla contra main/,
   );
 });
 

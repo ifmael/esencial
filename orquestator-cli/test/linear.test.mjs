@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { comment, getIssue, request, setState } from "../lib/linear.mjs";
+import {
+  comment,
+  getIssue,
+  notifyBlocked,
+  request,
+  setState,
+} from "../lib/linear.mjs";
 
 function fakeFetch(handler) {
   const calls = [];
@@ -89,4 +95,17 @@ test("comment crea el comentario en la issue", async () => {
   await comment("k", ISSUE, "Rama: ESN-7-x", impl);
   assert.equal(calls[0].body.variables.issueId, "uuid-1");
   assert.equal(calls[0].body.variables.body, "Rama: ESN-7-x");
+});
+
+test("notifyBlocked asigna la issue a ti y te menciona", async () => {
+  const { impl, calls } = fakeFetch((body) => {
+    if (body.query.includes("viewer")) {
+      return { viewer: { id: "u1", name: "Ismael", email: "i@x" } };
+    }
+    return { issueUpdate: { success: true }, commentCreate: { success: true } };
+  });
+  const me = await notifyBlocked("k", ISSUE, "¿Qué tabla?", impl);
+  assert.equal(me.id, "u1");
+  assert.equal(calls[1].body.variables.userId, "u1");
+  assert.match(calls[2].body.variables.body, /mention:\/\/user\/u1/);
 });

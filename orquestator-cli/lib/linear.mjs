@@ -68,3 +68,40 @@ export async function comment(apiKey, issue, body, fetchImpl = fetch) {
     fetchImpl,
   );
 }
+
+export async function viewer(apiKey, fetchImpl = fetch) {
+  const data = await request(
+    apiKey,
+    "query{ viewer{ id name email } }",
+    {},
+    fetchImpl,
+  );
+  return data.viewer;
+}
+
+export async function assign(apiKey, issue, userId, fetchImpl = fetch) {
+  await request(
+    apiKey,
+    `mutation($id:String!, $userId:String!){ issueUpdate(id:$id, input:{assigneeId:$userId}){ success } }`,
+    { id: issue.id, userId },
+    fetchImpl,
+  );
+}
+
+/** Asigna la issue a ti y te menciona con la pregunta: aviso doble. */
+export async function notifyBlocked(
+  apiKey,
+  issue,
+  question,
+  fetchImpl = fetch,
+) {
+  const me = await viewer(apiKey, fetchImpl);
+  await assign(apiKey, issue, me.id, fetchImpl);
+  await comment(
+    apiKey,
+    issue,
+    `Bloqueada: ${question}\n\n[${me.name}](mention://user/${me.id})`,
+    fetchImpl,
+  );
+  return me;
+}

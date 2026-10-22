@@ -152,6 +152,13 @@ test("un diff.external o un pre-push malicioso del clon no se ejecutan", () => {
   );
   gitIn(task, "config", "core.hooksPath", hooks);
   gitIn(task, "config", "diff.external", `sh -c "touch ${marker}"`);
+  // El hook del lado servidor tampoco se toca: nunca hacemos fetch del clon.
+  gitIn(
+    task,
+    "config",
+    "uploadpack.packObjectsHook",
+    `sh -c "touch ${marker}"`,
+  );
   guardTask(KEY, { base, main });
   assert.equal(fs.existsSync(marker), false);
 });

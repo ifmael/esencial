@@ -95,7 +95,7 @@ export function sha256(text) {
   return createHash("sha256").update(text).digest("hex");
 }
 
-function rules({ main, baseRef }) {
+export function protectedRules({ main, baseRef = BASE }) {
   try {
     return parsePaths(
       git(["show", `${baseRef}:${PROTECTED_FILE}`], { cwd: main }),
@@ -120,7 +120,7 @@ export function guardTask(
   const mirror = path.join(base, "upstream.git");
   const ref = importBranch({ main, mirror, repo, branch: state.branch, key });
   const files = diffFiles({ main, ref, baseRef });
-  const verdict = analyze(files, rules({ main, baseRef }));
+  const verdict = analyze(files, protectedRules({ main, baseRef }));
   const hash = sha256(diffPatch({ main, ref, baseRef }));
   const saved = state.approvals?.guard;
   return {

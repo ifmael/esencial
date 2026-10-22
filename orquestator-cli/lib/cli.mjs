@@ -8,6 +8,8 @@ import { fixTask } from "./fix.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import { inspect } from "./inspect.mjs";
+import { notifyBlocked } from "./linear.mjs";
+import { approvePr } from "./manual.mjs";
 import { publish } from "./pr.mjs";
 import { runFlow } from "./run.mjs";
 import { ship } from "./ship.mjs";
@@ -40,6 +42,7 @@ Uso:
   orquestator run ESN-123 [--dry-run]
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
+  orquestator approve --pr 42 --motivo "…"   PR que no abre el CLI
   orquestator status [ESN-123]    estado de una tarea (o de todas)
   orquestator block ESN-123 <pregunta>
   orquestator resume ESN-123
@@ -51,6 +54,16 @@ Opciones:
 
 function line(stream, text = "") {
   stream.write(`${text}\n`);
+}
+
+async function notifyBlock(key, state, question, out) {
+  if (!state.issueId) return;
+  try {
+    await notifyBlocked(linearKey(), { id: state.issueId }, question);
+    out("Linear: issue asignada y mención enviada.");
+  } catch (error) {
+    out(`Linear: no se pudo avisar (${error.message})`);
+  }
 }
 
 function parseKey(raw, stderr) {
@@ -158,11 +171,19 @@ export async function main(argv, io = {}) {
             dryRun,
             image: imageTag(),
             files,
+            main: process.cwd(),
             out: (text) => line(stdout, text),
           });
         } catch (error) {
           if (error.code !== "MIGRATION_LOCKED") throw error;
-          withLock(key, () => save(key, block(load(key), error.message)));
+          let next;
+          withLock(key, () => {
+            next = block(load(key), error.message);
+            save(key, next);
+          });
+          await notifyBlock(key, next, error.message, (text) =>
+            line(stdout, text),
+          );
           line(stdout, `Blocked: ${error.message}`);
           return 1;
         }
@@ -269,10 +290,24 @@ export async function main(argv, io = {}) {
         return 0;
       }
       case "approve": {
-        const key = parseKey(rest[0], stderr);
-        if (!key) return 2;
         const at = rest.indexOf("--motivo");
         const reason = at === -1 ? "" : (rest[at + 1] ?? "");
+        const prAt = rest.indexOf("--pr");
+        if (prAt !== -1) {
+          const number = Number(rest[prAt + 1]);
+          if (!Number.isInteger(number) || number <= 0) {
+            throw new Error("--pr necesita un número de PR");
+          }
+          approvePr(number, {
+            isTTY: process.stdin.isTTY,
+            reason,
+            dryRun,
+            out: (text) => line(stdout, text),
+          });
+          return 0;
+        }
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
         if (!process.stdin.isTTY) {
           throw new Error("approve solo se puede usar desde una terminal");
         }
@@ -340,13 +375,15 @@ export async function main(argv, io = {}) {
           line(stdout, `[dry-run] ${key} → Blocked: ${question}`);
           return 0;
         }
+        let next;
         withLock(key, () => {
           const state = load(key);
           if (!state) throw new Error(`La tarea ${key} no existe`);
-          const next = block(state, question);
+          next = block(state, question);
           save(key, next);
-          describe(stdout, next);
         });
+        describe(stdout, next);
+        await notifyBlock(key, next, question, (text) => line(stdout, text));
         return 0;
       }
       case "resume": {

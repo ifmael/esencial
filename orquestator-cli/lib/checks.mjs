@@ -5,6 +5,7 @@ import { ensureArtifactsAt } from "./artifacts.mjs";
 import { runPhase } from "./container.mjs";
 import { imageTag } from "./image.mjs";
 import { migrationsOf, reserveMigration } from "./migrations.mjs";
+import { redProbe } from "./red.mjs";
 import { home, load, repoDir, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
 
@@ -18,7 +19,7 @@ function tail(text, lines = TAIL) {
   return all.slice(-lines).join("\n");
 }
 
-function report(key, result) {
+function report(key, result, notes = []) {
   const status = result.status;
   const verdict = status === 0 ? "PASS" : `FAIL (exit ${status})`;
   const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
@@ -32,6 +33,9 @@ function report(key, result) {
     `$ ${CHECK_COMMAND}`,
     tail(output),
     "```",
+    ...(notes.length
+      ? ["", "## RED y tests", ...notes.map((note) => `- ${note}`)]
+      : []),
     "",
   ].join("\n");
 }
@@ -45,6 +49,7 @@ export function checkTask(
     dryRun,
     out,
     files = [],
+    main,
   } = {},
 ) {
   const state = load(key, base);
@@ -75,6 +80,29 @@ export function checkTask(
     out,
   });
   if (dryRun || result === null) return { ok: null, status: null };
-  fs.writeFileSync(path.join(task, "checks.md"), report(key, result));
-  return { ok: result.status === 0, status: result.status };
+
+  let red = null;
+  if (result.status === 0 && files.length && main) {
+    red = redProbe({
+      main,
+      repo: repoDir(key, base),
+      files,
+      out,
+      run: (options) =>
+        runner({
+          phase: "check",
+          image,
+          task,
+          upstream: mirrorPath(base),
+          repo: options.repo,
+          command: options.command,
+          out,
+        }),
+    });
+  }
+  fs.writeFileSync(
+    path.join(task, "checks.md"),
+    report(key, result, red?.notes ?? []),
+  );
+  return { ok: result.status === 0, status: result.status, red };
 }
