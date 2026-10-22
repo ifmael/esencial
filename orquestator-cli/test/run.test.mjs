@@ -75,8 +75,13 @@ test("run --dry-run no toca el clon de juguete", () => {
   const before = execFileSync("git", ["-C", repo, "for-each-ref"], {
     encoding: "utf8",
   });
-  save("ESN-7", transition(createState("ESN-7"), "In Progress"));
-  runFlow("ESN-7", { dryRun: true, out: () => {} });
+  const branch = execFileSync("git", ["-C", repo, "branch", "--show-current"], {
+    encoding: "utf8",
+  }).trim();
+  save("ESN-7", transition({ ...createState("ESN-7"), branch }, "In Progress"));
+  const lines = [];
+  runFlow("ESN-7", { dryRun: true, out: (t) => lines.push(t) });
+  assert.match(lines.join("\n"), new RegExp(`clon: en ${branch}`));
   assert.equal(
     execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], {
       encoding: "utf8",

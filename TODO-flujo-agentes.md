@@ -34,8 +34,8 @@ Convención de marcado:
 |---|---|---|
 | M0 — Base | Hecho (2026-10-22) | — |
 | M1 — Imagen del worker | Hecho (2026-10-22) | — |
-| M2 — CLI `orquestator-cli` | En curso | Esqueleto, máquina de estados y `run` |
-| M3 — Perfiles de fase | Pendiente | Elegir modelos de nan por perfil |
+| M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | — |
+| M3 — Perfiles de fase | En curso | Elegir modelos de nan por perfil |
 | M4 — Piloto | Pendiente | Elegir la feature del backlog |
 | M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
 | M5b — Automatización | Pendiente | `spec-reviewer`, `watch` y job `guard` |
@@ -930,6 +930,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | **M2 cerrado**: `guard`/`inspect`/`approve` con `--dry-run` sin efectos y `run --dry-run` revisando el clon; 119 tests | El criterio de M2 se cumple: todo comando con `--dry-run` y la cadena sobre un clon de juguete | M3: perfiles |
 | 2026-10-22 | M2 | `review.md` se publica como review de GitHub (no como comentario) | El filtrado por autor ya estaba en `fix --humano` | M3: perfiles |
 | 2026-10-22 | M2 | Sonda RED con worktree de main, heurísticas de tests debilitados y `approve --pr`; 115 tests | Un test que pasa contra main se anota, no bloquea | M3: perfiles |
 | 2026-10-22 | M2 | `spec` crea la issue en `Spec review`; M2 queda cerrado salvo lo que depende de agentes | Se crea con el cuerpo de un fichero (`--cuerpo`), sin plantilla propia | M3: perfiles |

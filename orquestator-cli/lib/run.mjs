@@ -1,4 +1,8 @@
-import { home, load } from "./state.mjs";
+import fs from "node:fs";
+import path from "node:path";
+
+import { git } from "./checkout.mjs";
+import { home, load, repoDir } from "./state.mjs";
 
 export const CHAIN = ["start", "check", "review", "ship", "pr-review"];
 
@@ -24,6 +28,17 @@ export function runFlow(key, { dryRun, base = home(), out = () => {} } = {}) {
     throw new Error(
       "run real necesita las fases de agente (M3); usa start, check, pr y ship",
     );
+  }
+  if (state?.branch) {
+    const repo = repoDir(key, base);
+    if (!fs.existsSync(path.join(repo, ".git"))) {
+      out(`[dry-run] clon: falta ${repo}`);
+    } else {
+      const branch = git(["branch", "--show-current"], { cwd: repo });
+      out(
+        `[dry-run] clon: ${branch === state.branch ? "en" : "en otra rama:"} ${branch} (esperada ${state.branch})`,
+      );
+    }
   }
   for (const step of steps) out(`[dry-run] ${step} ${key}`);
   out(
