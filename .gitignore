@@ -23,6 +23,7 @@ next-env.d.ts
 wireframes/design.zip
 
 # agent config (local)
+.task/
 
 # e2e
 e2e/**/.auth/

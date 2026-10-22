@@ -32,7 +32,7 @@ Convención de marcado:
 
 | Fase | Estado | Siguiente acción |
 |---|---|---|
-| M0 — Base | En curso | `gh auth login`, docker y decidir los emails antes de publicar |
+| M0 — Base | En curso | Docker (grupo), tokens de Cloudflare y workspace de Linear |
 | M1 — Imagen del worker | Pendiente | Escribir `orquestator-cli/Dockerfile` |
 | M2 — CLI `orquestator-cli` | Pendiente | Esqueleto, máquina de estados y `run` |
 | M3 — Perfiles de fase | Pendiente | Elegir modelos de nan por perfil |
@@ -78,7 +78,12 @@ Convención de marcado:
    - ADRs como memoria; el sistema diseñado para la atención (resumen + preguntas +
      entorno de prueba).
 
-### Hechos técnicos verificados (2026-10-19; v2: 2026-10-21)
+### Hechos técnicos verificados (2026-10-19; v2 y M0: 2026-10-21)
+
+- **Cloudflare D1 (2026-10-21)**: `POST /accounts/{id}/d1/database/{db}/query` acepta
+  `D1 Read` **o** `D1 Write` (referencia de la API), así que el token read-only de la CI
+  puede leer `d1_migrations`. Falta comprobarlo con el token real. `database_id` de
+  `esencial`: `989acff9-fbad-4ef7-a001-695d4966d264`; el account id no está en el repo.
 
 - **Linear Free** ($0): miembros ilimitados, 2 equipos, **250 issues no archivadas**
   (archivar libera cupo), API + webhooks + MCP, integración GitHub, detección de
@@ -621,22 +626,20 @@ Marca con fecha al completar.
 
 Objetivo: dejar listas las cuentas y la configuración mínima. Depende de: nada.
 
-- [ ] `gh auth login` y `gh auth status` correcto.
+- [x] `gh auth login` y `gh auth status` correcto (2026-10-21; cuenta `ifmael`, SSH).
 - [ ] `sudo systemctl enable --now docker` y `docker run --rm hello-world` correcto.
 - [x] Desactivar «Builds for non-production branches» en `esencial` y `esencial-api`
       (2026-10-20) hasta que exista el entorno de preview (P1): esas builds usan D1/R2
       de producción.
-- [!] Hacer público el repo (B). `gitleaks` 8.30.1 sobre el historial: limpio
-      (2026-10-21). **Bloqueado** por la decisión de los emails: 360 de los 361 commits
-      son `@masmovil.com`/`@masorange.es` (el resto, gmail), y publicar los expone en
-      cada `.patch`. Las 100+ recetas del libro también quedan públicas. Camino
-      recomendado: reescribir los emails con `git-filter-repo` a un noreply y hacer
-      público después; el `main` protegido en Free exige repo público (las reglas no
-      existen en privado sin Pro).
-- [ ] Configurar branch protection en `main`: PR obligatoria, checks `ci`, `lint` y
-      `migracion` (job de CI), y `guard` en M5b, sin bypass.
-- [ ] En GitHub, activar «Require approval for all outside collaborators» para workflows
-      de PRs desde forks.
+- [x] Hacer público el repo (B) (2026-10-21). Decisión: **publicar tal cual** (los
+      emails corporativos y las recetas del libro quedan visibles; `gitleaks` 8.30.1
+      sobre el historial: limpio). `main` protegido en Free exige repo público (las
+      reglas no existen en privado sin Pro).
+- [x] Branch protection en `main` (2026-10-21): PR obligatoria (0 aprobaciones), checks
+      `ci`, `lint` y `migracion`, `enforce_admins`, sin force-push ni borrado. `guard`
+      entra en M5b.
+- [x] «Require approval for all outside collaborators» activado (2026-10-21,
+      `fork-pr-contributor-approval` = `all_external_contributors`).
 - [ ] Crear un API token de Cloudflare limitado (D1 edit + Workers scripts edit) para el
       CLI; guardarlo en el entorno del host, nunca en el repo.
 - [!] Job `migracion` en `.github/workflows/ci.yml` (escrito 2026-10-21): pasa si el diff
@@ -644,9 +647,9 @@ Objetivo: dejar listas las cuentas y la configuración mínima. Depende de: nada
       `d1_migrations` de la D1 remota por la API (secretos `CLOUDFLARE_READ_TOKEN` y
       `CLOUDFLARE_ACCOUNT_ID`). **Bloqueado**: falta el token read-only para verificar que
       lista `_cf_D1_MIGRATIONS`; si no puede, R3-B (el CLI publica el status).
-- [ ] Si se usa Dependabot, añadir el token read-only a sus secretos; las PRs de forks no
-      reciben secretos y el job `migracion` queda bloqueado hasta que un maintainer lo
-      re-ejecute.
+- [-] Dependabot: no hay configuración y no se usa (2026-10-21); si se añade, el token
+      read-only va a sus secretos. El job `migracion` ya falla claro en PRs de forks sin
+      secretos hasta que un maintainer lo re-ejecute.
 - [x] Hermes en el host (2026-10-21): no está instalado y no hace falta; el binario entra
       en la imagen del worker (M1), que es donde corren los perfiles.
 - [ ] Crear el workspace de Linear: equipo con clave `ESQ`, estados `Backlog`,
@@ -890,7 +893,7 @@ Depende de: M5b.
 | 2026-10-21 | D1 | **D1-A**: `run` encadena las fases sin coordinador; plugin/C4 a M5b; M3 baja a ~0,5 día | El piloto valida el entorno y el CLI; el coordinador se añade solo si hace falta | M0 |
 | 2026-10-21 | Revisión v3 | R1-R4 y G1-G4 adoptados: estado/aprobaciones en host, espejo `/upstream`, job CI `migracion` read-only, status `guard`, thresholds, lock en `check`, sin MCP/verifier, `watch` a M5b; M2 3-4 días | El agente ya no puede tocar estado ni informes; M2 se recorta | M0 |
 | 2026-10-21 | Revisión v4 | A1-A3 adoptados: migración antes de `In validation`, hash local + status `guard` tras push, artefactos en host con dir base ro y overlays; 4 erratas | Sin cambios de alcance; el plan queda listo para M0 | M0 |
-| 2026-10-21 | M0 | `docs/flujo.md`, `.task/` ignorado y job `migracion` (API D1, sin `pnpm install`); gitleaks limpio; Hermes no va en el host | El job se verifica con el token; el repo no puede ser público con emails corporativos en el historial | Token CF + `gh auth login` |
+| 2026-10-21 | M0 | Repo público, `main` protegido (`ci`/`lint`/`migracion`, admins incluidos), aprobación para forks; job `migracion`, `docs/flujo.md`, `.task/` ignorado; gitleaks limpio | La decisión fue publicar tal cual; el repo ya es público y no hay vuelta atrás práctica | Docker (grupo) + tokens CF + Linear |
 
 ## Preguntas abiertas
 
@@ -904,7 +907,9 @@ Depende de: M5b.
   perfil lo necesita (M5b/M6).
 - ¿La integración GitHub de Linear mueve estados automáticamente o solo enlaza PRs?
   (decidir en M0).
-- ¿El token read-only de Cloudflare puede listar `_cf_D1_MIGRATIONS`? (M0; si no, R3-B).
+- ~~¿El token read-only de Cloudflare puede listar `_cf_D1_MIGRATIONS`?~~ Cerrada por
+  documentación (2026-10-21): `D1 Read` es un permiso aceptado por el endpoint de query;
+  queda comprobarlo con el token real (M0; si falla, R3-B).
 - ¿Se fija la versión de Hermes en la imagen o se actualiza con la imagen? (M1).
 - ¿Se copia el binario de omp a la imagen como plan B? (M1).
 - ¿Renombrar `orquestator-cli`? Se mantiene por ahora; renombrarlo después de M2 es caro.
