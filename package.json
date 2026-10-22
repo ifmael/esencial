@@ -13,6 +13,7 @@
     "e2e": "pnpm --filter @esencial/e2e test",
     "e2e:check": "pnpm --filter @esencial/e2e isolation-check",
     "test": "pnpm --filter api test && pnpm --filter web test",
+    "test:coverage": "pnpm --filter @esencial/api test:coverage && pnpm --filter @esencial/web test:coverage",
     "typecheck": "pnpm -r typecheck",
     "deploy": "pnpm build && wrangler deploy -c api/wrangler.toml && wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply esencial --local -c api/wrangler.toml --persist-to .wrangler/state",

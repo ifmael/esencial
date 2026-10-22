@@ -9,7 +9,7 @@ import { home, load, repoDir, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
 
 export const CHECK_COMMAND =
-  "pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store && pnpm lint && pnpm typecheck && pnpm test && pnpm e2e";
+  "pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm e2e";
 
 const TAIL = 120;
 
