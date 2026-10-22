@@ -235,7 +235,7 @@ export async function main(argv, io = {}) {
       case "inspect": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
-        line(stdout, inspect(key));
+        line(stdout, inspect(key, { dryRun }));
         return 0;
       }
       case "clean": {
@@ -274,6 +274,13 @@ export async function main(argv, io = {}) {
       case "guard": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
+        if (dryRun) {
+          line(
+            stdout,
+            `[dry-run] ${key}: importaría la rama y diffea contra origin/main`,
+          );
+          return 0;
+        }
         const result = guardTask(key, { main: process.cwd() });
         line(stdout, `hash: ${result.hash}`);
         if (result.files.length === 0)
@@ -308,6 +315,10 @@ export async function main(argv, io = {}) {
         }
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
+        if (dryRun) {
+          line(stdout, `[dry-run] aprobaría el diff protegido de ${key}`);
+          return 0;
+        }
         if (!process.stdin.isTTY) {
           throw new Error("approve solo se puede usar desde una terminal");
         }
@@ -322,10 +333,6 @@ export async function main(argv, io = {}) {
             stdout,
             "El diff no toca rutas protegidas; no hace falta aprobar.",
           );
-          return 0;
-        }
-        if (dryRun) {
-          line(stdout, `[dry-run] aprobaría ${result.hash}: ${reason}`);
           return 0;
         }
         withLock(key, () => {

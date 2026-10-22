@@ -5,7 +5,7 @@ import { home, load } from "./state.mjs";
 
 export function inspect(
   key,
-  { base = home(), main = process.cwd(), ghRun = runGh } = {},
+  { base = home(), main = process.cwd(), ghRun = runGh, dryRun } = {},
 ) {
   const state = load(key, base);
   if (!state) throw new Error(`La tarea ${key} no existe`);
@@ -32,6 +32,10 @@ export function inspect(
     out.push("", "Brief:", brief);
   }
 
+  if (dryRun) {
+    out.push("", "diff: (dry-run)");
+    return out.join("\n");
+  }
   try {
     const guard = guardTask(key, { base, main });
     out.push(

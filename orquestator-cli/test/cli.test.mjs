@@ -168,6 +168,27 @@ test("inspect de una tarea inexistente sale con 1", async () => {
   assert.match(r.err, /no existe/);
 });
 
+test("guard e inspect aceptan --dry-run sin tocar repos", async () => {
+  save(
+    "ESN-9",
+    transition({ ...createState("ESN-9"), branch: "ESN-9-x" }, "In Progress"),
+  );
+  const g = await run(["guard", "ESN-9", "--dry-run"]);
+  assert.equal(g.code, 0);
+  assert.match(g.out, /dry-run/);
+  const i = await run(["inspect", "ESN-9", "--dry-run"]);
+  assert.equal(i.code, 0);
+  assert.match(i.out, /diff: \(dry-run\)/);
+});
+
+test("approve --dry-run no exige TTY ni escribe", async () => {
+  save("ESN-9", transition(createState("ESN-9"), "In Progress"));
+  const r = await run(["approve", "ESN-9", "--motivo", "x", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /dry-run/);
+  assert.equal(load("ESN-9").approvals.guard, undefined);
+});
+
 test("approve solo desde una terminal", async () => {
   save("ESN-9", transition(createState("ESN-9"), "In Progress"));
   const r = await run(["approve", "ESN-9", "--motivo", "x"]);
