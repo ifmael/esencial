@@ -508,7 +508,7 @@
       <div class="hero-orbit"></div>
       <div class="hero-card">
         <div class="hero-card-top"><span class="live"></span> En curso · tu ordenador</div>
-        <div class="hero-task"><span>ESQ-123 · Deporte</span>Añadir una nota al terminar la sesión</div>
+        <div class="hero-task"><span>ESN-123 · Deporte</span>Añadir una nota al terminar la sesión</div>
         <div class="hero-rows">
           <div class="hero-row done"><span><span class="dot"></span> Ficha y criterios</span><b>hecho</b></div>
           <div class="hero-row active"><span><span class="dot"></span> Implementar</span><b>ahora</b></div>
@@ -700,7 +700,7 @@
 
     <div class="pieces reveal">
       <article class="piece"><span class="tag blue">Conductor</span><h3><code>run</code></h3><p>Prepara la copia, llama a las fases en orden, espera los resultados y se detiene en un bloqueo o en tu validación.</p><p class="no"><b>No hace:</b> no escribe código, no revisa, no aprueba y no mergea.</p></article>
-      <article class="piece"><span class="tag blue">Memoria</span><h3>La libreta</h3><p>Guarda la fase, las rondas y la huella de lo aprobado en <code>~/.orquestator/ESQ-123/</code>.</p><p class="no"><b>No hace:</b> no vive dentro de la copia; el implementador no puede reescribirla.</p></article>
+      <article class="piece"><span class="tag blue">Memoria</span><h3>La libreta</h3><p>Guarda la fase, las rondas y la huella de lo aprobado en <code>~/.orquestator/ESN-123/</code>.</p><p class="no"><b>No hace:</b> no vive dentro de la copia; el implementador no puede reescribirla.</p></article>
       <article class="piece"><span class="tag blue">Disco</span><h3>La copia</h3><p>Una copia de trabajo con su propia historia, sin conexión directa con tu repositorio principal.</p><p class="no"><b>No hace:</b> no monta tu <code>.git</code> principal ni empuja a la rama principal.</p></article>
       <article class="piece"><span class="tag blue">Frontera</span><h3>El espejo</h3><p>Una copia de la rama principal de solo lectura. El implementador la trae y resuelve los choques.</p><p class="no"><b>No hace:</b> no escribe en tu repositorio; el host lo actualiza.</p></article>
       <article class="piece"><span class="tag violet">Aislamiento</span><h3>Las cajas</h3><p>Cada fase corre en una caja con las herramientas que necesita y solo los ficheros que le tocan.</p><p class="no"><b>No hace:</b> no ve tus llaves, tu repositorio principal ni la libreta.</p></article>
@@ -854,7 +854,7 @@
       <div class="phase-body">
         <p>La máquina de estados y las operaciones deterministas. El piloto usa <code>run</code>; el coordinador no entra.</p>
         <ul>
-          <li><strong>Estado:</strong> fases, transiciones y libreta en <code>~/.orquestator/ESQ-123/state.json</code>.</li>
+          <li><strong>Estado:</strong> fases, transiciones y libreta en <code>~/.orquestator/ESN-123/state.json</code>.</li>
           <li><strong><code>run</code>:</strong> encadena <code>start → check → review → ship → pr-review</code>, aplica <code>fix</code> hasta agotar rondas, pide la migración antes de <code>In validation</code> y se detiene en <code>Blocked</code>/<code>In validation</code>.</li>
           <li><strong>Copia y espejo:</strong> copia sin remoto, espejo de la rama principal de solo lectura, importación de la rama y diferencias en tu copia principal.</li>
           <li><strong>Cajas:</strong> montajes por fase, directorio base de artefactos en solo lectura y overlays de escritura; estado y huella fuera.</li>
