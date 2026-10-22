@@ -720,9 +720,10 @@ Hecho cuando: las comprobaciones completas pasan dentro del contenedor sobre un 
 Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 **D1-A**: `run` encadena las fases sin coordinador; `watch` y el plugin/C4 pasan a M5b.
 
-- [ ] Crear `orquestator-cli/` (Node del repo; sin dependencias nuevas si se puede).
-- [ ] Módulo `state`: estados, transiciones válidas y estado en
-      `~/.orquestator/ESN-123/state.json` (host); tests.
+- [x] `orquestator-cli/` (Node 24, sin dependencias; tests con `node --test`) (2026-10-22).
+- [x] Módulo `state`: estados, transiciones válidas y estado en
+      `~/.orquestator/ESN-123/state.json` (host); escritura atómica, cerrojo y
+      comandos `status`/`block`/`resume` con `--dry-run` (2026-10-22).
 - [ ] Lock de migraciones: en `check`, la primera vez que el diff toca
       `api/migrations/**`, bloquea si otra tarea tiene una migración abierta; la reserva
       vive en el estado del host (no en `start`).

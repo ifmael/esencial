@@ -19,6 +19,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply esencial --remote -c api/wrangler.toml",
     "lint": "biome check . && pnpm --filter @esencial/web check:tokens",
     "lint:fix": "biome check --write .",
+    "orquestator": "node orquestator-cli/bin/orquestator.mjs",
     "format": "biome format --write .",
     "prepare": "husky"
   },
