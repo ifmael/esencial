@@ -7,8 +7,7 @@ FROM node:24-bookworm
 ARG HERMES_COMMIT=64dbae64747ab640a3fece06f359307c30d129da
 ARG PNPM_VERSION=12.4.2
 
-ENV npm_config_store_dir=/opt/pnpm-store \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     WRANGLER_SEND_METRICS=false \
     DEBIAN_FRONTEND=noninteractive \
     HERMES_HOME=/opt/hermes/home
@@ -36,14 +35,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY api/package.json api/
 COPY web/package.json web/
 COPY e2e/package.json e2e/
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts --store-dir /opt/pnpm-store
 
 RUN apt-get update \
  && pnpm --filter @esencial/e2e exec playwright install --with-deps chromium \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pnpm store prune \
- && chown -R node:node /opt/pnpm-store /ms-playwright
+RUN chown -R node:node /opt/pnpm-store /ms-playwright
 
 RUN mkdir -p /work && chown node:node /work
 

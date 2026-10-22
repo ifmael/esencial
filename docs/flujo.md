@@ -80,7 +80,8 @@ docker run --rm -v "$PWD:/work" -w /work --network none "<etiqueta>" pnpm test
   Hermes v0.22.4 fijado por commit (`HERMES_COMMIT` en el Dockerfile).
 - La etiqueta es el hash del Dockerfile y de `pnpm-lock.yaml`: un cambio en
   cualquiera de los dos produce una imagen nueva.
-- El store de pnpm y los navegadores viven en la imagen; el clon de la tarea
-  instala con `pnpm install --offline`.
+- El store de pnpm (`--store-dir /opt/pnpm-store`) y los navegadores viven en la
+  imagen; el clon de la tarea instala con
+  `pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store`.
 - `HERMES_HOME` se monta por fase (M2); el valor del Dockerfile es el de la
   instalación.
