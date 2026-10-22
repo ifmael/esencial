@@ -1,0 +1,1318 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Guía visual, sin jerga, del flujo agéntico de Esencial: de la ficha a la web publicada, con el plan de implementación.">
+<meta name="color-scheme" content="light dark">
+<script>
+  // Evita el destello de tema al cargar: aplica la preferencia antes de pintar.
+  try {
+    const saved = localStorage.getItem("flujo-theme");
+    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = saved || (dark ? "dark" : "light");
+  } catch (_) {}
+</script>
+<title>El flujo completo, sin jerga · Esencial</title>
+<style>
+  :root {
+    --paper: #f6f4ee;
+    --surface: #fffdf8;
+    --surface-2: #efede5;
+    --surface-3: #e7e5dc;
+    --ink: #17211b;
+    --muted: #5e6962;
+    --faint: #626d66;
+    --line: #d8d9d1;
+    --line-strong: #b9bcb2;
+    --green: #15803d;
+    --green-2: #1f9d55;
+    --green-soft: #e2f1e7;
+    --green-ink: #0f5429;
+    --amber: #8a4a06;
+    --amber-soft: #fbefd9;
+    --blue: #1e4f9c;
+    --blue-soft: #e6edfb;
+    --red: #a83232;
+    --red-soft: #fbe7e7;
+    --violet: #6d4b9b;
+    --violet-soft: #efe8fa;
+    --shadow: 0 22px 55px -30px rgba(23, 33, 27, .38);
+    --radius: 22px;
+    --radius-s: 14px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  [data-theme="dark"] {
+    --paper: #101611;
+    --surface: #161f19;
+    --surface-2: #1c2720;
+    --surface-3: #233028;
+    --ink: #edf3ec;
+    --muted: #aeb9b0;
+    --faint: #7e8b82;
+    --line: #2a372e;
+    --line-strong: #3d4d42;
+    --green: #4ade80;
+    --green-2: #86efac;
+    --green-soft: #173522;
+    --green-ink: #b6f2c9;
+    --amber: #fbbf24;
+    --amber-soft: #3a2a0d;
+    --blue: #93b4ff;
+    --blue-soft: #17243d;
+    --red: #fca5a5;
+    --red-soft: #3d1d1d;
+    --violet: #c4b5fd;
+    --violet-soft: #2b2243;
+    --shadow: 0 26px 60px -32px rgba(0, 0, 0, .7);
+    --line-strong: #4a5c50;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 86px; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 600px at 85% -10%, color-mix(in srgb, var(--green) 10%, transparent), transparent 65%),
+      radial-gradient(900px 500px at -10% 25%, color-mix(in srgb, var(--amber) 8%, transparent), transparent 70%),
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--green-ink); text-underline-offset: 3px; }
+  a:hover { color: var(--green); }
+  :focus-visible { outline: 3px solid var(--green); outline-offset: 3px; border-radius: 6px; }
+  .skip {
+    position: fixed; left: 12px; top: -100px; z-index: 100;
+    background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; text-decoration: none;
+  }
+  .skip:focus { top: 12px; }
+  .read-progress {
+    position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 90;
+    background: transparent; pointer-events: none;
+  }
+  .read-progress span {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--green), var(--green-2));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--green) 40%, transparent);
+  }
+  .wrap { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+  .eyebrow {
+    margin: 0 0 12px; text-transform: uppercase; letter-spacing: .16em;
+    font-size: 11px; font-weight: 800; color: var(--muted);
+  }
+  .hero {
+    position: relative; overflow: clip;
+    padding: 22px 0 42px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 75%);
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 80;
+    background: color-mix(in srgb, var(--paper) 84%, transparent);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  }
+  .topbar-inner {
+    display: flex; align-items: center; gap: 14px; min-height: 58px;
+    justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+  .brand-mark {
+    display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px;
+    background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 12px; font-weight: 700;
+  }
+  .nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a {
+    flex: 0 0 auto; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 650;
+    padding: 7px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .nav a:hover, .nav a:focus-visible { color: var(--ink); background: var(--surface-2); }
+  .theme-btn {
+    flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface);
+    color: var(--ink); border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 12px;
+    font-weight: 700; cursor: pointer;
+  }
+  .theme-btn:hover { border-color: var(--line-strong); }
+  .hero-grid {
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+    gap: clamp(28px, 5vw, 70px); align-items: center; padding-top: clamp(34px, 7vw, 74px);
+  }
+  h1 {
+    margin: 0; font-size: clamp(2.45rem, 6.1vw, 5.15rem); line-height: .98;
+    letter-spacing: -.055em; font-weight: 820; max-width: 14ch;
+  }
+  h1 em { font-style: normal; color: var(--green); }
+  .lead { margin: 22px 0 0; max-width: 58ch; color: var(--muted); font-size: clamp(16px, 1.5vw, 19px); }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .btn {
+    appearance: none; border: 1px solid transparent; border-radius: 999px;
+    padding: 12px 18px; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+    transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: var(--green-ink); color: var(--paper); }
+  [data-theme="dark"] .btn-primary { background: var(--green); color: #0b1a10; }
+  .btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { border-color: var(--line-strong); }
+  .hero-facts {
+    list-style: none; padding: 0; margin: 30px 0 0; display: flex; flex-wrap: wrap; gap: 18px 26px;
+    color: var(--muted); font-size: 13px;
+  }
+  .hero-facts strong { display: block; color: var(--ink); font-size: 17px; letter-spacing: -.02em; }
+  .hero-art { position: relative; min-height: 360px; display: grid; align-content: center; }
+  .hero-card {
+    position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 26px; box-shadow: var(--shadow); padding: 18px; max-width: 390px; margin-left: auto;
+  }
+  .hero-card-top { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 700; }
+  .live { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 5px color-mix(in srgb, var(--green) 15%, transparent); animation: breathe 2.2s ease-in-out infinite; }
+  .hero-task { margin: 14px 0 16px; font-size: 18px; font-weight: 780; letter-spacing: -.03em; }
+  .hero-task span { color: var(--muted); font-family: var(--mono); font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px; }
+  .hero-rows { display: grid; gap: 7px; }
+  .hero-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 13px; color: var(--muted);
+  }
+  .hero-row b { color: var(--ink); font-weight: 700; }
+  .hero-row.done { background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 28%, var(--line)); }
+  .hero-row.active { background: var(--amber-soft); border-color: color-mix(in srgb, var(--amber) 30%, var(--line)); }
+  .hero-row.active .dot { background: var(--amber); animation: breathe 1.4s ease-in-out infinite; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+  .hero-foot { margin-top: 14px; color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; gap: 10px; }
+  .hero-foot code { font-family: var(--mono); font-size: 11px; color: var(--green-ink); background: var(--green-soft); padding: 2px 6px; border-radius: 6px; }
+  .hero-orbit {
+    position: absolute; right: -60px; top: 20px; width: 250px; height: 250px; border: 1px dashed var(--line-strong);
+    border-radius: 50%; opacity: .5; animation: spin 38s linear infinite;
+  }
+  .hero-orbit::before, .hero-orbit::after {
+    content: ""; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--green);
+  }
+  .hero-orbit::before { top: -5px; left: 50%; }
+  .hero-orbit::after { bottom: -5px; left: 20%; background: var(--amber); }
+  main { display: block; }
+  section { padding: clamp(48px, 7vw, 86px) 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: 0; }
+  .section-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+  h2 { margin: 0; font-size: clamp(1.8rem, 3.6vw, 3.1rem); line-height: 1.05; letter-spacing: -.045em; font-weight: 820; max-width: 18ch; }
+  .section-head p { margin: 0; max-width: 48ch; color: var(--muted); font-size: 15px; }
+  .quick {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 26px 0 0;
+  }
+  .quick div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 16px; }
+  .quick strong { display: block; margin-bottom: 5px; font-size: 14px; }
+  .quick p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .pipeline {
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0;
+    margin-top: 30px; border: 1px solid var(--line); border-radius: 24px; overflow: hidden;
+    background: var(--surface);
+  }
+  .stage {
+    position: relative; padding: 18px 14px 16px; min-height: 230px; border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .stage:last-child { border-right: 0; }
+  .stage::after {
+    content: ""; position: absolute; z-index: 2; right: -8px; top: 42px; width: 15px; height: 15px;
+    border-top: 1.5px solid var(--line-strong); border-right: 1.5px solid var(--line-strong);
+    transform: rotate(45deg); background: var(--surface);
+  }
+  .stage:last-child::after { display: none; }
+  .stage-num { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--faint); }
+  .stage-role { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--green-ink); }
+  .stage h3 { margin: 0; font-size: 15px; line-height: 1.2; letter-spacing: -.02em; }
+  .stage p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .stage .produce { margin-top: auto; font-size: 11.5px; color: var(--faint); border-top: 1px dashed var(--line); padding-top: 8px; }
+  .stage .produce b { color: var(--ink); font-weight: 700; }
+  .stage.human { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--green) 5%, transparent)); }
+  .stage.cli { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--blue) 5%, transparent)); }
+  .stage.box { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--violet) 5%, transparent)); }
+  .stage.robot { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--amber) 5%, transparent)); }
+  .stage.external { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--green) 4%, transparent)); }
+  .support {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px;
+  }
+  .support-card {
+    border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface);
+    padding: 16px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .support-card h3 { margin: 0; font-size: 14px; }
+  .support-card p { margin: 0; color: var(--muted); font-size: 13px; }
+  .support-card .tag { align-self: flex-start; }
+  .tag {
+    display: inline-flex; align-items: center; width: fit-content; gap: 5px;
+    font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 999px;
+  }
+  .tag.green { background: var(--green-soft); color: var(--green-ink); }
+  .tag.blue { background: var(--blue-soft); color: var(--blue); }
+  .tag.amber { background: var(--amber-soft); color: var(--amber); }
+  .tag.red { background: var(--red-soft); color: var(--red); }
+  .tag.violet { background: var(--violet-soft); color: var(--violet); }
+  .callout {
+    margin-top: 18px; border: 1px solid var(--line); border-left: 4px solid var(--green);
+    border-radius: 12px; background: color-mix(in srgb, var(--green) 6%, var(--surface));
+    padding: 14px 16px; font-size: 14px;
+  }
+  .callout strong { color: var(--green-ink); }
+  .callout.warn { border-left-color: var(--amber); background: var(--amber-soft); }
+  .callout.warn strong { color: var(--amber); }
+  .callout.blue { border-left-color: var(--blue); background: var(--blue-soft); }
+  .callout.blue strong { color: var(--blue); }
+  .stepper {
+    display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; margin-top: 26px;
+    align-items: start;
+  }
+  .step-list {
+    display: grid; gap: 4px; position: sticky; top: 78px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 8px;
+  }
+  .step-btn {
+    display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center;
+    text-align: left; border: 0; background: transparent; color: var(--muted);
+    padding: 9px 8px; border-radius: 10px; font: inherit; font-size: 12.5px; font-weight: 650;
+    cursor: pointer;
+  }
+  .step-btn:hover { background: var(--surface-2); color: var(--ink); }
+  .step-btn[aria-current="step"] { background: var(--green-soft); color: var(--green-ink); }
+  .step-btn .n { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  .step-btn[aria-current="step"] .n { color: var(--green-ink); }
+  .step-stage {
+    border: 1px solid var(--line); border-radius: 26px; background: var(--surface);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .step-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+  }
+  .step-kicker { font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .step-controls { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 32px; height: 32px; display: grid; place-items: center; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    font: inherit; font-size: 15px; cursor: pointer;
+  }
+  .icon-btn:hover { border-color: var(--line-strong); }
+  .icon-btn.play { width: auto; padding: 0 12px; font-size: 12px; font-weight: 750; gap: 6px; }
+  .step-body { padding: clamp(20px, 3.5vw, 34px); }
+  .step-body h3 { margin: 0 0 8px; font-size: clamp(1.4rem, 2.5vw, 2.1rem); letter-spacing: -.04em; line-height: 1.1; }
+  .step-body > p { margin: 0 0 18px; color: var(--muted); max-width: 70ch; }
+  .step-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .fact { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .fact span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); font-weight: 800; }
+  .fact strong { display: block; font-size: 13px; margin-top: 3px; font-weight: 650; }
+  .step-state { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .step-note { margin-top: 16px; border-left: 3px solid var(--amber); padding: 8px 0 8px 12px; color: var(--muted); font-size: 13px; }
+  .step-note b { color: var(--amber); }
+  .step-progress { height: 5px; background: var(--surface-2); }
+  .step-progress span { display: block; height: 100%; width: 10%; background: var(--green); transition: width .3s ease; }
+  .state-svg-wrap { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 14px; overflow-x: auto; }
+  .state-svg { width: 100%; min-width: 820px; display: block; }
+  .state-node rect { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1.2; }
+  .state-node.human rect { fill: var(--green-soft); stroke: var(--green); }
+  .state-node.cli rect { fill: var(--blue-soft); stroke: var(--blue); }
+  .state-node.stop rect { fill: var(--red-soft); stroke: var(--red); stroke-dasharray: 6 4; }
+  .state-node.spec rect { fill: transparent; stroke: var(--line-strong); stroke-dasharray: 5 5; }
+  .state-node text { fill: var(--ink); font-family: var(--sans); font-size: 13.5px; font-weight: 700; }
+  .state-node .sub { fill: var(--muted); font-size: 10.5px; font-weight: 600; }
+  .state-edge { fill: none; stroke: var(--line-strong); stroke-width: 1.6; marker-end: url(#arrow); }
+  .state-edge.dashed { stroke-dasharray: 5 5; }
+  .state-edge.human { stroke: var(--green); }
+  .state-edge.stop { stroke: var(--red); }
+  .state-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; color: var(--muted); font-size: 12px; }
+  .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+  .state-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+  .state-card { border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); padding: 14px; }
+  .state-card h3 { margin: 0 0 4px; font-size: 14px; }
+  .state-card p { margin: 0; color: var(--muted); font-size: 13px; }
+  .state-card .who { display: block; margin-top: 8px; font-size: 10.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+  .pieces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .piece { border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); padding: 16px; }
+  .piece h3 { margin: 0 0 6px; font-size: 15px; }
+  .piece p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+  .piece .no { font-size: 12px; color: var(--faint); border-top: 1px dashed var(--line); padding-top: 8px; }
+  .piece .no b { color: var(--amber); }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 20px; }
+  .panel h3 { margin: 0 0 8px; font-size: 18px; letter-spacing: -.02em; }
+  .panel p { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; }
+  .timeline { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 0; }
+  .timeline li { position: relative; padding: 0 0 22px 34px; border-left: 2px solid var(--line); margin-left: 9px; }
+  .timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .timeline li::before {
+    content: ""; position: absolute; left: -8px; top: 2px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--green); box-shadow: 0 0 0 4px var(--surface);
+  }
+  .timeline li.warn::before { border-color: var(--amber); }
+  .timeline li.stop::before { border-color: var(--red); }
+  .timeline h4 { margin: 0 0 3px; font-size: 14px; }
+  .timeline p { margin: 0; color: var(--muted); font-size: 13px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 620px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); background: var(--surface-2); }
+  tr:last-child td { border-bottom: 0; }
+  td code, p code, li code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  .plan-rail { display: flex; gap: 4px; margin: 24px 0 18px; overflow-x: auto; padding-bottom: 4px; }
+  .plan-chip {
+    flex: 1 0 110px; border: 1px solid var(--line); border-radius: 999px; padding: 8px 10px;
+    font-size: 11px; font-weight: 750; text-align: center; color: var(--muted); background: var(--surface);
+  }
+  .plan-chip b { display: block; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  details.phase {
+    border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface);
+    margin-bottom: 8px; overflow: hidden;
+  }
+  details.phase summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px;
+    padding: 13px 16px; font-size: 14px; font-weight: 750;
+  }
+  details.phase summary::-webkit-details-marker { display: none; }
+  details.phase summary .meta { margin-left: auto; color: var(--muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+  details.phase[open] summary { border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .phase-body { padding: 14px 16px 16px; color: var(--muted); font-size: 13.5px; }
+  .phase-body p { margin: 0 0 8px; }
+  .phase-body ul { margin: 0; padding-left: 18px; }
+  .phase-body li { margin: 3px 0; }
+  .phase-body .done { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--line); color: var(--ink); font-size: 12.5px; }
+  .risk-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .risk { border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); padding: 15px; }
+  .risk h3 { margin: 0 0 5px; font-size: 14px; }
+  .risk p { margin: 0; color: var(--muted); font-size: 13px; }
+  .glossary { display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; }
+  .term { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .term dt { font-weight: 750; font-size: 13.5px; }
+  .term dd { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .footer { padding: 34px 0 50px; color: var(--muted); font-size: 12.5px; }
+  .footer-inner { display: flex; flex-wrap: wrap; gap: 14px 26px; justify-content: space-between; align-items: start; }
+  .footer a { color: var(--muted); }
+  .footer strong { color: var(--ink); }
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity .55s ease, transform .55s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @keyframes breathe { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes dash { to { stroke-dashoffset: -24; } }
+  @keyframes travel {
+    0% { left: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+  }
+  .state-edge { animation: dash 2.8s linear infinite; }
+  .hero-orbit { animation: spin 38s linear infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+  @media (max-width: 980px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-art { order: -1; min-height: 270px; }
+    .hero-card { margin: 0; max-width: 470px; }
+    .hero-orbit { right: 0; top: 0; width: 190px; height: 190px; }
+    .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stage { min-height: 0; border-bottom: 1px solid var(--line); }
+    .stage:nth-child(2n) { border-right: 0; }
+    .stage::after { display: none; }
+    .support, .pieces, .state-cards, .quick { grid-template-columns: repeat(2, 1fr); }
+    .stepper { grid-template-columns: 1fr; }
+    .step-list { position: static; grid-template-columns: repeat(2, 1fr); }
+    .section-head { display: block; }
+    .section-head p { margin-top: 10px; }
+  }
+  @media (max-width: 680px) {
+    .wrap { width: min(100% - 26px, 1180px); }
+    .nav { display: none; }
+    .topbar-inner { min-height: 54px; }
+    h1 { font-size: clamp(2.2rem, 12vw, 3.5rem); }
+    .pipeline, .support, .pieces, .state-cards, .quick, .split, .risk-grid, .glossary { grid-template-columns: 1fr; }
+    .stage { border-right: 0; padding: 14px 16px; }
+    .stage::after { display: none; }
+    .step-list { grid-template-columns: 1fr; max-height: 220px; overflow-y: auto; }
+    .step-facts { grid-template-columns: 1fr; }
+    .step-body { padding: 18px; }
+    .step-top { padding: 10px 14px; }
+    .state-svg { min-width: 760px; }
+    .hero-facts { gap: 14px 20px; }
+    .hero-actions .btn { width: 100%; justify-content: center; }
+  }
+  @media print {
+    .topbar, .read-progress, .hero-actions, .step-controls, .theme-btn, .skip { display: none !important; }
+    body { background: #fff; color: #000; }
+    .hero { padding-top: 0; }
+    .hero-orbit, .hero-art { display: none; }
+    section { break-inside: avoid; padding: 28px 0; }
+    .reveal { opacity: 1; transform: none; }
+    details.phase { break-inside: avoid; }
+    .step-list { display: none; }
+    .stepper { display: block; }
+    .step-stage { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<div class="read-progress" aria-hidden="true"><span id="read-progress"></span></div>
+
+<header class="hero">
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <div class="brand"><span class="brand-mark">ES</span> Esencial · flujo</div>
+      <nav class="nav" aria-label="Secciones">
+        <a href="#mapa">Mapa</a>
+        <a href="#paso">Paso a paso</a>
+        <a href="#estados">Estados</a>
+        <a href="#piezas">Piezas</a>
+        <a href="#aprobaciones">Aprobaciones</a>
+        <a href="#migraciones">Migraciones</a>
+        <a href="#plan">Plan</a>
+        <a href="#glosario">Glosario</a>
+      </nav>
+      <button class="theme-btn" id="theme" type="button" aria-pressed="false">Tema</button>
+    </div>
+  </div>
+
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Guía visual · 21 de octubre de 2026</p>
+      <h1>De una idea a una web publicada, <em>sin perder el control</em></h1>
+      <p class="lead">Qué pasa desde que escribes una tarea hasta que la web está publicada, quién hace cada cosa y dónde puedes parar. Las palabras técnicas están explicadas: no hace falta saber programar para seguir el recorrido.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#paso">Ver el flujo paso a paso</a>
+        <button class="btn btn-ghost" id="simulate" type="button">Simular el recorrido</button>
+        <a class="btn btn-ghost" href="#plan">Ir al plan</a>
+      </div>
+      <ul class="hero-facts">
+        <li><strong>1 copia</strong> por tarea</li>
+        <li><strong>1 caja</strong> por fase</li>
+        <li><strong>0 integraciones</strong> automáticas</li>
+        <li><strong>3 frenos</strong> humanos</li>
+      </ul>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="hero-orbit"></div>
+      <div class="hero-card">
+        <div class="hero-card-top"><span class="live"></span> En curso · tu ordenador</div>
+        <div class="hero-task"><span>ESQ-123 · Deporte</span>Añadir una nota al terminar la sesión</div>
+        <div class="hero-rows">
+          <div class="hero-row done"><span><span class="dot"></span> Ficha y criterios</span><b>hecho</b></div>
+          <div class="hero-row active"><span><span class="dot"></span> Implementar</span><b>ahora</b></div>
+          <div class="hero-row"><span><span class="dot"></span> Comprobar y revisar</span><b>después</b></div>
+          <div class="hero-row"><span><span class="dot"></span> Tu validación</span><b>al final</b></div>
+        </div>
+        <div class="hero-foot"><span>La libreta dice</span><code>run</code></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="contenido">
+
+<section id="mapa">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">01 · El mapa</p>
+        <h2>Siete estaciones, tres carriles y una regla</h2>
+      </div>
+      <p>El recorrido no es una caja negra: cada estación deja un rastro y se puede parar. Las tres primeras ocurren en tu ordenador; las dos siguientes son ayudantes; la sexta es la propuesta; la séptima eres tú.</p>
+    </div>
+
+    <div class="quick reveal">
+      <div><strong>Tú decides</strong><p>Qué se quiere, cuándo está listo y cuándo se publica. El ayudante nunca se autopromociona.</p></div>
+      <div><strong>El conductor ordena</strong><p><code>run</code> prepara la copia, llama a las cajas en orden y se detiene cuando hace falta una persona.</p></div>
+      <div><strong>Las cajas trabajan</strong><p>Implementar, comprobar y revisar ocurren en entornos aislados; no ven tus llaves ni tu repositorio principal.</p></div>
+    </div>
+
+    <div class="pipeline reveal" role="list" aria-label="Recorrido principal en siete estaciones">
+      <article class="stage human" role="listitem">
+        <span class="stage-num">01</span>
+        <span class="stage-role">Tú</span>
+        <h3>Ficha y criterios</h3>
+        <p>Escribes qué quieres y cómo se sabrá que está bien: un caso normal, uno que debe fallar y uno al límite.</p>
+        <div class="produce">Deja <b>la tarea en Ready</b></div>
+      </article>
+      <article class="stage cli" role="listitem">
+        <span class="stage-num">02</span>
+        <span class="stage-role">run · tu ordenador</span>
+        <h3>Copia y libreta</h3>
+        <p>Prepara una copia de trabajo, un espejo de la rama principal de solo lectura y una libreta fuera de la copia.</p>
+        <div class="produce">Deja <b>copia, espejo, libreta y resumen</b></div>
+      </article>
+      <article class="stage box" role="listitem">
+        <span class="stage-num">03</span>
+        <span class="stage-role">Caja · implementador</span>
+        <h3>Implementar</h3>
+        <p>Primero los pruebas que fallan, después el código. No puede tocar la libreta ni los informes ajenos.</p>
+        <div class="produce">Deja <b>código, pruebas, impl.md, pr-body.md</b></div>
+      </article>
+      <article class="stage robot" role="listitem">
+        <span class="stage-num">04</span>
+        <span class="stage-role">Caja · comprobaciones</span>
+        <h3>Comprobar</h3>
+        <p>Estilo, tipos, pruebas, umbrales de cobertura y recorrido completo. Comprueba que la prueba nuevo falla antes del arreglo.</p>
+        <div class="produce">Deja <b>el informe de comprobaciones</b> y un veredicto</div>
+      </article>
+      <article class="stage box" role="listitem">
+        <span class="stage-num">05</span>
+        <span class="stage-role">Cajas · dos revisores</span>
+        <h3>Revisar</h3>
+        <p>Un revisor limpio mira la ficha y el código. Otro mira la propuesta ya publicada. Los hallazgos críticos vuelven.</p>
+        <div class="produce">Deja <b>los dos informes de revisión</b></div>
+      </article>
+      <article class="stage external" role="listitem">
+        <span class="stage-num">06</span>
+        <span class="stage-role">GitHub</span>
+        <h3>Proponer</h3>
+        <p>Sube una rama y abre una propuesta de cambio. Añade el cuerpo, el diagrama, los informes y los semáforos.</p>
+        <div class="produce">Deja <b>propuesta + comprobaciones + semáforo</b></div>
+      </article>
+      <article class="stage human" role="listitem">
+        <span class="stage-num">07</span>
+        <span class="stage-role">Tú</span>
+        <h3>Validar y publicar</h3>
+        <p>Ves la copia temporal o el vídeo, pruebas e integras. El despliegue es automático; después se limpia.</p>
+        <div class="produce">Deja <b>web publicada y tarea Done</b></div>
+      </article>
+    </div>
+
+    <div class="callout reveal"><strong>La regla de oro:</strong> el ayudante propone y comprueba; tú apruebas lo delicado e integras. Ningún paso puede saltarse una comprobación ni publicar en la rama principal por su cuenta.</div>
+
+    <div class="support reveal">
+      <article class="support-card"><span class="tag blue">Pieza de apoyo</span><h3>La libreta</h3><p>Guarda la fase, las rondas y la huella de lo aprobado. Vive en tu ordenador, no en la copia que el ayudante puede editar.</p></article>
+      <article class="support-card"><span class="tag blue">Pieza de apoyo</span><h3>La copia</h3><p>Es una copia de trabajo sin conexión directa con tu repositorio principal. El ayudante guarda ahí sus cambios; tú importas la rama y la subes.</p></article>
+      <article class="support-card"><span class="tag blue">Pieza de apoyo</span><h3>El espejo</h3><p>Una copia de la rama principal de solo lectura. Si otra tarea integra antes, el implementador trae los cambios y resuelve el choque.</p></article>
+      <article class="support-card"><span class="tag amber">Freno</span><h3>El control de zonas</h3><p>Si el cambio toca algo delicado, el flujo se para y tú apruebas con una huella. El semáforo va atado a la versión exacta.</p></article>
+      <article class="support-card"><span class="tag amber">Freno</span><h3>La migración</h3><p>Un cambio de base de datos se aprueba aparte, se aplica con una llave limitada y un robot de comprobaciones confirma que está aplicado.</p></article>
+      <article class="support-card"><span class="tag green">Opcional · M5a</span><h3>La copia temporal</h3><p>Una versión de la web solo para esa propuesta, con su propia base de datos y sus propias fotos. Se borra al cerrar la propuesta.</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="paso">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">02 · Paso a paso</p>
+        <h2>El recorrido, contado despacio</h2>
+      </div>
+      <p>Diez pasos. Puedes avanzar a mano o dejar que se reproduzcan. Cada paso dice quién actúa, qué deja y qué pasa si algo falla.</p>
+    </div>
+
+    <div class="stepper reveal">
+      <div class="step-list" id="step-list" aria-label="Pasos del recorrido"></div>
+      <div class="step-stage">
+        <div class="step-top">
+          <span class="step-kicker" id="step-kicker">Paso 1 de 10</span>
+          <div class="step-controls">
+            <button class="icon-btn" id="prev" type="button" aria-label="Paso anterior">←</button>
+            <button class="icon-btn play" id="play" type="button" aria-pressed="false">Simular</button>
+            <button class="icon-btn" id="next" type="button" aria-label="Paso siguiente">→</button>
+          </div>
+        </div>
+        <div class="step-progress"><span id="step-progress"></span></div>
+        <div class="step-body" id="step-card" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="estados">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">03 · Los estados</p>
+        <h2>Dónde está la tarea, en todo momento</h2>
+      </div>
+      <p>El estado de producto vive en Linear. La libreta interna guarda la misma información para que el conductor sepa qué puede hacer y qué no.</p>
+    </div>
+
+    <div class="state-svg-wrap reveal">
+      <svg class="state-svg" viewBox="0 0 980 290" role="img" aria-labelledby="state-title state-desc">
+        <title id="state-title">Estados de una tarea</title>
+        <desc id="state-desc">Backlog pasa a revisión de la ficha, luego a Ready, In progress, In validation y Done. Blocked es una parada lateral con vuelta a la fase anterior.</desc>
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--line-strong)"></path>
+          </marker>
+        </defs>
+        <g class="state-node"><rect x="18" y="48" width="130" height="64" rx="15"></rect><text x="83" y="76" text-anchor="middle">Backlog</text><text x="83" y="93" text-anchor="middle" class="sub">la idea</text></g>
+        <g class="state-node spec"><rect x="178" y="48" width="130" height="64" rx="15"></rect><text x="243" y="76" text-anchor="middle">Revisión de ficha</text><text x="243" y="93" text-anchor="middle" class="sub">solo M5b</text></g>
+        <g class="state-node human"><rect x="338" y="48" width="130" height="64" rx="15"></rect><text x="403" y="76" text-anchor="middle">Ready</text><text x="403" y="93" text-anchor="middle" class="sub">tu sí</text></g>
+        <g class="state-node cli"><rect x="498" y="48" width="150" height="64" rx="15"></rect><text x="573" y="76" text-anchor="middle">In progress</text><text x="573" y="93" text-anchor="middle" class="sub">run y cajas</text></g>
+        <g class="state-node cli"><rect x="678" y="48" width="140" height="64" rx="15"></rect><text x="748" y="76" text-anchor="middle">In validation</text><text x="748" y="93" text-anchor="middle" class="sub">lo pruebas tú</text></g>
+        <g class="state-node human"><rect x="848" y="48" width="110" height="64" rx="15"></rect><text x="903" y="76" text-anchor="middle">Done</text><text x="903" y="93" text-anchor="middle" class="sub">integración</text></g>
+        <g class="state-node stop"><rect x="498" y="184" width="150" height="64" rx="15"></rect><text x="573" y="212" text-anchor="middle">Blocked</text><text x="573" y="229" text-anchor="middle" class="sub">una pregunta</text></g>
+        <path class="state-edge" d="M148 80 H178"></path>
+        <path class="state-edge" d="M308 80 H338"></path>
+        <path class="state-edge human" d="M468 80 H498"></path>
+        <path class="state-edge" d="M648 80 H678"></path>
+        <path class="state-edge human" d="M818 80 H848"></path>
+        <path class="state-edge stop dashed" d="M573 112 V184"></path>
+        <path class="state-edge stop dashed" d="M498 216 H430 V112"></path>
+        <text x="573" y="158" text-anchor="middle" fill="var(--red)" font-size="10.5" font-weight="700">falta una decisión</text>
+        <text x="403" y="132" text-anchor="middle" fill="var(--muted)" font-size="10.5">lo mueves tú</text>
+        <text x="748" y="132" text-anchor="middle" fill="var(--muted)" font-size="10.5">solo con todo verde</text>
+      </svg>
+      <div class="state-legend" aria-hidden="true">
+        <span><span class="legend-dot" style="background: var(--green)"></span>Lo mueves tú</span>
+        <span><span class="legend-dot" style="background: var(--blue)"></span>Lo mueve el conductor</span>
+        <span><span class="legend-dot" style="background: var(--red)"></span>Parada con pregunta</span>
+      </div>
+    </div>
+
+    <div class="state-cards reveal">
+      <article class="state-card"><h3>Backlog</h3><p>La idea está apuntada, pero todavía no tiene criterios. No se lanza nada.</p><span class="who">Tú</span></article>
+      <article class="state-card"><h3>Revisión de ficha</h3><p>Un revisor de la ficha haría preguntas. En el piloto no se usa: escribes tú la ficha y la pasas a Ready.</p><span class="who">M5b · tú</span></article>
+      <article class="state-card"><h3>Ready</h3><p>Ya hay criterios y un sí humano. El ayudante nunca se autopromociona a este estado.</p><span class="who">Tú</span></article>
+      <article class="state-card"><h3>In progress</h3><p>El conductor prepara la copia, llama a las cajas, comprueba, revisa y abre la propuesta.</p><span class="who">el conductor · run</span></article>
+      <article class="state-card"><h3>In validation</h3><p>La propuesta está publicada y con todo verde. Te toca probarla y decidir.</p><span class="who">el conductor, con comprobaciones verdes</span></article>
+      <article class="state-card"><h3>Done</h3><p>Has integrado. El despliegue es automático; después se limpia la copia y la libreta.</p><span class="who">Tú</span></article>
+    </div>
+    <div class="callout warn reveal"><strong>Blocked no es un fracaso:</strong> es una pregunta concreta con su contexto. La tarea se te asigna, se te menciona y vuelve con <code>resume</code> cuando respondes.</div>
+  </div>
+</section>
+
+<section id="piezas">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">04 · Las piezas</p>
+        <h2>Qué hace cada pieza y qué no hace</h2>
+      </div>
+      <p>La seguridad del flujo depende de que cada pieza tenga un trabajo pequeño y un límite claro.</p>
+    </div>
+
+    <div class="pieces reveal">
+      <article class="piece"><span class="tag blue">Conductor</span><h3><code>run</code></h3><p>Prepara la copia, llama a las fases en orden, espera los resultados y se detiene en un bloqueo o en tu validación.</p><p class="no"><b>No hace:</b> no escribe código, no revisa, no aprueba y no mergea.</p></article>
+      <article class="piece"><span class="tag blue">Memoria</span><h3>La libreta</h3><p>Guarda la fase, las rondas y la huella de lo aprobado en <code>~/.orquestator/ESQ-123/</code>.</p><p class="no"><b>No hace:</b> no vive dentro de la copia; el implementador no puede reescribirla.</p></article>
+      <article class="piece"><span class="tag blue">Disco</span><h3>La copia</h3><p>Una copia de trabajo con su propia historia, sin conexión directa con tu repositorio principal.</p><p class="no"><b>No hace:</b> no monta tu <code>.git</code> principal ni empuja a la rama principal.</p></article>
+      <article class="piece"><span class="tag blue">Frontera</span><h3>El espejo</h3><p>Una copia de la rama principal de solo lectura. El implementador la trae y resuelve los choques.</p><p class="no"><b>No hace:</b> no escribe en tu repositorio; el host lo actualiza.</p></article>
+      <article class="piece"><span class="tag violet">Aislamiento</span><h3>Las cajas</h3><p>Cada fase corre en una caja con las herramientas que necesita y solo los ficheros que le tocan.</p><p class="no"><b>No hace:</b> no ve tus llaves, tu repositorio principal ni la libreta.</p></article>
+      <article class="piece"><span class="tag amber">Freno</span><h3>El control de zonas</h3><p>Muestra el cambio de las zonas delicadas, pide una aprobación humana con huella y publica el semáforo <code>guard</code>.</p><p class="no"><b>No hace:</b> no aprueba solo; el ayudante no puede aprobar.</p></article>
+      <article class="piece"><span class="tag amber">Robot</span><h3>Las comprobaciones</h3><p>Estilo, tipos, pruebas, cobertura y recorrido completo. Comprueba que la prueba nuevo falla antes del arreglo.</p><p class="no"><b>No hace:</b> no opina sobre el diseño; si algo falla, vuelve al implementador.</p></article>
+      <article class="piece"><span class="tag violet">Ojos nuevos</span><h3>Los revisores</h3><p>Uno revisa antes de la propuesta; otro revisa la propuesta publicada. El segundo ve el cambio, no el hilo de comentarios.</p><p class="no"><b>No hace:</b> no ve la conversación del implementador ni puede tocar el código.</p></article>
+      <article class="piece"><span class="tag amber">Base de datos</span><h3>La migración</h3><p>Un robot de comprobaciones comprueba el estado con una llave de solo lectura; el conductor aplica el cambio tras tu aprobación con una llave de edición.</p><p class="no"><b>No hace:</b> no se aplica sola, no tiene vuelta atrás automática y no se toca desde una copia temporal.</p></article>
+      <article class="piece"><span class="tag green">Opcional · M5a</span><h3>La copia temporal</h3><p>Una web y una base de datos solo para esa propuesta, con Access y datos sembrados.</p><p class="no"><b>No hace:</b> no usa la base de datos ni las fotos de producción.</p></article>
+      <article class="piece"><span class="tag blue">Después</span><h3>La limpieza</h3><p>Retira la copia, la libreta y la caja; comprueba el despliegue y sugiere volver atrás si algo falla.</p><p class="no"><b>No hace:</b> no borra la propuesta ni tu rama remota.</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="aprobaciones">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">05 · Aprobaciones</p>
+        <h2>El semáforo va atado a la versión exacta</h2>
+      </div>
+      <p>Una etiqueta se queda pegada a la propuesta aunque cambie el código. Un semáforo no: cada versión tiene el suyo. Por eso lo delicado se aprueba con una huella.</p>
+    </div>
+
+    <div class="split reveal">
+      <div class="panel">
+        <span class="tag green">Antes de subir</span>
+        <h3>Manda la huella</h3>
+        <p>El control compara el cambio con la lista de zonas delicadas. Si hay algo, el flujo se para y te enseña el cambio. Tú ejecutas <code>approve</code> en una terminal interactiva; se guarda una huella del cambio en la libreta de tu ordenador.</p>
+        <p>Antes de las comprobaciones y de la propuesta, el conductor exige esa huella. No hay un número remoto todavía: la rama aún no se ha subido.</p>
+      </div>
+      <div class="panel">
+        <span class="tag amber">Después de subir</span>
+        <h3>Manda el semáforo</h3>
+        <p>Justo después de subir la rama, si la huella sigue coincidiendo, el conductor publica el semáforo <code>guard</code> sobre esa versión exacta. La protección de la rama principal y el trabajo automático de comprobaciones lo ven.</p>
+        <p>Si un <code>fix</code> cambia el cambio, el semáforo anterior deja de valer. El conductor revalida la huella: si no coincide, vuelve a <code>Blocked</code>; si coincide, lo vuelve a publicar.</p>
+      </div>
+    </div>
+
+    <ol class="timeline reveal">
+      <li><h4>El cambio toca una zona delicada</h4><p>La lista vive en <code>orquestator-cli/protected-paths.txt</code> y se lee de tu copia principal, no de la rama.</p></li>
+      <li><h4>El conductor se detiene y te enseña el cambio</h4><p>La tarea pasa a <code>Blocked</code>; se te asigna y se te menciona. No se abren comprobaciones ni propuesta sin tu sí.</p></li>
+      <li><h4>Tú apruebas en una terminal</h4><p><code>approve</code> guarda el motivo y una huella del cambio en la libreta de tu ordenador. Si el cambio cambia, la aprobación caduca.</p></li>
+      <li><h4>Se comprueba y se sube</h4><p>El conductor exige la huella en local; tras subir la rama publica el semáforo <code>guard</code> en la versión exacta.</p></li>
+      <li><h4>Una subida nueva invalida el semáforo</h4><p>Si el cambio protegido cambió, vuelve a <code>Blocked</code>. Si no cambió, el conductor repone el semáforo.</p></li>
+      <li class="stop"><h4>Las automatizaciones de GitHub no son aprobables</h4><p>Un cambio en <code>.github/workflows/</code> va en una propuesta tuya, fuera del flujo. La llave del conductor no tiene permiso de workflows.</p></li>
+    </ol>
+
+    <div class="callout blue reveal"><strong>Propuestas manuales:</strong> si abres una propuesta tú (por ejemplo, para cambiar las comprobaciones), puedes aprobar sus zonas delicadas con <code>approve --pr N</code>. El semáforo se publica sobre esa versión; si añades commits, se invalida y se vuelve a aprobar.</div>
+  </div>
+</section>
+
+<section id="migraciones">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">06 · Migraciones</p>
+        <h2>Cambiar la base de datos sin pisar a nadie</h2>
+      </div>
+      <p>Una migración es un cambio de estructura o de datos. No se aplica sola, no se puede deshacer con un botón y tiene que coordinarse con las demás tareas.</p>
+    </div>
+
+    <ol class="timeline reveal">
+      <li><h4>El cambio toca <code>api/migrations/</code></h4><p>La tarea lleva la etiqueta <code>migración</code> y una checklist en la propuesta. Es un cambio delicado: se aprueba aparte.</p></li>
+      <li><h4>El robot de comprobaciones mira si hay migración</h4><p>El trabajo automático <code>migracion</code> corre en todas las propuestas con una llave de solo lectura. Si no hay migración, pasa; si hay, comprueba que esté aplicada en la base de datos real.</p></li>
+      <li class="warn"><h4>La tarea se para y te pide aprobación</h4><p>Sin <code>approve --migracion</code>, no se aplica nada. El conductor te pide el sí en una terminal interactiva.</p></li>
+      <li><h4>El conductor aplica la migración</h4><p>Con una llave de edición limitada a la base de datos y a los scripts de Cloudflare, y un <code>wrangler</code> fijado. Nunca se usa <code>wrangler login</code> ni una llave global de la cuenta.</p></li>
+      <li><h4>Se vuelve a lanzar el robot</h4><p>El trabajo automático <code>migracion</code> se re-ejecuta. Solo cuando pasa, junto con las comprobaciones de integración y estilo, la tarea puede pasar a <code>In validation</code>.</p></li>
+      <li class="stop"><h4>Si una migración ya aplicada cambia de huella</h4><p>El conductor bloquea. Una migración aplicada es inmutable: el arreglo va en una migración nueva. La base de datos no tiene un botón de deshacer.</p></li>
+    </ol>
+
+    <div class="callout warn reveal"><strong>El atasco que se corrigió:</strong> antes, la revisión de la propuesta esperaba todas las comprobaciones en verde, incluido <code>migracion</code>, pero la migración se aplicaba «dentro» de <code>In validation</code>. Ninguno de los dos pasos podía ocurrir primero. Ahora se aprueba y se aplica <em>antes</em> de <code>In validation</code>; el robot confirma y entonces se mueve el estado.</div>
+
+    <div class="split reveal" style="margin-top:16px">
+      <div class="panel"><span class="tag green">M5a · copia temporal</span><h3>Primero la base de datos de prueba</h3><p>La migración se aplica a la base de datos de la copia temporal antes de construir y publicar esa copia. Nunca se usa la base de datos de producción para una copia temporal.</p></div>
+      <div class="panel"><span class="tag amber">Producción</span><h3>Después, la base de datos real</h3><p>La base de datos real se toca solo después de tu <code>approve --migracion</code> y antes de <code>In validation</code>. El merge no aplica migraciones por sorpresa.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="plan">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">07 · El plan</p>
+        <h2>Se construye por fases, no de golpe</h2>
+      </div>
+      <p>Cada fase deja algo que se puede probar. No se empieza la siguiente hasta que la anterior esté cerrada. El plan está listo para empezar M0.</p>
+    </div>
+
+    <div class="plan-rail reveal" aria-label="Camino crítico del plan">
+      <div class="plan-chip"><b>M0</b>Base</div>
+      <div class="plan-chip"><b>M1</b>Imagen</div>
+      <div class="plan-chip"><b>M2</b>Conductor</div>
+      <div class="plan-chip"><b>M3</b>Perfiles</div>
+      <div class="plan-chip"><b>M4</b>Piloto</div>
+      <div class="plan-chip"><b>M5a</b>Copia</div>
+      <div class="plan-chip"><b>M5b</b>Automatización</div>
+      <div class="plan-chip"><b>M6</b>Después</div>
+    </div>
+
+    <div class="table-wrap reveal" style="margin-bottom:18px">
+      <table>
+        <thead><tr><th>Fase</th><th>Estimación</th><th>Depende de</th><th>Qué deja listo</th></tr></thead>
+        <tbody>
+          <tr><td><strong>M0 · Base</strong></td><td>0,3-0,5 día</td><td>—</td><td>Cuentas, repo público, protección de la rama principal, trabajo automático <code>migracion</code>, llaves, Linear y documentación.</td></tr>
+          <tr><td><strong>M1 · Imagen</strong></td><td>0,5 día</td><td>M0</td><td>Una imagen con Node, pnpm, Playwright, Hermes, proxy de modelo y red interna; smoke prueba.</td></tr>
+          <tr><td><strong>M2 · Programa conductor</strong></td><td>3-4 días (4-6 con <code>watch</code> y <code>migrate</code> completos)</td><td>M0, M1</td><td>Máquina de estados, <code>run</code>, copia, espejo, cajas, comprobaciones, <code>guard</code>, propuesta, <code>inspect</code>, <code>clean</code> y pruebas.</td></tr>
+          <tr><td><strong>M3 · Perfiles</strong></td><td>2-3 horas</td><td>M1, M2</td><td>Implementador, revisor y revisor de la propuesta; modelos, resúmenes y formatos.</td></tr>
+          <tr><td><strong>M4 · Piloto</strong></td><td>1 tarea real</td><td>M0-M3</td><td>Una propuesta real pasada por el flujo, validada y integrada; revisión de lo ocurrido y ajustes.</td></tr>
+          <tr><td><strong>M5a · Copia temporal</strong></td><td>2-3 días</td><td>M4</td><td>Copias temporales por rama, base de datos y fotos propias, Access, datos sembrados y limpieza.</td></tr>
+          <tr><td><strong>M5b · Automatización</strong></td><td>1-2 días</td><td>M5a</td><td><code>watch</code> como servicio, revisor de la ficha, trabajo automático <code>guard</code>, conexión MCP si hace falta, limpieza tras la integración.</td></tr>
+          <tr><td><strong>M6 · Después</strong></td><td>A decidir</td><td>M5b</td><td>Evaluar omp, canales de aviso, ADR, cobertura al 60%, paralelismo y revisión de <code>AGENTS.md</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <details class="phase reveal" open>
+      <summary>M0 · Base <span class="meta">0,3-0,5 día · sin dependencias</span></summary>
+      <div class="phase-body">
+        <p>Dejar listas las cuentas y la configuración mínima. No se escribe código de producto.</p>
+        <ul>
+          <li><code>gh auth login</code> y Docker funcionando.</li>
+          <li>Repo público y protección de la rama principal: propuesta de cambio obligatoria, comprobaciones <code>ci</code>, <code>lint</code> y <code>migracion</code>, sin bypass.</li>
+          <li>Trabajo automático <code>migracion</code> en las comprobaciones con una llave de Cloudflare de solo lectura; verificar que puede listar las migraciones. Si no, se usa el plan B (el conductor publica el estado para todas las propuestas).</li>
+          <li>Llave de edición para el conductor (base de datos + scripts), llave de Linear, secretos de Dependabot si se usa.</li>
+          <li>Workspace de Linear con los estados y la vista «Necesita mi decisión»; sin una etiqueta aparte: el semáforo lo publica el conductor.</li>
+          <li><code>docs/flujo.md</code>, <code>.gitignore</code> con <code>.task/</code> y revisión previa a hacer público el repo.</li>
+        </ul>
+        <p class="done"><strong>Hecho cuando:</strong> una tarea de prueba se crea en Linear, se lee con <code>curl</code> y una rama empujada aparece enlazada.</p>
+      </div>
+    </details>
+
+    <details class="phase reveal">
+      <summary>M1 · Imagen del worker <span class="meta">0,5 día · depende de M0</span></summary>
+      <div class="phase-body">
+        <p>Una imagen reproducible con todo lo que necesitan las cajas. La imagen lleva herramientas, no código.</p>
+        <ul>
+          <li>Node 24, pnpm con store caliente, Chromium/Playwright, Hermes fijado y wrangler.</li>
+          <li>Proxy de modelo con la llave real; dentro de la caja, una llave falsa.</li>
+          <li>Red interna, <code>--network none</code> para las comprobaciones, <code>WRANGLER_SEND_METRICS=false</code>.</li>
+          <li>Límites de CPU, memoria y procesos; usuario no-root; <code>cap-drop=ALL</code>; <code>no-new-privileges</code>.</li>
+          <li>Provider de nan dentro del Hermes de la caja apuntando al proxy; consulta de prueba.</li>
+          <li>Etiqueta de imagen por Dockerfile + <code>pnpm-lock.yaml</code>.</li>
+        </ul>
+        <p class="done"><strong>Hecho cuando:</strong> las comprobaciones completas pasan dentro de la caja sobre una copia limpia.</p>
+      </div>
+    </details>
+
+    <details class="phase reveal">
+      <summary>M2 · Programa conductor <code>orquestator-cli</code> <span class="meta">3-4 días · depende de M0 y M1</span></summary>
+      <div class="phase-body">
+        <p>La máquina de estados y las operaciones deterministas. El piloto usa <code>run</code>; el coordinador no entra.</p>
+        <ul>
+          <li><strong>Estado:</strong> fases, transiciones y libreta en <code>~/.orquestator/ESQ-123/state.json</code>.</li>
+          <li><strong><code>run</code>:</strong> encadena <code>start → check → review → ship → pr-review</code>, aplica <code>fix</code> hasta agotar rondas, pide la migración antes de <code>In validation</code> y se detiene en <code>Blocked</code>/<code>In validation</code>.</li>
+          <li><strong>Copia y espejo:</strong> copia sin remoto, espejo de la rama principal de solo lectura, importación de la rama y diferencias en tu copia principal.</li>
+          <li><strong>Cajas:</strong> montajes por fase, directorio base de artefactos en solo lectura y overlays de escritura; estado y huella fuera.</li>
+          <li><strong>Comprobaciones:</strong> estilo, tipos, pruebas con umbrales de cobertura, recorrido completo, RED, pruebas debilitados y lock de migraciones.</li>
+          <li><strong>Propuesta:</strong> subir la rama, abrir la propuesta, cuerpo, comentarios, semáforo <code>guard</code>, filtrado de comentarios por autor y bloqueo de las automatizaciones de GitHub.</li>
+          <li><strong>Migración:</strong> solo si la funcionalidad la lleva; aplicar tras aprobación, re-ejecutar el trabajo automático y verificar la huella.</li>
+          <li><strong>Limpieza:</strong> retirar caja, copia y estado; comprobaciones de despliegue y sugerencia de vuelta atrás.</li>
+          <li><strong>Pruebas:</strong> tabla de transiciones, <code>--dry-run</code>, pruebas con un cambio externo malicioso y con la traída del espejo.</li>
+        </ul>
+        <p class="done"><strong>Hecho cuando:</strong> cada comando acepta <code>--dry-run</code> sin efectos y <code>run --dry-run</code> recorre el flujo completo sobre una copia de juguete.</p>
+      </div>
+    </details>
+
+    <details class="phase reveal">
+      <summary>M3 · Perfiles de fase <span class="meta">2-3 horas · depende de M1 y M2</span></summary>
+      <div class="phase-body">
+        <p>Tres perfiles con modelos distintos, resúmenes claros y el mismo formato de salida.</p>
+        <ul>
+          <li><code>implementer</code>, <code>reviewer</code> y <code>pr-reviewer</code>. Sin <code>verifier</code>: las comprobaciones son deterministas.</li>
+          <li>Sin enchufes de herramientas (MCP) en el piloto; la conexión solo si un perfil la necesita más adelante.</li>
+          <li>Modelo de nan distinto para el revisor y el revisor de la propuesta; el implementador usa el mejor de código.</li>
+          <li>Resúmenes: qué leer, qué producir, formato de los informes de revisión y cuándo parar y preguntar.</li>
+          <li>Prueba de humo con una tarea de juguete en una copia desechable.</li>
+        </ul>
+        <p class="done"><strong>Hecho cuando:</strong> una tarea de juguete produce resumen, implementación, informe de revisión y comprobaciones con los formatos esperados.</p>
+      </div>
+    </details>
+
+    <details class="phase reveal">
+      <summary>M4 · Piloto <span class="meta">1 tarea real · depende de M0-M3</span></summary>
+      <div class="phase-body">
+        <p>Recorrer el flujo entero con una funcionalidad pequeña del backlog, no con una tarea inventada.</p>
+        <ul>
+          <li>Elegir la funcionalidad y escribir la ficha con criterios positivos, negativos y límites; pasarla a <code>Ready</code>.</li>
+          <li>Ejecutar <code>run</code> y anotar tiempos e incidencias por fase.</li>
+          <li>Si la funcionalidad lleva migración, validar el trabajo automático <code>migracion</code> y <code>migrate</code> con la llave de edición.</li>
+          <li>Validar vídeo/capturas o local, integrar y confirmar el despliegue.</li>
+          <li>Revisión de lo ocurrido: qué falló, qué cambiar en el conductor y en los resúmenes; actualizar el plan.</li>
+          <li>Comprobar casos negativos, trazabilidad criterio→prueba, umbrales de cobertura y revisión por el agente y por ti.</li>
+        </ul>
+        <p class="done"><strong>Hecho cuando:</strong> la propuesta está integrada, las comprobaciones verdes y no hay pasos manuales no previstos (o están documentados).</p>
+      </div>
+    </details>
+
+    <details class="phase reveal">
+      <summary>M5a · Copia temporal <span class="meta">2-3 días · depende de M4</span></summary>
+      <div class="phase-body">
+        <p>Una copia de la web por rama, con su propia base de datos y sus propias fotos, para validar desde el móvil.</p>
+        <ul>
+          <li>Subir <code>wrangler</code> a 4.135.0 o superior; tu ordenador usa el de <code>devDependencies</code>, un solo número.</li>
+          <li>Copias por rama con <code>wrangler preview</code>, base de datos y almacén propios, URLs predecibles para los dos Workers.</li>
+          <li>Datos sembrados, migración de la base de datos de la copia antes de publicarla, limpieza al cerrar la propuesta.</li>
+          <li>Access sobre las URLs de la copia temporal; verificar el paso frontal↔API. Dominio propio opcional.</li>
+          <li>Enlace de la copia en el cuerpo de la propuesta y en Linear.</li>
+          <li>Orden: migración de la copia antes de <code>ship</code>; migración real tras tu aprobación y antes de <code>In validation</code>.</li>
+        </ul>
+        <p class="done"><strong>Hecho cuando:</strong> una propuesta obtiene una copia aislada con datos sembrados y se puede validar desde el móvil.</p>
+      </div>
+    </details>
+
+    <details class="phase reveal">
+      <summary>M5b · Automatización <span class="meta">1-2 días · depende de M5a</span></summary>
+      <div class="phase-body">
+        <p>Que la cola pueda correr sola y que la revisión de la ficha tenga su bucle.</p>
+        <ul>
+          <li><code>watch</code> como servicio de usuario (systemd con <code>loginctl enable-linger</code>) o timer; al detectar la integración, ejecuta <code>clean</code>.</li>
+          <li>Revisor de la ficha: preguntas en comentarios, bloque <code>orquestator-cli:acordado</code> y sondeo de respuestas.</li>
+          <li>Trabajo automático <code>guard</code> del robot de comprobaciones: lee la lista de la rama principal y falla si hay zonas delicadas sin el semáforo <code>guard</code>.</li>
+          <li>Conexión de herramientas (MCP) solo si un perfil la necesita; por defecto, ninguno.</li>
+          <li>Si el piloto no llevó migración, construir <code>migrate</code> y probarlo con una migración de juguete.</li>
+          <li>Evaluar si hace falta coordinador (Nivel 2); si no, <code>run</code> sigue siendo el camino.</li>
+          <li>Medir el tiempo de una tarea de principio a fin.</li>
+        </ul>
+        <p class="done"><strong>Hecho cuando:</strong> la cola corre sola y una propuesta con zonas delicadas sin el semáforo <code>guard</code> no se puede integrar.</p>
+      </div>
+    </details>
+
+    <details class="phase reveal">
+      <summary>M6 · Después del piloto <span class="meta">a decidir · depende de M5b</span></summary>
+      <div class="phase-body">
+        <p>Decisiones que se toman con datos del piloto, no antes.</p>
+        <ul>
+          <li>Evaluar omp como ejecutor si Hermes no cumple la adherencia (mismo resumen y comprobaciones).</li>
+          <li>Canales de aviso (Telegram/ntfy) y latidos, si aportan.</li>
+          <li>notas de decisiones (ADR) para la arquitectura real; revisión final de <code>AGENTS.md</code>.</li>
+          <li>Revisar cobertura: objetivo 60% en <code>api</code>/<code>web</code> y decidir si se suben los umbrales.</li>
+          <li>Revisar el paralelismo: cuántas tareas a la vez con 16 núcleos y 30 GiB.</li>
+        </ul>
+      </div>
+    </details>
+
+    <div class="split reveal" style="margin-top:18px">
+      <div class="panel">
+        <span class="tag green">Primero</span>
+        <h3>Los primeros cinco minutos de M0</h3>
+        <ol style="margin:0; padding-left:18px; color:var(--muted); font-size:13.5px">
+          <li><code>gh auth login</code> y comprobar con <code>gh auth status</code>.</li>
+          <li>Arrancar Docker y probar <code>docker run --rm hello-world</code>.</li>
+          <li>Preparar la revisión previa a hacer público el repo: correos del historial, recetas del libro y <code>gitleaks</code>.</li>
+          <li>Crear el workspace de Linear y la llave de API.</li>
+          <li>Crear la llave de Cloudflare de solo lectura para el trabajo automático <code>migracion</code> y la de edición para el conductor.</li>
+        </ol>
+      </div>
+      <div class="panel">
+        <span class="tag amber">Riesgos</span>
+        <h3>Lo que hay que verificar</h3>
+        <ul style="margin:0; padding-left:18px; color:var(--muted); font-size:13.5px">
+          <li>Que la llave de solo lectura de Cloudflare pueda listar las migraciones. Si no, se usa el plan B.</li>
+          <li>Que <code>wrangler preview</code> soporte la base de datos, el almacén de fotos y Access.</li>
+          <li>Que haya modelos de nan suficientemente distintos para los dos revisores.</li>
+          <li>Las propuestas de forks no reciben secretos; el trabajo automático <code>migracion</code> queda bloqueado hasta que un responsable lo re-ejecute.</li>
+          <li>M2 son 3-4 días con el alcance recortado; con <code>watch</code> y <code>migrate</code> completos, 4-6.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="glosario">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <p class="eyebrow">08 · Glosario</p>
+        <h2>Traductor de palabras</h2>
+      </div>
+      <p>Si una palabra no está aquí, se puede explicar sin ella. Este glosario existe para que el resto del documento no tenga que repetir definiciones.</p>
+    </div>
+
+    <dl class="glossary reveal">
+      <div class="term"><dt>Tarea / issue</dt><dd>La ficha donde escribes qué quieres y cómo se sabrá que está bien.</dd></div>
+      <div class="term"><dt>Spec</dt><dd>Los criterios de la ficha: un caso normal, uno que debe fallar y uno al límite.</dd></div>
+      <div class="term"><dt><code>run</code></dt><dd>El conductor. Prepara la copia, llama a las fases en orden y se detiene cuando hace falta una persona.</dd></div>
+      <div class="term"><dt>Copia / clon</dt><dd>Una copia de trabajo del repositorio, con su propia historia, sin conexión directa con tu repositorio principal.</dd></div>
+      <div class="term"><dt>Caja / contenedor</dt><dd>Un entorno aislado con las herramientas de una fase. No ve tus llaves ni tu repositorio principal.</dd></div>
+      <div class="term"><dt>Libreta / estado</dt><dd>El fichero de tu ordenador que guarda la fase, las rondas y la huella aprobada. No vive en la copia.</dd></div>
+      <div class="term"><dt>Semáforo / commit status</dt><dd>Una marca de «verde» o «rojo» atada a una versión exacta del código. Si cambia el código, la marca anterior no vale.</dd></div>
+      <div class="term"><dt>Huella / hash</dt><dd>Un resumen único de un cambio o de una migración. Sirve para saber si algo cambió.</dd></div>
+      <div class="term"><dt>Aprobación en terminal</dt><dd>Un sí que das en una terminal interactiva, no desde el agente. Así el ayudante no puede aprobar por ti.</dd></div>
+      <div class="term"><dt>PR / propuesta</dt><dd>Una rama con cambios que se propone integrar en la rama principal. No se integra sola.</dd></div>
+      <div class="term"><dt>CI / robot de comprobaciones</dt><dd>El sistema que ejecuta estilo, tipos, pruebas y recorrido completo en cada propuesta.</dd></div>
+      <div class="term"><dt>Migración</dt><dd>Un cambio en la base de datos. Se aprueba aparte, se aplica con una llave limitada y no tiene vuelta atrás automática.</dd></div>
+      <div class="term"><dt>Copia temporal / preview</dt><dd>Una versión de la web solo para una propuesta, con su propia base de datos y sus fotos. Se borra al cerrar.</dd></div>
+      <div class="term"><dt>Llave / token</dt><dd>Una credencial limitada. La de solo lectura no puede cambiar nada; la de edición solo toca lo necesario.</dd></div>
+      <div class="term"><dt>RED</dt><dd>El prueba nuevo falla antes del arreglo. Así se sabe que la prueba prueba algo real.</dd></div>
+      <div class="term"><dt>Umbral de cobertura</dt><dd>El mínimo de código que deben tocar los pruebas. Los umbrales solo suben.</dd></div>
+      <div class="term"><dt>MCP</dt><dd>Un enchufe de herramientas externas. En el piloto no se usa; se añadirá solo si un perfil lo necesita.</dd></div>
+      <div class="term"><dt>Merge</dt><dd>Integrar la propuesta en la rama principal. Es el único camino a la web publicada y siempre lo haces tú.</dd></div>
+      <div class="term"><dt>Rollback</dt><dd>Volver a la versión anterior si el despliegue falla. La limpieza lo sugiere; no lo hace sola.</dd></div>
+    </dl>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div>
+      <strong>Guía del flujo agéntico de Esencial</strong><br>
+      Documento visual para entender el plan. Si hay discrepancia, manda el plan.
+    </div>
+    <div>
+      Fuente: <a href="../TODO-flujo-agentes.md">TODO-flujo-agentes.md</a><br>
+      Revisiones: <a href="../REVIEW-flujo-agentes-v4.md">v4</a> · <a href="../REVIEW-flujo-agentes-v3.md">v3</a> · <a href="../REVIEW-flujo-agentes-v2.md">v2</a>
+    </div>
+    <div>
+      21 de octubre de 2026<br>
+      Sin jerga. Sin integraciones automáticas.
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Tema */
+  const themeButton = $("#theme");
+  const root = document.documentElement;
+  const stored = (() => {
+    try { return localStorage.getItem("flujo-theme"); } catch (_) { return null; }
+  })();
+  const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const applyTheme = (theme) => {
+    root.dataset.theme = theme;
+    if (themeButton) {
+      themeButton.setAttribute("aria-pressed", String(theme === "dark"));
+      themeButton.textContent = theme === "dark" ? "Claro" : "Oscuro";
+    }
+  };
+  applyTheme(stored || (systemDark ? "dark" : "light"));
+  if (themeButton) {
+    themeButton.addEventListener("click", () => {
+      const next = root.dataset.theme === "dark" ? "light" : "dark";
+      applyTheme(next);
+      try { localStorage.setItem("flujo-theme", next); } catch (_) {}
+    });
+  }
+
+  /* Progreso de lectura */
+  const progress = $("#read-progress");
+  const updateProgress = () => {
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - window.innerHeight;
+    const value = max > 0 ? Math.min(100, Math.max(0, (window.scrollY / max) * 100)) : 0;
+    if (progress) progress.style.width = value + "%";
+  };
+  window.addEventListener("scroll", updateProgress, { passive: true });
+  window.addEventListener("resize", updateProgress);
+  updateProgress();
+
+  /* Revelado al entrar en pantalla */
+  const reveals = $$(".reveal");
+  if (!reduce && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+    reveals.forEach((el) => observer.observe(el));
+  } else {
+    reveals.forEach((el) => el.classList.add("in"));
+  }
+
+  /* Pasos */
+  const steps = [
+    {
+      n: "01",
+      title: "La ficha y los criterios",
+      who: "Tú",
+      where: "Linear",
+      produces: "Una tarea en Ready",
+      ifFails: "Se queda en Backlog",
+      state: "Ready",
+      body: "Escribes qué quieres y cómo se sabrá que está bien. Lo importante no es la descripción: son los criterios. Al menos uno normal, uno que debe fallar y uno al límite. Cuando los tienes, mueves la tarea a Ready. En el piloto no hay revisor de la ficha: la ficha la escribes tú.",
+      note: "El ayudante nunca se autopromociona a Ready. Ese sí es tuyo."
+    },
+    {
+      n: "02",
+      title: "La copia, el espejo y la libreta",
+      who: "run",
+      where: "Tu ordenador",
+      produces: "Copia, espejo, libreta y resumen",
+      ifFails: "No se lanza nada",
+      state: "In progress",
+      body: "run prepara una copia de trabajo y una libreta en tu ordenador. La copia no tiene conexión directa con tu repositorio principal: el ayudante guarda ahí sus cambios y tú importas la rama. El espejo de la rama principal es de solo lectura; si otra tarea mergea antes, el implementador trae los cambios y resuelve el choque.",
+      note: "La libreta y la huella de lo aprobado viven fuera de la copia. El implementador no puede reescribirlas."
+    },
+    {
+      n: "03",
+      title: "El implementador",
+      who: "Caja aislada",
+      where: "Sobre la copia",
+      produces: "Tests, código, impl.md y pr-body.md",
+      ifFails: "Vuelve a la fase o se bloquea",
+      state: "In progress",
+      body: "El implementador lee la ficha y los informes anteriores. Escribe primero los pruebas que fallan (RED), luego el código que los hace pasar. No puede tocar la libreta, ni el informe de comprobaciones, ni el de revisión; solo escribe su informe y el cuerpo de la propuesta. No ve tus llaves ni tu repositorio principal.",
+      note: "Trabaja en una caja con el mínimo de ficheros: lo que necesita leer en solo lectura y lo suyo en escritura."
+    },
+    {
+      n: "04",
+      title: "Las comprobaciones",
+      who: "Robot",
+      where: "Caja de comprobaciones",
+      produces: "el informe de comprobaciones y un veredicto",
+      ifFails: "fix --from check",
+      state: "In progress",
+      body: "El robot ejecuta estilo, tipos, pruebas con umbrales de cobertura y el recorrido completo. Comprueba que los pruebas nuevos fallan contra la rama principal (RED) y que nadie ha debilitado una prueba existente. Si el cambio toca la base de datos, bloquea para que no haya dos migraciones abiertas a la vez.",
+      note: "El robot no opina sobre el diseño. Si algo falla, devuelve el problema; no lo esconde."
+    },
+    {
+      n: "05",
+      title: "El revisor",
+      who: "Caja aislada",
+      where: "Contexto limpio",
+      produces: "el informe de revisión",
+      ifFails: "fix --from review",
+      state: "In progress",
+      body: "El revisor mira la ficha, el informe del implementador y las comprobaciones. No ve la conversación del implementador: tiene que entender el cambio por lo que quedó escrito. Separa lo crítico de la deuda. Lo crítico vuelve al implementador; la deuda se anota. Hay un máximo de tres rondas.",
+      note: "Revisar no es reescribir: el revisor no toca el código, solo deja hallazgos con archivo y línea."
+    },
+    {
+      n: "06",
+      title: "El control de zonas delicadas",
+      who: "Tú",
+      where: "Terminal interactiva",
+      produces: "Huella aprobada y semáforo guard",
+      ifFails: "Blocked",
+      state: "Blocked si falta",
+      body: "Si el cambio toca una zona delicada, el conductor se para y te enseña el cambio. Tú ejecutas approve en una terminal y se guarda una huella. Antes de las comprobaciones y de la propuesta manda esa huella. Después de la subida, si sigue coincidiendo, se publica el semáforo guard sobre la versión exacta. Cada push lo invalida; si el cambio cambió, vuelve a Blocked.",
+      note: "Las automatizaciones de GitHub no son aprobables: un cambio de las comprobaciones va en una propuesta tuya, fuera del flujo."
+    },
+    {
+      n: "07",
+      title: "La propuesta",
+      who: "run / ship",
+      where: "GitHub",
+      produces: "propuesta, cuerpo, comentarios y semáforo guard",
+      ifFails: "Blocked o fix",
+      state: "In progress",
+      body: "El conductor sube la rama y abre la propuesta con el cuerpo que escribió el implementador, el diagrama y los comentarios de revisión y comprobaciones. No toca la rama principal ni cambia las automatizaciones de GitHub. El semáforo guard se publica después de la subida. La propuesta es el único camino a main, y la integración sigue siendo tuyo.",
+      note: "El cuerpo de la propuesta incluye el resumen, los criterios cubiertos, el plan de pruebas y los riesgos."
+    },
+    {
+      n: "08",
+      title: "La revisión de la propuesta",
+      who: "pr-reviewer",
+      where: "Caja con el cambio",
+      produces: "el informe de la propuesta y comentarios",
+      ifFails: "fix --from pr-review",
+      state: "In progress",
+      body: "El conductor baja el cambio a un fichero. El revisor de la propuesta lo lee en una caja sin acceso a internet, solo al proxy del modelo. No ve el hilo de la propuesta: tus comentarios se filtran por autor para que nadie pueda inyectar instrucciones. Si hay críticos, vuelve al implementador; máximo dos rondas.",
+      note: "El revisor de la propuesta es distinto del revisor previo y usa otro modelo: dos pares de ojos, no el mismo."
+    },
+    {
+      n: "09",
+      title: "Migración, choques y el paso a validación",
+      who: "El conductor y tú",
+      where: "GitHub y Cloudflare",
+      produces: "Todo verde y listo para integrar",
+      ifFails: "Blocked o fix --from conflicto",
+      state: "In validation",
+      body: "Antes de pasar a validación, el conductor comprueba que la rama se pueda integrar. Si hay choque, fix --from conflicto: el implementador mezcla la rama principal, comprueba y vuelve a subir. Si hay migración, primero tu approve --migracion; el conductor la aplica a la base de datos real y vuelve a lanzar el job migracion. Solo con todo verde y mergeable se pasa a In validation.",
+      note: "La migración se aplica antes de In validation, no dentro. Ese orden es lo que evita el atasco con el robot de comprobaciones."
+    },
+    {
+      n: "10",
+      title: "Tu validación y la limpieza",
+      who: "Tú",
+      where: "Copia temporal, propuesta y Linear",
+      produces: "Web publicada, Done y limpieza",
+      ifFails: "fix --humano o vuelta atrás",
+      state: "Done",
+      body: "Ves la copia temporal o el vídeo, pruebas e integras. El despliegue es automático. Después, clean retira la copia, la libreta y la caja, y comprueba el despliegue; si algo falla, sugiere volver a la versión anterior. Si rechazas, fix --humano lee solo tus comentarios y vuelve a la misma propuesta; cuenta como ronda humana.",
+      note: "La integración nunca es automática. La web publicada no es el final del flujo: la limpieza y la comprobación posterior también cuentan."
+    }
+  ];
+
+  const list = $("#step-list");
+  const card = $("#step-card");
+  const kicker = $("#step-kicker");
+  const bar = $("#step-progress");
+  const playButton = $("#play");
+  let current = 0;
+  let timer = null;
+
+  const renderList = () => {
+    if (!list) return;
+    list.innerHTML = steps.map((step, index) => (
+      '<button class="step-btn" type="button" data-step="' + index + '" aria-current="' + (index === current ? "step" : "false") + '">' +
+        '<span class="n">' + step.n + '</span><span>' + step.title + '</span>' +
+      '</button>'
+    )).join("");
+    $$(".step-btn", list).forEach((button) => {
+      button.addEventListener("click", () => {
+        stop();
+        current = Number(button.dataset.step);
+        render();
+      });
+    });
+  };
+
+  const render = () => {
+    const step = steps[current];
+    if (!step || !card) return;
+    kicker.textContent = "Paso " + (current + 1) + " de " + steps.length + " · " + step.who;
+    card.innerHTML =
+      '<h3>' + step.title + '</h3>' +
+      '<p>' + step.body + '</p>' +
+      '<div class="step-facts">' +
+        '<div class="fact"><span>Quién</span><strong>' + step.who + '</strong></div>' +
+        '<div class="fact"><span>Dónde</span><strong>' + step.where + '</strong></div>' +
+        '<div class="fact"><span>Qué deja</span><strong>' + step.produces + '</strong></div>' +
+        '<div class="fact"><span>Si falla</span><strong>' + step.ifFails + '</strong></div>' +
+      '</div>' +
+      '<div class="step-state"><span class="tag green">Linear</span><span class="tag blue">' + step.state + '</span></div>' +
+      '<div class="step-note"><b>Ojo:</b> ' + step.note + '</div>';
+    bar.style.width = (((current + 1) / steps.length) * 100) + "%";
+    $$(".step-btn", list).forEach((button, index) => {
+      button.setAttribute("aria-current", index === current ? "step" : "false");
+    });
+  };
+
+  const stop = () => {
+    if (timer) {
+      window.clearInterval(timer);
+      timer = null;
+    }
+    if (playButton) {
+      playButton.textContent = "Simular";
+      playButton.setAttribute("aria-pressed", "false");
+    }
+  };
+
+  const next = () => {
+    if (current >= steps.length - 1) {
+      stop();
+      return;
+    }
+    current += 1;
+    render();
+  };
+
+  const start = () => {
+    if (timer) { stop(); return; }
+    if (current >= steps.length - 1) current = 0;
+    render();
+    if (playButton) {
+      playButton.textContent = "Pausar";
+      playButton.setAttribute("aria-pressed", "true");
+    }
+    timer = window.setInterval(next, 4200);
+  };
+
+  if (list) {
+    renderList();
+    render();
+  }
+  const prevButton = $("#prev");
+  const nextButton = $("#next");
+  if (prevButton) prevButton.addEventListener("click", () => { stop(); current = (current - 1 + steps.length) % steps.length; render(); });
+  if (nextButton) nextButton.addEventListener("click", () => { stop(); next(); });
+  if (playButton) playButton.addEventListener("click", start);
+  const simulate = $("#simulate");
+  if (simulate) {
+    simulate.addEventListener("click", () => {
+      const section = document.getElementById("paso");
+      if (section) section.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      window.setTimeout(() => start(), reduce ? 0 : 450);
+    });
+  }
+  document.addEventListener("keydown", (event) => {
+    const tag = (event.target.tagName || "").toLowerCase();
+    if (["input", "textarea", "select"].includes(tag)) return;
+    if (!document.getElementById("paso")) return;
+    const rect = document.getElementById("paso").getBoundingClientRect();
+    const visible = rect.top < window.innerHeight * 0.8 && rect.bottom > 0;
+    if (!visible) return;
+    if (event.key === "ArrowLeft") { event.preventDefault(); stop(); current = (current - 1 + steps.length) % steps.length; render(); }
+    if (event.key === "ArrowRight") { event.preventDefault(); stop(); next(); }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stop();
+  });
+
+  /* Imprimir: abrir todos los detalles */
+  window.addEventListener("beforeprint", () => {
+    $$("details.phase").forEach((detail) => { detail.dataset.wasOpen = detail.open ? "1" : "0"; detail.open = true; });
+  });
+  window.addEventListener("afterprint", () => {
+    $$("details.phase").forEach((detail) => { detail.open = detail.dataset.wasOpen === "1"; });
+  });
+})();
+</script>
+</body>
+</html>

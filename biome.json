@@ -10,7 +10,12 @@
   "linter": { "enabled": true, "rules": { "a11y": "warn" } },
   "overrides": [
     {
-      "includes": ["project-site/**", "wireframes/**", "web/src/tokens.css"],
+      "includes": [
+        "project-site/**",
+        "wireframes/**",
+        "web/src/tokens.css",
+        "docs/**/*.html"
+      ],
       "linter": { "enabled": false },
       "formatter": { "enabled": false },
       "assist": { "enabled": false }

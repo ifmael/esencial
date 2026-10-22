@@ -52,3 +52,68 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm lint
+
+  # Pasa si el diff no toca migraciones. Si las toca, exige que estén aplicadas
+  # en la D1 remota. Token read-only en el secreto CLOUDFLARE_READ_TOKEN y el
+  # account id en la variable CLOUDFLARE_ACCOUNT_ID; las PRs de forks no reciben
+  # secretos y el job falla hasta que un maintainer lo re-ejecute (R3-B).
+  migracion:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detectar migraciones en el diff
+        id: diff
+        run: |
+          base="origin/$BASE"
+          changed=$(git diff --name-only "$base"...HEAD -- api/migrations)
+          if [ -z "$changed" ]; then
+            echo "Sin migraciones en el diff."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$changed"
+          # Una migración ya en main está aplicada: es inmutable.
+          if git diff --name-status "$base"...HEAD -- api/migrations | grep -Eq '^(M|D|R)'; then
+            echo "::error::Una migración aplicada no se modifica ni se borra: añade una nueva."
+            exit 1
+          fi
+        env:
+          BASE: ${{ github.base_ref }}
+
+      - name: Están aplicadas en la D1 remota
+        if: steps.diff.outputs.skip != '1'
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_READ_TOKEN:-}" ]; then
+            echo "::error::Falta el secreto CLOUDFLARE_READ_TOKEN (en PRs de forks lo re-ejecuta un maintainer)."
+            exit 1
+          fi
+          db=$(node -p "require('fs').readFileSync('api/wrangler.toml','utf8').match(/database_id\s*=\s*\"([^\"]+)\"/)[1]")
+          resp=$(curl -sS -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${db}/query" \
+            -H "Authorization: Bearer ${CLOUDFLARE_READ_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"sql":"SELECT name FROM d1_migrations ORDER BY id"}')
+          if ! jq -e '.success == true' > /dev/null <<<"$resp"; then
+            echo "$resp"
+            echo "::error::El token read-only no pudo leer d1_migrations: aplica la migración a mano o pasa a R3-B (el CLI publica el status)."
+            exit 1
+          fi
+          applied=$(jq -r '.result[0].results[]?.name' <<<"$resp")
+          fail=0
+          for f in $(git diff --name-only "origin/$BASE"...HEAD -- api/migrations); do
+            if ! grep -Fxq "$f" <<<"$applied"; then
+              echo "::error::$f no está aplicada en la D1 remota: approve --migracion y orquestator-cli migrate."
+              fail=1
+            fi
+          done
+          exit $fail
+        env:
+          BASE: ${{ github.base_ref }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_READ_TOKEN: ${{ secrets.CLOUDFLARE_READ_TOKEN }}
