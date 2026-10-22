@@ -3,7 +3,9 @@ import { checkTask } from "./checks.mjs";
 import { linearKey } from "./config.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
+import { inspect } from "./inspect.mjs";
 import { publish } from "./pr.mjs";
+import { runFlow } from "./run.mjs";
 import { ship } from "./ship.mjs";
 import {
   assertKey,
@@ -26,6 +28,8 @@ Uso:
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
   orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
   orquestator ship ESN-123        actualiza el body y comenta checks/review
+  orquestator inspect ESN-123     estado, brief, diff, artefactos y CI
+  orquestator run ESN-123 [--dry-run]
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
   orquestator status [ESN-123]    estado de una tarea (o de todas)
@@ -139,6 +143,21 @@ export async function main(argv, io = {}) {
         });
         line(stdout, `PR #${result.number}: ${result.url}`);
         return 0;
+      }
+      case "inspect": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        line(stdout, inspect(key));
+        return 0;
+      }
+      case "run": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = runFlow(key, {
+          dryRun,
+          out: (text) => line(stdout, text),
+        });
+        return result ? 0 : 1;
       }
       case "ship": {
         const key = parseKey(rest[0], stderr);

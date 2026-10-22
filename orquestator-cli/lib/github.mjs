@@ -47,7 +47,13 @@ export function editArgs(branch, bodyFile) {
 }
 
 export function viewArgs(branch) {
-  return ["pr", "view", branch, "--json", "number,url,headRefOid,state"];
+  return [
+    "pr",
+    "view",
+    branch,
+    "--json",
+    "number,url,headRefOid,state,mergeable,statusCheckRollup",
+  ];
 }
 
 export function commentArgs(pr, bodyFile) {

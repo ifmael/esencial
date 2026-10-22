@@ -123,6 +123,19 @@ test("ship --dry-run exige PR y body pero no llama a gh", async () => {
   assert.match(r.out, /PR #3/);
 });
 
+test("run --dry-run recorre la cadena", async () => {
+  const r = await run(["run", "ESN-9", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /\[dry-run\] start ESN-9/);
+  assert.match(r.out, /\[dry-run\] pr-review ESN-9/);
+});
+
+test("inspect de una tarea inexistente sale con 1", async () => {
+  const r = await run(["inspect", "ESN-404"]);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /no existe/);
+});
+
 test("approve solo desde una terminal", async () => {
   save("ESN-9", transition(createState("ESN-9"), "In Progress"));
   const r = await run(["approve", "ESN-9", "--motivo", "x"]);

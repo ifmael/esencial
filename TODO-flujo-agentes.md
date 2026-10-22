@@ -776,8 +776,8 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       nombres/hashes y la heurística SQL destructiva (`DROP`, `ALTER … DROP`, `NOT NULL`
       sin `DEFAULT`); `--pr N` para PRs manuales; si el hash de una aplicada cambia →
       `Blocked`; tests.
-- [ ] Comando `inspect` read-only (issue, brief, diff, artifacts, logs, CI) para depurar y
-      reanudar sin abrir el clon.
+- [x] Comando `inspect` read-only (estado, brief, artefactos, diff y CI) para depurar y
+      reanudar sin abrir el clon (2026-10-22).
 - [ ] Token de GitHub fino solo en el entorno del CLI; push HTTPS con credential helper;
       `Commit statuses` de escritura, sin `Workflows`; tests de que el token no aparece en
       logs.
@@ -791,11 +791,10 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       `--migracion` y `--pr N`), `migrate` (también `--pr N`; si el piloto lleva
       migración), `ship`, `pr-review`, `fix`, `block`, `resume`, `clean`, `status` y
       `--dry-run`.
-- [ ] Comando `run`: encadena `start → check → review → ship → pr-review`, aplica `fix`
-      según el origen hasta agotar rondas, si hay migración pide `approve --migracion` y
-      aplica `migrate` antes de `In validation`, comprueba `gh pr view --json mergeable`
-      (`fix --from conflicto` si no) y se detiene en `Blocked`/`In validation`; reanuda
-      desde el estado del host; tests con `--dry-run`.
+- [x] `run --dry-run`: recorre `start → check → review → ship → pr-review` según el
+      estado, sin efectos; tests para los tres puntos de partida (2026-10-22).
+- [ ] `run` real: encadenar las fases de agente (M3), `fix` con rondas, migración y
+      `mergeable`, parando en `Blocked`/`In validation`.
 - [ ] Tests: tabla de transiciones, rechazo de saltos, `--dry-run` sin efectos, `guard`
       con `diff.external` malicioso y fetch del espejo (`uploadpack.packObjectsHook`).
 - [ ] `clean`: retirar contenedor, clon y estado tras el merge; correr las comprobaciones
@@ -922,6 +921,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | `inspect` (estado, brief, artefactos, diff, CI) y `run --dry-run` con la cadena según el estado; 85 tests | El `run` real espera a las fases de agente (M3) | Lock de migración y `clean` |
 | 2026-10-22 | M2 | `artifacts` y `ship`: artefactos validados, body + comentarios y status `guard` repuesto; 78 tests | Un artefacto vacío no se publica; el host nunca escribe estado en el clon | `inspect` y `run` |
 | 2026-10-22 | M2 | `pr`: push, PR con body, status `guard` y bloqueo sin aprobación; 70 tests | El título sale de la issue, guardado en `start` | `ship` y `artifacts` |
 | 2026-10-22 | M2 | `guard` local: rutas protegidas, hash y `approve`; `check` bloquea sin aprobación y el clon malicioso no ejecuta nada; 61 tests | Se importa la rama por el espejo, nunca con un `fetch` del clon | `pr` y status remoto |
