@@ -19,14 +19,17 @@ RUN npm install -g "pnpm@${PNPM_VERSION}" \
  && apt-get install -y --no-install-recommends ca-certificates libatomic1 \
  && rm -rf /var/lib/apt/lists/*
 
-# Hermes fijado por commit, sin su navegador (usamos el de Playwright) y con
-# los datos fuera de /root, porque el contenedor corre con el UID del host.
-RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
+# Hermes fijado por commit, sin su navegador (usamos el de Playwright) y
+# instalado como `node`: si lo instala root, al arrancar con el UID del host
+# no puede completar sus dependencias y se queda sin `ruamel`.
+RUN mkdir -p /opt/hermes && chown node:node /opt/hermes
+USER node
+RUN HOME=/home/node curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
       | bash -s -- --commit "${HERMES_COMMIT}" --non-interactive \
                      --skip-browser --skip-computer-use \
-                     --dir /opt/hermes/hermes-agent --hermes-home /opt/hermes/home \
- && cp /root/.local/bin/hermes /usr/local/bin/hermes \
- && chmod -R a+rX /opt/hermes /usr/local/bin/hermes
+                     --dir /opt/hermes/hermes-agent --hermes-home /opt/hermes/home
+USER root
+RUN cp /home/node/.local/bin/hermes /usr/local/bin/hermes
 
 # Store caliente y Chromium con el lockfile del repo. El clon de la tarea se
 # monta en /work y reutiliza el store con `pnpm install --offline`.
