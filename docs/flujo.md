@@ -19,7 +19,7 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 | Backlog | tú |
 | Spec review | tú creas; el agente comenta; tú decides (M5b) |
 | Ready | **solo tú**; el agente nunca se autopromociona |
-| In progress | el CLI (`run`, `start`, `fix`) |
+| In Progress | el CLI (`run`, `start`, `fix`) |
 | In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable` |
 | Done | tú al mergear (o la integración GitHub) |
 | Blocked | el CLI o tú, con una pregunta concreta; `resume` vuelve a la fase anterior |
