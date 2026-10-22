@@ -32,8 +32,8 @@ Convención de marcado:
 
 | Fase | Estado | Siguiente acción |
 |---|---|---|
-| M0 — Base | En curso | Token de edición + env y workspace de Linear |
-| M1 — Imagen del worker | Pendiente | Escribir `orquestator-cli/Dockerfile` |
+| M0 — Base | Hecho (2026-10-22) | — |
+| M1 — Imagen del worker | En curso | Escribir `orquestator-cli/Dockerfile` |
 | M2 — CLI `orquestator-cli` | Pendiente | Esqueleto, máquina de estados y `run` |
 | M3 — Perfiles de fase | Pendiente | Elegir modelos de nan por perfil |
 | M4 — Piloto | Pendiente | Elegir la feature del backlog |
@@ -129,7 +129,7 @@ Convención de marcado:
 
 | Tema | Decisión |
 |---|---|
-| Estado de las tareas | **Linear Free** (1 equipo, clave `ESN`; estados `Backlog → Spec review → Ready → In progress → In validation → Done`, más `Blocked`; auto-archivado) |
+| Estado de las tareas | **Linear Free** (1 equipo, clave `ESN`; estados `Backlog → Spec review → Ready → In Progress → In validation → Done`, más `Blocked`; auto-archivado) |
 | Ejecución | **Local**, sin Orca. Un **clon local por tarea** (C2-A) y un **contenedor efímero por fase** que monta ese mismo clon; el clon y sus commits persisten entre fases |
 | Orquestador | **CLI determinista en el piloto** (`run`): el agente decide dentro de su fase; el CLI encadena y valida. El coordinador (Nivel 2, forma 2) se evalúa en M5b |
 | Orquestación | **Un `run` por tarea** (D1-A): `watch` despacha y `run` encadena las fases; sin coordinador en el piloto. El coordinador por tarea (forma 2) queda como opción de M5b |
@@ -246,7 +246,7 @@ lo fetchea y el implementer mergea.
    | `orquestator-cli approve ESN-123 --motivo "…"` | aprueba el diff protegido (solo TTY); guarda el hash | tú |
    | `orquestator-cli inspect ESN-123 --what issue\|brief\|diff\|review\|check\|ci` | datos read-only para depurar o reanudar | `run`/tú |
    | `orquestator-cli migrate ESN-123` | aplica las migraciones aprobadas a la D1 remota (token de edición, `wrangler` fijado) y re-ejecuta el job de CI `migracion`; sin commit status propio | CLI |
-   | `orquestator-cli ship ESN-123` | push y PR desde `.task/pr-body.md`; sube review/checks como comentarios; Linear sigue en `In progress` | `run` |
+   | `orquestator-cli ship ESN-123` | push y PR desde `.task/pr-body.md`; sube review/checks como comentarios; Linear sigue en `In Progress` | `run` |
    | `orquestator-cli pr-review ESN-123` | lanza `pr-reviewer` en contenedor ro con **red interna (solo proxy)** sobre `gh pr diff`; el CLI publica los comentarios; si no hay críticos: con migración, `approve --migracion` + `migrate` + espera `migracion`; luego `In validation` | `run` |
    | `orquestator-cli fix ESN-123` | devuelve los hallazgos al `implementer` en la misma rama/PR; `--from conflicto` mergea `main` | `run`/tú |
    | `orquestator-cli block ESN-123 --pregunta "…"` | `Blocked` + comentario con la pregunta | cualquiera |
@@ -299,7 +299,7 @@ Linear (producto) e interno (`~/.orquestator/ESN-123/state.json`, en el host) se
 | Backlog | — | tú |
 | Spec review | `spec` (M5b; en el piloto no se usa) | tú creas; agente comenta; tú decides |
 | Ready | `ready` | **tú** (el agente nunca se autopromociona) |
-| In progress | `implement → comprobaciones → review → ship → pr-review` | CLI (`run`, `start`, `check`, `ship`, `pr-review`) |
+| In Progress | `implement → comprobaciones → review → ship → pr-review` | CLI (`run`, `start`, `check`, `ship`, `pr-review`) |
 | In validation | `waiting-human` | CLI, cuando `pr-review` no tiene críticos y la migración (si hay) está aplicada y con checks verdes |
 | Done | `done` | **tú** (merge); la integración GitHub puede marcarlo también |
 | Blocked | `blocked` | CLI/agente, con pregunta concreta; `orquestator-cli resume` vuelve |
@@ -446,7 +446,7 @@ en contenedor.
 8. Sin críticos, checks verdes (incluida `migracion`) y `mergeable` → Linear
    `In validation`. Validas (preview + PR), mergeas → deploy automático y `Done`. Si
    rechazas: `orquestator-cli fix --humano` lee
-   **solo tus comentarios** (filtrados por autor), vuelve a `In progress` y cuenta como
+   **solo tus comentarios** (filtrados por autor), vuelve a `In Progress` y cuenta como
    **ronda humana** aparte (no consume las 2 rondas del `pr-review`).
 
 ### Tests y trazabilidad
@@ -510,7 +510,7 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
 ### Reglas duras (seguridad y proceso)
 
 - **Quién mueve los estados**: tú `Spec review → Ready` y `In validation → Done`
-  (merge); el CLI (`run`/comandos) `In progress`, `In validation` y `Blocked`.
+  (merge); el CLI (`run`/comandos) `In Progress`, `In validation` y `Blocked`.
 - El agente **no modifica `.github/workflows/`**: el CLI bloquea el diff y el review lo
   marca; un cambio de CI va en PR aparte que revisas tú.
 - Reintentos: máx. 2 por fallo de contenedor/comprobaciones. Review previo: máx. 3 rondas.
@@ -641,8 +641,9 @@ Objetivo: dejar listas las cuentas y la configuración mínima. Depende de: nada
       entra en M5b.
 - [x] «Require approval for all outside collaborators» activado (2026-10-21,
       `fork-pr-contributor-approval` = `all_external_contributors`).
-- [ ] Crear un API token de Cloudflare limitado (D1 edit + Workers scripts edit) para el
-      CLI; guardarlo en el entorno del host, nunca en el repo.
+- [x] Token de Cloudflare con `D1 Edit` + `Workers Scripts Edit` (2026-10-22) en
+      `~/.config/orquestator/env` (`CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`),
+      fuera del repo; probado con una lectura de `d1_migrations`.
 - [x] Job `migracion` en `.github/workflows/ci.yml` (2026-10-22): pasa si el diff no toca
       migraciones; si las toca, rechaza `M`/`D`/`R` y exige cada alta en `d1_migrations`
       de la D1 remota por la API. Token read-only verificado en la PR #49: `D1 Read`
@@ -653,24 +654,28 @@ Objetivo: dejar listas las cuentas y la configuración mínima. Depende de: nada
       secretos hasta que un maintainer lo re-ejecute.
 - [x] Hermes en el host (2026-10-21): no está instalado y no hace falta; el binario entra
       en la imagen del worker (M1), que es donde corren los perfiles.
-- [ ] Crear el workspace de Linear: equipo con clave `ESN`, estados `Backlog`,
-      `Spec review`, `Ready`, `In progress`, `In validation`, `Done`, `Blocked`;
-      auto-archivado activado.
-- [ ] Crear la vista «Necesita mi decisión» (filtro `Blocked`); activar notificaciones de
-      Linear (móvil/email). El status `guard` lo publica el CLI; no hay etiqueta.
-- [ ] Crear una API key de Linear y guardarla en el entorno (`LINEAR_API_KEY`), nunca
-      en el repo.
-- [ ] Instalar la integración de Linear con GitHub en `ifmael/esencial`; decidir qué
-      automatizaciones quedan activas (rama → estado, merge → `Done`) para no duplicar
-      con el CLI.
-- [ ] Verificar la API de Linear con `curl` (leer una issue) y anotar el comando; el CLI
-      la usará en M2. El CLI no usa el MCP de Linear.
+- [x] Workspace de Linear (2026-10-22): equipo `ESN` («Esencial») con `Backlog`,
+      `Spec review`, `Ready`, `In Progress`, `In validation`, `Done`, `Blocked`
+      (verificado por API); auto-archivado activado.
+- [x] Vista «Necesita mi decisión» (filtro `Blocked`) y notificaciones de cuenta
+      (asignaciones y menciones) (2026-10-22).
+- [x] API key de Linear en `~/.config/orquestator/env` (`LINEAR_API_KEY`) (2026-10-22).
+- [x] Integración de Linear con GitHub (2026-10-22) instalada sobre `ifmael/esencial`;
+      enlace verificado (`Fixes ESN-1` → adjunto `github` en la issue). Automatizaciones:
+      solo `PR merged → Done`, el resto sin acción (confirmar en Team → Workflows).
+- [x] API de Linear verificada: `viewer`, `teams` e `issues` responden con
+      `Authorization: $LINEAR_API_KEY` (sin `Bearer`); el CLI la usará en M2. El CLI no
+      usa el MCP de Linear.
 - [x] Escribir `docs/flujo.md` con: ramas `ESN-NNN-slug`, magic words, estados,
       artefactos y límites (2026-10-21).
 - [x] Añadir `.task/` a `.gitignore` (2026-10-21).
 
 Hecho cuando: una issue de prueba se crea en Linear, se lee con `curl` a la API (o con
 `orquestator-cli inspect` en M2) y una rama empujada aparece enlazada en la issue.
+
+Cumplido el 2026-10-22: `ESN-1` leída por API y enlazada a la PR #52 (adjunto
+`sourceType: github`). El enlace se probó con `Fixes ESN-1` en el cuerpo y la PR no
+en borrador.
 
 ### M1 — Imagen del worker (≈0,5 día)
 
@@ -898,6 +903,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | PR #49: job `migracion` verificado con el token read-only (`D1 Read` lee `d1_migrations`); `biome.json` excluye el HTML de `docs/` | El job distingue permisos de «no aplicada»; el token no hace falta en el host, solo en Actions | Docker (grupo) + token de edición + env + Linear |
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
+| 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
 
 ## Preguntas abiertas
 
