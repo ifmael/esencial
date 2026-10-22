@@ -82,6 +82,17 @@ test("start se niega si la tarea ya está empezada", async () => {
   assert.match(r.err, /ya está empezada/);
 });
 
+test("check --dry-run enseña la cadena sin ejecutar docker", async () => {
+  save("ESN-9", transition(createState("ESN-9"), "In Progress"));
+  fs.mkdirSync(path.join(dir, "ESN-9", "repo"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "ESN-9", "task"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "upstream.git"));
+  const r = await run(["check", "ESN-9", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /docker run/);
+  assert.match(r.out, /pnpm e2e/);
+});
+
 test("--dry-run no escribe nada", async () => {
   save("ESN-9", transition(createState("ESN-9"), "In Progress"));
   const r = await run(["block", "ESN-9", "x", "--dry-run"]);

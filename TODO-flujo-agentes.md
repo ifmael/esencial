@@ -737,14 +737,17 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       y la rama `ESN-NNN-slug`; mantener el espejo bare `~/.orquestator/upstream.git` y
       montarlo ro en `/upstream`; el host importa la rama y diffea en el checkout
       principal; guardas.
-- [ ] Módulo `container`: build/run con el directorio base `.task` en ro y overlays rw
-      por fase (implementer `impl.md`/`pr-body.md`; check `checks.md`; reviewer
-      `review.md`; pr-review `pr-review.md`; el resto ro; `/upstream` ro), pre-crear
-      vacíos los ficheros, UID del host, entorno y `--rm`; estado y hash no se montan; sin
-      credenciales de git.
-- [ ] Módulo `checks`: ejecutar `pnpm lint`, `typecheck`, `test` (con cobertura),
-      `e2e` en el contenedor, capturar logs, prueba RED contra `main` y heurísticas de
-      tests debilitados; escribir `.task/checks.md`.
+- [x] Módulo `container`: run con el directorio base `.task` en ro y overlays rw por
+      fase (implementer `impl.md`/`pr-body.md`; check `checks.md`; reviewer
+      `review.md`; pr-review `pr-review.md`; el resto ro; `/upstream` ro), ficheros
+      pre-creados, UID del host, límites y `--rm`; estado y hash no se montan; sin
+      credenciales de git. `check` sin red; los agentes por la red interna
+      (2026-10-22).
+- [x] `check` base: `pnpm install --offline && lint && typecheck && test && e2e` en el
+      contenedor, salida capturada en `checks.md` y comando con `--dry-run`
+      (2026-10-22).
+- [ ] `checks` completo: cobertura, prueba RED contra `main` y heurísticas de tests
+      debilitados.
 - [ ] Cobertura: `vitest --coverage` en `api` y `web`, dependencia
       `@vitest/coverage-v8` y `coverage.thresholds` en `api/vitest.config.ts` y
       `web/vite.config.ts` (solo suben); paso en CI; reporte en `checks.md`.
@@ -914,6 +917,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | `container` (montajes ro/rw por fase, red, límites) y `check` base con `checks.md`; 52 tests | Las fases de agente usan la red interna y el home de Hermes de la imagen | `pr`, `guard` |
 | 2026-10-22 | M2 | CLI con estado, `status`/`block`/`resume` y `start` (Linear + clon + rama + brief); 38 tests y `--dry-run` | El espejo bare necesita el refspec de `remote.origin.fetch` para actualizarse | `check` y `container` |
 | 2026-10-22 | M1 | **M1 cerrado**: imagen con pnpm, Chromium, Hermes v0.22.4 y store; smoke offline (624 tests, 89 e2e) y límites validados; proxy con la clave de nan | Hermes se instala como `node` y usa `/opt/hermes/home`; corepack no sirve sin red | M2: CLI |
 

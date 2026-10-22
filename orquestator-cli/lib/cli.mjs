@@ -1,5 +1,7 @@
 import { git } from "./checkout.mjs";
+import { checkTask } from "./checks.mjs";
 import { linearKey } from "./config.mjs";
+import { imageTag } from "./image.mjs";
 import {
   assertKey,
   block,
@@ -18,6 +20,7 @@ export const USAGE = `orquestator — flujo de tareas de Esencial
 
 Uso:
   orquestator start ESN-123       abre la tarea: clon, rama y brief
+  orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
   orquestator status [ESN-123]    estado de una tarea (o de todas)
   orquestator block ESN-123 <pregunta>
   orquestator resume ESN-123
@@ -97,6 +100,25 @@ export async function main(argv, io = {}) {
         });
         describe(stdout, state);
         return 0;
+      }
+      case "check": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = checkTask(key, {
+          dryRun,
+          image: imageTag(),
+          out: (text) => line(stdout, text),
+        });
+        if (dryRun) return 0;
+        if (result.ok) {
+          line(stdout, "Comprobaciones OK (checks.md)");
+          return 0;
+        }
+        line(
+          stdout,
+          `Comprobaciones FALLAN (exit ${result.status}); mira checks.md`,
+        );
+        return 1;
       }
       case "status": {
         if (!rest[0]) {
