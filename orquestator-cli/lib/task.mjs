@@ -71,7 +71,7 @@ export async function startTask(key, options = {}) {
   await comment(apiKey, issue, `Rama: \`${branch}\``, fetchImpl);
 
   const state = transition(
-    { ...createState(key), branch, issueId: issue.id },
+    { ...createState(key), branch, issueId: issue.id, issueTitle: issue.title },
     "In Progress",
   );
   save(key, state, base);

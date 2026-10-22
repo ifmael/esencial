@@ -3,6 +3,7 @@ import { checkTask } from "./checks.mjs";
 import { linearKey } from "./config.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
+import { publish } from "./pr.mjs";
 import {
   assertKey,
   block,
@@ -22,6 +23,7 @@ export const USAGE = `orquestator — flujo de tareas de Esencial
 Uso:
   orquestator start ESN-123       abre la tarea: clon, rama y brief
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
+  orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
   orquestator status [ESN-123]    estado de una tarea (o de todas)
@@ -122,6 +124,19 @@ export async function main(argv, io = {}) {
           `Comprobaciones FALLAN (exit ${result.status}); mira checks.md`,
         );
         return 1;
+      }
+      case "pr": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        if (dryRun) {
+          publish(key, { dryRun, out: (text) => line(stdout, text) });
+          return 0;
+        }
+        const result = await publish(key, {
+          out: (text) => line(stdout, text),
+        });
+        line(stdout, `PR #${result.number}: ${result.url}`);
+        return 0;
       }
       case "guard": {
         const key = parseKey(rest[0], stderr);

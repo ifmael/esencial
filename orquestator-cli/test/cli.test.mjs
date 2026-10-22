@@ -93,6 +93,22 @@ test("check --dry-run enseña la cadena sin ejecutar docker", async () => {
   assert.match(r.out, /pnpm e2e/);
 });
 
+test("pr --dry-run enseña el plan sin tocar nada", async () => {
+  save(
+    "ESN-9",
+    transition({ ...createState("ESN-9"), branch: "ESN-9-x" }, "In Progress"),
+  );
+  fs.mkdirSync(path.join(dir, "ESN-9", "task"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "ESN-9", "task", "pr-body.md"),
+    "Fixes ESN-9\n",
+  );
+  const r = await run(["pr", "ESN-9", "--dry-run"]);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /dry-run/);
+  assert.match(r.out, /ESN-9-x/);
+});
+
 test("approve solo desde una terminal", async () => {
   save("ESN-9", transition(createState("ESN-9"), "In Progress"));
   const r = await run(["approve", "ESN-9", "--motivo", "x"]);

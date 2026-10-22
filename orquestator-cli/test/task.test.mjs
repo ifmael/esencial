@@ -95,6 +95,7 @@ test("startTask crea clon, rama, artefactos, mueve Linear y guarda estado", asyn
   assert.equal(state.state, "In Progress");
   assert.equal(state.branch, `${KEY}-exportar-el-plan-en-pdf`);
   assert.equal(state.issueId, "uuid-7");
+  assert.equal(state.issueTitle, "Exportar el plan en PDF");
   assert.equal(load(KEY, dir).state, "In Progress");
   const repo = path.join(dir, KEY, "repo");
   assert.equal(
