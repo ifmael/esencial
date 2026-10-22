@@ -728,9 +728,9 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       remoto con `--local --no-hardlinks`, crear la rama `ESN-NNN-slug`, escribir
       `brief.md` y los artefactos, pasar a In Progress y comentar la rama; tests con
       HTTP simulado y git real; `--dry-run` sin efectos (2026-10-22).
-- [ ] Lock de migraciones: en `check`, la primera vez que el diff toca
-      `api/migrations/**`, bloquea si otra tarea tiene una migración abierta; la reserva
-      vive en el estado del host (no en `start`).
+- [x] Lock de migraciones: `check` reserva en `~/.orquestator/migrations.lock.json`
+      cuando el diff toca `api/migrations/**`; otra tarea con migración abierta →
+      `Blocked` con su clave; se libera en `clean` (2026-10-22).
 - [ ] Módulo `linear`: leer issue, mover estado, comentar, asignar y mencionar (API con
       token); tests con HTTP simulado.
 - [ ] Módulo `checkout`: crear/eliminar el clon local (`git clone --local --no-hardlinks`)
@@ -797,8 +797,9 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       `mergeable`, parando en `Blocked`/`In validation`.
 - [ ] Tests: tabla de transiciones, rechazo de saltos, `--dry-run` sin efectos, `guard`
       con `diff.external` malicioso y fetch del espejo (`uploadpack.packObjectsHook`).
-- [ ] `clean`: retirar contenedor, clon y estado tras el merge; correr las comprobaciones
-      de `DEPLOY.md` §7 y sugerir `wrangler rollback` si fallan.
+- [x] `clean`: tras el merge (o `--force`) borra la tarea y libera la migración; corre
+      las dos comprobaciones fiables del §7 de `DEPLOY.md` y sugiere `wrangler rollback`
+      si fallan (2026-10-22).
 - [ ] Script `orquestator-cli` en `package.json`.
 
 Hecho cuando: cada comando acepta `--dry-run` sin efectos, `run --dry-run` recorre el
@@ -921,6 +922,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | Lock de migraciones (reserva global, `Blocked` con la otra tarea) y `clean` con las comprobaciones de deploy; 93 tests | El lock se libera en `clean`; una tarea abandonada se limpia con `clean --force` | `fix` y la cobertura |
 | 2026-10-22 | M2 | `inspect` (estado, brief, artefactos, diff, CI) y `run --dry-run` con la cadena según el estado; 85 tests | El `run` real espera a las fases de agente (M3) | Lock de migración y `clean` |
 | 2026-10-22 | M2 | `artifacts` y `ship`: artefactos validados, body + comentarios y status `guard` repuesto; 78 tests | Un artefacto vacío no se publica; el host nunca escribe estado en el clon | `inspect` y `run` |
 | 2026-10-22 | M2 | `pr`: push, PR con body, status `guard` y bloqueo sin aprobación; 70 tests | El título sale de la issue, guardado en `start` | `ship` y `artifacts` |

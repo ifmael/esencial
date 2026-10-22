@@ -1,5 +1,6 @@
 import { git } from "./checkout.mjs";
 import { checkTask } from "./checks.mjs";
+import { clean } from "./clean.mjs";
 import { linearKey } from "./config.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
@@ -29,6 +30,7 @@ Uso:
   orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
   orquestator ship ESN-123        actualiza el body y comenta checks/review
   orquestator inspect ESN-123     estado, brief, diff, artefactos y CI
+  orquestator clean ESN-123 [--force]
   orquestator run ESN-123 [--dry-run]
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
@@ -38,6 +40,7 @@ Uso:
 
 Opciones:
   --dry-run   enseña lo que haría sin escribir nada
+  --force     clean aunque la tarea no esté en Done
 `;
 
 function line(stream, text = "") {
@@ -115,11 +118,33 @@ export async function main(argv, io = {}) {
       case "check": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
-        const result = checkTask(key, {
-          dryRun,
-          image: imageTag(),
-          out: (text) => line(stdout, text),
-        });
+        let files = [];
+        if (!dryRun) {
+          const guard = guardTask(key, { main: process.cwd() });
+          if (guard.noApprove) {
+            throw new Error(`Rutas no aprobables: ${guard.touched.join(", ")}`);
+          }
+          if (guard.needsApproval && !guard.approval) {
+            throw new Error(
+              `Faltan aprobaciones (${guard.touched.join(", ")}): orquestator approve ${key} --motivo "…"`,
+            );
+          }
+          files = guard.files;
+        }
+        let result;
+        try {
+          result = checkTask(key, {
+            dryRun,
+            image: imageTag(),
+            files,
+            out: (text) => line(stdout, text),
+          });
+        } catch (error) {
+          if (error.code !== "MIGRATION_LOCKED") throw error;
+          withLock(key, () => save(key, block(load(key), error.message)));
+          line(stdout, `Blocked: ${error.message}`);
+          return 1;
+        }
         if (dryRun) return 0;
         if (result.ok) {
           line(stdout, "Comprobaciones OK (checks.md)");
@@ -149,6 +174,16 @@ export async function main(argv, io = {}) {
         if (!key) return 2;
         line(stdout, inspect(key));
         return 0;
+      }
+      case "clean": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = await clean(key, {
+          dryRun,
+          force: args.includes("--force"),
+          out: (text) => line(stdout, text),
+        });
+        return result ? 0 : 1;
       }
       case "run": {
         const key = parseKey(rest[0], stderr);

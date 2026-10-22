@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 import { ARTIFACTS } from "../lib/artifacts.mjs";
 import { CHECK_COMMAND, checkTask } from "../lib/checks.mjs";
+import { reserveMigration } from "../lib/migrations.mjs";
 import { createState, save, transition } from "../lib/state.mjs";
 
 let dir;
@@ -85,6 +86,20 @@ test("checkTask no escribe en dry-run", () => {
   assert.equal(result.ok, null);
   assert.equal(seen.dryRun, true);
   assert.equal(fs.readFileSync(path.join(task, "checks.md"), "utf8"), "");
+});
+
+test("checkTask reserva la migración y choca con otra tarea", () => {
+  started();
+  reserveMigration({ base: dir, key: "ESN-1", files: ["0001_x.sql"] });
+  assert.throws(
+    () =>
+      checkTask("ESN-7", {
+        base: dir,
+        files: ["api/migrations/0027_x.sql"],
+        runner: () => ({ status: 0 }),
+      }),
+    (error) => error.code === "MIGRATION_LOCKED" && /ESN-1/.test(error.message),
+  );
 });
 
 test("los artefactos de la fase existen antes de correr", () => {

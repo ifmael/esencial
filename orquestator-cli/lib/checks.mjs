@@ -4,6 +4,7 @@ import path from "node:path";
 import { ensureArtifactsAt } from "./artifacts.mjs";
 import { runPhase } from "./container.mjs";
 import { imageTag } from "./image.mjs";
+import { migrationsOf, reserveMigration } from "./migrations.mjs";
 import { home, load, repoDir, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
 
@@ -37,12 +38,29 @@ function report(key, result) {
 
 export function checkTask(
   key,
-  { base = home(), image = imageTag(), runner = runPhase, dryRun, out } = {},
+  {
+    base = home(),
+    image = imageTag(),
+    runner = runPhase,
+    dryRun,
+    out,
+    files = [],
+  } = {},
 ) {
   const state = load(key, base);
   if (!state) throw new Error(`La tarea ${key} no existe`);
   if (!["In Progress", "In validation"].includes(state.state)) {
     throw new Error(`No se comprueba una tarea en ${state.state}`);
+  }
+  const migrations = migrationsOf(files);
+  if (migrations.length && !dryRun) {
+    try {
+      reserveMigration({ base, key, files: migrations });
+    } catch (error) {
+      const locked = new Error(`${error.message}; la tarea queda bloqueada`);
+      locked.code = "MIGRATION_LOCKED";
+      throw locked;
+    }
   }
   const task = taskDir(key, base);
   ensureArtifactsAt(task);
