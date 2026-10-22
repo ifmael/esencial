@@ -1,0 +1,12 @@
+# Proxy de modelo: la única pieza que conoce la clave real de nan. El worker
+# usa una clave dummy y solo puede hablar con /v1/* a través de este puerto.
+:8080 {
+	handle /v1/* {
+		reverse_proxy https://api.nan.builders {
+			header_up Authorization "Bearer {env.NAN_API_KEY}"
+		}
+	}
+	handle {
+		respond 404
+	}
+}
