@@ -36,9 +36,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY api/package.json api/
 COPY web/package.json web/
 COPY e2e/package.json e2e/
-RUN pnpm install --frozen-lockfile --ignore-scripts \
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+RUN apt-get update \
  && pnpm --filter @esencial/e2e exec playwright install --with-deps chromium \
- && pnpm store prune \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN pnpm store prune \
  && chown -R node:node /opt/pnpm-store /ms-playwright
 
 RUN mkdir -p /work && chown node:node /work
