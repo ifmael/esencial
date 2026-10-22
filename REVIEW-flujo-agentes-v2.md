@@ -69,7 +69,7 @@ leído.
   checkout principal (`git fetch <clon> +refs/heads/X:refs/orquestator-cli/X`) y
   calcula todos los diffs ahí, con `--no-ext-diff --no-textconv`. Los atributos y
   filtros salen de la configuración del checkout principal, que es de confianza.
-  El coordinador arranca con un `cwd` neutro (p. ej. `~/.orquestator/ESQ-123/`).
+  El coordinador arranca con un `cwd` neutro (p. ej. `~/.orquestator/ESN-123/`).
   ~30 min de diseño.
 - **B.** Mantener git en el clon con una denylist más larga. Es frágil: cada
   versión de git puede añadir claves nuevas.
@@ -145,7 +145,7 @@ pulsar el siguiente botón. A cambio cuesta:
 
 Alternativas:
 
-- ★ **A.** En el piloto, `orquestator-cli run ESQ-123` encadena las fases de forma
+- ★ **A.** En el piloto, `orquestator-cli run ESN-123` encadena las fases de forma
   determinista y sin coordinador. Se añade un coordinador si aparece una decisión
   que el CLI no pueda tomar. Ahorra ~1 día de M3 y elimina C4 del piloto. Reabre la
   decisión «Nivel 2»; la evidencia es F2.

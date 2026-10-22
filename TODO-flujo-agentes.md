@@ -129,7 +129,7 @@ Convención de marcado:
 
 | Tema | Decisión |
 |---|---|
-| Estado de las tareas | **Linear Free** (1 equipo, clave `ESQ`; estados `Backlog → Spec review → Ready → In progress → In validation → Done`, más `Blocked`; auto-archivado) |
+| Estado de las tareas | **Linear Free** (1 equipo, clave `ESN`; estados `Backlog → Spec review → Ready → In progress → In validation → Done`, más `Blocked`; auto-archivado) |
 | Ejecución | **Local**, sin Orca. Un **clon local por tarea** (C2-A) y un **contenedor efímero por fase** que monta ese mismo clon; el clon y sus commits persisten entre fases |
 | Orquestador | **CLI determinista en el piloto** (`run`): el agente decide dentro de su fase; el CLI encadena y valida. El coordinador (Nivel 2, forma 2) se evalúa en M5b |
 | Orquestación | **Un `run` por tarea** (D1-A): `watch` despacha y `run` encadena las fases; sin coordinador en el piloto. El coordinador por tarea (forma 2) queda como opción de M5b |
@@ -149,7 +149,7 @@ Convención de marcado:
 | Orden y controles (F4) | Comprobaciones **antes** del review; RED de los tests nuevos/modificados contra `main` (unit/integración; e2e best-effort); `.only` bloquea; `.skip`, tests borrados y `expect` eliminados son hallazgos en `.task/checks.md` |
 | Límites (F5) | Timeout por fase, máximo de peticiones al modelo por fase y tope de gasto en la clave de nan; al agotarse → `Blocked` con logs. Cuenta tiempo activo. Las rondas humanas (`fix --humano`) van aparte y no bloquean solas |
 | Contenedores (I2) | **Uno por fase**, `--rm`, con el mismo clon montado: implementer escribe `impl.md`/`pr-body.md` y ve brief/informes previos en ro; check escribe `checks.md`; reviewer escribe `review.md`; pr-review escribe `pr-review.md`. El estado y el hash de `approve` viven en el host, no en el clon |
-| Estado y aprobaciones (R1) | `~/.orquestator/ESQ-123/state.json` y el hash de `approve` en el host; `run` es el dueño. Los contenedores no montan el estado; los informes se publican desde el host |
+| Estado y aprobaciones (R1) | `~/.orquestator/ESN-123/state.json` y el hash de `approve` en el host; `run` es el dueño. Los contenedores no montan el estado; los informes se publican desde el host |
 | Upstream (R2) | Espejo bare de `main` en `~/.orquestator/upstream.git`, actualizado por el host y montado ro en `/upstream`; el worker hace `git fetch /upstream main` y el implementer mergea. `run` comprueba `gh pr view --json mergeable` antes de `In validation`; conflicto → `fix --from conflicto` |
 | Guard (R4) | Hash aprobado en el estado del host antes de `check`/`ship`; commit status `guard` atado al SHA tras el push (no etiqueta). Cada push lo invalida y el CLI lo repone si el hash sigue valiendo |
 | CLI (I3) | M2 depende de **M0 y M1**; criterio: cada comando acepta `--dry-run` y la suite de transiciones pasa; estimación **3-4 días** (4-6 con `watch` y `migrate` completos) |
@@ -199,7 +199,7 @@ preview con D1/R2/Access.
 
 Adoptados **A1** (la migración se aprueba y aplica antes de `In validation`, no dentro),
 **A2** (hash aprobado en local; status `guard` tras el push) y **A3** (artefactos en
-`~/.orquestator/ESQ-123/task/`, directorio base `:ro` y overlays `:rw`, `human-feedback.md`
+`~/.orquestator/ESN-123/task/`, directorio base `:ro` y overlays `:rw`, `human-feedback.md`
 y `pr-diff.patch`), más las 4 erratas. Sin cambios de alcance.
 
 ## Arquitectura
@@ -214,7 +214,7 @@ orquestator-cli watch (despachador, host)
 orquestator-cli run (por tarea, host)
    │  encadena las fases y lanza los workers
    ▼
-clon local (tasks/ESQ-123) + contenedor(es) efímeros
+clon local (tasks/ESN-123) + contenedor(es) efímeros
    │  fases: spec · implementa · revisa · comprobaciones · PR review
    ▼
 host importa la rama (refs/orquestator-cli/…) y empuja · PR · preview
@@ -226,7 +226,7 @@ despacha. La forma 2 (coordinador por tarea) es una opción de M5b. Cada tarea v
 clon y sus contenedores; el checkout principal no se edita ni se le hace checkout de ramas
 del agente. El host **nunca ejecuta git con `cwd` en el clon**: importa la rama y calcula
 los diffs en el checkout principal. El **estado y las aprobaciones** viven en
-`~/.orquestator/ESQ-123/`; el clon solo guarda código y artefactos. El host mantiene un
+`~/.orquestator/ESN-123/`; el clon solo guarda código y artefactos. El host mantiene un
 espejo bare de `main` en `~/.orquestator/upstream.git`, montado ro en `/upstream`; el worker
 lo fetchea y el implementer mergea.
 
@@ -237,25 +237,25 @@ lo fetchea y el implementer mergea.
 
    | Comando | Qué hace | Quién lo lanza |
    |---|---|---|
-   | `orquestator-cli spec ESQ-123` | lanza `spec-reviewer` (M5b) en contenedor ro con red interna (solo proxy); el CLI publica las preguntas | tú |
-   | `orquestator-cli start ESQ-123` | exige `Ready`; crea el clon, copia el brief desde la issue y lanza `implementer` | `run`/tú |
-   | `orquestator-cli run ESQ-123` | encadena las fases hasta un bloqueo o `In validation`; comprueba `mergeable`; sin coordinador | `watch`/tú |
-   | `orquestator-cli review ESQ-123` | lanza `reviewer` en contexto limpio → `.task/review.md` | `run` |
-   | `orquestator-cli check ESQ-123` | lint, typecheck, test (con cobertura) y e2e en el contenedor | `run`/CLI |
-   | `orquestator-cli guard ESQ-123` | muestra las rutas protegidas tocadas y el estado de aprobación | tú |
-   | `orquestator-cli approve ESQ-123 --motivo "…"` | aprueba el diff protegido (solo TTY); guarda el hash | tú |
-   | `orquestator-cli inspect ESQ-123 --what issue\|brief\|diff\|review\|check\|ci` | datos read-only para depurar o reanudar | `run`/tú |
-   | `orquestator-cli migrate ESQ-123` | aplica las migraciones aprobadas a la D1 remota (token de edición, `wrangler` fijado) y re-ejecuta el job de CI `migracion`; sin commit status propio | CLI |
-   | `orquestator-cli ship ESQ-123` | push y PR desde `.task/pr-body.md`; sube review/checks como comentarios; Linear sigue en `In progress` | `run` |
-   | `orquestator-cli pr-review ESQ-123` | lanza `pr-reviewer` en contenedor ro con **red interna (solo proxy)** sobre `gh pr diff`; el CLI publica los comentarios; si no hay críticos: con migración, `approve --migracion` + `migrate` + espera `migracion`; luego `In validation` | `run` |
-   | `orquestator-cli fix ESQ-123` | devuelve los hallazgos al `implementer` en la misma rama/PR; `--from conflicto` mergea `main` | `run`/tú |
-   | `orquestator-cli block ESQ-123 --pregunta "…"` | `Blocked` + comentario con la pregunta | cualquiera |
-   | `orquestator-cli resume ESQ-123` | vuelve a la fase anterior tras resolver un bloqueo | tú/`run` |
-   | `orquestator-cli clean ESQ-123` | retira el contenedor y el clon tras el merge; corre las comprobaciones de `DEPLOY.md` §7 y sugiere `wrangler rollback` si fallan | CLI |
+   | `orquestator-cli spec ESN-123` | lanza `spec-reviewer` (M5b) en contenedor ro con red interna (solo proxy); el CLI publica las preguntas | tú |
+   | `orquestator-cli start ESN-123` | exige `Ready`; crea el clon, copia el brief desde la issue y lanza `implementer` | `run`/tú |
+   | `orquestator-cli run ESN-123` | encadena las fases hasta un bloqueo o `In validation`; comprueba `mergeable`; sin coordinador | `watch`/tú |
+   | `orquestator-cli review ESN-123` | lanza `reviewer` en contexto limpio → `.task/review.md` | `run` |
+   | `orquestator-cli check ESN-123` | lint, typecheck, test (con cobertura) y e2e en el contenedor | `run`/CLI |
+   | `orquestator-cli guard ESN-123` | muestra las rutas protegidas tocadas y el estado de aprobación | tú |
+   | `orquestator-cli approve ESN-123 --motivo "…"` | aprueba el diff protegido (solo TTY); guarda el hash | tú |
+   | `orquestator-cli inspect ESN-123 --what issue\|brief\|diff\|review\|check\|ci` | datos read-only para depurar o reanudar | `run`/tú |
+   | `orquestator-cli migrate ESN-123` | aplica las migraciones aprobadas a la D1 remota (token de edición, `wrangler` fijado) y re-ejecuta el job de CI `migracion`; sin commit status propio | CLI |
+   | `orquestator-cli ship ESN-123` | push y PR desde `.task/pr-body.md`; sube review/checks como comentarios; Linear sigue en `In progress` | `run` |
+   | `orquestator-cli pr-review ESN-123` | lanza `pr-reviewer` en contenedor ro con **red interna (solo proxy)** sobre `gh pr diff`; el CLI publica los comentarios; si no hay críticos: con migración, `approve --migracion` + `migrate` + espera `migracion`; luego `In validation` | `run` |
+   | `orquestator-cli fix ESN-123` | devuelve los hallazgos al `implementer` en la misma rama/PR; `--from conflicto` mergea `main` | `run`/tú |
+   | `orquestator-cli block ESN-123 --pregunta "…"` | `Blocked` + comentario con la pregunta | cualquiera |
+   | `orquestator-cli resume ESN-123` | vuelve a la fase anterior tras resolver un bloqueo | tú/`run` |
+   | `orquestator-cli clean ESN-123` | retira el contenedor y el clon tras el merge; corre las comprobaciones de `DEPLOY.md` §7 y sugiere `wrangler rollback` si fallan | CLI |
    | `orquestator-cli status [--watch (M5b)]` | cola y estado; `--watch` es el despachador | tú/CLI |
 
    Módulos internos (deterministas y testeables): `state` (transiciones y
-   `~/.orquestator/ESQ-123/state.json`), `linear` (leer issue, mover estado, comentar),
+   `~/.orquestator/ESN-123/state.json`), `linear` (leer issue, mover estado, comentar),
    `checkout` (clon `git clone --local --no-hardlinks`, sin remoto, más el espejo bare
    `~/.orquestator/upstream.git`; importación de la rama en `refs/orquestator-cli/…`),
    `container` (`docker run` con mounts por fase), `check` (comandos del repo), `guard` (rutas
@@ -267,17 +267,17 @@ determinista de la issue.
    chromium/playwright, wrangler y Hermes. Store de pnpm caliente (`pnpm fetch`).
    Etiquetada por contenido del Dockerfile **y del `pnpm-lock.yaml`**.
 3. **Coordinador por tarea (M5b, opcional; no en el piloto)**: si se añade, un perfil/proceso
-   por tarea con `cwd` neutro (`~/.orquestator/ESQ-123/`) y toolset restringido a
+   por tarea con `cwd` neutro (`~/.orquestator/ESN-123/`) y toolset restringido a
    `orquestator-cli` (C4). Decide el siguiente paso dentro de lo permitido, lanza fases y
    reporta; no redacta la spec ni el brief. En el piloto, `run` encadena las fases sin
    coordinador.
 4. **Perfiles de fase** (Hermes): `implementer`, `reviewer` y `pr-reviewer`; el
    `spec-reviewer` entra en M5b. Las comprobaciones son deterministas y no necesitan un
    `verifier`. Cada uno con su modelo de nan, su brief y su `HERMES_HOME` aislado por fase.
-5. **Contrato de artefactos**: en `~/.orquestator/ESQ-123/task/` (host), montado en
+5. **Contrato de artefactos**: en `~/.orquestator/ESN-123/task/` (host), montado en
    `<clon>/.task/`: `brief.md`, `impl.md`, `review.md`, `pr-review.md`, `checks.md`,
    `pr-body.md`, `human-feedback.md` y `pr-diff.patch`; el estado y las aprobaciones viven
-   en `~/.orquestator/ESQ-123/state.json`. Plantillas en «Contrato de artefactos».
+   en `~/.orquestator/ESN-123/state.json`. Plantillas en «Contrato de artefactos».
 6. **Plugin `orquestator`** (Hermes, M5b, opcional): expone un solo tool con las
    acciones de fase y `inspect` read-only; llama al CLI con `execFile` (sin shell). Se
    instala en `~/.hermes/plugins/` desde el checkout principal y se activa en
@@ -292,7 +292,7 @@ determinista de la issue.
 
 ### Estados y transiciones
 
-Linear (producto) e interno (`~/.orquestator/ESQ-123/state.json`, en el host) se mapean así:
+Linear (producto) e interno (`~/.orquestator/ESN-123/state.json`, en el host) se mapean así:
 
 | Linear | Fase interna | Quién mueve |
 |---|---|---|
@@ -319,7 +319,7 @@ Hay **un solo clon por tarea** y **un contenedor por fase**, montando ese mismo 
 | `reviewer` | ro | `brief.md`, `impl.md`, `checks.md` ro; `review.md` rw |
 | `pr-reviewer` | ro | `brief.md`, `impl.md`, `checks.md`, `review.md`, `pr-diff.patch` ro; `pr-review.md` rw |
 
-- El **estado** (`~/.orquestator/ESQ-123/state.json`), el hash de `approve` y el
+- El **estado** (`~/.orquestator/ESN-123/state.json`), el hash de `approve` y el
   directorio base de artefactos se llevan en el host. El CLI **pre-crea vacíos** los
   ficheros que aún no existan (Docker crearía un directorio si se monta un fichero
   inexistente en `:ro`). El directorio base se monta `:ro`; encima, solo los ficheros que
@@ -359,7 +359,7 @@ en contenedor.
   filtros salen de ahí. Si se añade el coordinador (M5b), arranca con `cwd` neutro, así que
   Hermes no carga el `AGENTS.md` que el implementer pudo editar. **El host no ejecuta
   agentes**: los perfiles corren en contenedor. El estado y el hash de `approve` viven en
-  `~/.orquestator/ESQ-123/`, fuera del clon. `orquestator-cli` se ejecuta desde el checkout
+  `~/.orquestator/ESN-123/`, fuera del clon. `orquestator-cli` se ejecuta desde el checkout
   principal y se niega si `orquestator-cli/` difiere de `main`.
 - **Forma 2** (si se añade en M5b) no cambia esto: cada coordinador por tarea usa las
   mismas reglas. C4 (restringir el toolset del coordinador al plugin `orquestator`) sería
@@ -413,7 +413,7 @@ en contenedor.
 
 - El CLI (`run`/`watch`) y los contenedores corren en este equipo. Si se apaga, el flujo
   **se pausa**, no se pierde: Linear, la rama/PR, la CI y los previews viven en la nube; el
-  clon, `~/.orquestator/ESQ-123/state.json` y `~/.orquestator/ESQ-123/task/`, en disco.
+  clon, `~/.orquestator/ESN-123/state.json` y `~/.orquestator/ESN-123/task/`, en disco.
 - Al arrancar: `orquestator-cli status` y `resume` retoman la fase. Las fases son
   reanudables; si el contenedor murió a mitad, la fase se vuelve a lanzar sobre el clon.
 - Locks obsoletos y contenedores huérfanos se detectan por PID/edad y etiqueta; `clean` los
@@ -436,7 +436,7 @@ en contenedor.
    `fix --from check` → implementer → check → review (sin PR) o push (con PR).
    `fix --from pr-review` → implementer → check → push. `fix --from conflicto` →
    implementer mergea `main` → check → review → push.
-6. `orquestator-cli ship` → PR con rama `ESQ-123-slug`, magic words, resumen, diagrama y
+6. `orquestator-cli ship` → PR con rama `ESN-123-slug`, magic words, resumen, diagrama y
    preview.
 7. `orquestator-cli pr-review` → el CLI baja `gh pr diff`; `pr-reviewer` revisa en un
    contenedor con el clon en solo lectura y **red interna (solo el proxy de modelo)**, y
@@ -498,7 +498,7 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
 - `guard` muestra el diff protegido; `approve` (TTY, con motivo) guarda un hash. Si el
   diff protegido cambia después, la aprobación caduca y se vuelve a bloquear.
 - **Antes de `check` y de `ship`** el CLI exige el **hash aprobado** en
-  `~/.orquestator/ESQ-123/state.json` (no hay SHA remoto todavía). **Tras el push** de
+  `~/.orquestator/ESN-123/state.json` (no hay SHA remoto todavía). **Tras el push** de
   `ship` y de cada `fix`, si el hash sigue coincidiendo, publica el commit status
   `guard` sobre ese SHA. M5b añade el job de CI que lee la lista de `origin/main` (no de
   la rama) y falla si hay rutas protegidas sin el status `guard`.
@@ -523,7 +523,7 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
 - La clave real de nan solo vive en el proxy de modelo; los agentes usan una dummy. Nunca
   en la imagen ni en el repo.
 - No hay merge automático: el merge siempre es humano.
-- El flujo **nunca empuja a `main`**: solo a `refs/heads/ESQ-NNN-slug`; el único camino a
+- El flujo **nunca empuja a `main`**: solo a `refs/heads/ESN-NNN-slug`; el único camino a
   `main` es un PR mergeado por ti. El CLI rechaza cualquier push cuyo destino sea `main`
   y prohíbe `--force`.
 - Si el diff toca una ruta protegida: antes de `check`/`ship` manda el **hash aprobado**;
@@ -554,13 +554,13 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
 
 ## Contrato de artefactos
 
-Todos viven en `~/.orquestator/ESQ-123/task/` (host), se montan en `<clon>/.task/` y
+Todos viven en `~/.orquestator/ESN-123/task/` (host), se montan en `<clon>/.task/` y
 `.task/` sigue en `.gitignore`.
 
 ### `.task/brief.md` (lo genera `orquestator-cli start` desde la issue)
 
 ```md
-# Brief — ESQ-123 <título>
+# Brief — ESN-123 <título>
 
 ## Objetivo
 ## Contexto y enlaces (issue, docs, PRs previas)
@@ -577,7 +577,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 ### `.task/impl.md` (lo escribe el `implementer`)
 
 ```md
-# Implementación — ESQ-123
+# Implementación — ESN-123
 
 ## Plan de pruebas
 | Criterio | Test (archivo) | Tipo | Negativo | Estado |
@@ -590,7 +590,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 ### `.task/review.md` y `.task/pr-review.md` (los escribe el revisor)
 
 ```md
-# Review — ESQ-123
+# Review — ESN-123
 
 ## Trazabilidad criterio→test
 ## Hallazgos críticos
@@ -602,7 +602,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 ### `.task/pr-body.md` (lo escribe el `implementer`)
 
 ```md
-# ESQ-123 <título>
+# ESN-123 <título>
 
 ## Qué cambia
 ## Criterios cubiertos
@@ -652,7 +652,7 @@ Objetivo: dejar listas las cuentas y la configuración mínima. Depende de: nada
       secretos hasta que un maintainer lo re-ejecute.
 - [x] Hermes en el host (2026-10-21): no está instalado y no hace falta; el binario entra
       en la imagen del worker (M1), que es donde corren los perfiles.
-- [ ] Crear el workspace de Linear: equipo con clave `ESQ`, estados `Backlog`,
+- [ ] Crear el workspace de Linear: equipo con clave `ESN`, estados `Backlog`,
       `Spec review`, `Ready`, `In progress`, `In validation`, `Done`, `Blocked`;
       auto-archivado activado.
 - [ ] Crear la vista «Necesita mi decisión» (filtro `Blocked`); activar notificaciones de
@@ -664,7 +664,7 @@ Objetivo: dejar listas las cuentas y la configuración mínima. Depende de: nada
       con el CLI.
 - [ ] Verificar la API de Linear con `curl` (leer una issue) y anotar el comando; el CLI
       la usará en M2. El CLI no usa el MCP de Linear.
-- [x] Escribir `docs/flujo.md` con: ramas `ESQ-NNN-slug`, magic words, estados,
+- [x] Escribir `docs/flujo.md` con: ramas `ESN-NNN-slug`, magic words, estados,
       artefactos y límites (2026-10-21).
 - [x] Añadir `.task/` a `.gitignore` (2026-10-21).
 
@@ -711,14 +711,14 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 
 - [ ] Crear `orquestator-cli/` (Node del repo; sin dependencias nuevas si se puede).
 - [ ] Módulo `state`: estados, transiciones válidas y estado en
-      `~/.orquestator/ESQ-123/state.json` (host); tests.
+      `~/.orquestator/ESN-123/state.json` (host); tests.
 - [ ] Lock de migraciones: en `check`, la primera vez que el diff toca
       `api/migrations/**`, bloquea si otra tarea tiene una migración abierta; la reserva
       vive en el estado del host (no en `start`).
 - [ ] Módulo `linear`: leer issue, mover estado, comentar, asignar y mencionar (API con
       token); tests con HTTP simulado.
 - [ ] Módulo `checkout`: crear/eliminar el clon local (`git clone --local --no-hardlinks`)
-      y la rama `ESQ-NNN-slug`; mantener el espejo bare `~/.orquestator/upstream.git` y
+      y la rama `ESN-NNN-slug`; mantener el espejo bare `~/.orquestator/upstream.git` y
       montarlo ro en `/upstream`; el host importa la rama y diffea en el checkout
       principal; guardas.
 - [ ] Módulo `container`: build/run con el directorio base `.task` en ro y overlays rw
@@ -737,7 +737,7 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       `.github/workflows/`. No publica `migracion`.
 - [ ] `ship`: publicar el body, subir `review.md`/`checks.md` como comentarios y, tras
       el push, publicar el status `guard` si el hash aprobado sigue valiendo.
-- [ ] Módulo `artifacts`: escribir/leer `~/.orquestator/ESQ-123/task/*` con las
+- [ ] Módulo `artifacts`: escribir/leer `~/.orquestator/ESN-123/task/*` con las
       plantillas, pre-crear vacíos los ficheros y publicar desde el host; el estado y las
       aprobaciones no se escriben en el clon.
 - [ ] Módulo `guard`: lista de rutas, diff contra `origin/main` desde el checkout
@@ -757,7 +757,7 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [ ] Token de GitHub fino solo en el entorno del CLI; push HTTPS con credential helper;
       `Commit statuses` de escritura, sin `Workflows`; tests de que el token no aparece en
       logs.
-- [ ] `pr-review`: bajar `gh pr diff` a `~/.orquestator/ESQ-123/task/pr-diff.patch` en el
+- [ ] `pr-review`: bajar `gh pr diff` a `~/.orquestator/ESN-123/task/pr-diff.patch` en el
       host, lanzar el revisor en contenedor con el clon ro y **red interna (solo el proxy
       de modelo)**, publicar los comentarios desde `pr-review.md`; esperar `ci` y `lint`;
       si hay migración, `approve --migracion` →
@@ -895,6 +895,7 @@ Depende de: M5b.
 | 2026-10-21 | Revisión v4 | A1-A3 adoptados: migración antes de `In validation`, hash local + status `guard` tras push, artefactos en host con dir base ro y overlays; 4 erratas | Sin cambios de alcance; el plan queda listo para M0 | M0 |
 | 2026-10-21 | M0 | Repo público, `main` protegido (`ci`/`lint`/`migracion`, admins incluidos), aprobación para forks; job `migracion`, `docs/flujo.md`, `.task/` ignorado; gitleaks limpio | La decisión fue publicar tal cual; el repo ya es público y no hay vuelta atrás práctica | Tokens CF + Linear |
 | 2026-10-22 | M0 | PR #49: job `migracion` verificado con el token read-only (`D1 Read` lee `d1_migrations`); `biome.json` excluye el HTML de `docs/` | El job distingue permisos de «no aplicada»; el token no hace falta en el host, solo en Actions | Docker (grupo) + token de edición + env + Linear |
+| 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; `ESN` sí se lee | Crear el workspace con `ESN` |
 
 ## Preguntas abiertas
 
