@@ -1,6 +1,7 @@
 import { git } from "./checkout.mjs";
 import { checkTask } from "./checks.mjs";
 import { linearKey } from "./config.mjs";
+import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import {
   assertKey,
@@ -21,6 +22,8 @@ export const USAGE = `orquestator — flujo de tareas de Esencial
 Uso:
   orquestator start ESN-123       abre la tarea: clon, rama y brief
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
+  orquestator guard ESN-123       rutas protegidas y hash del diff
+  orquestator approve ESN-123 --motivo "…"
   orquestator status [ESN-123]    estado de una tarea (o de todas)
   orquestator block ESN-123 <pregunta>
   orquestator resume ESN-123
@@ -119,6 +122,59 @@ export async function main(argv, io = {}) {
           `Comprobaciones FALLAN (exit ${result.status}); mira checks.md`,
         );
         return 1;
+      }
+      case "guard": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = guardTask(key, { main: process.cwd() });
+        line(stdout, `hash: ${result.hash}`);
+        if (result.files.length === 0)
+          line(stdout, "Sin cambios frente a origin/main.");
+        for (const file of result.touched) line(stdout, `  protegido: ${file}`);
+        if (result.noApprove)
+          line(stdout, "OJO: hay rutas que no se pueden aprobar.");
+        line(
+          stdout,
+          result.approval
+            ? `aprobado: ${result.approval.reason} (${result.approval.at})`
+            : "sin aprobar",
+        );
+        return 0;
+      }
+      case "approve": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const at = rest.indexOf("--motivo");
+        const reason = at === -1 ? "" : (rest[at + 1] ?? "");
+        if (!process.stdin.isTTY) {
+          throw new Error("approve solo se puede usar desde una terminal");
+        }
+        if (!reason.trim())
+          throw new Error('approve necesita un motivo: --motivo "…"');
+        const result = guardTask(key, { main: process.cwd() });
+        if (result.noApprove) {
+          throw new Error(`Rutas no aprobables: ${result.touched.join(", ")}`);
+        }
+        if (!result.needsApproval) {
+          line(
+            stdout,
+            "El diff no toca rutas protegidas; no hace falta aprobar.",
+          );
+          return 0;
+        }
+        if (dryRun) {
+          line(stdout, `[dry-run] aprobaría ${result.hash}: ${reason}`);
+          return 0;
+        }
+        withLock(key, () => {
+          const state = load(key);
+          save(
+            key,
+            approveState(state, { hash: result.hash, reason, isTTY: true }),
+          );
+        });
+        line(stdout, `Aprobado ${result.hash}`);
+        return 0;
       }
       case "status": {
         if (!rest[0]) {

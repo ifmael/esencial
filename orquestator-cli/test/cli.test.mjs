@@ -93,6 +93,19 @@ test("check --dry-run enseña la cadena sin ejecutar docker", async () => {
   assert.match(r.out, /pnpm e2e/);
 });
 
+test("approve solo desde una terminal", async () => {
+  save("ESN-9", transition(createState("ESN-9"), "In Progress"));
+  const r = await run(["approve", "ESN-9", "--motivo", "x"]);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /terminal/);
+});
+
+test("guard de una tarea inexistente sale con 1", async () => {
+  const r = await run(["guard", "ESN-404"]);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /no existe/);
+});
+
 test("--dry-run no escribe nada", async () => {
   save("ESN-9", transition(createState("ESN-9"), "In Progress"));
   const r = await run(["block", "ESN-9", "x", "--dry-run"]);

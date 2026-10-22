@@ -1,0 +1,34 @@
+# Rutas protegidas de `guard`. Se lee de `origin/main`, no de la rama.
+# Una línea que acaba en `/` es prefijo; el resto es el fichero exacto.
+# `!` delante = nunca aprobable (un cambio de CI va en PR aparte).
+package.json
+api/package.json
+web/package.json
+e2e/package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.npmrc
+biome.json
+api/tsconfig.json
+web/tsconfig.json
+e2e/tsconfig.json
+api/vitest.config.ts
+web/vite.config.ts
+e2e/playwright.config.ts
+api/tests/helpers.ts
+api/tests/wrangler.test.toml
+web/tests/setup.ts
+web/tests/audio-fake.ts
+web/tests/view-transition-stub.ts
+e2e/tests/helpers.ts
+web/scripts/check-design-tokens.ts
+web/scripts/gen-tokens.ts
+!.github/workflows/
+.husky/
+wrangler.toml
+api/wrangler.toml
+orquestator-cli/
+AGENTS.md
+DEPLOY.md
+docs/flujo.md
+.gitignore

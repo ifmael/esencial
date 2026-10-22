@@ -759,11 +759,13 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [ ] Módulo `artifacts`: escribir/leer `~/.orquestator/ESN-123/task/*` con las
       plantillas, pre-crear vacíos los ficheros y publicar desde el host; el estado y las
       aprobaciones no se escriben en el clon.
-- [ ] Módulo `guard`: lista de rutas, diff contra `origin/main` desde el checkout
-      principal, hash de aprobación, `approve` solo TTY; antes de `check`/`ship` manda el
-      hash y tras cada push el status `guard` se repone si sigue valiendo; `approve --pr N`
-      para PRs manuales (CI, Dependabot); tests, incluido uno con un `diff.external`
-      malicioso en el clon que no debe ejecutar nada. `.github/workflows/` no es aprobable.
+- [x] `guard` local: lista en `orquestator-cli/protected-paths.txt` leída de
+      `origin/main`, diff desde el checkout principal (el clon se importa por el espejo
+      con los hooks neutralizados), hash del diff y `approve` (TTY, motivo);
+      `.github/workflows/` no es aprobable; `check` exige la aprobación; test con
+      `diff.external` y `pre-push` maliciosos (2026-10-22).
+- [ ] `guard` remoto: status `guard` en GitHub, reposición tras cada push y
+      `approve --pr N` para PRs manuales.
 - [ ] Módulo `migrate` (solo si la feature del piloto lleva migración; si no, M5b):
       detectar `api/migrations/**`, listar pendientes en remoto, aplicar las aprobadas tras
       `approve --migracion` con
@@ -917,6 +919,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-22 | M2 | `guard` local: rutas protegidas, hash y `approve`; `check` bloquea sin aprobación y el clon malicioso no ejecuta nada; 61 tests | Se importa la rama por el espejo, nunca con un `fetch` del clon | `pr` y status remoto |
 | 2026-10-22 | M2 | `container` (montajes ro/rw por fase, red, límites) y `check` base con `checks.md`; 52 tests | Las fases de agente usan la red interna y el home de Hermes de la imagen | `pr`, `guard` |
 | 2026-10-22 | M2 | CLI con estado, `status`/`block`/`resume` y `start` (Linear + clon + rama + brief); 38 tests y `--dry-run` | El espejo bare necesita el refspec de `remote.origin.fetch` para actualizarse | `check` y `container` |
 | 2026-10-22 | M1 | **M1 cerrado**: imagen con pnpm, Chromium, Hermes v0.22.4 y store; smoke offline (624 tests, 89 e2e) y límites validados; proxy con la clave de nan | Hermes se instala como `node` y usa `/opt/hermes/home`; corepack no sirve sin red | M2: CLI |
