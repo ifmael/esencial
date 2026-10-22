@@ -93,7 +93,7 @@ salida propia a internet (red interna).
 
 ```bash
 docker network inspect esencial-workers >/dev/null 2>&1 || docker network create --internal esencial-workers
-source ~/.config/orquestator/env
+set -a; . ~/.config/orquestator/env; set +a   # exporta las variables para -e
 docker run -d --name esencial-proxy --restart unless-stopped -e NAN_API_KEY \
   -p 127.0.0.1:8799:8080 \
   -v "$PWD/orquestator-cli/proxy/Caddyfile:/etc/caddy/Caddyfile:ro" \
