@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
 import {
+  effortFor,
   hermesCommand,
   modelFor,
   promptFor,
@@ -36,14 +37,15 @@ function started(state = "In Progress") {
   );
 }
 
-test("el comando de Hermes es one-shot, sin config del host y con la salida en el artefacto", () => {
-  const command = hermesCommand("qwen3.6", "review.md");
-  assert.match(command, /hermes chat --oneshot -Q --safe-mode --yolo/);
+test("el comando de Hermes es one-shot y escribe la salida en el artefacto", () => {
+  const command = hermesCommand("qwen3.8-flash", "review.md");
+  assert.match(command, /hermes chat --oneshot -Q --yolo/);
+  assert.doesNotMatch(command, /--safe-mode/);
   assert.match(
     command,
     /--provider custom --base-url http:\/\/esencial-proxy:8080\/v1/,
   );
-  assert.match(command, /--model qwen3\.6/);
+  assert.match(command, /--model qwen3\.8-flash/);
   assert.match(command, /--query-file -/);
   assert.match(command, /> \/work\/\.task\/review\.md$/);
 });
@@ -91,12 +93,13 @@ test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefac
   });
   assert.equal(result.artifact, "Veredicto: APROBADO\n\nsin hallazgos\n");
   assert.equal(seen.phase, "reviewer");
-  assert.match(seen.command, /--model deepseek-v4-flash/);
+  assert.match(seen.command, /--model qwen3\.8-flash/);
   assert.match(seen.command, /> \/work\/\.task\/review\.md/);
   assert.match(seen.input, /Perfil: revisor/);
   assert.match(seen.input, /## checks/);
   assert.match(seen.input, /diff --git/);
-  assert.ok(fs.existsSync(path.join(dir, "ESN-7", "hermes", "reviewer")));
+  const config = path.join(dir, "ESN-7", "hermes", "reviewer", "config.yaml");
+  assert.match(fs.readFileSync(config, "utf8"), /reasoning_effort: max/);
 });
 
 test("un artefacto vacío o un fallo de Hermes no pasan", () => {
@@ -149,19 +152,27 @@ test("dry-run enseña el comando y no crea el HERMES_HOME", () => {
     out: (t) => lines.push(t),
   });
   assert.equal(result.dryRun, true);
-  assert.match(lines.join("\n"), /--model deepseek-v4-flash/);
+  assert.match(lines.join("\n"), /--model qwen3\.8-flash/);
   assert.match(result.prompt, /\(dry-run\)/);
   assert.equal(fs.existsSync(path.join(dir, "ESN-7", "hermes")), false);
 });
 
-test("el modelo se cambia con ORQUESTATOR_MODEL_* y se valida", () => {
+test("modelo y esfuerzo salen del perfil y se validan", () => {
+  assert.equal(modelFor("implementer"), "deepseek-v4-flash");
+  assert.equal(effortFor("implementer"), "xhigh");
+  assert.equal(effortFor("pr-review"), "ultra");
   process.env.ORQUESTATOR_MODEL_REVIEWER = "glm5.3-flash";
+  process.env.ORQUESTATOR_EFFORT_REVIEWER = "low";
   try {
     assert.equal(modelFor("reviewer"), "glm5.3-flash");
+    assert.equal(effortFor("reviewer"), "low");
     process.env.ORQUESTATOR_MODEL_REVIEWER = "modelo; rm -rf /";
+    process.env.ORQUESTATOR_EFFORT_REVIEWER = "brutal";
     assert.throws(() => modelFor("reviewer"), /Modelo inválido/);
+    assert.throws(() => effortFor("reviewer"), /Esfuerzo inválido/);
   } finally {
     delete process.env.ORQUESTATOR_MODEL_REVIEWER;
+    delete process.env.ORQUESTATOR_EFFORT_REVIEWER;
   }
 });
 

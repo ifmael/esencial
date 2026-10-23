@@ -14,27 +14,53 @@ const MAX_DIFF = 120_000;
 
 /** Perfil de cada fase: modelo, fichero de instrucciones y artefacto de salida. */
 export const PROFILES = {
+  "spec-review": {
+    file: "spec-reviewer.md",
+    model: "qwen3.8-flash",
+    effort: "max",
+    env: "ORQUESTATOR_MODEL_SPEC_REVIEW",
+    effortEnv: "ORQUESTATOR_EFFORT_SPEC_REVIEW",
+    writes: "spec-review.md",
+  },
   implementer: {
     file: "implementer.md",
-    model: "qwen3.6",
+    model: "deepseek-v4-flash",
+    effort: "xhigh",
     env: "ORQUESTATOR_MODEL_IMPLEMENTER",
+    effortEnv: "ORQUESTATOR_EFFORT_IMPLEMENTER",
     writes: "impl.md",
   },
   reviewer: {
     file: "reviewer.md",
-    model: "deepseek-v4-flash",
+    model: "qwen3.8-flash",
+    effort: "max",
     env: "ORQUESTATOR_MODEL_REVIEWER",
+    effortEnv: "ORQUESTATOR_EFFORT_REVIEWER",
     writes: "review.md",
   },
   "pr-review": {
     file: "pr-reviewer.md",
-    model: "glm5.3-flash",
+    model: "deepseek-v4-flash",
+    effort: "ultra",
     env: "ORQUESTATOR_MODEL_PR_REVIEW",
+    effortEnv: "ORQUESTATOR_EFFORT_PR_REVIEW",
     writes: "pr-review.md",
   },
 };
 
+export const EFFORTS = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "ultra",
+];
+
 const CONTEXT = {
+  "spec-review": ["title", "description"],
   implementer: ["brief", "human-feedback", "checks", "review", "pr-review"],
   reviewer: ["brief", "impl", "checks"],
   "pr-review": ["brief", "impl", "checks", "review", "pr-body"],
@@ -50,6 +76,25 @@ export function modelFor(phase) {
   return model;
 }
 
+export function effortFor(phase) {
+  const spec = PROFILES[phase];
+  if (!spec) throw new Error(`Perfil desconocido: ${phase}`);
+  const effort = process.env[spec.effortEnv] || spec.effort;
+  if (!EFFORTS.includes(effort)) {
+    throw new Error(`Esfuerzo inválido: ${effort}`);
+  }
+  return effort;
+}
+
+/** El esfuerzo de razonamiento solo se puede fijar por config, no por flag. */
+export function hermesConfig(home, effort) {
+  fs.mkdirSync(home, { recursive: true });
+  fs.writeFileSync(
+    path.join(home, "config.yaml"),
+    `agent:\n  reasoning_effort: ${effort}\n`,
+  );
+}
+
 export function profileText(phase) {
   const spec = PROFILES[phase];
   if (!spec) throw new Error(`Perfil desconocido: ${phase}`);
@@ -59,7 +104,7 @@ export function profileText(phase) {
 /** Comando de Hermes dentro del contenedor; el prompt entra por stdin. */
 export function hermesCommand(model, writes) {
   return [
-    "hermes chat --oneshot -Q --safe-mode --yolo",
+    "hermes chat --oneshot -Q --yolo",
     "--provider custom --base-url http://esencial-proxy:8080/v1 --api-key dummy",
     `--model ${model}`,
     "--query-file -",
@@ -152,11 +197,8 @@ export function runAgent(
   }
   const prompt = promptFor(phase, context);
   const command = hermesCommand(modelFor(phase), spec.writes);
-  if (!dryRun) {
-    fs.mkdirSync(path.join(path.dirname(task), "hermes", phase), {
-      recursive: true,
-    });
-  }
+  const hermes = path.join(path.dirname(task), "hermes", phase);
+  if (!dryRun) hermesConfig(hermes, effortFor(phase));
   const result = runner({
     phase,
     image,

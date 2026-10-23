@@ -70,6 +70,15 @@ test("las fases de agente montan su HERMES_HOME aislado y la identidad git", () 
   assert.doesNotMatch(args, /\/opt\/hermes\/home/);
 });
 
+test("spec-review monta el repo en ro, sin espejo, y escribe sus preguntas", () => {
+  ensureArtifactsAt(paths().task);
+  const args = dockerArgs({ phase: "spec-review", ...paths() }).join(" ");
+  assert.match(args, /repo:\/work:ro/);
+  assert.doesNotMatch(args, /upstream\.git:\/upstream/);
+  assert.match(args, /task\/spec-review\.md:\/work\/\.task\/spec-review\.md/);
+  assert.match(args, /--network esencial-workers/);
+});
+
 test("ensureArtifacts crea los ficheros que faltan sin pisar los llenos", () => {
   ensureArtifactsAt(paths().task);
   assert.ok(fs.existsSync(path.join(paths().task, "checks.md")));

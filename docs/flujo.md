@@ -54,27 +54,28 @@ hermes chat --oneshot -Q --safe-mode --yolo \
   --model <modelo> --query-file - > /work/.task/<artefacto>
 ```
 
-- `--safe-mode` ignora config, reglas, plugins y MCPs del host: en el piloto no hay
-  MCPs. Los agentes solo ven el clon, los artefactos y el espejo (ro).
-- `HERMES_HOME` es propio de cada fase y de cada tarea
-  (`~/.orquestator/ESN-123/hermes/<fase>/`), así que las sesiones no se mezclan.
+- Cada fase tiene su `HERMES_HOME` en `~/.orquestator/ESN-123/hermes/<fase>/` con un
+  `config.yaml` generado que solo fija `agent.reasoning_effort`; no hay config del host
+  ni MCPs. El esfuerzo no tiene flag en `hermes chat`: se configura ahí.
+- Los agentes solo ven el clon, los artefactos y el espejo (ro); `spec-review` monta
+  `main` en ro y no ve ningún clon de tarea.
 - Identidad de git dentro del contenedor: `orquestator <orquestator@esencial.invalid>`;
   sin push (lo hace el host).
 - El implementer escribe `impl.md` (respuesta final) y `pr-body.md` (con sus tools).
 
-| Fase | Comando | Modelo | Artefacto |
-|---|---|---|---|
-| spec-reviewer | `spec-review` | por decidir | preguntas en la issue |
-| implementer | `implement` | por decidir | `impl.md`, `pr-body.md` |
-| reviewer | `review` | por decidir | `review.md` |
-| pr-reviewer | `pr-review` | por decidir | `pr-review.md` |
+| Fase | Comando | Modelo | Esfuerzo | Artefacto |
+|---|---|---|---|---|
+| spec-reviewer | `spec-review` | `qwen3.8-flash` | `max` | `spec-review.md` + comentario |
+| implementer | `implement` | `deepseek-v4-flash` | `xhigh` | `impl.md`, `pr-body.md` |
+| reviewer | `review` | `qwen3.8-flash` | `max` | `review.md` |
+| pr-reviewer | `pr-review` | `deepseek-v4-flash` | `ultra` | `pr-review.md` |
 
 Roles decididos para el piloto: los cuatro de la tabla. Después del piloto: `test-auditor`
 (tests que prueban comportamiento) y `security-auditor` (diffs de autenticación, API,
 cabeceras o datos).
 
-Los modelos se cambian sin tocar código con `ORQUESTATOR_MODEL_IMPLEMENTER`,
-`ORQUESTATOR_MODEL_REVIEWER` y `ORQUESTATOR_MODEL_PR_REVIEW`.
+Modelo y esfuerzo se cambian sin tocar código con `ORQUESTATOR_MODEL_<FASE>` y
+`ORQUESTATOR_EFFORT_<FASE>` (`SPEC_REVIEW`, `IMPLEMENTER`, `REVIEWER`, `PR_REVIEW`).
 
 `review.md` y `pr-review.md` empiezan con `Veredicto: APROBADO` o
 `Veredicto: CAMBIOS`; con CAMBIOS el comando sale con 1 y toca

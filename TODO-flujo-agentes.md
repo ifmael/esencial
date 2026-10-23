@@ -35,7 +35,7 @@ Convención de marcado:
 | M0 — Base | Hecho (2026-10-22) | — |
 | M1 — Imagen del worker | Hecho (2026-10-22) | — |
 | M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | — |
-| M3 — Perfiles de fase | En curso | Reconstruir la imagen y hacer el humo de una tarea de juguete |
+| M3 — Perfiles de fase | En curso | Reconstruir la imagen y hacer la prueba real con una tarea de juguete |
 | M4 — Piloto | Pendiente | Elegir la feature del backlog |
 | M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
 | M5b — Automatización | Pendiente | `watch`, job `guard` y bucle automático de spec |
@@ -823,12 +823,13 @@ ni el remoto.
 Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depende de: M1, M2.
 
 - [x] Crear los perfiles del piloto: `implementer`, `reviewer`, `pr-reviewer` y
-      `spec-reviewer` (`orquestator-cli/perfiles/`; falta el cuarto). Las comprobaciones
-      son deterministas: no hay `verifier`.
+      `spec-reviewer` (`orquestator-cli/perfiles/`), con el comando `spec-review`. Las
+      comprobaciones son deterministas: no hay `verifier`.
 - [x] Sin MCPs en el piloto: `--safe-mode` desactiva config/rules/plugins/MCP; no hay
       `mcp_servers` que declarar. El gateway se añade en M5b/M6 si hace falta.
-- [x] Modelos de nan por perfil: `qwen3.6` implementer, `deepseek-v4-flash` reviewer,
-      `glm5.3-flash` pr-reviewer; `ORQUESTATOR_MODEL_*` los cambia sin tocar código.
+- [x] Modelos y esfuerzo decididos por el usuario: `spec-reviewer` qwen3.8-flash/max,
+      `implementer` deepseek-v4-flash/xhigh, `reviewer` qwen3.8-flash/max, `pr-reviewer`
+      deepseek-v4-flash/ultra. `ORQUESTATOR_MODEL_*`/`ORQUESTATOR_EFFORT_*` los cambian.
 - [x] Briefs de fase: perfil + brief + artefactos de contexto; la respuesta final es el
       artefacto (el implementer escribe además `pr-body.md` con sus tools).
 - [x] Formato de `review.md`/`pr-review.md`: primera línea `Veredicto: APROBADO|CAMBIOS`
@@ -944,6 +945,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-23 | M3 | **Modelos elegidos por el usuario**: qwen3.8-flash/max (spec y review), deepseek-v4-flash/xhigh (implement) y deepseek-v4-flash/ultra (pr-review); `spec-review` ya comenta las preguntas en la issue | El esfuerzo solo se fija por config, así que cada fase genera su `config.yaml` en su HERMES_HOME | Reconstruir imagen y prueba real |
 | 2026-10-23 | M3 | **Roles del piloto cerrados por el usuario**: `implementer`, `reviewer`, `pr-reviewer` y `spec-reviewer`; `test-auditor` y `security-auditor` al backlog posterior | El `spec-reviewer` pasa de M5b al piloto (solo el perfil y sus preguntas; el bucle automático sigue en M5b) | Decidir modelos |
 | 2026-10-23 | M3 | Perfiles y cadena real: `implement`, `review`, `pr-review` y `run` encadenan Hermes con `--safe-mode` y HERMES_HOME por fase; 132 tests | El agente ya implementa, revisa y re-revisa dentro del contenedor; solo falta el humo con la imagen nueva | Humo con imagen |
 | 2026-10-22 | M2 | **M2 cerrado**: `guard`/`inspect`/`approve` con `--dry-run` sin efectos y `run --dry-run` revisando el clon; 119 tests | El criterio de M2 se cumple: todo comando con `--dry-run` y la cadena sobre un clon de juguete | M3: perfiles |

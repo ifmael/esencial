@@ -6,6 +6,7 @@ import { dirFor, home } from "./state.mjs";
 /** Ficheros de la tarea; cada fase escribe solo el suyo. */
 export const ARTIFACTS = [
   "brief.md",
+  "spec-review.md",
   "impl.md",
   "checks.md",
   "review.md",

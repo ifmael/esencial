@@ -8,6 +8,13 @@ export const NETWORK = "esencial-workers";
 
 /** Qué escribe cada fase y con qué red corre. */
 export const PHASES = {
+  "spec-review": {
+    rw: ["spec-review.md"],
+    network: "model",
+    home: true,
+    repo: "ro",
+    upstream: false,
+  },
   implementer: {
     rw: ["impl.md", "pr-body.md"],
     network: "model",
@@ -30,7 +37,7 @@ export function dockerArgs({ phase, image, repo, task, upstream, uid, gid }) {
     );
   exists("el clon", repo);
   exists("el task", task);
-  exists("el espejo", upstream);
+  if (spec.upstream !== false) exists("el espejo", upstream);
   const user = `${uid ?? process.getuid?.() ?? 1000}:${gid ?? process.getgid?.() ?? 1000}`;
   const args = [
     "run",
@@ -38,14 +45,15 @@ export function dockerArgs({ phase, image, repo, task, upstream, uid, gid }) {
     "--init",
     "--shm-size=1g",
     "-v",
-    `${repo}:/work`,
+    spec.repo === "ro" ? `${repo}:/work:ro` : `${repo}:/work`,
     "-w",
     "/work",
     "-v",
     `${task}:/work/.task:ro`,
-    "-v",
-    `${upstream}:/upstream:ro`,
   ];
+  if (spec.upstream !== false) {
+    args.push("-v", `${upstream}:/upstream:ro`);
+  }
   for (const name of spec.rw) {
     args.push("-v", `${path.join(task, name)}:/work/.task/${name}`);
   }

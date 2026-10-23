@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 
-import { createIssue } from "../lib/spec.mjs";
+import { createIssue, specReview } from "../lib/spec.mjs";
 
 function fakeFetch({
   states = ["Backlog", "Spec review", "Ready"],
@@ -81,4 +84,51 @@ test("createIssue falla si Linear no confirma la creación", async () => {
     () => createIssue("k", { title: "x", body: "" }, impl),
     /no se creó/,
   );
+});
+
+test("specReview exige Spec review, escribe spec-review y comenta en la issue", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "orquestator-spec-"));
+  const main = path.join(dir, "main");
+  fs.mkdirSync(main);
+  const calls = [];
+  const issue = {
+    id: "uuid-7",
+    identifier: "ESN-7",
+    title: "Exportar el plan",
+    description: "Quiero el plan en PDF.",
+    state: { id: "st-1", name: "Spec review" },
+  };
+  const fetchImpl = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    calls.push(body);
+    const data = body.query.includes("commentCreate")
+      ? { commentCreate: { success: true } }
+      : { issues: { nodes: [issue] } };
+    return { ok: true, json: async () => ({ data }) };
+  };
+  let seen;
+  const result = await specReview("ESN-7", {
+    apiKey: "lin_api_x",
+    base: dir,
+    main,
+    fetchImpl,
+    runner: (options) => {
+      seen = options;
+      fs.writeFileSync(
+        path.join(options.task, "spec-review.md"),
+        "Sin preguntas: la spec está lista.",
+      );
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  });
+  assert.equal(seen.phase, "spec-review");
+  assert.equal(seen.repo, main);
+  assert.match(seen.input, /Exportar el plan/);
+  assert.match(seen.input, /Quiero el plan en PDF/);
+  assert.equal(
+    calls.find((c) => c.query.includes("commentCreate")).variables.body,
+    "Sin preguntas: la spec está lista.",
+  );
+  assert.equal(result.issue.identifier, "ESN-7");
+  fs.rmSync(dir, { recursive: true, force: true });
 });

@@ -13,7 +13,7 @@ import { approvePr } from "./manual.mjs";
 import { publish } from "./pr.mjs";
 import { runFlow } from "./run.mjs";
 import { publishPrReview, ship } from "./ship.mjs";
-import { createIssue } from "./spec.mjs";
+import { createIssue, specReview } from "./spec.mjs";
 import {
   assertKey,
   block,
@@ -32,6 +32,7 @@ export const USAGE = `orquestator — flujo de tareas de Esencial
 
 Uso:
   orquestator spec --titulo "…" [--cuerpo fichero.md]
+  orquestator spec-review ESN-123  preguntas del spec-reviewer en la issue
   orquestator start ESN-123       abre la tarea: clon, rama y brief
   orquestator implement ESN-123   el implementer trabaja en el clon
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
@@ -119,6 +120,24 @@ export async function main(argv, io = {}) {
         }
         const issue = await createIssue(linearKey(), { title, body });
         line(stdout, `${issue.identifier}: ${issue.url}`);
+        return 0;
+      }
+      case "spec-review": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        if (dryRun) {
+          line(
+            stdout,
+            `[dry-run] ${key}: spec-reviewer sobre la issue y comentario con sus preguntas`,
+          );
+          return 0;
+        }
+        const result = await specReview(key, {
+          apiKey: linearKey(),
+          main: process.cwd(),
+          out: (text) => line(stdout, text),
+        });
+        line(stdout, `Comentario publicado en ${result.issue.identifier}.`);
         return 0;
       }
       case "start": {
