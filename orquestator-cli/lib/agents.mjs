@@ -86,12 +86,34 @@ export function effortFor(phase) {
   return effort;
 }
 
-/** El esfuerzo de razonamiento solo se puede fijar por config, no por flag. */
-export function hermesConfig(home, effort) {
+export const PROXY_URL = "http://esencial-proxy:8080/v1";
+
+/**
+ * Config de Hermes por fase. El esfuerzo de razonamiento no tiene flag en
+ * `hermes chat`: se fija aquí. El proveedor va explícito para que la fase no
+ * dependa de la config del host (HERMES_HOME es propio).
+ */
+export function hermesConfig(home, { model, effort }) {
   fs.mkdirSync(home, { recursive: true });
   fs.writeFileSync(
     path.join(home, "config.yaml"),
-    `agent:\n  reasoning_effort: ${effort}\n`,
+    [
+      "model:",
+      "  provider: custom",
+      `  default: ${model}`,
+      `  base_url: ${PROXY_URL}`,
+      "  api_mode: chat_completions",
+      "providers:",
+      "  custom:",
+      `    api: ${PROXY_URL}`,
+      "    api_key: dummy",
+      "    discover_models: false",
+      "    models:",
+      `      - ${model}`,
+      "agent:",
+      `  reasoning_effort: ${effort}`,
+      "",
+    ].join("\n"),
   );
 }
 
@@ -198,7 +220,9 @@ export function runAgent(
   const prompt = promptFor(phase, context);
   const command = hermesCommand(modelFor(phase), spec.writes);
   const hermes = path.join(path.dirname(task), "hermes", phase);
-  if (!dryRun) hermesConfig(hermes, effortFor(phase));
+  if (!dryRun) {
+    hermesConfig(hermes, { model: modelFor(phase), effort: effortFor(phase) });
+  }
   const result = runner({
     phase,
     image,

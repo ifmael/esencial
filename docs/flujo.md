@@ -55,8 +55,9 @@ hermes chat --oneshot -Q --safe-mode --yolo \
 ```
 
 - Cada fase tiene su `HERMES_HOME` en `~/.orquestator/ESN-123/hermes/<fase>/` con un
-  `config.yaml` generado que solo fija `agent.reasoning_effort`; no hay config del host
-  ni MCPs. El esfuerzo no tiene flag en `hermes chat`: se configura ahí.
+  `config.yaml` generado: proveedor `custom` → proxy, modelo, `discover_models: false` y
+  `agent.reasoning_effort`. No hay config del host ni MCPs. El esfuerzo no tiene flag en
+  `hermes chat`: se configura ahí.
 - Los agentes solo ven el clon, los artefactos y el espejo (ro); `spec-review` monta
   `main` en ro y no ve ningún clon de tarea.
 - Identidad de git dentro del contenedor: `orquestator <orquestator@esencial.invalid>`;

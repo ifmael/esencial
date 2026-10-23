@@ -98,8 +98,14 @@ test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefac
   assert.match(seen.input, /Perfil: revisor/);
   assert.match(seen.input, /## checks/);
   assert.match(seen.input, /diff --git/);
-  const config = path.join(dir, "ESN-7", "hermes", "reviewer", "config.yaml");
-  assert.match(fs.readFileSync(config, "utf8"), /reasoning_effort: max/);
+  const config = fs.readFileSync(
+    path.join(dir, "ESN-7", "hermes", "reviewer", "config.yaml"),
+    "utf8",
+  );
+  assert.match(config, /provider: custom/);
+  assert.match(config, /default: qwen3\.8-flash/);
+  assert.match(config, /base_url: http:\/\/esencial-proxy:8080\/v1/);
+  assert.match(config, /reasoning_effort: max/);
 });
 
 test("un artefacto vacío o un fallo de Hermes no pasan", () => {
