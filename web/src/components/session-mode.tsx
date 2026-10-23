@@ -205,6 +205,17 @@ export function SessionMode({
   const warned = useRef<number[]>([]);
   // El botón del menú de series: al cerrarlo con Escape vuelve el foco ahí.
   const setsButton = useRef<HTMLButtonElement>(null);
+  // La pausa que corre AHORA. El intervalo del reloj se rehace con cada pausa,
+  // pero un tic ya lanzado puede llegar con la pausa vieja en la mano y
+  // llevarse por delante una recién arrancada (justo lo que pasa al marcar la
+  // serie siguiente cuando expiraba la anterior): el tic comprueba que la pausa
+  // que trae sigue siendo la de ahora.
+  const currentPause = useRef<Pause | null>(null);
+
+  const setPauseState = useCallback((next: Pause | null) => {
+    currentPause.current = next;
+    setPause(next);
+  }, []);
 
   const askExit = useCallback(() => setConfirmingExit(true), []);
 
@@ -243,7 +254,7 @@ export function SessionMode({
       // Una marca que la pausa ya trae pasada no suena: avisaría al arrancar.
       warned.current = WARN_LEADS_MS.filter((ms) => ms >= durationMs);
       startPauseAudio();
-      setPause({
+      setPauseState({
         kind,
         durationMs,
         endsAt: Date.now() + durationMs,
@@ -254,7 +265,7 @@ export function SessionMode({
       });
       setNow(Date.now());
     },
-    [],
+    [setPauseState],
   );
 
   // Al acabar la pausa: la de entre series vuelve al primer miembro del bloque
@@ -263,11 +274,13 @@ export function SessionMode({
   // siguiente a la marcada, así el descanso no devuelve a la serie ya hecha.
   const finishPause = useCallback(
     (pause: Pause) => {
+      // Un tic de una pausa que ya no corre (la sustituyó otra) no cierra nada.
+      if (currentPause.current !== pause) return;
       if (finished.current) return;
       finished.current = true;
       stopPauseAudio();
       beep();
-      setPause(null);
+      setPauseState(null);
       moveTo((i) => {
         const [start, end] = blockRange(items, i);
         return pause.kind === "after"
@@ -276,7 +289,7 @@ export function SessionMode({
       });
       setSetIndex(pause.cursorSet);
     },
-    [items, moveTo],
+    [items, moveTo, setPauseState],
   );
 
   // Pausa al marcar: una serie (o el cardio) que pasa a hecha da el paso que
@@ -313,7 +326,7 @@ export function SessionMode({
       // estuviera corriendo ya no pinta nada: se corta sin pitido.
       finished.current = true;
       stopPauseAudio();
-      setPause(null);
+      setPauseState(null);
     } else if (step.kind === "move") {
       // Dentro del mismo bloque se sigue en la vuelta que se acaba de marcar
       // (la serie); al cambiar de bloque o de ejercicio, se vuelve a la 1.
@@ -330,7 +343,7 @@ export function SessionMode({
         step.pause === "sets" ? marked + 1 : 0,
       );
     }
-  }, [item, items, active, startPause]);
+  }, [item, items, active, startPause, setPauseState]);
 
   // El reloj de la pausa: tics para la cuenta atrás, un aviso al cruzar cada
   // marca (`WARN_LEADS_MS`) y, al llegar a `endsAt`, el pitido. Al volver a la
@@ -392,7 +405,7 @@ export function SessionMode({
     if (!pause) return;
     finished.current = true; // saltar no pita
     stopPauseAudio();
-    setPause(null);
+    setPauseState(null);
     moveTo((i) => {
       const [start, end] = blockRange(items, i);
       return pause.kind === "after"
@@ -408,7 +421,7 @@ export function SessionMode({
     if (!pause) return;
     if (pause.paused) {
       startPauseAudio();
-      setPause({
+      setPauseState({
         ...pause,
         paused: false,
         endsAt: Date.now() + pause.remainingMs,
@@ -416,7 +429,7 @@ export function SessionMode({
       setNow(Date.now());
     } else {
       stopPauseAudio();
-      setPause({
+      setPauseState({
         ...pause,
         paused: true,
         remainingMs: Math.max(0, pause.endsAt - Date.now()),
@@ -447,6 +460,12 @@ export function SessionMode({
   const blockSize = blockEnd - blockStart + 1;
   // Lo que falta para cerrar: «Terminar» lo enseña antes de pedir el esfuerzo.
   const pending = pendingItems(items);
+  // El descanso a mano («Descanso»): el de entre series y, si no lo hay, el de
+  // «al terminar» — el único que se programa en el cardio. Sin ninguno de los
+  // dos no hay nada que arrancar y el botón se apaga. En el cardio la pausa es
+  // la de «al terminar» (no tiene series), así que al acabar pasa de ejercicio.
+  const manualRest = item.restSecs ?? item.restAfterSecs;
+  const manualKind: Pause["kind"] = item.sets === null ? "after" : "sets";
   const note = item.sets
     ? item.superset
       ? `Encadenado con «${items[active + 1]?.name ?? ""}»`
@@ -837,12 +856,10 @@ export function SessionMode({
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="tonal"
-            disabled={
-              item.sets === null || item.restSecs === null || pause !== null
-            }
+            disabled={manualRest === null || pause !== null}
             onClick={() =>
-              item.restSecs !== null &&
-              startPause(item.restSecs, "sets", item.name, setIdx)
+              manualRest !== null &&
+              startPause(manualRest, manualKind, item.name, setIdx)
             }
           >
             Descanso

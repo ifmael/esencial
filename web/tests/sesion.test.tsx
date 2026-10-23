@@ -1738,6 +1738,57 @@ describe("modo interactivo", () => {
     ).toBe(true);
   });
 
+  it("«Descanso» usa «al terminar» cuando no hay entre series (y vale en el cardio)", async () => {
+    const mode = await enterMode({ last: { 21: benchLast, 22: rowLast } });
+    // Remo no tiene ningún descanso: no hay nada que arrancar.
+    fireEvent.click(
+      within(mode).getByRole("button", { name: "Ejercicio siguiente" }),
+    );
+    const descanso = within(mode).getByRole("button", {
+      name: /^descanso$/i,
+    }) as HTMLButtonElement;
+    expect(descanso.disabled).toBe(true);
+
+    // El cardio solo programa «al terminar»: la pausa es esa y al agotarse
+    // pasa de ejercicio (siendo el último, se queda).
+    fireEvent.click(
+      within(mode).getByRole("button", { name: "Ejercicio siguiente" }),
+    );
+    expect(
+      within(mode).getByRole("heading", { name: "Running" }),
+    ).toBeDefined();
+    fireEvent.click(within(mode).getByRole("button", { name: /^descanso$/i }));
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa al terminar running/i,
+      }),
+    ).toBeDefined();
+    expect(within(mode).getByText("2:00")).toBeDefined();
+  });
+
+  it("«Descanso» arranca el de entre series si lo hay, y el de fin si es el único", async () => {
+    const mode = await enterMode({
+      last: { 21: benchLast },
+      detail: {
+        ...SESSION_DETAIL,
+        exercises: [
+          {
+            ...SESSION_DETAIL.exercises[0],
+            restSecs: null,
+            restAfterSecs: 120,
+          },
+        ],
+      },
+    });
+    fireEvent.click(within(mode).getByRole("button", { name: /^descanso$/i }));
+    expect(
+      within(mode).getByRole("progressbar", {
+        name: /pausa entre series de press banca/i,
+      }),
+    ).toBeDefined();
+    expect(within(mode).getByText("2:00")).toBeDefined();
+  });
+
   it("el play/pausa del descanso congela la cuenta atrás y la reanuda", async () => {
     const mode = await enterMode({ last: { 21: benchLast } });
     fireEvent.click(
