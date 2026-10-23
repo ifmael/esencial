@@ -38,7 +38,7 @@ Convención de marcado:
 | M3 — Perfiles de fase | En curso | Reconstruir la imagen y hacer el humo de una tarea de juguete |
 | M4 — Piloto | Pendiente | Elegir la feature del backlog |
 | M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
-| M5b — Automatización | Pendiente | `spec-reviewer`, `watch` y job `guard` |
+| M5b — Automatización | Pendiente | `watch`, job `guard` y bucle automático de spec |
 | M6 — Después del piloto | Pendiente | Evaluar tras M5b |
 
 ## Referencias y hechos verificados
@@ -138,14 +138,14 @@ Convención de marcado:
 | Red y secretos (C5) | **B**: proxy de modelo mínimo (Caddy/nginx) con la clave real; worker en red interna sin salida; store de pnpm horneado; `--cpus`, `--memory`, `--pids-limit`, no-root, `cap-drop=ALL`, `no-new-privileges`. **MCP por perfil** solo si un perfil lo necesita (M5b/M6) vía gateway/sidecar; en el piloto no hay MCPs |
 | Agente | **Hermes** (v0.19; provider custom de nan). Sin bake-off; el CLI habla con Linear por API, no por MCP |
 | Ejecutor de fases | Hermes dentro del contenedor. **Intercambiable**: omp es el plan B |
-| Modelos | nan, un modelo distinto por fase (perfiles de Hermes) |
+| Modelos | nan, un modelo distinto por fase. Piloto: `implementer`, `reviewer`, `pr-reviewer` y `spec-reviewer`. Después del piloto (backlog): `test-auditor` y `security-auditor` |
 | Tests | El `implementer` escribe plan de pruebas y código (TDD); el `reviewer` audita contra la spec; negativos obligatorios; no se debilita un test existente |
 | Review | Uno previo a la PR (`reviewer`, contexto limpio) y otro sobre la PR publicada (`pr-reviewer`, contexto limpio y modelo distinto) |
 | Validación | PR con resumen + diagrama + preview de Cloudflare; el humano valida y mergea |
 | Comprobaciones | `lint`, `typecheck`, `test` (con cobertura), `e2e` + la CI existente |
 | Integridad de las comprobaciones | **C1-A**: rutas protegidas en `orquestator-cli/protected-paths.txt`; si el diff las toca → `Blocked`, aprobación humana (TTY, hash en el estado) y **commit status `guard`** tras el push (no etiqueta) |
 | Retorno (F2) | `fix --from review` → implementer → **check → review** → push → pr-review; `--from check` → implementer → check → review (sin PR) o push (con PR); `--from pr-review` → implementer → check → push → pr-review; `--from conflicto` → implementer mergea `main` → check → review → push. `fix --humano` (desde `In validation`) lee **solo tus comentarios** y cuenta como **ronda humana** aparte. Siempre la misma PR |
-| Spec en el piloto (F3) | **No se lanza el `spec-reviewer`**: escribes tú la spec y pasas a `Ready`. El bucle con agente, el bloque `orquestator-cli:acordado` y el sondeo de comentarios quedan para M5b |
+| Spec en el piloto (F3) | **Cambio 2026-10-23: el `spec-reviewer` sí entra en el piloto.** Lanza él las preguntas sobre la issue en `Spec review` y tú decides cuándo pasa a `Ready`. El bucle automático (bloque `orquestator-cli:acordado` y sondeo desde `watch`) queda para M5b |
 | Orden y controles (F4) | Comprobaciones **antes** del review; RED de los tests nuevos/modificados contra `main` (unit/integración; e2e best-effort); `.only` bloquea; `.skip`, tests borrados y `expect` eliminados son hallazgos en `.task/checks.md` |
 | Límites (F5) | Timeout por fase, máximo de peticiones al modelo por fase y tope de gasto en la clave de nan; al agotarse → `Blocked` con logs. Cuenta tiempo activo. Las rondas humanas (`fix --humano`) van aparte y no bloquean solas |
 | Contenedores (I2) | **Uno por fase**, `--rm`, con el mismo clon montado: implementer escribe `impl.md`/`pr-body.md` y ve brief/informes previos en ro; check escribe `checks.md`; reviewer escribe `review.md`; pr-review escribe `pr-review.md`. El estado y el hash de `approve` viven en el host, no en el clon |
@@ -237,7 +237,7 @@ lo fetchea y el implementer mergea.
 
    | Comando | Qué hace | Quién lo lanza |
    |---|---|---|
-   | `orquestator-cli spec ESN-123` | lanza `spec-reviewer` (M5b) en contenedor ro con red interna (solo proxy); el CLI publica las preguntas | tú |
+   | `orquestator-cli spec ESN-123` | crea la issue en `Spec review`; `spec-review` lanza el `spec-reviewer` con red interna (solo proxy) y publica sus preguntas | tú |
    | `orquestator-cli start ESN-123` | exige `Ready`; crea el clon, copia el brief desde la issue y lanza `implementer` | `run`/tú |
    | `orquestator-cli run ESN-123` | encadena las fases hasta un bloqueo o `In validation`; comprueba `mergeable`; sin coordinador | `watch`/tú |
    | `orquestator-cli review ESN-123` | lanza `reviewer` en contexto limpio → `.task/review.md` | `run` |
@@ -271,9 +271,12 @@ determinista de la issue.
    `orquestator-cli` (C4). Decide el siguiente paso dentro de lo permitido, lanza fases y
    reporta; no redacta la spec ni el brief. En el piloto, `run` encadena las fases sin
    coordinador.
-4. **Perfiles de fase** (Hermes): `implementer`, `reviewer` y `pr-reviewer`; el
-   `spec-reviewer` entra en M5b. Las comprobaciones son deterministas y no necesitan un
+4. **Perfiles de fase** (Hermes): `implementer`, `reviewer`, `pr-reviewer` y
+   `spec-reviewer` en el piloto. Las comprobaciones son deterministas y no necesitan un
    `verifier`. Cada uno con su modelo de nan, su brief y su `HERMES_HOME` aislado por fase.
+   **Backlog tras el piloto:** `test-auditor` (audita que los tests prueben comportamiento,
+   no el cableado) y `security-auditor` (solo cuando el diff toca autenticación, API,
+   cabeceras o datos).
 5. **Contrato de artefactos**: en `~/.orquestator/ESN-123/task/` (host), montado en
    `<clon>/.task/`: `brief.md`, `impl.md`, `review.md`, `pr-review.md`, `checks.md`,
    `pr-body.md`, `human-feedback.md` y `pr-diff.patch`; el estado y las aprobaciones viven
@@ -297,7 +300,7 @@ Linear (producto) e interno (`~/.orquestator/ESN-123/state.json`, en el host) se
 | Linear | Fase interna | Quién mueve |
 |---|---|---|
 | Backlog | — | tú |
-| Spec review | `spec` (M5b; en el piloto no se usa) | tú creas; agente comenta; tú decides |
+| Spec review | `spec` (piloto) | tú creas; el `spec-reviewer` comenta preguntas; tú decides |
 | Ready | `ready` | **tú** (el agente nunca se autopromociona) |
 | In Progress | `implement → comprobaciones → review → ship → pr-review` | CLI (`run`, `start`, `check`, `ship`, `pr-review`) |
 | In validation | `waiting-human` | CLI, cuando `pr-review` no tiene críticos y la migración (si hay) está aplicada y con checks verdes |
@@ -423,8 +426,9 @@ en contenedor.
 
 ### Flujo de una tarea
 
-1. **Piloto**: escribes la issue con contexto y criterios y la mueves tú a `Ready`. El
-   `spec-reviewer` y su bucle quedan para M5b.
+1. **Piloto**: escribes la issue con contexto y criterios; el `spec-reviewer` lanza las
+   preguntas que falten y tú la mueves a `Ready` cuando la spec está clara. El bucle
+   automático de comentarios queda para M5b.
 2. `orquestator-cli run` (o `start` si vas fase a fase) → clon + contenedor; el
    `implementer` escribe el plan de pruebas (positivo, negativo, límites) y después el
    código (TDD). `run` encadena los pasos 2-7.
@@ -818,8 +822,8 @@ ni el remoto.
 
 Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depende de: M1, M2.
 
-- [x] Crear los perfiles del piloto: `implementer`, `reviewer` y `pr-reviewer`
-      (`orquestator-cli/perfiles/`). El `spec-reviewer` entra en M5b. Las comprobaciones
+- [x] Crear los perfiles del piloto: `implementer`, `reviewer`, `pr-reviewer` y
+      `spec-reviewer` (`orquestator-cli/perfiles/`; falta el cuarto). Las comprobaciones
       son deterministas: no hay `verifier`.
 - [x] Sin MCPs en el piloto: `--safe-mode` desactiva config/rules/plugins/MCP; no hay
       `mcp_servers` que declarar. El gateway se añade en M5b/M6 si hace falta.
@@ -833,6 +837,13 @@ Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depend
       (`skip`/`only`, asserts, umbrales), no adivinar (pregunta en `impl.md`).
 - [ ] Prueba de humo con una tarea de juguete en un clon desechable (necesita la imagen
       reconstruida y `docker`; la ejecuta el usuario).
+
+**Backlog de perfiles (después del piloto):**
+
+- `test-auditor`: audita que los tests prueben comportamiento y no el cableado; entra si
+  el piloto enseña tests que pasan sin probar nada.
+- `security-auditor`: revisa solo los diffs que tocan autenticación, API, cabeceras,
+  secretos o datos.
 
 Hecho cuando: una tarea de juguete produce brief, impl, review y comprobaciones con los formatos
 esperados.
@@ -882,9 +893,8 @@ Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
       tarea y llamada a `run`; el piloto lanza `run` a mano.
 - [ ] `watch` como servicio de usuario de systemd (con `loginctl enable-linger`) o timer;
       si la máquina se apaga, se pausa y reanuda. Al detectar el merge, ejecuta `clean`.
-- [ ] Spec-reviewer y bucle de spec: contenedor ro con red interna (solo el proxy), preguntas
-      en comentarios, bloque `<!-- orquestator-cli:acordado -->` y sondeo de respuestas
-      humanas desde `watch`.
+- [ ] Bucle automático de spec (el perfil ya está en el piloto): bloque
+      `<!-- orquestator-cli:acordado -->` y sondeo de respuestas humanas desde `watch`.
 - [ ] Job de CI `guard`: lee `orquestator-cli/protected-paths.txt` de `origin/main` y
       falla si el diff toca rutas protegidas sin el status `guard`.
 - [ ] Si el piloto no llevó migración, construir `migrate` y probarlo con una migración de
@@ -934,6 +944,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-23 | M3 | **Roles del piloto cerrados por el usuario**: `implementer`, `reviewer`, `pr-reviewer` y `spec-reviewer`; `test-auditor` y `security-auditor` al backlog posterior | El `spec-reviewer` pasa de M5b al piloto (solo el perfil y sus preguntas; el bucle automático sigue en M5b) | Decidir modelos |
 | 2026-10-23 | M3 | Perfiles y cadena real: `implement`, `review`, `pr-review` y `run` encadenan Hermes con `--safe-mode` y HERMES_HOME por fase; 132 tests | El agente ya implementa, revisa y re-revisa dentro del contenedor; solo falta el humo con la imagen nueva | Humo con imagen |
 | 2026-10-22 | M2 | **M2 cerrado**: `guard`/`inspect`/`approve` con `--dry-run` sin efectos y `run --dry-run` revisando el clon; 119 tests | El criterio de M2 se cumple: todo comando con `--dry-run` y la cadena sobre un clon de juguete | M3: perfiles |
 | 2026-10-22 | M2 | `review.md` se publica como review de GitHub (no como comentario) | El filtrado por autor ya estaba en `fix --humano` | M3: perfiles |

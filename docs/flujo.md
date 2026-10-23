@@ -62,11 +62,16 @@ hermes chat --oneshot -Q --safe-mode --yolo \
   sin push (lo hace el host).
 - El implementer escribe `impl.md` (respuesta final) y `pr-body.md` (con sus tools).
 
-| Fase | Comando | Modelo por defecto | Artefacto |
+| Fase | Comando | Modelo | Artefacto |
 |---|---|---|---|
-| implementer | `implement` | `qwen3.6` | `impl.md`, `pr-body.md` |
-| reviewer | `review` | `deepseek-v4-flash` | `review.md` |
-| pr-reviewer | `pr-review` | `glm5.3-flash` | `pr-review.md` |
+| spec-reviewer | `spec-review` | por decidir | preguntas en la issue |
+| implementer | `implement` | por decidir | `impl.md`, `pr-body.md` |
+| reviewer | `review` | por decidir | `review.md` |
+| pr-reviewer | `pr-review` | por decidir | `pr-review.md` |
+
+Roles decididos para el piloto: los cuatro de la tabla. Después del piloto: `test-auditor`
+(tests que prueban comportamiento) y `security-auditor` (diffs de autenticación, API,
+cabeceras o datos).
 
 Los modelos se cambian sin tocar código con `ORQUESTATOR_MODEL_IMPLEMENTER`,
 `ORQUESTATOR_MODEL_REVIEWER` y `ORQUESTATOR_MODEL_PR_REVIEW`.
