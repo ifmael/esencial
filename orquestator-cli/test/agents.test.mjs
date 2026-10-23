@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -106,6 +107,19 @@ test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefac
   assert.match(config, /default: qwen3\.8-flash/);
   assert.match(config, /base_url: http:\/\/esencial-proxy:8080\/v1/);
   assert.match(config, /reasoning_effort: max/);
+  assert.ok(
+    fs.existsSync(
+      path.join(
+        dir,
+        "ESN-7",
+        "hermes",
+        "reviewer",
+        "skills",
+        "revisar",
+        "SKILL.md",
+      ),
+    ),
+  );
 });
 
 test("un artefacto vacío o un fallo de Hermes no pasan", () => {
@@ -186,4 +200,70 @@ test("verdictOf lee el veredicto y devuelve null si falta", () => {
   assert.equal(verdictOf("Veredicto: APROBADO\nok"), "APROBADO");
   assert.equal(verdictOf("texto\n`Veredicto: CAMBIOS`\n"), "CAMBIOS");
   assert.equal(verdictOf("sin veredicto"), null);
+});
+
+test("reviewer y pr-review reciben el AGENTS.md de main, no el del clon", () => {
+  started();
+  const main = path.join(dir, "main");
+  fs.mkdirSync(main);
+  execFileSync("git", ["init", "-q", main]);
+  fs.writeFileSync(path.join(main, "AGENTS.md"), "reglas de main");
+  execFileSync("git", ["-C", main, "add", "."]);
+  execFileSync("git", [
+    "-c",
+    "user.email=t@test",
+    "-c",
+    "user.name=T",
+    "-C",
+    main,
+    "commit",
+    "-q",
+    "-m",
+    "main",
+  ]);
+  execFileSync("git", [
+    "-C",
+    main,
+    "update-ref",
+    "refs/remotes/origin/main",
+    "HEAD",
+  ]);
+  let seen;
+  runAgent("ESN-7", {
+    phase: "reviewer",
+    base: dir,
+    main,
+    diff: "",
+    runner: (options) => {
+      seen = options;
+      fs.writeFileSync(
+        path.join(options.task, "review.md"),
+        "Veredicto: APROBADO",
+      );
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  });
+  assert.equal(
+    seen.agentsFile,
+    path.join(dir, "ESN-7", "hermes", "reviewer", "AGENTS.md"),
+  );
+  assert.equal(
+    fs.readFileSync(seen.agentsFile, "utf8").trim(),
+    "reglas de main",
+  );
+});
+
+test("implementer no lleva AGENTS.md encima: lee el del clon y puede editarlo", () => {
+  started();
+  let seen;
+  runAgent("ESN-7", {
+    phase: "implementer",
+    base: dir,
+    runner: (options) => {
+      seen = options;
+      fs.writeFileSync(path.join(options.task, "impl.md"), "hecho");
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  });
+  assert.equal(seen.agentsFile, undefined);
 });

@@ -79,6 +79,18 @@ test("spec-review monta el repo en ro, sin espejo, y escribe sus preguntas", () 
   assert.match(args, /--network esencial-workers/);
 });
 
+test("AGENTS.md de confianza se monta encima del clon en ro", () => {
+  ensureArtifactsAt(paths().task);
+  const file = path.join(dir, "AGENTS.md");
+  fs.writeFileSync(file, "reglas");
+  const args = dockerArgs({
+    phase: "reviewer",
+    ...paths(),
+    agentsFile: file,
+  }).join(" ");
+  assert.match(args, /AGENTS\.md:\/work\/AGENTS\.md:ro/);
+});
+
 test("ensureArtifacts crea los ficheros que faltan sin pisar los llenos", () => {
   ensureArtifactsAt(paths().task);
   assert.ok(fs.existsSync(path.join(paths().task, "checks.md")));

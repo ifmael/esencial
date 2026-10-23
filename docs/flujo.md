@@ -60,6 +60,13 @@ hermes chat --oneshot -Q --safe-mode --yolo \
   `hermes chat`: se configura ahí.
 - Los agentes solo ven el clon, los artefactos y el espejo (ro); `spec-review` monta
   `main` en ro y no ve ningún clon de tarea.
+- **AGENTS.md**: Hermes lo lee del proyecto (cadena de la raíz git al directorio de
+  trabajo), no de `HERMES_HOME`. El implementer lee el de la rama y puede actualizarlo;
+  `review` y `pr-review` reciben encima el de `origin/main` montado en ro, así que el
+  implementer no puede cambiar las reglas que lee el revisor. `spec-review` ya ve `main`.
+- **Skills por rol**: `orquestator-cli/perfiles/skills/<fase>/` se copia a
+  `HERMES_HOME/skills/`; Hermes las indexa y el agente las carga cuando las necesita.
+  No se usan skills de proyecto (`.hermes/skills`), que exigirían `hermes skills trust`.
 - Identidad de git dentro del contenedor: `orquestator <orquestator@esencial.invalid>`;
   sin push (lo hace el host).
 - El implementer escribe `impl.md` (respuesta final) y `pr-body.md` (con sus tools).

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ensureArtifactsAt, readArtifact } from "./artifacts.mjs";
+import { git } from "./checkout.mjs";
 import { runPhase } from "./container.mjs";
 import { diffPatch, importBranch } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
@@ -86,6 +87,8 @@ export function effortFor(phase) {
   return effort;
 }
 
+const SKILLS = fileURLToPath(new URL("../perfiles/skills", import.meta.url));
+
 export const PROXY_URL = "http://esencial-proxy:8080/v1";
 
 /**
@@ -93,6 +96,21 @@ export const PROXY_URL = "http://esencial-proxy:8080/v1";
  * `hermes chat`: se fija aquí. El proveedor va explícito para que la fase no
  * dependa de la config del host (HERMES_HOME es propio).
  */
+export function installSkills(phase, home) {
+  const src = path.join(SKILLS, phase);
+  if (fs.existsSync(src)) {
+    fs.cpSync(src, path.join(home, "skills"), { recursive: true });
+  }
+}
+
+export function trustedAgents(main) {
+  try {
+    return git(["show", "origin/main:AGENTS.md"], { cwd: main });
+  } catch {
+    return null;
+  }
+}
+
 export function hermesConfig(home, { model, effort }) {
   fs.mkdirSync(home, { recursive: true });
   fs.writeFileSync(
@@ -220,8 +238,17 @@ export function runAgent(
   const prompt = promptFor(phase, context);
   const command = hermesCommand(modelFor(phase), spec.writes);
   const hermes = path.join(path.dirname(task), "hermes", phase);
+  let agentsFile;
   if (!dryRun) {
     hermesConfig(hermes, { model: modelFor(phase), effort: effortFor(phase) });
+    installSkills(phase, hermes);
+    if (phase === "reviewer" || phase === "pr-review") {
+      const trusted = trustedAgents(main);
+      if (trusted) {
+        agentsFile = path.join(hermes, "AGENTS.md");
+        fs.writeFileSync(agentsFile, trusted);
+      }
+    }
   }
   const result = runner({
     phase,
@@ -231,6 +258,7 @@ export function runAgent(
     upstream: mirrorPath(base),
     command,
     input: prompt,
+    agentsFile,
     dryRun,
     out,
   });

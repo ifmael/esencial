@@ -29,7 +29,16 @@ function exists(label, target) {
   if (!fs.existsSync(target)) throw new Error(`Falta ${label}: ${target}`);
 }
 
-export function dockerArgs({ phase, image, repo, task, upstream, uid, gid }) {
+export function dockerArgs({
+  phase,
+  image,
+  repo,
+  task,
+  upstream,
+  uid,
+  gid,
+  agentsFile,
+}) {
   const spec = PHASES[phase];
   if (!spec)
     throw new Error(
@@ -53,6 +62,11 @@ export function dockerArgs({ phase, image, repo, task, upstream, uid, gid }) {
   ];
   if (spec.upstream !== false) {
     args.push("-v", `${upstream}:/upstream:ro`);
+  }
+  if (agentsFile) {
+    // AGENTS.md de main montado encima del del clon: el implementer no puede
+    // cambiar las reglas que lee el revisor.
+    args.push("-v", `${agentsFile}:/work/AGENTS.md:ro`);
   }
   for (const name of spec.rw) {
     args.push("-v", `${path.join(task, name)}:/work/.task/${name}`);
@@ -105,11 +119,12 @@ export function runPhase({
   upstream,
   command,
   input,
+  agentsFile,
   dryRun,
   out = () => {},
 }) {
   ensureArtifactsAt(task);
-  const args = dockerArgs({ phase, image, repo, task, upstream });
+  const args = dockerArgs({ phase, image, repo, task, upstream, agentsFile });
   const argv = [...args, "bash", "-lc", command];
   if (dryRun) {
     out(
