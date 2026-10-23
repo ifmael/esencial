@@ -8,7 +8,7 @@ import {
   viewArgs,
 } from "./github.mjs";
 import { guardTask } from "./guard.mjs";
-import { home, load, save } from "./state.mjs";
+import { home, load, save, transition } from "./state.mjs";
 
 export function ship(
   key,
@@ -60,6 +60,35 @@ export function ship(
 
   const description = guard.needsApproval ? "aprobado" : "sin rutas protegidas";
   ghRun(statusArgs(pr.headRefOid, "success", description));
-  save(key, { ...state, pr: { ...state.pr, sha: pr.headRefOid } }, base);
-  return { sha: pr.headRefOid, number: pr.number, url: pr.url };
+  const next =
+    state.state === "In Progress" ? transition(state, "In validation") : state;
+  save(key, { ...next, pr: { ...state.pr, sha: pr.headRefOid } }, base);
+  return {
+    sha: pr.headRefOid,
+    number: pr.number,
+    url: pr.url,
+    state: next.state,
+  };
+}
+
+/** Publica pr-review.md como comentario de la PR (la re-revisión). */
+export function publishPrReview(
+  key,
+  { base = home(), dryRun, out = () => {}, ghRun = runGh } = {},
+) {
+  const state = load(key, base);
+  if (!state) throw new Error(`La tarea ${key} no existe`);
+  if (!state.pr?.number) {
+    throw new Error(`La tarea ${key} no tiene PR; ejecuta pr antes`);
+  }
+  const file = artifactPath(key, "pr-review.md", base);
+  if (!readArtifact(key, "pr-review.md", base).trim()) {
+    throw new Error("pr-review.md está vacío");
+  }
+  if (dryRun) {
+    out(`[dry-run] comentar pr-review.md en la PR #${state.pr.number}`);
+    return { dryRun: true };
+  }
+  ghRun(commentArgs(state.pr.number, file));
+  return { number: state.pr.number };
 }

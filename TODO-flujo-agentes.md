@@ -35,7 +35,7 @@ Convención de marcado:
 | M0 — Base | Hecho (2026-10-22) | — |
 | M1 — Imagen del worker | Hecho (2026-10-22) | — |
 | M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | — |
-| M3 — Perfiles de fase | En curso | Elegir modelos de nan por perfil |
+| M3 — Perfiles de fase | En curso | Reconstruir la imagen y hacer el humo de una tarea de juguete |
 | M4 — Piloto | Pendiente | Elegir la feature del backlog |
 | M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
 | M5b — Automatización | Pendiente | `spec-reviewer`, `watch` y job `guard` |
@@ -818,17 +818,21 @@ ni el remoto.
 
 Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depende de: M1, M2.
 
-- [ ] Crear los perfiles del piloto: `implementer`, `reviewer` y `pr-reviewer`. El
-      `spec-reviewer` entra en M5b. Las comprobaciones son deterministas: no hay `verifier`.
-- [ ] Sin MCPs en el piloto: los perfiles no declaran `mcp_servers`; el gateway se añade
-      en M5b/M6 si un perfil necesita uno.
-- [ ] Asignar modelo de nan a cada uno (implementer: el mejor de código; reviewer y
-      pr-reviewer: distintos del implementer).
-- [ ] Escribir los briefs de fase: qué leer, qué producir, formato de salida y límites.
-- [ ] Definir el formato de `review.md`/`pr-review.md` (`crítico`/`deuda`, archivo:línea).
-- [ ] Incluir guardarraíles en los briefs: no tocar workflows, no debilitar tests,
-      preguntar antes de adivinar (criterio de `Blocked`).
-- [ ] Prueba de humo con una tarea de juguete en un clon desechable.
+- [x] Crear los perfiles del piloto: `implementer`, `reviewer` y `pr-reviewer`
+      (`orquestator-cli/perfiles/`). El `spec-reviewer` entra en M5b. Las comprobaciones
+      son deterministas: no hay `verifier`.
+- [x] Sin MCPs en el piloto: `--safe-mode` desactiva config/rules/plugins/MCP; no hay
+      `mcp_servers` que declarar. El gateway se añade en M5b/M6 si hace falta.
+- [x] Modelos de nan por perfil: `qwen3.6` implementer, `deepseek-v4-flash` reviewer,
+      `glm5.3-flash` pr-reviewer; `ORQUESTATOR_MODEL_*` los cambia sin tocar código.
+- [x] Briefs de fase: perfil + brief + artefactos de contexto; la respuesta final es el
+      artefacto (el implementer escribe además `pr-body.md` con sus tools).
+- [x] Formato de `review.md`/`pr-review.md`: primera línea `Veredicto: APROBADO|CAMBIOS`
+      y cada hallazgo como **crítico** o **deuda** con `archivo:línea`.
+- [x] Guardarraíles en los briefs: no tocar `.github/workflows/`, no debilitar tests
+      (`skip`/`only`, asserts, umbrales), no adivinar (pregunta en `impl.md`).
+- [ ] Prueba de humo con una tarea de juguete en un clon desechable (necesita la imagen
+      reconstruida y `docker`; la ejecuta el usuario).
 
 Hecho cuando: una tarea de juguete produce brief, impl, review y comprobaciones con los formatos
 esperados.
@@ -930,6 +934,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-23 | M3 | Perfiles y cadena real: `implement`, `review`, `pr-review` y `run` encadenan Hermes con `--safe-mode` y HERMES_HOME por fase; 132 tests | El agente ya implementa, revisa y re-revisa dentro del contenedor; solo falta el humo con la imagen nueva | Humo con imagen |
 | 2026-10-22 | M2 | **M2 cerrado**: `guard`/`inspect`/`approve` con `--dry-run` sin efectos y `run --dry-run` revisando el clon; 119 tests | El criterio de M2 se cumple: todo comando con `--dry-run` y la cadena sobre un clon de juguete | M3: perfiles |
 | 2026-10-22 | M2 | `review.md` se publica como review de GitHub (no como comentario) | El filtrado por autor ya estaba en `fix --humano` | M3: perfiles |
 | 2026-10-22 | M2 | Sonda RED con worktree de main, heurísticas de tests debilitados y `approve --pr`; 115 tests | Un test que pasa contra main se anota, no bloquea | M3: perfiles |

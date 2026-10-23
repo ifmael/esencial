@@ -18,13 +18,18 @@ afterEach(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test("run --dry-run recorre el flujo entero desde cero", () => {
+test("run --dry-run recorre el flujo entero desde cero", async () => {
   const lines = [];
-  const result = runFlow("ESN-7", { dryRun: true, out: (t) => lines.push(t) });
+  const result = await runFlow("ESN-7", {
+    dryRun: true,
+    out: (t) => lines.push(t),
+  });
   assert.deepEqual(result.steps, [
     "start",
+    "implement",
     "check",
     "review",
+    "pr",
     "ship",
     "pr-review",
   ]);
@@ -33,13 +38,20 @@ test("run --dry-run recorre el flujo entero desde cero", () => {
   assert.match(lines.join("\n"), /Blocked/);
 });
 
-test("run --dry-run desde In Progress no repite start", () => {
+test("run --dry-run desde In Progress no repite start", async () => {
   save("ESN-7", transition(createState("ESN-7"), "In Progress"));
-  const result = runFlow("ESN-7", { dryRun: true, out: () => {} });
-  assert.deepEqual(result.steps, ["check", "review", "ship", "pr-review"]);
+  const result = await runFlow("ESN-7", { dryRun: true, out: () => {} });
+  assert.deepEqual(result.steps, [
+    "implement",
+    "check",
+    "review",
+    "pr",
+    "ship",
+    "pr-review",
+  ]);
 });
 
-test("run --dry-run desde In validation solo espera pr-review", () => {
+test("run --dry-run desde In validation solo espera pr-review", async () => {
   save(
     "ESN-7",
     transition(
@@ -47,11 +59,11 @@ test("run --dry-run desde In validation solo espera pr-review", () => {
       "In validation",
     ),
   );
-  const result = runFlow("ESN-7", { dryRun: true, out: () => {} });
+  const result = await runFlow("ESN-7", { dryRun: true, out: () => {} });
   assert.deepEqual(result.steps, ["pr-review"]);
 });
 
-test("run --dry-run no toca el clon de juguete", () => {
+test("run --dry-run no toca el clon de juguete", async () => {
   const repo = path.join(dir, "ESN-7", "repo");
   fs.mkdirSync(repo, { recursive: true });
   execFileSync("git", ["init", "-q", repo]);
@@ -80,7 +92,7 @@ test("run --dry-run no toca el clon de juguete", () => {
   }).trim();
   save("ESN-7", transition({ ...createState("ESN-7"), branch }, "In Progress"));
   const lines = [];
-  runFlow("ESN-7", { dryRun: true, out: (t) => lines.push(t) });
+  await runFlow("ESN-7", { dryRun: true, out: (t) => lines.push(t) });
   assert.match(lines.join("\n"), new RegExp(`clon: en ${branch}`));
   assert.equal(
     execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], {
@@ -91,5 +103,73 @@ test("run --dry-run no toca el clon de juguete", () => {
   assert.equal(
     execFileSync("git", ["-C", repo, "for-each-ref"], { encoding: "utf8" }),
     before,
+  );
+});
+
+function fakeSteps(overrides = {}) {
+  const names = ["implement", "check", "review", "pr", "ship", "pr-review"];
+  const calls = [];
+  const steps = {};
+  for (const name of names) {
+    steps[name] = async () => {
+      calls.push(name);
+      return overrides[name] ?? {};
+    };
+  }
+  return { steps, calls };
+}
+
+test("run real encadena las fases y para en la primera que no pasa", async () => {
+  save(
+    "ESN-7",
+    transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+  );
+  const { steps, calls } = fakeSteps({
+    check: { stop: "check", hint: "orquestator fix ESN-7 --from checks" },
+  });
+  const lines = [];
+  const result = await runFlow("ESN-7", {
+    steps,
+    out: (t) => lines.push(t),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.stop, "check");
+  assert.deepEqual(calls, ["implement", "check"]);
+  assert.match(lines.join("\n"), /orquestator fix ESN-7/);
+});
+
+test("run real completa la cadena y deja In validation al pasar ship", async () => {
+  save(
+    "ESN-7",
+    transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+  );
+  const { steps, calls } = fakeSteps();
+  const result = await runFlow("ESN-7", { steps, out: () => {} });
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, [
+    "implement",
+    "check",
+    "review",
+    "pr",
+    "ship",
+    "pr-review",
+  ]);
+});
+
+test("run real no arranca una tarea cerrada", async () => {
+  save(
+    "ESN-7",
+    transition(
+      transition(
+        transition(createState("ESN-7"), "In Progress"),
+        "In validation",
+      ),
+      "Done",
+    ),
+  );
+  const { steps } = fakeSteps();
+  await assert.rejects(
+    runFlow("ESN-7", { steps, out: () => {} }),
+    /no continúa/,
   );
 });

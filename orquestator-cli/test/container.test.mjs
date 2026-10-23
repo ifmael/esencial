@@ -62,6 +62,14 @@ test("check va sin red; las fases de agente van por la red interna", () => {
   );
 });
 
+test("las fases de agente montan su HERMES_HOME aislado y la identidad git", () => {
+  const args = dockerArgs({ phase: "implementer", ...paths() }).join(" ");
+  assert.match(args, /hermes\/implementer:\/hermes-home/);
+  assert.match(args, /HERMES_HOME=\/hermes-home/);
+  assert.match(args, /GIT_AUTHOR_NAME=orquestator/);
+  assert.doesNotMatch(args, /\/opt\/hermes\/home/);
+});
+
 test("ensureArtifacts crea los ficheros que faltan sin pisar los llenos", () => {
   ensureArtifactsAt(paths().task);
   assert.ok(fs.existsSync(path.join(paths().task, "checks.md")));

@@ -42,6 +42,41 @@ Viven en `~/.orquestator/ESN-123/task/` (host) y se montan en `<clon>/.task/`
 El estado interno y el hash de `approve` viven en `~/.orquestator/ESN-123/state.json`,
 en el host. El agente no puede tocarlos.
 
+## Fases de agente (M3)
+
+`implement`, `review` y `pr-review` lanzan un perfil de Hermes en el contenedor de la
+tarea (`run` los encadena). El prompt va por stdin y la respuesta final se escribe en
+el artefacto de la fase:
+
+```bash
+hermes chat --oneshot -Q --safe-mode --yolo \
+  --provider custom --base-url http://esencial-proxy:8080/v1 --api-key dummy \
+  --model <modelo> --query-file - > /work/.task/<artefacto>
+```
+
+- `--safe-mode` ignora config, reglas, plugins y MCPs del host: en el piloto no hay
+  MCPs. Los agentes solo ven el clon, los artefactos y el espejo (ro).
+- `HERMES_HOME` es propio de cada fase y de cada tarea
+  (`~/.orquestator/ESN-123/hermes/<fase>/`), así que las sesiones no se mezclan.
+- Identidad de git dentro del contenedor: `orquestator <orquestator@esencial.invalid>`;
+  sin push (lo hace el host).
+- El implementer escribe `impl.md` (respuesta final) y `pr-body.md` (con sus tools).
+
+| Fase | Comando | Modelo por defecto | Artefacto |
+|---|---|---|---|
+| implementer | `implement` | `qwen3.6` | `impl.md`, `pr-body.md` |
+| reviewer | `review` | `deepseek-v4-flash` | `review.md` |
+| pr-reviewer | `pr-review` | `glm5.3-flash` | `pr-review.md` |
+
+Los modelos se cambian sin tocar código con `ORQUESTATOR_MODEL_IMPLEMENTER`,
+`ORQUESTATOR_MODEL_REVIEWER` y `ORQUESTATOR_MODEL_PR_REVIEW`.
+
+`review.md` y `pr-review.md` empiezan con `Veredicto: APROBADO` o
+`Veredicto: CAMBIOS`; con CAMBIOS el comando sale con 1 y toca
+`fix --from review|pr-review`. La cadena real es
+`start → implement → check → review → pr → ship → pr-review` y para en `Blocked`,
+en una comprobación que falla o al dejar la tarea en `In validation`.
+
 ## Comprobaciones
 
 `pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm e2e` en el contenedor,

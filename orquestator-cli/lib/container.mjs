@@ -8,10 +8,14 @@ export const NETWORK = "esencial-workers";
 
 /** Qué escribe cada fase y con qué red corre. */
 export const PHASES = {
-  implementer: { rw: ["impl.md", "pr-body.md"], network: "model" },
+  implementer: {
+    rw: ["impl.md", "pr-body.md"],
+    network: "model",
+    home: true,
+  },
   check: { rw: ["checks.md"], network: "none" },
-  reviewer: { rw: ["review.md"], network: "model" },
-  "pr-review": { rw: ["pr-review.md"], network: "model" },
+  reviewer: { rw: ["review.md"], network: "model", home: true },
+  "pr-review": { rw: ["pr-review.md"], network: "model", home: true },
 };
 
 function exists(label, target) {
@@ -61,7 +65,25 @@ export function dockerArgs({ phase, image, repo, task, upstream, uid, gid }) {
   if (spec.network === "none") {
     args.push("--network", "none");
   } else {
-    args.push("--network", NETWORK, "-e", "HERMES_HOME=/opt/hermes/home");
+    args.push("--network", NETWORK);
+  }
+  if (spec.home) {
+    // HERMES_HOME aislado por fase: sesiones y caché de Hermes no se mezclan.
+    const hermes = path.join(path.dirname(task), "hermes", phase);
+    args.push(
+      "-v",
+      `${hermes}:/hermes-home`,
+      "-e",
+      "HERMES_HOME=/hermes-home",
+      "-e",
+      "GIT_AUTHOR_NAME=orquestator",
+      "-e",
+      "GIT_AUTHOR_EMAIL=orquestator@esencial.invalid",
+      "-e",
+      "GIT_COMMITTER_NAME=orquestator",
+      "-e",
+      "GIT_COMMITTER_EMAIL=orquestator@esencial.invalid",
+    );
   }
   args.push(image);
   return args;
@@ -74,6 +96,7 @@ export function runPhase({
   task,
   upstream,
   command,
+  input,
   dryRun,
   out = () => {},
 }) {
@@ -88,6 +111,7 @@ export function runPhase({
   }
   const result = spawnSync("docker", argv, {
     encoding: "utf8",
+    input,
     maxBuffer: 64 * 1024 * 1024,
   });
   if (result.error)

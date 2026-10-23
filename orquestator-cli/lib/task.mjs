@@ -3,14 +3,7 @@ import path from "node:path";
 import { ensureArtifacts, writeArtifact } from "./artifacts.mjs";
 import { cloneTask, ensureMirror } from "./checkout.mjs";
 import { comment, getIssue, setState } from "./linear.mjs";
-import {
-  createState,
-  home,
-  repoDir,
-  save,
-  taskDir,
-  transition,
-} from "./state.mjs";
+import { createState, home, repoDir, save, transition } from "./state.mjs";
 
 export function slugify(title) {
   return title

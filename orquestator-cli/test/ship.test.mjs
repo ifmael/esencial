@@ -7,7 +7,7 @@ import { afterEach, beforeEach, test } from "node:test";
 
 import { writeArtifact } from "../lib/artifacts.mjs";
 import { approveState, guardTask } from "../lib/guard.mjs";
-import { ship } from "../lib/ship.mjs";
+import { publishPrReview, ship } from "../lib/ship.mjs";
 import { createState, load, save, transition } from "../lib/state.mjs";
 
 const KEY = "ESN-7";
@@ -108,6 +108,7 @@ test("ship edita el body, comenta review/checks y publica el status", () => {
   assert.ok(kinds.includes("edit"));
   assert.equal(kinds.filter((k) => k === "comment").length, 1);
   assert.equal(kinds.filter((k) => k === "review").length, 1);
+  assert.equal(load(KEY, base).state, "In validation");
   const status = calls.find((a) => a[0] === "api");
   assert.ok(status[1].endsWith("/sha9"));
 });
@@ -128,4 +129,29 @@ test("ship omite los comentarios vacíos y el dry-run no hace nada", () => {
   calls.length = 0;
   ship(KEY, { main, ghRun, dryRun: true, out: () => {} });
   assert.deepEqual(calls, []);
+});
+
+test("publishPrReview exige PR y pr-review, y la comenta sin tocar el body", () => {
+  const calls = [];
+  const ghRun = (args) => {
+    calls.push(args);
+    return "";
+  };
+  writeArtifact(KEY, "pr-review.md", "");
+  assert.throws(
+    () => publishPrReview(KEY, { base, ghRun }),
+    /pr-review\.md está vacío/,
+  );
+  writeArtifact(KEY, "pr-review.md", "Veredicto: APROBADO\n");
+  const result = publishPrReview(KEY, { base, ghRun });
+  assert.equal(result.number, 9);
+  assert.deepEqual(calls, [
+    [
+      "pr",
+      "comment",
+      "9",
+      "--body-file",
+      path.join(base, KEY, "task", "pr-review.md"),
+    ],
+  ]);
 });

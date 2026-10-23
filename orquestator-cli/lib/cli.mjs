@@ -1,6 +1,6 @@
 import fs from "node:fs";
+import { runAgent, verdictOf } from "./agents.mjs";
 import { git } from "./checkout.mjs";
-
 import { checkTask } from "./checks.mjs";
 import { clean } from "./clean.mjs";
 import { linearKey } from "./config.mjs";
@@ -8,11 +8,11 @@ import { fixTask } from "./fix.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import { inspect } from "./inspect.mjs";
-import { notifyBlocked } from "./linear.mjs";
+import { notifyBlocked, setState } from "./linear.mjs";
 import { approvePr } from "./manual.mjs";
 import { publish } from "./pr.mjs";
 import { runFlow } from "./run.mjs";
-import { ship } from "./ship.mjs";
+import { publishPrReview, ship } from "./ship.mjs";
 import { createIssue } from "./spec.mjs";
 import {
   assertKey,
@@ -33,8 +33,11 @@ export const USAGE = `orquestator — flujo de tareas de Esencial
 Uso:
   orquestator spec --titulo "…" [--cuerpo fichero.md]
   orquestator start ESN-123       abre la tarea: clon, rama y brief
+  orquestator implement ESN-123   el implementer trabaja en el clon
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
+  orquestator review ESN-123      el reviewer revisa el diff (review.md)
   orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
+  orquestator pr-review ESN-123   re-revisión de la PR (pr-review.md)
   orquestator ship ESN-123        actualiza el body y comenta checks/review
   orquestator inspect ESN-123     estado, brief, diff, artefactos y CI
   orquestator clean ESN-123 [--force]
@@ -56,13 +59,23 @@ function line(stream, text = "") {
   stream.write(`${text}\n`);
 }
 
-async function notifyBlock(key, state, question, out) {
+async function notifyBlock(state, question, out) {
   if (!state.issueId) return;
   try {
     await notifyBlocked(linearKey(), { id: state.issueId }, question);
     out("Linear: issue asignada y mención enviada.");
   } catch (error) {
     out(`Linear: no se pudo avisar (${error.message})`);
+  }
+}
+
+async function moveLinear(key, name, out) {
+  const state = load(key);
+  if (!state?.issueId) return;
+  try {
+    await setState(linearKey(), { id: state.issueId }, name);
+  } catch (error) {
+    out(`Linear: no se pudo mover a ${name} (${error.message})`);
   }
 }
 
@@ -149,6 +162,66 @@ export async function main(argv, io = {}) {
         describe(stdout, state);
         return 0;
       }
+      case "implement": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = runAgent(key, {
+          phase: "implementer",
+          dryRun,
+          main: process.cwd(),
+          out: (text) => line(stdout, text),
+        });
+        if (result.dryRun) return 0;
+        line(stdout, "impl.md escrito");
+        return 0;
+      }
+      case "review": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = runAgent(key, {
+          phase: "reviewer",
+          dryRun,
+          main: process.cwd(),
+          out: (text) => line(stdout, text),
+        });
+        if (result.dryRun) return 0;
+        const verdict = verdictOf(result.artifact);
+        if (!verdict) throw new Error("review.md no trae «Veredicto:»");
+        line(stdout, `review: ${verdict}`);
+        if (verdict === "CAMBIOS") {
+          line(stdout, `Ejecuta: orquestator fix ${key} --from review`);
+          return 1;
+        }
+        return 0;
+      }
+      case "pr-review": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = runAgent(key, {
+          phase: "pr-review",
+          dryRun,
+          main: process.cwd(),
+          out: (text) => line(stdout, text),
+        });
+        if (result.dryRun) {
+          publishPrReview(key, {
+            dryRun,
+            out: (text) => line(stdout, text),
+          });
+          return 0;
+        }
+        const verdict = verdictOf(result.artifact);
+        if (!verdict) throw new Error("pr-review.md no trae «Veredicto:»");
+        const { number } = publishPrReview(key, {
+          out: (text) => line(stdout, text),
+        });
+        line(stdout, `pr-review: ${verdict} (PR #${number})`);
+        if (verdict === "CAMBIOS") {
+          line(stdout, `Ejecuta: orquestator fix ${key} --from pr-review`);
+          return 1;
+        }
+        return 0;
+      }
       case "check": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
@@ -181,9 +254,7 @@ export async function main(argv, io = {}) {
             next = block(load(key), error.message);
             save(key, next);
           });
-          await notifyBlock(key, next, error.message, (text) =>
-            line(stdout, text),
-          );
+          await notifyBlock(next, error.message, (text) => line(stdout, text));
           line(stdout, `Blocked: ${error.message}`);
           return 1;
         }
@@ -251,11 +322,13 @@ export async function main(argv, io = {}) {
       case "run": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
-        const result = runFlow(key, {
+        const result = await runFlow(key, {
           dryRun,
           out: (text) => line(stdout, text),
         });
-        return result ? 0 : 1;
+        if (result.ok || result.dryRun) return 0;
+        if (result.hint) line(stdout, result.hint);
+        return 1;
       }
       case "ship": {
         const key = parseKey(rest[0], stderr);
@@ -269,6 +342,9 @@ export async function main(argv, io = {}) {
           stdout,
           `PR #${result.number} actualizada (${result.sha.slice(0, 7)})`,
         );
+        if (result.state === "In validation") {
+          await moveLinear(key, "In validation", (text) => line(stdout, text));
+        }
         return 0;
       }
       case "guard": {
@@ -390,7 +466,7 @@ export async function main(argv, io = {}) {
           save(key, next);
         });
         describe(stdout, next);
-        await notifyBlock(key, next, question, (text) => line(stdout, text));
+        await notifyBlock(next, question, (text) => line(stdout, text));
         return 0;
       }
       case "resume": {
