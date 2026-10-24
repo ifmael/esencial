@@ -8,7 +8,7 @@ import { fixTask } from "./fix.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import { inspect } from "./inspect.mjs";
-import { notifyBlocked, setState } from "./linear.mjs";
+import { getIssue, notifyBlocked, setState } from "./linear.mjs";
 import { approvePr } from "./manual.mjs";
 import { publish } from "./pr.mjs";
 import { runFlow } from "./run.mjs";
@@ -74,7 +74,8 @@ async function moveLinear(key, name, out) {
   const state = load(key);
   if (!state?.issueId) return;
   try {
-    await setState(linearKey(), { id: state.issueId }, name);
+    // setState necesita el equipo; el estado local solo guarda el id.
+    await setState(linearKey(), await getIssue(linearKey(), key), name);
   } catch (error) {
     out(`Linear: no se pudo mover a ${name} (${error.message})`);
   }

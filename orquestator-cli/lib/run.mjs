@@ -7,7 +7,7 @@ import { checkTask } from "./checks.mjs";
 import { linearKey } from "./config.mjs";
 import { guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
-import { setState } from "./linear.mjs";
+import { getIssue, setState } from "./linear.mjs";
 import { publish } from "./pr.mjs";
 import { publishPrReview, ship } from "./ship.mjs";
 import { home, load, repoDir } from "./state.mjs";
@@ -41,7 +41,11 @@ async function moveLinear(key, base, out) {
   const state = load(key, base);
   if (!state?.issueId) return;
   try {
-    await setState(linearKey(), { id: state.issueId }, "In validation");
+    await setState(
+      linearKey(),
+      await getIssue(linearKey(), key),
+      "In validation",
+    );
   } catch (error) {
     out(`Linear: no se pudo mover a In validation (${error.message})`);
   }
