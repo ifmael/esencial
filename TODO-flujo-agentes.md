@@ -867,9 +867,12 @@ esperados.
 
 Objetivo: recorrer el flujo entero con una feature pequeña. Depende de: M0–M3.
 
-- [ ] Elegir la feature del backlog (`TODO-sesion-exercises.md`) y anotar su issue.
-- [ ] Escribir la issue/spec con contexto y criterios (positivos, negativos y límites) y
-      moverla a `Ready` (en el piloto no se usa `Spec review`).
+- [ ] Elegir la feature del backlog (`TODO-sesion-exercises.md`); la candidata puesta por
+      el usuario en `Spec review` es **ESN-6 «Añadir bip cuando falta un segundo»**.
+- [ ] **`Spec review` en el piloto** (decisión 2026-10-24): `spec-review ESN-6` publica
+      las preguntas del `spec-reviewer` en la issue; las respondes. El bucle automático
+      (`orquestator-cli:acordado` + `watch`) sigue en M5b.
+- [ ] Con la spec clara, **tú** mueves la issue a `Ready` (el agente nunca lo hace).
 - [ ] Ejecutar `run` (o los comandos uno a uno) y anotar tiempos e incidencias por fase.
 - [ ] Si la feature lleva migración, validar el job `migracion` (token read-only) y
       `migrate` con el token de edición.
@@ -963,6 +966,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-24 | M4 | **`Spec review` entra en el piloto por decisión del usuario**; ESN-6 «Añadir bip cuando falta un segundo», añadida a ese estado | El `spec-reviewer` ya estaba en el piloto (M3), pero M4 aún decía lo contrario; se corrige la checklist. El bucle automático sigue en M5b | Lanzar `spec-review ESN-6` |
 | 2026-10-24 | M3 | **M3 cerrado**: smoke real de ESN-5 (spec-review, implement, check, review, pr, ship, pr-review) con PR #56 y CI verde; fallos corregidos: `-i` antes de la imagen, `/task` con repo ro, `pnpm test` sin `test:coverage` y movimiento de Linear con el equipo | El flujo completo funciona con los cuatro modelos y skills por rol; el e2e del contenedor dio un «network connection lost» intermitente y pasó al reintentar | M4: elegir feature |
 | 2026-10-23 | M3 | **Modelos elegidos por el usuario**: qwen3.8-flash/max (spec y review), deepseek-v4-flash/xhigh (implement) y deepseek-v4-flash/ultra (pr-review); `spec-review` ya comenta las preguntas en la issue | El esfuerzo solo se fija por config, así que cada fase genera su `config.yaml` en su HERMES_HOME | Reconstruir imagen y prueba real |
 | 2026-10-23 | M3 | **Roles del piloto cerrados por el usuario**: `implementer`, `reviewer`, `pr-reviewer` y `spec-reviewer`; `test-auditor` y `security-auditor` al backlog posterior | El `spec-reviewer` pasa de M5b al piloto (solo el perfil y sus preguntas; el bucle automático sigue en M5b) | Decidir modelos |

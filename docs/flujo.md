@@ -17,7 +17,7 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 | Estado | Quién lo mueve |
 |---|---|
 | Backlog | tú |
-| Spec review | tú creas; el agente comenta; tú decides (M5b) |
+| Spec review | tú creas; el agente comenta sus preguntas; tú decides (el bucle automático llega en M5b) |
 | Ready | **solo tú**; el agente nunca se autopromociona |
 | In Progress | el CLI (`run`, `start`, `fix`) |
 | In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable` |
