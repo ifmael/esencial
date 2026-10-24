@@ -30,6 +30,7 @@ test("run --dry-run recorre el flujo entero desde cero", async () => {
     "check",
     "review",
     "pr",
+    "preview",
     "ship",
     "pr-review",
   ]);
@@ -46,6 +47,7 @@ test("run --dry-run desde In Progress no repite start", async () => {
     "check",
     "review",
     "pr",
+    "preview",
     "ship",
     "pr-review",
   ]);
@@ -107,7 +109,15 @@ test("run --dry-run no toca el clon de juguete", async () => {
 });
 
 function fakeSteps(overrides = {}) {
-  const names = ["implement", "check", "review", "pr", "ship", "pr-review"];
+  const names = [
+    "implement",
+    "check",
+    "review",
+    "pr",
+    "preview",
+    "ship",
+    "pr-review",
+  ];
   const calls = [];
   const steps = {};
   for (const name of names) {
@@ -151,6 +161,7 @@ test("run real completa la cadena y deja In validation al pasar ship", async () 
     "check",
     "review",
     "pr",
+    "preview",
     "ship",
     "pr-review",
   ]);

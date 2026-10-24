@@ -29,3 +29,25 @@ aud = "280c84d8f285f6f7b76df01d1c0db07df4dab3be6dcb88e7ff23eac396fe7080"
 
   [access.dev.identity]
   email = "ismael.rm.1986@gmail.com"
+
+# Preview por rama (M5a): D1 y R2 aislados de producción (una pareja compartida
+# por todos los previews; el CLI aplica las migraciones antes de desplegar y pasa
+# WEB_ORIGIN con --var). El bloque `env.preview` existe para migrar esa D1.
+[[previews.d1_databases]]
+binding = "DB"
+database_name = "esencial-preview"
+database_id = "48c3b2cf-26a9-451c-839a-8a090f364a92"
+migrations_dir = "migrations"
+
+[[previews.r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "esencial-photos-preview"
+
+[env.preview]
+name = "esencial-api-preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "esencial-preview"
+database_id = "48c3b2cf-26a9-451c-839a-8a090f364a92"
+migrations_dir = "migrations"
