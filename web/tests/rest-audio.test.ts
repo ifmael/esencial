@@ -6,6 +6,7 @@ import {
   beep,
   startPauseAudio,
   stopPauseAudio,
+  WARN_LEADS_MS,
   warnAhead,
 } from "../src/lib/rest-audio";
 import { createFakeAudio } from "./audio-fake";
@@ -47,6 +48,11 @@ describe("rest-audio", () => {
     vi.stubGlobal("AudioContext", audio.Ctor);
     beep();
     expect(tones().map((o) => o.frequency.value)).toEqual([880, 1175, 1568]);
+  });
+
+  it("las marcas del aviso son los tres últimos segundos de la pausa", () => {
+    // Un tono al cruzar cada marca: a los 3 s, a los 2 s y al segundo final.
+    expect(WARN_LEADS_MS).toEqual([3000, 2000, 1000]);
   });
 
   it("el aviso previo es un solo tono, distinto y más corto que los del fin", () => {
