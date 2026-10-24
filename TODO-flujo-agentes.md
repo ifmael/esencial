@@ -923,6 +923,10 @@ Hecho cuando: la cola corre sola y una PR con rutas protegidas sin el status `gu
 
 ### M6 — Después del piloto (a decidir)
 
+- **Login**: hoy la comprobación post-deploy de `clean` da por bueno un 302 a
+  `https://ifmael.cloudflareaccess.com/` (constante `ACCESS_LOGIN`). Al cambiar el
+  sistema de login hay que actualizarla en `clean.mjs` y en este apartado.
+
 Depende de: M5b.
 
 - [ ] Evaluar omp como worker si Hermes no cumple la adherencia (mismo brief y comprobaciones).

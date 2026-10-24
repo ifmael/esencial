@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
-import { clean } from "../lib/clean.mjs";
+import { ACCESS_LOGIN, clean } from "../lib/clean.mjs";
 import { readLock, reserveMigration } from "../lib/migrations.mjs";
 import { createState, dirFor, save, transition } from "../lib/state.mjs";
 
@@ -72,5 +72,37 @@ test("si las comprobaciones fallan, sugiere rollback", async () => {
   const out = [];
   await clean(KEY, { base: dir, fetchImpl: failing, out: (t) => out.push(t) });
   assert.match(out.join("\n"), /FALLA api/);
+  assert.match(out.join("\n"), /wrangler rollback/);
+});
+
+test("un 302 hacia el login de Access cuenta como deploy vivo", async () => {
+  done();
+  const access = async (url) => ({
+    status: 302,
+    headers: { get: () => `${ACCESS_LOGIN}cdn-cgi/access/login/` },
+    json: async () => ({}),
+    url,
+  });
+  const out = [];
+  await clean(KEY, { base: dir, fetchImpl: access, out: (t) => out.push(t) });
+  assert.match(out.join("\n"), /OK frontal/);
+  assert.match(out.join("\n"), /OK api/);
+  assert.doesNotMatch(out.join("\n"), /rollback/);
+});
+
+test("un 302 hacia otro sitio sigue siendo fallo", async () => {
+  done();
+  const elsewhere = async () => ({
+    status: 302,
+    headers: { get: () => "https://ejemplo.invalid/login" },
+    json: async () => ({}),
+  });
+  const out = [];
+  await clean(KEY, {
+    base: dir,
+    fetchImpl: elsewhere,
+    out: (t) => out.push(t),
+  });
+  assert.match(out.join("\n"), /FALLA frontal/);
   assert.match(out.join("\n"), /wrangler rollback/);
 });

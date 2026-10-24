@@ -5,6 +5,15 @@ import { dirFor, home, load } from "./state.mjs";
 
 export const FRONT = "https://esencial.nutrirutina.workers.dev";
 export const API = "https://esencial-api.nutrirutina.workers.dev";
+// shortcut: hoy el login es Cloudflare Access; si cambia, ajustar aquí y en el
+// plan (M6). Un 302 a otro sitio sigue siendo un fallo.
+export const ACCESS_LOGIN = "https://ifmael.cloudflareaccess.com/";
+
+function accessRedirect(response) {
+  if (response.status !== 302) return false;
+  const location = response.headers?.get?.("location") ?? "";
+  return location.startsWith(ACCESS_LOGIN);
+}
 
 /** Las dos comprobaciones fiables de DEPLOY.md §7 (sin identidad). */
 export async function postDeployChecks(fetchImpl = fetch) {
@@ -12,12 +21,15 @@ export async function postDeployChecks(fetchImpl = fetch) {
     {
       name: "frontal",
       url: `${FRONT}/plan-recetas`,
-      ok: (r) => r.status === 200,
+      ok: (r) => r.status === 200 || accessRedirect(r),
     },
     {
       name: "api",
       url: `${API}/api/health`,
-      ok: async (r) => r.status === 200 && (await r.json()).ok === true,
+      ok: async (r) => {
+        if (accessRedirect(r)) return true;
+        return r.status === 200 && (await r.json()).ok === true;
+      },
     },
   ];
   const results = [];
