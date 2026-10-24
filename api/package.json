@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc"
   },
   "dependencies": {
@@ -14,6 +15,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.22.0",
     "@cloudflare/workers-types": "5.20260902.1",
+    "@vitest/coverage-istanbul": "4.1.11",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   }

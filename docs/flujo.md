@@ -17,7 +17,7 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 | Estado | Quién lo mueve |
 |---|---|
 | Backlog | tú |
-| Spec review | tú creas; el agente comenta; tú decides (M5b) |
+| Spec review | tú creas; el agente comenta sus preguntas; tú decides (el bucle automático llega en M5b) |
 | Ready | **solo tú**; el agente nunca se autopromociona |
 | In Progress | el CLI (`run`, `start`, `fix`) |
 | In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable` |
@@ -42,11 +42,68 @@ Viven en `~/.orquestator/ESN-123/task/` (host) y se montan en `<clon>/.task/`
 El estado interno y el hash de `approve` viven en `~/.orquestator/ESN-123/state.json`,
 en el host. El agente no puede tocarlos.
 
+## Fases de agente (M3)
+
+`implement`, `review` y `pr-review` lanzan un perfil de Hermes en el contenedor de la
+tarea (`run` los encadena). El prompt va por stdin y la respuesta final se escribe en
+el artefacto de la fase:
+
+```bash
+hermes chat --oneshot -Q --safe-mode --yolo \
+  --provider custom --base-url http://esencial-proxy:8080/v1 --api-key dummy \
+  --model <modelo> --query-file - > /work/.task/<artefacto>
+```
+
+- La config de cada fase vive en `~/.orquestator/ESN-123/hermes/<fase>/` y se monta
+  **encima** del home que trae la imagen (`config.yaml`, `SOUL.md` y `skills/`). No se
+  reemplaza `HERMES_HOME` entero: un home vacío obliga a Hermes a instalar sus
+  dependencias (necesita red) y el contenedor corre sin salida. Las skills van como
+  `skills.external_dirs` en ro. El esfuerzo no tiene flag en `hermes chat`: va en
+  `agent.reasoning_effort`.
+- Los agentes solo ven el clon, los artefactos y el espejo (ro); `spec-review` monta
+  `main` en ro y no ve ningún clon de tarea.
+- **AGENTS.md**: Hermes lo lee del proyecto (cadena de la raíz git al directorio de
+  trabajo), no de `HERMES_HOME`. El implementer lee el de la rama y puede actualizarlo;
+  `review` y `pr-review` reciben encima el de `origin/main` montado en ro, así que el
+  implementer no puede cambiar las reglas que lee el revisor. `spec-review` ya ve `main`.
+- **Identidad por rol**: `orquestator-cli/perfiles/soul/<fase>.md` se copia como
+  `HERMES_HOME/SOUL.md`; Hermes lo carga siempre (el `AGENTS.md` del repo sigue siendo
+  el núcleo común, sin duplicar).
+- **Skills por rol**: `orquestator-cli/perfiles/skills/<fase>/` se copia a
+  `HERMES_HOME/skills/`; Hermes las indexa y el agente las carga cuando las necesita.
+  No se usan skills de proyecto (`.hermes/skills`), que exigirían `hermes skills trust`.
+- Identidad de git dentro del contenedor: `orquestator <orquestator@esencial.invalid>`;
+  sin push (lo hace el host).
+- El implementer escribe `impl.md` (respuesta final) y `pr-body.md` (con sus tools).
+
+| Fase | Comando | Modelo | Esfuerzo | Artefacto |
+|---|---|---|---|---|
+| spec-reviewer | `spec-review` | `qwen3.8-flash` | `max` | `spec-review.md` + comentario |
+| implementer | `implement` | `deepseek-v4-flash` | `xhigh` | `impl.md`, `pr-body.md` |
+| reviewer | `review` | `qwen3.8-flash` | `max` | `review.md` |
+| pr-reviewer | `pr-review` | `deepseek-v4-flash` | `ultra` | `pr-review.md` |
+
+Roles decididos para el piloto: los cuatro de la tabla. Después del piloto: `test-auditor`
+(tests que prueban comportamiento) y `security-auditor` (diffs de autenticación, API,
+cabeceras o datos).
+
+Modelo y esfuerzo se cambian sin tocar código con `ORQUESTATOR_MODEL_<FASE>` y
+`ORQUESTATOR_EFFORT_<FASE>` (`SPEC_REVIEW`, `IMPLEMENTER`, `REVIEWER`, `PR_REVIEW`).
+
+`review.md` y `pr-review.md` empiezan con `Veredicto: APROBADO` o
+`Veredicto: CAMBIOS`; con CAMBIOS el comando sale con 1 y toca
+`fix --from review|pr-review`. La cadena real es
+`start → implement → check → review → pr → ship → pr-review` y para en `Blocked`,
+en una comprobación que falla o al dejar la tarea en `In validation`.
+
 ## Comprobaciones
 
-`pnpm lint && pnpm typecheck && pnpm test && pnpm e2e` en el contenedor, antes del
-review. La cobertura de `api` y `web` se mide y sus umbrales solo suben (objetivo
-60 % en M6). Un test nuevo o modificado debe fallar contra `main` (RED).
+`pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm e2e` en el contenedor,
+antes del review. Si la rama aún no tiene `test:coverage` (main antes del merge de M2),
+cae a `pnpm test` sin ocultar fallos. La cobertura se mide en las dos partes: `api` con istanbul (v8 no
+ve el código dentro de workerd) y `web` con v8; los umbrales solo suben. Hoy:
+api 95/90/99/97 y web 86/85/86/88 (sentencias/ramas/funciones/líneas). Un test
+nuevo o modificado debe fallar contra `main` (RED).
 
 ## Límites
 
