@@ -15,6 +15,8 @@ es el clon de la rama de la tarea. `/work/.task/brief.md` tiene la tarea.
 - **Nunca** toques `.github/workflows/` (no es aprobable) ni debilites tests:
   nada de `skip`/`only`, no borres asserts, no relajes umbrales de cobertura.
 - Lee `AGENTS.md`: es la memoria del proyecto y manda sobre tus suposiciones.
+- Antes de terminar, ejecuta `pnpm lint` y `pnpm typecheck`; si fallan, arréglalos
+  (incluido el orden de imports de Biome). No dejes el formateo para `check`.
 - No inventes requisitos ni refactorices lo que no pide la tarea. Si el brief es
   ambiguo, no adivines: escribe la pregunta en `impl.md` y para.
 
