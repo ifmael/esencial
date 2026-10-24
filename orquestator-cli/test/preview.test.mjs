@@ -12,6 +12,7 @@ import {
   PREVIEW_DB,
   previewName,
   previewTask,
+  previewUrlOf,
   previewUrls,
   withPreviewBlock,
 } from "../lib/preview.mjs";
@@ -84,6 +85,23 @@ function options(extra = {}) {
   };
 }
 
+test("previewUrlOf lee el JSON aunque wrangler imprima progreso antes", () => {
+  const output = [
+    "🌀 Building list of assets...",
+    "✨ Read 11 files",
+    JSON.stringify({
+      deployment: {
+        urls: ["https://3d47615a-esencial.nutrirutina.workers.dev"],
+      },
+      preview: { urls: ["https://esn-7-esencial.nutrirutina.workers.dev"] },
+    }),
+  ].join("\n");
+  assert.equal(
+    previewUrlOf(output),
+    "https://esn-7-esencial.nutrirutina.workers.dev",
+  );
+});
+
 test("previewName y previewUrls son predecibles", () => {
   assert.equal(previewName(KEY), NAME);
   assert.deepEqual(previewUrls(NAME), {
@@ -144,7 +162,6 @@ test("preview construye, migra, despliega los dos Workers y guarda el estado", a
   assert.match(readArtifact(KEY, "pr-body.md", base), /## Preview/);
   assert.equal(gh.length, 1);
   assert.equal(gh[0][1], "edit");
-  assert.match(out.join("\n"), /Preview/);
 });
 
 test("un preview público sin Access falla y no guarda el estado", async () => {

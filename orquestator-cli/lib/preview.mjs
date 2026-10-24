@@ -48,10 +48,17 @@ export function withPreviewBlock(body, urls) {
 }
 
 export function previewUrlOf(output) {
-  let data;
-  try {
-    data = JSON.parse(output);
-  } catch {
+  // `--json` deja el JSON detrás del progreso («Building list of assets…»).
+  const start = output.indexOf("{");
+  let data = null;
+  if (start !== -1) {
+    try {
+      data = JSON.parse(output.slice(start));
+    } catch {
+      data = null;
+    }
+  }
+  if (!data) {
     const match = /https:\/\/[^\s"]+workers\.dev/.exec(output);
     if (!match) throw new Error("Wrangler no devolvió la URL del preview");
     return match[0].replace(/\/$/, "");
@@ -245,8 +252,6 @@ export async function previewTask(
     ghRun(editArgs(String(state.pr.number), path.join(task, "pr-body.md")));
   }
 
-  out(`Preview web: ${web}`);
-  out(`Preview API: ${api}`);
   return { name, web, api };
 }
 
