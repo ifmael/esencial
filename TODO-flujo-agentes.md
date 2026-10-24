@@ -913,16 +913,17 @@ Objetivo: previews aisladas y validadas desde el móvil. Depende de: M4.
       migraciones ya siembran el catálogo, no hace falta otro script).
 - [x] Limpieza con `clean` (`wrangler preview delete` de los dos Workers); no hay webhook
       de «PR cerrada», se limpia al mergear/cerrar.
-- [ ] Access sobre las URLs de preview de ambos Workers; verificar frontal↔API. Dominio
-      propio opcional. **Pendiente**: el token necesita `Access: Edit`; el CLI ya falla si
-      el preview responde 200.
+- [x] Access sobre las URLs de preview de ambos Workers; verificar frontal↔API. Dominio
+      propio opcional. App `all_preview_workers` creada (solo el email del dueño); las dos
+      URLs del preview de PR #58 responden 302 al login.
 - [x] Añadir al body de la PR el enlace de preview (bloque `<!-- preview -->`); falta verlo
       en Linear con una PR real.
 - [x] Orden de migraciones: preview antes de `ship` (y la D1 remota tras
       `approve --migracion`).
 
-Hecho cuando: una PR obtiene preview aislado con datos sembrados y se puede validar desde
-el móvil.
+**Hecho** (2026-10-24): PR #58 tiene preview propio
+(`esn-58-esencial[-api]`), con D1/R2 de preview, Access y datos sembrados; el smoke
+desplegó, verificó y borró un preview de prueba. Falta la validación en el móvil.
 
 ### M5b — Automatización (≈1-2 días)
 
@@ -991,7 +992,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
 | 2026-10-24 | M4-M5b | **Se mantiene A**: piloto a mano y `watch` en M5b como servicio local de sondeo. Se añade explorar un webhook con URL pública, sin cambiar la opción principal | El sondeo no necesita exponer nada; el webhook sí exige endpoint público y firma | M4 con ESN-6 |
-| 2026-10-24 | M5a | Preview por rama: `wrangler preview` 4.152, D1 `esencial-preview` y R2 `esencial-photos-preview` compartidos, URLs `<clave>-esencial[-api]`, Access pendiente del token | Una pareja de recursos de preview basta para un usuario; el aislamiento por PR se evalúa en M6 si molesta | Smoke real |
+| 2026-10-24 | M5a | Preview por rama: `wrangler preview` 4.152, D1 `esencial-preview` y R2 `esencial-photos-preview` compartidos, URLs `<clave>-esencial[-api]`, app de Access `all_preview_workers` | Una pareja de recursos de preview basta para un usuario; el aislamiento por PR se evalúa en M6 si molesta | Validar PR #58 en el móvil |
 | 2026-10-24 | M4 | **Retro arreglada el mismo día**: `ship` espera la CI, el implementer pasa lint/tipos antes de salir y los revisores no escriben el artefacto | Los tres fallos costaban una ronda de check (~20 min) y un `In validation` prematuro | — |
 | 2026-10-24 | M4 | **Piloto cerrado con ESN-6 («bip al segundo final»)**: spec review 159 s; `run` 1 de 837 s con check rojo por orden de imports, `fix` 1/2 y `run` 2 de 1 859 s; PR #57 mergeada (`c15a458`) con CI 4m30s y `clean` OK | El flujo completo funciona con una feature real; el único coste fue una ronda de formato. Pendientes de la retro: previews (M5a), montaje de `pr-review` y esperar el CI antes de `In validation` | M5a |
 | 2026-10-24 | M4 | **`Spec review` entra en el piloto por decisión del usuario**; ESN-6 «Añadir bip cuando falta un segundo», añadida a ese estado | El `spec-reviewer` ya estaba en el piloto (M3), pero M4 aún decía lo contrario; se corrige la checklist. El bucle automático sigue en M5b | Lanzar `spec-review ESN-6` |

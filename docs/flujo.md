@@ -120,8 +120,9 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   todos los previews** y nunca los de producción. Las migraciones se aplican en
   cada preview (deben ser aditivas). Las fotos no se copian: las recetas salen
   con monograma hasta que se suban a ese bucket.
-- Access: una app con destino `all_preview_workers` y una política que permita
-  el email del dueño; el CLI **falla** si el preview responde 200.
+- Access: app `all_preview_workers` con una política que permite el email del
+  dueño; el CLI **falla** si el preview responde 200. La cookie es por host: abre
+  primero la URL de la API y después la web.
 - Requisitos del token de `~/.config/orquestator/env`: **Workers Scripts: Edit**,
   **D1: Edit**, **R2: Edit** y **Access: Edit** (para la app de previews).
 - Wrangler **≥ 4.135.0** (el del `devDependencies` del checkout principal); el
