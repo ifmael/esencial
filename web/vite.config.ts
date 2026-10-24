@@ -16,5 +16,11 @@ export default defineConfig({
     // Node ≥25 trae un `localStorage` propio (vacío, sin `clear`) que tapa el
     // de jsdom en los workers de test: se apaga para que mande el de jsdom.
     execArgv: ["--no-experimental-webstorage"],
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      reporter: ["text-summary"],
+      thresholds: { statements: 86, branches: 85, functions: 86, lines: 88 },
+    },
   },
 });

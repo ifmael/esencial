@@ -1,0 +1,293 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { ensureArtifactsAt, readArtifact } from "./artifacts.mjs";
+import { git } from "./checkout.mjs";
+import { runPhase } from "./container.mjs";
+import { diffPatch, importBranch } from "./guard.mjs";
+import { imageTag } from "./image.mjs";
+import { home, load, repoDir, taskDir } from "./state.mjs";
+import { mirrorPath } from "./task.mjs";
+
+const DIR = fileURLToPath(new URL("../perfiles", import.meta.url));
+const MAX_DIFF = 120_000;
+
+/** Perfil de cada fase: modelo, fichero de instrucciones y artefacto de salida. */
+export const PROFILES = {
+  "spec-review": {
+    file: "spec-reviewer.md",
+    model: "qwen3.8-flash",
+    effort: "max",
+    env: "ORQUESTATOR_MODEL_SPEC_REVIEW",
+    effortEnv: "ORQUESTATOR_EFFORT_SPEC_REVIEW",
+    writes: "spec-review.md",
+  },
+  implementer: {
+    file: "implementer.md",
+    model: "deepseek-v4-flash",
+    effort: "xhigh",
+    env: "ORQUESTATOR_MODEL_IMPLEMENTER",
+    effortEnv: "ORQUESTATOR_EFFORT_IMPLEMENTER",
+    writes: "impl.md",
+  },
+  reviewer: {
+    file: "reviewer.md",
+    model: "qwen3.8-flash",
+    effort: "max",
+    env: "ORQUESTATOR_MODEL_REVIEWER",
+    effortEnv: "ORQUESTATOR_EFFORT_REVIEWER",
+    writes: "review.md",
+  },
+  "pr-review": {
+    file: "pr-reviewer.md",
+    model: "deepseek-v4-flash",
+    effort: "ultra",
+    env: "ORQUESTATOR_MODEL_PR_REVIEW",
+    effortEnv: "ORQUESTATOR_EFFORT_PR_REVIEW",
+    writes: "pr-review.md",
+  },
+};
+
+export const EFFORTS = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "ultra",
+];
+
+const CONTEXT = {
+  "spec-review": ["title", "description"],
+  implementer: ["brief", "human-feedback", "checks", "review", "pr-review"],
+  reviewer: ["brief", "impl", "checks"],
+  "pr-review": ["brief", "impl", "checks", "review", "pr-body"],
+};
+
+const MODELS = /^[A-Za-z0-9._-]+$/;
+
+export function modelFor(phase) {
+  const spec = PROFILES[phase];
+  if (!spec) throw new Error(`Perfil desconocido: ${phase}`);
+  const model = process.env[spec.env] || spec.model;
+  if (!MODELS.test(model)) throw new Error(`Modelo inválido: ${model}`);
+  return model;
+}
+
+export function effortFor(phase) {
+  const spec = PROFILES[phase];
+  if (!spec) throw new Error(`Perfil desconocido: ${phase}`);
+  const effort = process.env[spec.effortEnv] || spec.effort;
+  if (!EFFORTS.includes(effort)) {
+    throw new Error(`Esfuerzo inválido: ${effort}`);
+  }
+  return effort;
+}
+
+const SKILLS = fileURLToPath(new URL("../perfiles/skills", import.meta.url));
+const SOULS = fileURLToPath(new URL("../perfiles/soul", import.meta.url));
+
+export const PROXY_URL = "http://esencial-proxy:8080/v1";
+
+/**
+ * Config de Hermes por fase. El esfuerzo de razonamiento no tiene flag en
+ * `hermes chat`: se fija aquí. El proveedor va explícito para que la fase no
+ * dependa de la config del host (HERMES_HOME es propio).
+ */
+export function installSkills(phase, home) {
+  const src = path.join(SKILLS, phase);
+  if (fs.existsSync(src)) {
+    fs.cpSync(src, path.join(home, "skills"), { recursive: true });
+  }
+}
+
+export function installSoul(phase, home) {
+  const src = path.join(SOULS, `${phase}.md`);
+  if (fs.existsSync(src)) {
+    fs.mkdirSync(home, { recursive: true });
+    fs.copyFileSync(src, path.join(home, "SOUL.md"));
+  }
+}
+
+export function trustedAgents(main) {
+  try {
+    return git(["show", "origin/main:AGENTS.md"], { cwd: main });
+  } catch {
+    return null;
+  }
+}
+
+export function hermesConfig(home, { model, effort }) {
+  fs.mkdirSync(home, { recursive: true });
+  fs.writeFileSync(
+    path.join(home, "config.yaml"),
+    [
+      "model:",
+      "  provider: custom",
+      `  default: ${model}`,
+      `  base_url: ${PROXY_URL}`,
+      "  api_mode: chat_completions",
+      "providers:",
+      "  custom:",
+      `    api: ${PROXY_URL}`,
+      "    api_key: dummy",
+      "    discover_models: false",
+      "    models:",
+      `      - ${model}`,
+      "skills:",
+      "  external_dirs:",
+      "    - /skills",
+      "agent:",
+      `  reasoning_effort: ${effort}`,
+      "",
+    ].join("\n"),
+  );
+}
+
+export function profileText(phase) {
+  const spec = PROFILES[phase];
+  if (!spec) throw new Error(`Perfil desconocido: ${phase}`);
+  return fs.readFileSync(path.join(DIR, spec.file), "utf8").trim();
+}
+
+/** Comando de Hermes dentro del contenedor; el prompt entra por stdin. */
+export function hermesCommand(model, writes, root = "/work/.task") {
+  return [
+    "hermes chat --oneshot -Q --yolo",
+    "--provider custom --base-url http://esencial-proxy:8080/v1 --api-key dummy",
+    `--model ${model}`,
+    "--query-file -",
+    `> ${root}/${writes}`,
+  ].join(" ");
+}
+
+function section(title, text) {
+  const body = String(text ?? "").trim();
+  return body ? [`## ${title}`, "", body, ""] : [];
+}
+
+export function promptFor(phase, context) {
+  const parts = [profileText(phase), ""];
+  for (const name of CONTEXT[phase]) {
+    parts.push(...section(name, context[name]), "");
+  }
+  if (context.diff !== undefined) {
+    const diff = String(context.diff).trim();
+    const capped =
+      diff.length > MAX_DIFF
+        ? `${diff.slice(0, MAX_DIFF)}\n\n[diff recortado: ${diff.length - MAX_DIFF} caracteres]`
+        : diff;
+    parts.push(
+      ...section("diff frente a main", capped || "(sin cambios frente a main)"),
+      "",
+    );
+  }
+  return `${parts.join("\n").trimEnd()}\n`;
+}
+
+export function verdictOf(text) {
+  return (
+    /^\W*Veredicto:\s*(APROBADO|CAMBIOS)\b/im.exec(text ?? "")?.[1] ?? null
+  );
+}
+
+function diffFor(key, { base, main }) {
+  const state = load(key, base);
+  if (!state?.branch) return "";
+  const ref = importBranch({
+    main,
+    mirror: mirrorPath(base),
+    repo: repoDir(key, base),
+    branch: state.branch,
+    key,
+  });
+  return diffPatch({ main, ref });
+}
+
+function tail(text, size = 400) {
+  return String(text ?? "")
+    .trim()
+    .slice(-size);
+}
+
+export function runAgent(
+  key,
+  {
+    phase,
+    base = home(),
+    main = process.cwd(),
+    image = imageTag(),
+    dryRun,
+    out = () => {},
+    runner = runPhase,
+    diff,
+  } = {},
+) {
+  const spec = PROFILES[phase];
+  if (!spec) {
+    throw new Error(
+      `Fase desconocida: ${phase} (${Object.keys(PROFILES).join(", ")})`,
+    );
+  }
+  const state = load(key, base);
+  if (!state) throw new Error(`La tarea ${key} no existe`);
+  const allowed = phase === "pr-review" ? ["In validation"] : ["In Progress"];
+  if (!allowed.includes(state.state)) {
+    throw new Error(`${phase} no corre con la tarea en ${state.state}`);
+  }
+  const task = taskDir(key, base);
+  ensureArtifactsAt(task);
+  const context = { diff };
+  for (const name of CONTEXT[phase]) {
+    context[name] = readArtifact(key, `${name}.md`, base);
+  }
+  if (phase !== "implementer" && context.diff === undefined) {
+    context.diff = dryRun ? "(dry-run)" : diffFor(key, { base, main });
+  }
+  const prompt = promptFor(phase, context);
+  const command = hermesCommand(modelFor(phase), spec.writes);
+  const hermes = path.join(path.dirname(task), "hermes", phase);
+  let agentsFile;
+  if (!dryRun) {
+    hermesConfig(hermes, { model: modelFor(phase), effort: effortFor(phase) });
+    installSkills(phase, hermes);
+    installSoul(phase, hermes);
+    // Capa local vacía: oculta las 53 skills builtin y da a Hermes dónde
+    // escribir .hub; las del rol entran por external_dirs (/skills).
+    fs.mkdirSync(path.join(hermes, "skills-local"), { recursive: true });
+    if (phase === "reviewer" || phase === "pr-review") {
+      const trusted = trustedAgents(main);
+      if (trusted) {
+        agentsFile = path.join(hermes, "AGENTS.md");
+        fs.writeFileSync(agentsFile, trusted);
+      }
+    }
+  }
+  const result = runner({
+    phase,
+    image,
+    repo: repoDir(key, base),
+    task,
+    upstream: mirrorPath(base),
+    command,
+    input: prompt,
+    agentsFile,
+    dryRun,
+    out,
+  });
+  if (dryRun) return { dryRun: true, prompt };
+  if (result.status !== 0) {
+    const detail = tail(result.stderr);
+    throw new Error(
+      `${phase}: Hermes falló (exit ${result.status})${detail ? `: ${detail}` : ""}`,
+    );
+  }
+  const artifact = readArtifact(key, spec.writes, base);
+  if (!artifact.trim()) {
+    throw new Error(`${phase}: ${spec.writes} quedó vacío`);
+  }
+  return { status: result.status, artifact };
+}

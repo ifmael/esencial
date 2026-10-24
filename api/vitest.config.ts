@@ -14,5 +14,12 @@ export default defineConfig({
     // Files share one miniflare D1 namespace: run them one at a time and wipe
     // tables per file (see tests/helpers.ts).
     fileParallelism: false,
+    // v8 no ve el código dentro de workerd; istanbul instrumenta al transformar.
+    coverage: {
+      provider: "istanbul",
+      include: ["src/**/*.ts"],
+      reporter: ["text-summary"],
+      thresholds: { statements: 95, branches: 90, functions: 99, lines: 97 },
+    },
   },
 });
