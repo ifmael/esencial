@@ -90,13 +90,16 @@ export function dockerArgs({
     args.push("--network", NETWORK);
   }
   if (spec.home) {
-    // HERMES_HOME aislado por fase: sesiones y caché de Hermes no se mezclan.
+    // El home de la imagen ya trae las dependencias de Hermes; se monta encima
+    // solo lo de la fase. Copiar el home entero por fase exigiría red.
     const hermes = path.join(path.dirname(task), "hermes", phase);
     args.push(
       "-v",
-      `${hermes}:/hermes-home`,
-      "-e",
-      "HERMES_HOME=/hermes-home",
+      `${path.join(hermes, "config.yaml")}:/opt/hermes/home/config.yaml:ro`,
+      "-v",
+      `${path.join(hermes, "SOUL.md")}:/opt/hermes/home/SOUL.md:ro`,
+      "-v",
+      `${path.join(hermes, "skills")}:/skills:ro`,
       "-e",
       "GIT_AUTHOR_NAME=orquestator",
       "-e",

@@ -54,10 +54,12 @@ hermes chat --oneshot -Q --safe-mode --yolo \
   --model <modelo> --query-file - > /work/.task/<artefacto>
 ```
 
-- Cada fase tiene su `HERMES_HOME` en `~/.orquestator/ESN-123/hermes/<fase>/` con un
-  `config.yaml` generado: proveedor `custom` → proxy, modelo, `discover_models: false` y
-  `agent.reasoning_effort`. No hay config del host ni MCPs. El esfuerzo no tiene flag en
-  `hermes chat`: se configura ahí.
+- La config de cada fase vive en `~/.orquestator/ESN-123/hermes/<fase>/` y se monta
+  **encima** del home que trae la imagen (`config.yaml`, `SOUL.md` y `skills/`). No se
+  reemplaza `HERMES_HOME` entero: un home vacío obliga a Hermes a instalar sus
+  dependencias (necesita red) y el contenedor corre sin salida. Las skills van como
+  `skills.external_dirs` en ro. El esfuerzo no tiene flag en `hermes chat`: va en
+  `agent.reasoning_effort`.
 - Los agentes solo ven el clon, los artefactos y el espejo (ro); `spec-review` monta
   `main` en ro y no ve ningún clon de tarea.
 - **AGENTS.md**: Hermes lo lee del proyecto (cadena de la raíz git al directorio de

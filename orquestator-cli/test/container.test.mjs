@@ -62,12 +62,19 @@ test("check va sin red; las fases de agente van por la red interna", () => {
   );
 });
 
-test("las fases de agente montan su HERMES_HOME aislado y la identidad git", () => {
+test("las fases de agente montan config, SOUL y skills sobre el home de la imagen", () => {
   const args = dockerArgs({ phase: "implementer", ...paths() }).join(" ");
-  assert.match(args, /hermes\/implementer:\/hermes-home/);
-  assert.match(args, /HERMES_HOME=\/hermes-home/);
+  assert.match(
+    args,
+    /hermes\/implementer\/config\.yaml:\/opt\/hermes\/home\/config\.yaml:ro/,
+  );
+  assert.match(
+    args,
+    /hermes\/implementer\/SOUL\.md:\/opt\/hermes\/home\/SOUL\.md:ro/,
+  );
+  assert.match(args, /hermes\/implementer\/skills:\/skills:ro/);
   assert.match(args, /GIT_AUTHOR_NAME=orquestator/);
-  assert.doesNotMatch(args, /\/opt\/hermes\/home/);
+  assert.doesNotMatch(args, /HERMES_HOME=\/hermes-home/);
 });
 
 test("spec-review monta el repo en ro, sin espejo, y escribe sus preguntas", () => {

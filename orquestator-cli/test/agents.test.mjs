@@ -107,6 +107,8 @@ test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefac
   assert.match(config, /default: qwen3\.8-flash/);
   assert.match(config, /base_url: http:\/\/esencial-proxy:8080\/v1/);
   assert.match(config, /reasoning_effort: max/);
+  assert.match(config, /external_dirs:/);
+  assert.match(config, /- \/skills/);
   assert.ok(
     fs.existsSync(
       path.join(
