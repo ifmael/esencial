@@ -9,8 +9,12 @@ import { redProbe } from "./red.mjs";
 import { home, load, repoDir, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
 
-export const CHECK_COMMAND =
-  "pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm e2e";
+// La cobertura vive en una rama que aún no está en main; hasta que se mergee, el
+// check cae a `pnpm test` sin enmascarar un fallo real de cobertura.
+const HAS_COVERAGE =
+  "node -e \"process.exit(require('./package.json').scripts['test:coverage'] ? 0 : 1)\"";
+
+export const CHECK_COMMAND = `pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store && pnpm lint && pnpm typecheck && if ${HAS_COVERAGE}; then pnpm test:coverage; else pnpm test; fi && pnpm e2e`;
 
 const TAIL = 120;
 
