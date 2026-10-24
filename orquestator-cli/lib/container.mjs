@@ -100,6 +100,8 @@ export function dockerArgs({
       `${path.join(hermes, "SOUL.md")}:/opt/hermes/home/SOUL.md:ro`,
       "-v",
       `${path.join(hermes, "skills")}:/skills:ro`,
+      "-v",
+      `${path.join(hermes, "skills-local")}:/opt/hermes/home/skills`,
       "-e",
       "GIT_AUTHOR_NAME=orquestator",
       "-e",

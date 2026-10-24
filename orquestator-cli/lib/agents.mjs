@@ -255,6 +255,9 @@ export function runAgent(
     hermesConfig(hermes, { model: modelFor(phase), effort: effortFor(phase) });
     installSkills(phase, hermes);
     installSoul(phase, hermes);
+    // Capa local vacía: oculta las 53 skills builtin y da a Hermes dónde
+    // escribir .hub; las del rol entran por external_dirs (/skills).
+    fs.mkdirSync(path.join(hermes, "skills-local"), { recursive: true });
     if (phase === "reviewer" || phase === "pr-review") {
       const trusted = trustedAgents(main);
       if (trusted) {

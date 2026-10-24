@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import {
@@ -83,6 +84,7 @@ export async function specReview(
     });
     installSkills("spec-review", hermes);
     installSoul("spec-review", hermes);
+    fs.mkdirSync(path.join(hermes, "skills-local"), { recursive: true });
   }
   const result = runner({
     phase: "spec-review",

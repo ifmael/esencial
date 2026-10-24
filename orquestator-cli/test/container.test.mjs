@@ -73,6 +73,10 @@ test("las fases de agente montan config, SOUL y skills sobre el home de la image
     /hermes\/implementer\/SOUL\.md:\/opt\/hermes\/home\/SOUL\.md:ro/,
   );
   assert.match(args, /hermes\/implementer\/skills:\/skills:ro/);
+  assert.match(
+    args,
+    /hermes\/implementer\/skills-local:\/opt\/hermes\/home\/skills/,
+  );
   assert.match(args, /GIT_AUTHOR_NAME=orquestator/);
   assert.doesNotMatch(args, /HERMES_HOME=\/hermes-home/);
 });
