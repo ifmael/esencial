@@ -840,7 +840,8 @@ Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depend
       compartido); en review se monta el de `main` en ro. La configuración propia de
       cada agente va en `SOUL.md` y en las skills, copiados al `HERMES_HOME` de la fase.
 - [ ] Prueba de humo con una tarea de juguete en un clon desechable (necesita la imagen
-      reconstruida y `docker`; la ejecuta el usuario).
+      reconstruida y `docker`; la ejecuta el usuario). Incluye comprobar con
+      `hermes skills list` que cada fase solo indexa sus skills.
 
 **Backlog de perfiles (después del piloto):**
 

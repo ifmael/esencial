@@ -274,3 +274,27 @@ test("implementer no lleva AGENTS.md encima: lee el del clon y puede editarlo", 
   });
   assert.equal(seen.agentsFile, undefined);
 });
+
+test("cada fase recibe solo las skills de su rol", () => {
+  started();
+  const run = (phase, artifact) =>
+    runAgent("ESN-7", {
+      phase,
+      base: dir,
+      diff: "",
+      runner: (options) => {
+        fs.writeFileSync(path.join(options.task, artifact), "ok");
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    });
+  run("reviewer", "review.md");
+  run("implementer", "impl.md");
+  const reviewer = fs.readdirSync(
+    path.join(dir, "ESN-7", "hermes", "reviewer", "skills"),
+  );
+  const implementer = fs.readdirSync(
+    path.join(dir, "ESN-7", "hermes", "implementer", "skills"),
+  );
+  assert.deepEqual(reviewer, ["revisar"]);
+  assert.deepEqual(implementer, ["implementar"]);
+});
