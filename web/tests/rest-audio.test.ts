@@ -3,10 +3,10 @@
 // tono corto y el pitido de fin arranca sus tres tonos.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  WARN_LEADS_MS,
   beep,
   startPauseAudio,
   stopPauseAudio,
+  WARN_LEADS_MS,
   warnAhead,
 } from "../src/lib/rest-audio";
 import { createFakeAudio } from "./audio-fake";
