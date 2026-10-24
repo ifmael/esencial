@@ -36,7 +36,7 @@ Convención de marcado:
 | M1 — Imagen del worker | Hecho (2026-10-22) | — |
 | M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | — |
 | M3 — Perfiles de fase | Hecho (2026-10-24) | — |
-| M4 — Piloto | Pendiente | Elegir la feature del backlog |
+| M4 — Piloto | Hecho (2026-10-24) | — |
 | M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
 | M5b — Automatización | Pendiente | `watch`, job `guard` y bucle automático de spec |
 | M6 — Después del piloto | Pendiente | Evaluar tras M5b |
@@ -863,25 +863,39 @@ Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depend
 Hecho cuando: una tarea de juguete produce brief, impl, review y comprobaciones con los formatos
 esperados.
 
-### M4 — Piloto (1 tarea real)
+### M4 — Piloto (Hecho 2026-10-24)
 
 Objetivo: recorrer el flujo entero con una feature pequeña. Depende de: M0–M3.
 
-- [ ] Elegir la feature del backlog (`TODO-sesion-exercises.md`); la candidata puesta por
-      el usuario en `Spec review` es **ESN-6 «Añadir bip cuando falta un segundo»**.
-- [ ] **`Spec review` en el piloto** (decisión 2026-10-24): `spec-review ESN-6` publica
-      las preguntas del `spec-reviewer` en la issue; las respondes. El bucle automático
-      (`orquestator-cli:acordado` + `watch`) sigue en M5b.
-- [ ] Con la spec clara, **tú** mueves la issue a `Ready` (el agente nunca lo hace).
-- [ ] Ejecutar `run` (o los comandos uno a uno) y anotar tiempos e incidencias por fase.
-- [ ] Si la feature lleva migración, validar el job `migracion` (token read-only) y
-      `migrate` con el token de edición.
-- [ ] Validar vídeo/capturas + PR (o local) y mergear; confirmar deploy.
-- [ ] Retro: qué falló, qué cambiar en CLI y briefs; actualizar este documento.
-- [ ] Comprobar: casos negativos cubiertos, trazabilidad criterio→test, umbrales de
-      cobertura cumplidos y PR revisada por el agente y por ti.
+- [x] **ESN-6 «Añadir bip cuando falta un segundo»**, feature elegida por el usuario.
+- [x] **`Spec review` en el piloto**: `spec-review ESN-6` publicó 6 preguntas (2
+      bloqueantes); el humano las respondió y la spec se cerró en un comentario (mismo
+      660 Hz a 3/2/1 s; el fin no cambia). 159 s. El bucle automático sigue en M5b.
+- [x] **`Ready`** lo movió el humano; el agente no se autopromociona.
+- [x] **`run`**: implement → check → review → pr → ship → pr-review. 837 s la primera
+      vuelta (check FALLÓ por el orden de imports de `rest-audio.test.ts`), `fix --from
+      checks` 1/2 y 1 859 s la segunda. Review y pr-review: APROBADO. PR #57, mergeada
+      en `c15a458`.
+- [x] **Sin migración**: `migrate` queda para M5b.
+- [x] **Validación humana y deploy**: sonido probado en local (túnel SSH); `ci` 4m30s,
+      `lint`, `migracion` y `guard` verdes; `clean` con el deploy OK (frontal y API, 302
+      de Access).
+- [x] **Retro**:
+  - `check` cazó el orden de imports que el implementer no formateó: una ronda de ~20
+    min. El implementer debería correr `pnpm lint` sobre lo tocado antes de salir.
+  - `pr-review` no pudo escribir `pr-review.md` (montaje ro) y el CLI tomó el veredicto
+    por stdout; el artefacto arrastra el aviso del verificador. Revisar el montaje.
+  - `ship` pasa a `In validation` sin esperar al `ci`; aquí llegó verde después. El plan
+    pide CI verde: `run` podría esperar `gh pr checks`.
+  - No hay preview por rama: la prueba fue local por túnel SSH. Refuerza M5a.
+  - `start` imprime la rama dos veces y `fix` solo cuenta la ronda (hay que relanzar
+    `run`): documentarlo.
+- [x] **Criterios**: el e2e de sesión verifica la secuencia real de osciladores (keep-alive
+      de 60 Hz + 3×660 + 880/1175/1568), los límites de pausas de 1 y 2 s y «una vez por
+      marca»; cobertura y `ci` verdes.
 
-Hecho cuando: PR mergeada, comprobaciones verdes y ningún paso manual no previsto (o documentado).
+**Hecho** (2026-10-24): PR #57 mergeada, comprobaciones verdes; los pasos manuales fueron
+los previstos (responder la spec, mover a `Ready`, validar de oído, mergear).
 
 ### M5a — Preview (≈2-3 días)
 
@@ -970,6 +984,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
 | 2026-10-24 | M4-M5b | **Se mantiene A**: piloto a mano y `watch` en M5b como servicio local de sondeo. Se añade explorar un webhook con URL pública, sin cambiar la opción principal | El sondeo no necesita exponer nada; el webhook sí exige endpoint público y firma | M4 con ESN-6 |
+| 2026-10-24 | M4 | **Piloto cerrado con ESN-6 («bip al segundo final»)**: spec review 159 s; `run` 1 de 837 s con check rojo por orden de imports, `fix` 1/2 y `run` 2 de 1 859 s; PR #57 mergeada (`c15a458`) con CI 4m30s y `clean` OK | El flujo completo funciona con una feature real; el único coste fue una ronda de formato. Pendientes de la retro: previews (M5a), montaje de `pr-review` y esperar el CI antes de `In validation` | M5a |
 | 2026-10-24 | M4 | **`Spec review` entra en el piloto por decisión del usuario**; ESN-6 «Añadir bip cuando falta un segundo», añadida a ese estado | El `spec-reviewer` ya estaba en el piloto (M3), pero M4 aún decía lo contrario; se corrige la checklist. El bucle automático sigue en M5b | Lanzar `spec-review ESN-6` |
 | 2026-10-24 | M3 | **M3 cerrado**: smoke real de ESN-5 (spec-review, implement, check, review, pr, ship, pr-review) con PR #56 y CI verde; fallos corregidos: `-i` antes de la imagen, `/task` con repo ro, `pnpm test` sin `test:coverage` y movimiento de Linear con el equipo | El flujo completo funciona con los cuatro modelos y skills por rol; el e2e del contenedor dio un «network connection lost» intermitente y pasó al reintentar | M4: elegir feature |
 | 2026-10-23 | M3 | **Modelos elegidos por el usuario**: qwen3.8-flash/max (spec y review), deepseek-v4-flash/xhigh (implement) y deepseek-v4-flash/ultra (pr-review); `spec-review` ya comenta las preguntas en la issue | El esfuerzo solo se fija por config, así que cada fase genera su `config.yaml` en su HERMES_HOME | Reconstruir imagen y prueba real |
