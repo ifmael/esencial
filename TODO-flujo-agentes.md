@@ -849,8 +849,9 @@ Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depend
 
 - [ ] `spec-reviewer`: escribir en lenguaje llano, sin jerga; preguntas que entienda
       cualquiera, con el motivo en una línea.
-- [ ] Identidad propia del agente en Linear (usuario aparte o app OAuth `actor=app`)
-      para distinguir sus comentarios de los humanos; hoy firma el dueño de la clave.
+- [ ] Identidad propia del agente en Linear: **decidido app OAuth con `actor=app`**
+      (2026-10-24), sin asiento. Falta crear la app, sus credenciales y la instalación;
+      hoy firma el dueño de la clave.
 
 **Backlog de perfiles (después del piloto):**
 
