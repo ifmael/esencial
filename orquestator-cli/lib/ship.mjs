@@ -3,6 +3,7 @@ import {
   commentArgs,
   editArgs,
   reviewArgs,
+  runChecks,
   runGh,
   statusArgs,
   viewArgs,
@@ -18,6 +19,8 @@ export function ship(
     dryRun,
     out = () => {},
     ghRun = runGh,
+    checksRun = runChecks,
+    waitChecks = true,
   } = {},
 ) {
   const state = load(key, base);
@@ -56,6 +59,16 @@ export function ship(
   // review.md va como review (gh pr review --comment), no como comentario suelto.
   if (filled.get("review.md")) {
     ghRun(reviewArgs(pr.number, artifactPath(key, "review.md", base)));
+  }
+
+  if (waitChecks) {
+    const ci = checksRun(pr.number);
+    if (ci.status !== 0) {
+      const detail = String(ci.stderr ?? "").trim();
+      throw new Error(
+        `La CI de la PR #${pr.number} no está verde (exit ${ci.status})${detail ? `: ${detail}` : ""}; ejecuta orquestator fix ${key} --from checks`,
+      );
+    }
   }
 
   const description = guard.needsApproval ? "aprobado" : "sin rutas protegidas";

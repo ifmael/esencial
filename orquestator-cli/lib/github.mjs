@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 
 export function runGh(args) {
   try {
@@ -62,4 +62,28 @@ export function commentArgs(pr, bodyFile) {
 
 export function reviewArgs(pr, bodyFile) {
   return ["pr", "review", String(pr), "--comment", "--body-file", bodyFile];
+}
+
+export function checksArgs(pr) {
+  return ["pr", "checks", String(pr), "--watch", "--interval", "10"];
+}
+
+/** Espera a que la CI de la PR termine. Devuelve {status, stdout, stderr}. */
+export function runChecks(pr) {
+  let result;
+  // Justo tras abrir la PR, `gh` puede decir que aún no hay checks; se reintenta.
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    result = spawnSync("gh", checksArgs(pr), {
+      encoding: "utf8",
+      timeout: 30 * 60 * 1000,
+    });
+    const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+    if (!/no checks reported/i.test(output)) break;
+    execFileSync("sleep", ["10"]);
+  }
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  };
 }

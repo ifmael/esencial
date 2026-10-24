@@ -102,7 +102,7 @@ test("ship edita el body, comenta review/checks y publica el status", () => {
       return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
     return "";
   };
-  const result = ship(KEY, { main, ghRun });
+  const result = ship(KEY, { main, ghRun, checksRun: () => ({ status: 0 }) });
   assert.equal(result.sha, "sha9");
   const kinds = calls.map((a) => a[1]);
   assert.ok(kinds.includes("edit"));
@@ -123,12 +123,37 @@ test("ship omite los comentarios vacíos y el dry-run no hace nada", () => {
       return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
     return "";
   };
-  ship(KEY, { main, ghRun });
+  ship(KEY, { main, ghRun, checksRun: () => ({ status: 0 }) });
   assert.equal(calls.filter((a) => a[1] === "comment").length, 0);
   assert.equal(calls.filter((a) => a[1] === "review").length, 0);
   calls.length = 0;
   ship(KEY, { main, ghRun, dryRun: true, out: () => {} });
   assert.deepEqual(calls, []);
+});
+
+test("ship espera a la CI y no pasa a In validation si falla", () => {
+  writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
+  approve(guardTask(KEY, { base, main }).hash);
+  const ghRun = (args) => {
+    if (args[1] === "view")
+      return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
+    return "";
+  };
+  const calls = [];
+  assert.throws(
+    () =>
+      ship(KEY, {
+        main,
+        ghRun,
+        checksRun: (n) => {
+          calls.push(n);
+          return { status: 1, stderr: "ci rojo" };
+        },
+      }),
+    /CI.*no está verde/,
+  );
+  assert.deepEqual(calls, [9]);
+  assert.equal(load(KEY, base).state, "In Progress");
 });
 
 test("publishPrReview exige PR y pr-review, y la comenta sin tocar el body", () => {
