@@ -122,6 +122,7 @@ test("specReview exige Spec review, escribe spec-review y comenta en la issue", 
     },
   });
   assert.equal(seen.phase, "spec-review");
+  assert.match(seen.command, /> \/task\/spec-review\.md/);
   assert.equal(seen.repo, main);
   assert.match(seen.input, /Exportar el plan/);
   assert.match(seen.input, /Quiero el plan en PDF/);

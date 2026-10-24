@@ -154,13 +154,13 @@ export function profileText(phase) {
 }
 
 /** Comando de Hermes dentro del contenedor; el prompt entra por stdin. */
-export function hermesCommand(model, writes) {
+export function hermesCommand(model, writes, root = "/work/.task") {
   return [
     "hermes chat --oneshot -Q --yolo",
     "--provider custom --base-url http://esencial-proxy:8080/v1 --api-key dummy",
     `--model ${model}`,
     "--query-file -",
-    `> /work/.task/${writes}`,
+    `> ${root}/${writes}`,
   ].join(" ");
 }
 

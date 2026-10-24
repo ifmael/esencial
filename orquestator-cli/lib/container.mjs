@@ -14,6 +14,7 @@ export const PHASES = {
     home: true,
     repo: "ro",
     upstream: false,
+    taskRoot: "/task",
   },
   implementer: {
     rw: ["impl.md", "pr-body.md"],
@@ -48,6 +49,7 @@ export function dockerArgs({
   exists("el task", task);
   if (spec.upstream !== false) exists("el espejo", upstream);
   const user = `${uid ?? process.getuid?.() ?? 1000}:${gid ?? process.getgid?.() ?? 1000}`;
+  const taskRoot = spec.taskRoot ?? "/work/.task";
   const args = [
     "run",
     "--rm",
@@ -58,7 +60,7 @@ export function dockerArgs({
     "-w",
     "/work",
     "-v",
-    `${task}:/work/.task:ro`,
+    `${task}:${taskRoot}:ro`,
   ];
   if (spec.upstream !== false) {
     args.push("-v", `${upstream}:/upstream:ro`);
@@ -69,7 +71,7 @@ export function dockerArgs({
     args.push("-v", `${agentsFile}:/work/AGENTS.md:ro`);
   }
   for (const name of spec.rw) {
-    args.push("-v", `${path.join(task, name)}:/work/.task/${name}`);
+    args.push("-v", `${path.join(task, name)}:${taskRoot}/${name}`);
   }
   args.push(
     "--user",
@@ -130,7 +132,11 @@ export function runPhase({
 }) {
   ensureArtifactsAt(task);
   const args = dockerArgs({ phase, image, repo, task, upstream, agentsFile });
-  const argv = [...args, "bash", "-lc", command];
+  // Sin -i, `docker run` no conecta stdin y `--query-file -` llega vacío.
+  // Las opciones van antes de la imagen: después, docker las trata como comando.
+  const argv = [...args];
+  if (input !== undefined) argv.splice(argv.length - 1, 0, "-i");
+  argv.push("bash", "-lc", command);
   if (dryRun) {
     out(
       `[dry-run] docker ${argv.map((a) => (a.includes(" ") ? JSON.stringify(a) : a)).join(" ")}`,

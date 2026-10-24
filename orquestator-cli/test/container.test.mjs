@@ -43,8 +43,9 @@ test("cada fase monta en escritura solo sus ficheros", () => {
   for (const phase of Object.keys(PHASES)) {
     ensureArtifactsAt(paths().task);
     const args = dockerArgs({ phase, ...paths() }).join(" ");
+    const root = PHASES[phase].taskRoot ?? "/work/.task";
     for (const name of PHASES[phase].rw) {
-      assert.match(args, new RegExp(`task/${name}:/work/\\.task/${name}`));
+      assert.match(args, new RegExp(`task/${name}:${root}/${name}`));
     }
     assert.doesNotMatch(args, /state\.json/);
     assert.doesNotMatch(args, /upstream\.git:\/upstream`/);
@@ -86,7 +87,9 @@ test("spec-review monta el repo en ro, sin espejo, y escribe sus preguntas", () 
   const args = dockerArgs({ phase: "spec-review", ...paths() }).join(" ");
   assert.match(args, /repo:\/work:ro/);
   assert.doesNotMatch(args, /upstream\.git:\/upstream/);
-  assert.match(args, /task\/spec-review\.md:\/work\/\.task\/spec-review\.md/);
+  assert.match(args, /task:\/task:ro/);
+  assert.match(args, /task\/spec-review\.md:\/task\/spec-review\.md/);
+  assert.doesNotMatch(args, /\/work\/\.task/);
   assert.match(args, /--network esencial-workers/);
 });
 
@@ -125,6 +128,7 @@ test("runPhase con dryRun no ejecuta docker y enseña el comando", () => {
   assert.equal(result, null);
   assert.match(lines.join("\n"), /docker run/);
   assert.match(lines.join("\n"), /pnpm lint/);
+  assert.doesNotMatch(lines.join("\n"), / -i /);
 });
 
 test("runPhase exige que existan el clon, el task y el espejo", () => {
@@ -138,4 +142,17 @@ test("runPhase exige que existan el clon, el task y el espejo", () => {
       }),
     /clon/,
   );
+});
+
+test("runPhase pasa -i cuando hay prompt por stdin", () => {
+  const lines = [];
+  runPhase({
+    phase: "reviewer",
+    ...paths(),
+    command: "hermes --query-file -",
+    input: "prompt",
+    dryRun: true,
+    out: (t) => lines.push(t),
+  });
+  assert.match(lines.join("\n"), / --init .* -i /);
 });

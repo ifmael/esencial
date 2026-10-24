@@ -75,7 +75,11 @@ export async function specReview(
     title: issue.title,
     description: issue.description ?? "",
   });
-  const command = hermesCommand(modelFor("spec-review"), "spec-review.md");
+  const command = hermesCommand(
+    modelFor("spec-review"),
+    "spec-review.md",
+    "/task",
+  );
   if (!dryRun) {
     const hermes = path.join(path.dirname(task), "hermes", "spec-review");
     hermesConfig(hermes, {
