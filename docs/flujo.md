@@ -64,6 +64,9 @@ hermes chat --oneshot -Q --safe-mode --yolo \
   trabajo), no de `HERMES_HOME`. El implementer lee el de la rama y puede actualizarlo;
   `review` y `pr-review` reciben encima el de `origin/main` montado en ro, así que el
   implementer no puede cambiar las reglas que lee el revisor. `spec-review` ya ve `main`.
+- **Identidad por rol**: `orquestator-cli/perfiles/soul/<fase>.md` se copia como
+  `HERMES_HOME/SOUL.md`; Hermes lo carga siempre (el `AGENTS.md` del repo sigue siendo
+  el núcleo común, sin duplicar).
 - **Skills por rol**: `orquestator-cli/perfiles/skills/<fase>/` se copia a
   `HERMES_HOME/skills/`; Hermes las indexa y el agente las carga cuando las necesita.
   No se usan skills de proyecto (`.hermes/skills`), que exigirían `hermes skills trust`.

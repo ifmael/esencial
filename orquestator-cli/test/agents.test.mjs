@@ -120,6 +120,13 @@ test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefac
       ),
     ),
   );
+  assert.match(
+    fs.readFileSync(
+      path.join(dir, "ESN-7", "hermes", "reviewer", "SOUL.md"),
+      "utf8",
+    ),
+    /Identidad: revisor/,
+  );
 });
 
 test("un artefacto vacío o un fallo de Hermes no pasan", () => {

@@ -4,6 +4,8 @@ import {
   effortFor,
   hermesCommand,
   hermesConfig,
+  installSkills,
+  installSoul,
   modelFor,
   promptFor,
 } from "./agents.mjs";
@@ -74,10 +76,13 @@ export async function specReview(
   });
   const command = hermesCommand(modelFor("spec-review"), "spec-review.md");
   if (!dryRun) {
-    hermesConfig(
-      path.join(path.dirname(task), "hermes", "spec-review"),
-      effortFor("spec-review"),
-    );
+    const hermes = path.join(path.dirname(task), "hermes", "spec-review");
+    hermesConfig(hermes, {
+      model: modelFor("spec-review"),
+      effort: effortFor("spec-review"),
+    });
+    installSkills("spec-review", hermes);
+    installSoul("spec-review", hermes);
   }
   const result = runner({
     phase: "spec-review",

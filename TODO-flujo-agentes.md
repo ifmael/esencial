@@ -836,9 +836,9 @@ Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depend
       y cada hallazgo como **crítico** o **deuda** con `archivo:línea`.
 - [x] Guardarraíles en los briefs: no tocar `.github/workflows/`, no debilitar tests
       (`skip`/`only`, asserts, umbrales), no adivinar (pregunta en `impl.md`).
-- [x] AGENTS.md y skills por rol: Hermes lee el AGENTS.md del proyecto; en review se
-      monta el de `main` en ro; las skills viven en `orquestator-cli/perfiles/skills/`
-      y se copian al `HERMES_HOME` de cada fase.
+- [x] AGENTS.md y skills por rol: Hermes lee el AGENTS.md del proyecto (núcleo
+      compartido); en review se monta el de `main` en ro. La configuración propia de
+      cada agente va en `SOUL.md` y en las skills, copiados al `HERMES_HOME` de la fase.
 - [ ] Prueba de humo con una tarea de juguete en un clon desechable (necesita la imagen
       reconstruida y `docker`; la ejecuta el usuario).
 

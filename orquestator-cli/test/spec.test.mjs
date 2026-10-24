@@ -130,5 +130,14 @@ test("specReview exige Spec review, escribe spec-review y comenta en la issue", 
     "Sin preguntas: la spec está lista.",
   );
   assert.equal(result.issue.identifier, "ESN-7");
+  const hermes = path.join(dir, "ESN-7", "hermes", "spec-review");
+  assert.match(
+    fs.readFileSync(path.join(hermes, "SOUL.md"), "utf8"),
+    /Identidad: revisor de especificación/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(hermes, "config.yaml"), "utf8"),
+    /reasoning_effort: max/,
+  );
   fs.rmSync(dir, { recursive: true, force: true });
 });

@@ -88,6 +88,7 @@ export function effortFor(phase) {
 }
 
 const SKILLS = fileURLToPath(new URL("../perfiles/skills", import.meta.url));
+const SOULS = fileURLToPath(new URL("../perfiles/soul", import.meta.url));
 
 export const PROXY_URL = "http://esencial-proxy:8080/v1";
 
@@ -100,6 +101,14 @@ export function installSkills(phase, home) {
   const src = path.join(SKILLS, phase);
   if (fs.existsSync(src)) {
     fs.cpSync(src, path.join(home, "skills"), { recursive: true });
+  }
+}
+
+export function installSoul(phase, home) {
+  const src = path.join(SOULS, `${phase}.md`);
+  if (fs.existsSync(src)) {
+    fs.mkdirSync(home, { recursive: true });
+    fs.copyFileSync(src, path.join(home, "SOUL.md"));
   }
 }
 
@@ -242,6 +251,7 @@ export function runAgent(
   if (!dryRun) {
     hermesConfig(hermes, { model: modelFor(phase), effort: effortFor(phase) });
     installSkills(phase, hermes);
+    installSoul(phase, hermes);
     if (phase === "reviewer" || phase === "pr-review") {
       const trusted = trustedAgents(main);
       if (trusted) {
