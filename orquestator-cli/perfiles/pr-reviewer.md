@@ -15,7 +15,8 @@ nada.**
 
 ## Salida
 
-Tu respuesta final es `pr-review.md`. La **primera línea** debe ser exactamente una de:
+Tu respuesta final es el artefacto (el host la guarda en `pr-review.md`); **no
+escribas** ficheros en `.task`. La **primera línea** debe ser exactamente una de:
 
 ```
 Veredicto: APROBADO
