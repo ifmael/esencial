@@ -35,7 +35,7 @@ Convención de marcado:
 | M0 — Base | Hecho (2026-10-22) | — |
 | M1 — Imagen del worker | Hecho (2026-10-22) | — |
 | M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | — |
-| M3 — Perfiles de fase | En curso | Reconstruir la imagen y hacer la prueba real con una tarea de juguete |
+| M3 — Perfiles de fase | Hecho (2026-10-24) | — |
 | M4 — Piloto | Pendiente | Elegir la feature del backlog |
 | M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
 | M5b — Automatización | Pendiente | `watch`, job `guard` y bucle automático de spec |
@@ -842,8 +842,8 @@ Objetivo: los perfiles del piloto, con modelos distintos y briefs claros. Depend
 - [x] Skills por rol verificadas dentro de la imagen: cada fase indexa solo la suya
       (`revisar-cambio`, `implementar-esencial`, …) y 0 builtin; el home de la imagen
       conserva sus dependencias (2026-10-24).
-- [ ] Prueba de humo con una tarea de juguete en un clon desechable (necesita la imagen
-      reconstruida y `docker`; la ejecuta el usuario).
+- [x] Prueba de humo con una tarea de juguete (ESN-5 → PR #56): las cuatro fases reales,
+      `check` y CI verdes, `In validation` (2026-10-24).
 
 **Pendiente (pedido del usuario, 2026-10-24):**
 
@@ -959,6 +959,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
+| 2026-10-24 | M3 | **M3 cerrado**: smoke real de ESN-5 (spec-review, implement, check, review, pr, ship, pr-review) con PR #56 y CI verde; fallos corregidos: `-i` antes de la imagen, `/task` con repo ro, `pnpm test` sin `test:coverage` y movimiento de Linear con el equipo | El flujo completo funciona con los cuatro modelos y skills por rol; el e2e del contenedor dio un «network connection lost» intermitente y pasó al reintentar | M4: elegir feature |
 | 2026-10-23 | M3 | **Modelos elegidos por el usuario**: qwen3.8-flash/max (spec y review), deepseek-v4-flash/xhigh (implement) y deepseek-v4-flash/ultra (pr-review); `spec-review` ya comenta las preguntas en la issue | El esfuerzo solo se fija por config, así que cada fase genera su `config.yaml` en su HERMES_HOME | Reconstruir imagen y prueba real |
 | 2026-10-23 | M3 | **Roles del piloto cerrados por el usuario**: `implementer`, `reviewer`, `pr-reviewer` y `spec-reviewer`; `test-auditor` y `security-auditor` al backlog posterior | El `spec-reviewer` pasa de M5b al piloto (solo el perfil y sus preguntas; el bucle automático sigue en M5b) | Decidir modelos |
 | 2026-10-23 | M3 | Perfiles y cadena real: `implement`, `review`, `pr-review` y `run` encadenan Hermes con `--safe-mode` y HERMES_HOME por fase; 132 tests | El agente ya implementa, revisa y re-revisa dentro del contenedor; solo falta el humo con la imagen nueva | Humo con imagen |
