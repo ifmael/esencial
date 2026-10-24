@@ -882,11 +882,13 @@ Objetivo: recorrer el flujo entero con una feature pequeña. Depende de: M0–M3
       de Access).
 - [x] **Retro**:
   - `check` cazó el orden de imports que el implementer no formateó: una ronda de ~20
-    min. El implementer debería correr `pnpm lint` sobre lo tocado antes de salir.
+    min. **Arreglado**: el perfil del implementer corre `pnpm lint` y `pnpm typecheck`
+    antes de salir.
   - `pr-review` no pudo escribir `pr-review.md` (montaje ro) y el CLI tomó el veredicto
-    por stdout; el artefacto arrastra el aviso del verificador. Revisar el montaje.
-  - `ship` pasa a `In validation` sin esperar al `ci`; aquí llegó verde después. El plan
-    pide CI verde: `run` podría esperar `gh pr checks`.
+    por stdout; el artefacto arrastraba el aviso del verificador. **Arreglado**: los
+    perfiles de revisión dicen que no escriban `.task`; el artefacto es stdout.
+  - `ship` pasaba a `In validation` sin esperar al `ci`. **Arreglado**: espera
+    `gh pr checks --watch` (30 min) y aborta sin mover si no está verde.
   - No hay preview por rama: la prueba fue local por túnel SSH. Refuerza M5a.
   - `start` imprime la rama dos veces y `fix` solo cuenta la ronda (hay que relanzar
     `run`): documentarlo.
@@ -984,6 +986,7 @@ Depende de: M5b.
 | 2026-10-22 | M0 | Clave del equipo `ESQ` → `ESN` (iniciales de «Esencial») en plan, convención y diagrama | `ESQ` no era acrónimo de nada; decidido con el usuario | Crear el workspace con `ESN` |
 | 2026-10-22 | M0 | **M0 cerrado**: token de edición, Linear (`ESN`, estados, vista, key, integración) y enlace verificado con `ESN-1` | El enlace necesita `Fixes` en el cuerpo y la PR no en borrador; el estado real es `In Progress` | M1: Dockerfile |
 | 2026-10-24 | M4-M5b | **Se mantiene A**: piloto a mano y `watch` en M5b como servicio local de sondeo. Se añade explorar un webhook con URL pública, sin cambiar la opción principal | El sondeo no necesita exponer nada; el webhook sí exige endpoint público y firma | M4 con ESN-6 |
+| 2026-10-24 | M4 | **Retro arreglada el mismo día**: `ship` espera la CI, el implementer pasa lint/tipos antes de salir y los revisores no escriben el artefacto | Los tres fallos costaban una ronda de check (~20 min) y un `In validation` prematuro | — |
 | 2026-10-24 | M4 | **Piloto cerrado con ESN-6 («bip al segundo final»)**: spec review 159 s; `run` 1 de 837 s con check rojo por orden de imports, `fix` 1/2 y `run` 2 de 1 859 s; PR #57 mergeada (`c15a458`) con CI 4m30s y `clean` OK | El flujo completo funciona con una feature real; el único coste fue una ronda de formato. Pendientes de la retro: previews (M5a), montaje de `pr-review` y esperar el CI antes de `In validation` | M5a |
 | 2026-10-24 | M4 | **`Spec review` entra en el piloto por decisión del usuario**; ESN-6 «Añadir bip cuando falta un segundo», añadida a ese estado | El `spec-reviewer` ya estaba en el piloto (M3), pero M4 aún decía lo contrario; se corrige la checklist. El bucle automático sigue en M5b | Lanzar `spec-review ESN-6` |
 | 2026-10-24 | M3 | **M3 cerrado**: smoke real de ESN-5 (spec-review, implement, check, review, pr, ship, pr-review) con PR #56 y CI verde; fallos corregidos: `-i` antes de la imagen, `/task` con repo ro, `pnpm test` sin `test:coverage` y movimiento de Linear con el equipo | El flujo completo funciona con los cuatro modelos y skills por rol; el e2e del contenedor dio un «network connection lost» intermitente y pasó al reintentar | M4: elegir feature |
