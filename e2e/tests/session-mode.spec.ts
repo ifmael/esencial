@@ -411,7 +411,7 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     ).toBeVisible();
   });
 
-  test("el aviso previo suena a los 3 s y a los 2 s del pitido de fin (móvil)", async ({
+  test("el aviso previo suena a los 3 s, a los 2 s y al segundo del pitido de fin (móvil)", async ({
     page,
   }, testInfo) => {
     const press = await seededExercise(page.request, "Press banca");
@@ -463,24 +463,32 @@ test.describe("MODO SESIÓN — modo interactivo de registro", () => {
     ).toBeVisible();
 
     // La pausa se agota sola; para entonces ha sonado todo, en este orden: el
-    // keep-alive del arranque, los dos avisos y los tres tonos del fin, cada uno
-    // una sola vez (ninguno se repite, ni se cuela un tono de más).
+    // keep-alive del arranque, los tres avisos y los tres tonos del fin, cada
+    // uno una sola vez (ninguno se repite, ni se cuela un tono de más).
     await expect(
       mode.getByRole("progressbar", { name: /pausa entre series/i }),
     ).toBeHidden({ timeout: 10_000 });
     const recorded = await page.evaluate(() => window.__tones ?? []);
-    expect(recorded.map((t) => t.hz)).toEqual([60, 660, 660, 880, 1175, 1568]);
+    expect(recorded.map((t) => t.hz)).toEqual([
+      60, 660, 660, 660, 880, 1175, 1568,
+    ]);
 
-    // El primer aviso llega ~3 s antes del pitido de fin, y el segundo un
-    // segundo después (el tic es de 250 ms).
+    // El primer aviso llega ~3 s antes del pitido de fin, el segundo un segundo
+    // después y el tercero al segundo final (el tic es de 250 ms).
     const warnAt = recorded.filter((t) => t.hz === 660).map((t) => t.at);
-    expect(warnAt).toHaveLength(2);
-    const [first = 0, second = 0] = warnAt;
+    expect(warnAt).toHaveLength(3);
+    const [first = 0, second = 0, third = 0] = warnAt;
     const end = recorded.find((t) => t.hz === 880)?.at ?? 0;
     expect(end - first).toBeGreaterThan(2600);
     expect(end - first).toBeLessThan(3400);
     expect(second - first).toBeGreaterThan(600);
     expect(second - first).toBeLessThan(1400);
+    expect(third - second).toBeGreaterThan(600);
+    expect(third - second).toBeLessThan(1400);
+    // El último cae ya en el segundo final, pegado al pitido de fin (como mucho,
+    // los cuatro tics de 250 ms que le quedan a la pausa).
+    expect(end - third).toBeGreaterThan(150);
+    expect(end - third).toBeLessThan(1400);
   });
 
   test("sin descanso programado no hay pausa: la casilla se marca directa", async ({

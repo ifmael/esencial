@@ -1777,7 +1777,7 @@ describe("modo interactivo", () => {
     expect(within(mode).getByText("0:01")).toBeDefined();
   });
 
-  it("avisa a los 3 s y a los 2 s del final, una vez cada uno", async () => {
+  it("avisa en los tres últimos segundos (3, 2 y 1) del final, una vez cada uno", async () => {
     const mode = await enterMode({ last: { 21: benchLast } });
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
@@ -1811,6 +1811,14 @@ describe("modo interactivo", () => {
     tick();
     expect(warns()).toHaveLength(2);
 
+    // El último segundo también avisa: el aviso no se salta ninguno.
+    endsIn(real, 1_000);
+    tick();
+    expect(warns()).toHaveLength(3);
+    endsIn(real, 500);
+    tick();
+    expect(warns()).toHaveLength(3);
+
     // Al agotarse la pausa pita el de fin, y no suena ningún aviso más.
     endsIn(real, -1_000);
     tick();
@@ -1818,16 +1826,16 @@ describe("modo interactivo", () => {
       within(mode).queryByRole("progressbar", { name: /pausa/i }),
     ).toBeNull();
     expect(audio.oscillators.some((o) => o.frequency.value === 880)).toBe(true);
-    expect(warns()).toHaveLength(2);
+    expect(warns()).toHaveLength(3);
   });
 
-  it("un salto del reloj que cruza las dos marcas avisa una sola vez", async () => {
+  it("un salto del reloj que cruza las tres marcas avisa una sola vez", async () => {
     const mode = await enterMode({ last: { 21: benchLast } });
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
     );
     // La pestaña estuvo en segundo plano y el reloj vuelve con 1 s por delante:
-    // las dos marcas caen en el mismo tic, y suenan como un solo aviso (no en
+    // las tres marcas caen en el mismo tic, y suenan como un solo aviso (no en
     // ráfaga).
     endsIn(Date.now, 1_000);
     tick();
@@ -1853,13 +1861,15 @@ describe("modo interactivo", () => {
     );
   });
 
-  it("una pausa más corta que el aviso no avisa, y la de fin sí", async () => {
-    // Press banca con el descanso entre series por debajo del aviso (2 s), para
-    // que no se solapen; el de fin se queda en 90 s.
+  it("una pausa de un segundo no avisa (sus marcas ya pasaron), y la de fin sí", async () => {
+    // Press banca con el descanso entre series en 1 s —la pausa más corta que
+    // admite el plan—, para que las tres marcas del aviso ya estén pasadas al
+    // arrancar (avisarían en el mismo instante, pegadas al pitido de fin); el
+    // de fin se queda en 90 s.
     const detail = {
       ...SESSION_DETAIL,
       exercises: [
-        { ...SESSION_DETAIL.exercises[0], restSecs: 2, restAfterSecs: 90 },
+        { ...SESSION_DETAIL.exercises[0], restSecs: 1, restAfterSecs: 90 },
         { ...SESSION_DETAIL.exercises[1], position: 1 },
       ],
     };
@@ -1873,24 +1883,25 @@ describe("modo interactivo", () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(t0);
     const at = (offsetMs: number) => clock.mockReturnValue(t0 + offsetMs);
 
-    // La pausa entre series dura 2 s: ni de lejos avisa.
+    // La pausa entre series dura 1 s: ni a mitad avisa.
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Press banca serie 1" }),
     );
     expect(pause(/pausa entre series de press banca/i)).toBeDefined();
-    at(1_000); // queda 1 s de los 2
+    at(500); // queda medio segundo
     tick();
     expect(warns()).toHaveLength(0);
-    at(2_000); // se agotó
+    at(1_000); // se agotó
     tick();
     expect(pause(/pausa/i)).toBeNull();
 
-    // La otra serie tampoco: y la de fin (90 s) sí avisa a los 3 s.
+    // La otra serie tampoco; pero la de fin (90 s) sí avisa a los 3 s y al
+    // segundo.
     goToSet(mode, 2);
     fireEvent.click(
       within(mode).getByRole("checkbox", { name: "Press banca serie 2" }),
     );
-    at(3_000); // arrancó en 2_000: queda 1 s de los 2
+    at(1_500); // arrancó en 1_000: queda medio segundo
     tick();
     expect(warns()).toHaveLength(0);
 
@@ -1899,9 +1910,12 @@ describe("modo interactivo", () => {
       within(mode).getByRole("checkbox", { name: "Press banca serie 3" }),
     );
     expect(pause(/pausa al terminar press banca/i)).toBeDefined();
-    at(91_000); // arrancó en 4_000 + 90_000: quedan 3 s
+    at(88_500); // arrancó en 1_500 + 90_000: quedan 3 s
     tick();
     expect(warns()).toHaveLength(1);
+    at(90_500); // queda 1 s
+    tick();
+    expect(warns()).toHaveLength(2);
   });
 
   it("al volver a la pestaña la pausa se resincroniza: terminada y con pitido", async () => {

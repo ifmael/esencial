@@ -12,8 +12,10 @@ const BEEP_HZ = [880, 1175, 1568] as const;
 /** El aviso previo: un solo tono, más grave que cualquiera del fin. */
 const WARN_HZ = 660;
 /** Las marcas del aviso (ms que quedan), de mayor a menor: suena un tono al
- *  cruzar cada una. */
-export const WARN_LEADS_MS: readonly number[] = [3000, 2000];
+ *  cruzar cada una. Los tres últimos segundos de la pausa —3 s, 2 s y 1 s—:
+ *  el de 1 s no se salta, porque el aviso de fin no debe llegar sin que el
+ *  último segundo haya sonado. */
+export const WARN_LEADS_MS: readonly number[] = [3000, 2000, 1000];
 /** Lo que dura un tono del pitido de fin, y el del aviso previo (más corto). */
 const TONE_MS = 120;
 const WARN_MS = 100;
