@@ -10,6 +10,11 @@ export type Env = {
   // se designa admin. Ninguno de los dos va en el wrangler de producción.
   DEV_AUTH?: string;
   ADMIN_EMAIL?: string;
+  // Preview (M5a): `ctx.access` no existe en las Preview URLs de Workers, así
+  // que la API valida el JWT que Access deja en la cabecera. Solo se activa
+  // configurando TEAM_DOMAIN + POLICY_AUD (el `aud` de la app de Access).
+  TEAM_DOMAIN?: string;
+  POLICY_AUD?: string;
 };
 
 export function getDb(env: Env): D1Database {
