@@ -37,6 +37,18 @@ export async function readyIssues(apiKey, team, fetchImpl = fetch) {
   return data.issues.nodes;
 }
 
+const SPEC_REVIEW = `query($team:String!) {
+  issues(filter:{team:{key:{eq:$team}}, state:{name:{eq:"Spec review"}}}, orderBy:updatedAt, first:50) {
+    nodes { id identifier title description state{id name} team{id key} }
+  }
+}`;
+
+/** Issues en Spec review: `watch` busca el bloque de acuerdo. */
+export async function specReviewIssues(apiKey, team, fetchImpl = fetch) {
+  const data = await request(apiKey, SPEC_REVIEW, { team }, fetchImpl);
+  return data.issues.nodes;
+}
+
 export async function getIssue(apiKey, key, fetchImpl = fetch) {
   const match = /^([A-Z][A-Z0-9]{1,5})-(\d+)$/.exec(key);
   if (!match) throw new Error(`Clave inválida: ${key}`);
@@ -68,6 +80,20 @@ export async function setState(apiKey, issue, stateName, fetchImpl = fetch) {
     apiKey,
     `mutation($id:String!, $stateId:String!){ issueUpdate(id:$id, input:{stateId:$stateId}){ success } }`,
     { id: issue.id, stateId: state.id },
+    fetchImpl,
+  );
+}
+
+export async function updateDescription(
+  apiKey,
+  issue,
+  description,
+  fetchImpl = fetch,
+) {
+  await request(
+    apiKey,
+    `mutation($id:String!, $description:String!){ issueUpdate(id:$id, input:{description:$description}){ success } }`,
+    { id: issue.id, description },
     fetchImpl,
   );
 }

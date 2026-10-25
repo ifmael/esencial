@@ -17,11 +17,11 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 | Estado | Quién lo mueve |
 |---|---|
 | Backlog | tú |
-| Spec review | tú creas; el agente comenta sus preguntas; tú decides (el bucle automático llega en M5b) |
-| Ready | **solo tú**; el agente nunca se autopromociona |
+| Spec review | tú creas; el agente comenta sus preguntas; al aceptar añades `<!-- orquestator-cli:acordado -->` y `watch` la pasa a `Ready` |
+| Ready | **tú** (el agente nunca se autopromociona; `watch` solo obedece ese bloque) |
 | In Progress | el CLI (`run`, `start`, `fix`) |
 | In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable` |
-| Done | tú al mergear (o la integración GitHub) |
+| Done | `watch` al ver la PR mergeada (o tú) |
 | Blocked | el CLI o tú, con una pregunta concreta; `resume` vuelve a la fase anterior |
 
 ## Artefactos
@@ -210,8 +210,12 @@ cada 60 s (equipo `ESN`; `LINEAR_TEAM` o `--team` lo cambian) y despacha:
 
 1. Las issues en **Ready** sin estado local: llama a `run` (empieza por `start`).
 2. Las tareas locales en **In Progress**: reanuda `run` (si la máquina se apagó).
-3. Las **In validation**: si la PR está mergeada, pasa a `Done` y ejecuta `clean`
-   (borra previews y tarea).
+3. Las **Spec review** con el bloque `<!-- orquestator-cli:acordado -->` en la
+   descripción: las pasa a `Ready` y borra el bloque. Tú decides cuándo añadirlo;
+   sin él no se mueve nada.
+4. Las **In validation**: si la PR está mergeada, mueve la issue a `Done` en
+   Linear, pasa la tarea local a `Done` y ejecuta `clean` (borra previews y tarea).
+   Si Linear falla, no limpia: lo reintenta en el siguiente sondeo.
 
 `--max-parallel` (por defecto 1) limita los `run` simultáneos. Cada tarea tiene
 un `run.lock` con el pid: dos `watch` no la arrancan a la vez, y un cerrojo de
