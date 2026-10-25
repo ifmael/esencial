@@ -50,10 +50,23 @@ beforeEach(() => {
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 function accessOk() {
-  return async () => ({
-    status: 302,
-    headers: { get: () => `${ACCESS_LOGIN}?redirect_uri=x` },
-  });
+  return async (url, options = {}) => {
+    if (options.method === "OPTIONS") {
+      return {
+        status: 204,
+        headers: {
+          get: (name) =>
+            name === "access-control-allow-origin"
+              ? previewUrls(NAME).web
+              : null,
+        },
+      };
+    }
+    return {
+      status: 302,
+      headers: { get: () => `${ACCESS_LOGIN}?redirect_uri=x` },
+    };
+  };
 }
 
 function happyWrangler(calls) {
@@ -177,6 +190,29 @@ test("un preview público sin Access falla y no guarda el estado", async () => {
         }),
       ),
     /Access/,
+  );
+  assert.equal(load(KEY, base).preview, undefined);
+});
+
+test("un preflight bloqueado por Access se detecta antes de guardar", async () => {
+  const preflightBlocked = async (url, options = {}) =>
+    options.method === "OPTIONS"
+      ? { status: 403, headers: { get: () => null } }
+      : {
+          status: 302,
+          headers: { get: () => `${ACCESS_LOGIN}?redirect_uri=x` },
+        };
+  await assert.rejects(
+    () =>
+      previewTask(
+        KEY,
+        options({
+          runner: () => ({ status: 0 }),
+          wrangler: happyWrangler([]),
+          fetchImpl: preflightBlocked,
+        }),
+      ),
+    /preflight/,
   );
   assert.equal(load(KEY, base).preview, undefined);
 });

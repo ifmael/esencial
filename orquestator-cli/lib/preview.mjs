@@ -103,6 +103,32 @@ function credentials(env) {
   }
 }
 
+async function expectPreflight(api, web, { fetchImpl }) {
+  const response = await fetchImpl(`${api}/api/recipes`, {
+    method: "OPTIONS",
+    headers: {
+      Origin: web,
+      "Access-Control-Request-Method": "GET",
+    },
+  });
+  if (response.status === 403) {
+    throw new Error(
+      `Access bloquea el preflight CORS de ${api}: activa «Bypass OPTIONS requests» (options_preflight_bypass) en la app de Access de previews`,
+    );
+  }
+  const allow = response.headers?.get?.("access-control-allow-origin");
+  if (response.status !== 204 && response.status !== 200) {
+    throw new Error(
+      `El preflight CORS de ${api} devolvió HTTP ${response.status} (se espera 204)`,
+    );
+  }
+  if (allow !== web) {
+    throw new Error(
+      `El preflight CORS de ${api} no autoriza ${web} (Access-Control-Allow-Origin: ${allow ?? "falta"})`,
+    );
+  }
+}
+
 async function expectAccess(url, { fetchImpl, sleep, waits, delay, out }) {
   let last = "";
   for (let attempt = 0; attempt < waits; attempt += 1) {
@@ -229,6 +255,7 @@ export async function previewTask(
     delay,
     out,
   });
+  await expectPreflight(api, web, { fetchImpl });
 
   const bodyFile = path.join(task, "pr-body.md");
   const body = fs.existsSync(bodyFile) ? fs.readFileSync(bodyFile, "utf8") : "";

@@ -914,8 +914,9 @@ Objetivo: previews aisladas y validadas desde el móvil. Depende de: M4.
 - [x] Limpieza con `clean` (`wrangler preview delete` de los dos Workers); no hay webhook
       de «PR cerrada», se limpia al mergear/cerrar.
 - [x] Access sobre las URLs de preview de ambos Workers; verificar frontal↔API. Dominio
-      propio opcional. App `all_preview_workers` creada (solo el email del dueño); las dos
-      URLs del preview de PR #58 responden 302 al login.
+      propio opcional. App `all_preview_workers` creada (solo el email del dueño) con
+      `options_preflight_bypass` (sin él el preflight CORS de la API da 403); las dos URLs
+      del preview de PR #58 responden 302 al login.
 - [x] Añadir al body de la PR el enlace de preview (bloque `<!-- preview -->`); falta verlo
       en Linear con una PR real.
 - [x] Orden de migraciones: preview antes de `ship` (y la D1 remota tras
