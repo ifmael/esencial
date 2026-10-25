@@ -53,6 +53,33 @@ jobs:
 
       - run: pnpm lint
 
+  # Rutas protegidas: si el diff las toca, exige el status `guard` que publica
+  # el CLI tras la aprobación humana. Los cambios de CI (workflows) se revisan
+  # a mano y no los puede producir el CLI (guard local los marca no aprobables).
+  guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      statuses: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - run: node .github/scripts/guard-ci.mjs
+        env:
+          BASE: origin/${{ github.base_ref }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GUARD_WAIT_SECS: 90
+
   # Pasa si el diff no toca migraciones. Si las toca, exige que estén aplicadas
   # en la D1 remota. Token read-only en el secreto CLOUDFLARE_READ_TOKEN y el
   # account id en la variable CLOUDFLARE_ACCOUNT_ID; las PRs de forks no reciben

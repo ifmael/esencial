@@ -1,0 +1,17 @@
+[Unit]
+Description=Orquestator watch (cola de Linear)
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/esencial
+# mise: el node/gh del usuario están fuera del PATH mínimo de systemd.
+ExecStart=/bin/bash -lc 'exec node orquestator-cli/bin/orquestator.mjs watch --max-parallel 1'
+Restart=on-failure
+RestartSec=30
+KillSignal=SIGTERM
+TimeoutStopSec=1h
+
+[Install]
+WantedBy=default.target

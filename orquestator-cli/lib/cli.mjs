@@ -3,7 +3,7 @@ import { runAgent, verdictOf } from "./agents.mjs";
 import { git } from "./checkout.mjs";
 import { checkTask } from "./checks.mjs";
 import { clean } from "./clean.mjs";
-import { linearKey } from "./config.mjs";
+import { linearKey, linearTeam } from "./config.mjs";
 import { fixTask } from "./fix.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
@@ -28,6 +28,7 @@ import {
   withLock,
 } from "./state.mjs";
 import { mirrorPath, startTask } from "./task.mjs";
+import { watch } from "./watch.mjs";
 
 export const USAGE = `orquestator — flujo de tareas de Esencial
 
@@ -46,6 +47,7 @@ Uso:
   orquestator clean ESN-123 [--force]
   orquestator fix ESN-123 [--from checks|review|pr-review|conflicto] [--humano]
   orquestator run ESN-123 [--dry-run]
+  orquestator watch [--max-parallel N] [--interval S] [--once]
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
   orquestator approve --pr 42 --motivo "…"   PR que no abre el CLI
@@ -363,6 +365,40 @@ export async function main(argv, io = {}) {
         if (result.ok || result.dryRun) return 0;
         if (result.hint) line(stdout, result.hint);
         return 1;
+      }
+      case "watch": {
+        const value = (flag, fallback) => {
+          const at = rest.indexOf(flag);
+          if (at === -1) return fallback;
+          const found = rest[at + 1];
+          if (!found || found.startsWith("--")) {
+            throw new Error(`${flag} necesita un valor`);
+          }
+          return found;
+        };
+        const maxParallel = Number(value("--max-parallel", "1"));
+        const intervalSecs = Number(value("--interval", "60"));
+        const team = value("--team", linearTeam());
+        const controller = new AbortController();
+        const stop = () => controller.abort();
+        process.once("SIGINT", stop);
+        process.once("SIGTERM", stop);
+        try {
+          const result = await watch({
+            dryRun,
+            maxParallel,
+            intervalSecs,
+            team,
+            once: rest.includes("--once"),
+            signal: controller.signal,
+            out: (text) => line(stdout, text),
+          });
+          line(stdout, result.once ? "watch: una pasada" : "watch: parado");
+          return 0;
+        } finally {
+          process.off("SIGINT", stop);
+          process.off("SIGTERM", stop);
+        }
       }
       case "ship": {
         const key = parseKey(rest[0], stderr);

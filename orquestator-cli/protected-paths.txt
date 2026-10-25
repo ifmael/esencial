@@ -24,6 +24,7 @@ e2e/tests/helpers.ts
 web/scripts/check-design-tokens.ts
 web/scripts/gen-tokens.ts
 !.github/workflows/
+.github/scripts/
 .husky/
 wrangler.toml
 api/wrangler.toml

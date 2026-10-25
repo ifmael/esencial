@@ -131,6 +131,28 @@ test("ship omite los comentarios vacíos y el dry-run no hace nada", () => {
   assert.deepEqual(calls, []);
 });
 
+test("ship publica el status guard antes de esperar a la CI", () => {
+  writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
+  approve(guardTask(KEY, { base, main }).hash);
+  const calls = [];
+  const ghRun = (args) => {
+    calls.push(args);
+    if (args[1] === "view")
+      return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
+    return "";
+  };
+  let statusPosted = false;
+  ship(KEY, {
+    main,
+    ghRun,
+    checksRun: () => {
+      statusPosted = calls.some((args) => args[0] === "api");
+      return { status: 0 };
+    },
+  });
+  assert.equal(statusPosted, true);
+});
+
 test("ship espera a la CI y no pasa a In validation si falla", () => {
   writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
   approve(guardTask(KEY, { base, main }).hash);

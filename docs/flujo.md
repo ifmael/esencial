@@ -202,3 +202,48 @@ docker run --rm --init --network esencial-workers \
     --base-url http://esencial-proxy:8080/v1 --api-key dummy \
     --model qwen3.6 -q "Responde solo: ok"'
 ```
+
+## Cola automática (M5b)
+
+`orquestator watch [--max-parallel N] [--interval S] [--once]` sondea Linear
+cada 60 s (equipo `ESN`; `LINEAR_TEAM` o `--team` lo cambian) y despacha:
+
+1. Las issues en **Ready** sin estado local: llama a `run` (empieza por `start`).
+2. Las tareas locales en **In Progress**: reanuda `run` (si la máquina se apagó).
+3. Las **In validation**: si la PR está mergeada, pasa a `Done` y ejecuta `clean`
+   (borra previews y tarea).
+
+`--max-parallel` (por defecto 1) limita los `run` simultáneos. Cada tarea tiene
+un `run.lock` con el pid: dos `watch` no la arrancan a la vez, y un cerrojo de
+proceso muerto se libera solo. Una tarea que falla **no se reintenta** hasta que
+su estado cambie (`fix`, `resume` o edición); así un check rojo no quema tokens.
+`--once` hace una pasada y espera a las tareas; `--dry-run` enseña lo que haría.
+
+### Servicio de usuario
+
+La unidad está en `orquestator-cli/systemd/orquestator-watch.service`; ajusta
+`WorkingDirectory` si el repo no está en `%h/Projects/esencial`:
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp orquestator-cli/systemd/orquestator-watch.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now orquestator-watch.service
+loginctl enable-linger "$USER"   # sigue tras cerrar sesión
+journalctl --user -u orquestator-watch -f
+```
+
+`SIGTERM` deja de despachar y espera a las tareas en curso; el `TimeoutStopSec`
+de la unidad acota la espera. Si la máquina se apaga, al volver el servicio
+reanuda desde el estado del host.
+
+### Job `guard`
+
+El job `guard` de la CI lee `orquestator-cli/protected-paths.txt` de la base
+(`origin/main`), no de la rama, y si el diff toca una ruta protegida exige el
+status `guard` (lo publica `orquestator ship` antes de esperar a la CI). Sin
+status, el job espera 90 s y falla. Los cambios de `.github/workflows/` se
+revisan a mano y el job no los exige: el CLI no puede aprobarlos. Para que
+bloquee el merge, añade **`guard` a los checks requeridos** de `main` en GitHub.
+
+`approve` sigue siendo local y con TTY: el status solo se publica tras ese paso.

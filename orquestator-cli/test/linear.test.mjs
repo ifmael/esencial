@@ -5,6 +5,7 @@ import {
   comment,
   getIssue,
   notifyBlocked,
+  readyIssues,
   request,
   setState,
 } from "../lib/linear.mjs";
@@ -43,6 +44,16 @@ test("request convierte errors de GraphQL en excepción", async () => {
     json: async () => ({ errors: [{ message: "boom" }] }),
   });
   await assert.rejects(() => request("k", "q", {}, impl), /boom/);
+});
+
+test("readyIssues pide al equipo las issues en Ready", async () => {
+  const { impl, calls } = fakeFetch(() => ({
+    issues: { nodes: [{ identifier: "ESN-1", title: "Una" }] },
+  }));
+  const nodes = await readyIssues("k", "ESN", impl);
+  assert.equal(nodes[0].identifier, "ESN-1");
+  assert.equal(calls[0].body.variables.team, "ESN");
+  assert.match(calls[0].body.query, /state:\{name:\{eq:"Ready"\}\}/);
 });
 
 test("getIssue busca por número y equipo", async () => {

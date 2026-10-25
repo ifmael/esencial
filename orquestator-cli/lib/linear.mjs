@@ -25,6 +25,18 @@ const ISSUE = `query($team:String!, $number:Float!) {
   }
 }`;
 
+const READY = `query($team:String!) {
+  issues(filter:{team:{key:{eq:$team}}, state:{name:{eq:"Ready"}}}, orderBy:updatedAt, first:50) {
+    nodes { id identifier title state{name} }
+  }
+}`;
+
+/** Issues del equipo en Ready: la cola de `watch`. */
+export async function readyIssues(apiKey, team, fetchImpl = fetch) {
+  const data = await request(apiKey, READY, { team }, fetchImpl);
+  return data.issues.nodes;
+}
+
 export async function getIssue(apiKey, key, fetchImpl = fetch) {
   const match = /^([A-Z][A-Z0-9]{1,5})-(\d+)$/.exec(key);
   if (!match) throw new Error(`Clave inválida: ${key}`);
