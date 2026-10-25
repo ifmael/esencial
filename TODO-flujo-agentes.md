@@ -916,7 +916,9 @@ Objetivo: previews aisladas y validadas desde el móvil. Depende de: M4.
 - [x] Access sobre las URLs de preview de ambos Workers; verificar frontal↔API. Dominio
       propio opcional. App `all_preview_workers` creada (solo el email del dueño) con
       `options_preflight_bypass` (sin él el preflight CORS de la API da 403); las dos URLs
-      del preview de PR #58 responden 302 al login.
+      del preview de PR #58 responden 302 al login. **`ctx.access` llega undefined en las
+      Preview URLs** (issue cloudflare-docs#33810): la API valida el
+      `Cf-Access-Jwt-Assertion` con `jose` si recibe `TEAM_DOMAIN` + `POLICY_AUD`.
 - [x] Añadir al body de la PR el enlace de preview (bloque `<!-- preview -->`); falta verlo
       en Linear con una PR real.
 - [x] Orden de migraciones: preview antes de `ship` (y la D1 remota tras

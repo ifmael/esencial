@@ -164,6 +164,8 @@ test("preview construye, migra, despliega los dos Workers y guarda el estado", a
   const api = previews.find((args) => args.includes("esencial-api"));
   const web = previews.find((args) => args.includes("esencial"));
   assert.ok(api.includes(`WEB_ORIGIN:${urls.web}`));
+  assert.ok(api.includes("TEAM_DOMAIN:https://ifmael.cloudflareaccess.com"));
+  assert.ok(api.some((arg) => arg.startsWith("POLICY_AUD:")));
   assert.ok(web.includes(`API_ORIGIN:${urls.api}`));
 
   const state = load(KEY, base);

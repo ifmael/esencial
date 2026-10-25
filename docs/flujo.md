@@ -125,6 +125,11 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   preflight CORS da 403); el CLI **falla** si el preview responde 200 o si el
   preflight no autoriza la web. La cookie es por host: abre primero la URL de la
   API y después la web.
+- **Identidad en previews**: `ctx.access` llega `undefined` en las Preview URLs
+  (limitación de Cloudflare), así que la API valida el `Cf-Access-Jwt-Assertion`
+  con `jose` contra el JWKS del equipo (`TEAM_DOMAIN` + `POLICY_AUD` que pasa el
+  CLI, por defecto la app `Esencial previews`). En producción sigue mandando
+  `ctx.access`.
 - Requisitos del token de `~/.config/orquestator/env`: **Workers Scripts: Edit**,
   **D1: Edit**, **R2: Edit** y **Access: Edit** (para la app de previews).
 - Wrangler **≥ 4.135.0** (el del `devDependencies` del checkout principal); el

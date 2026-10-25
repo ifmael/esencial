@@ -14,6 +14,12 @@ import { mirrorPath } from "./task.mjs";
 export const PREVIEW_DB = "esencial-preview";
 export const PREVIEW_BUCKET = "esencial-photos-preview";
 export const SUBDOMAIN = "nutrirutina";
+// Preview: `ctx.access` no existe en las Preview URLs de Workers (issue
+// cloudflare/cloudflare-docs#33810), así que la API valida el JWT de Access.
+// Si se recrea la app `Esencial previews`, actualizar el aud (o en el env).
+export const ACCESS_TEAM_DOMAIN = "https://ifmael.cloudflareaccess.com";
+export const PREVIEW_POLICY_AUD =
+  "f9d4a592a123777a910776eb63a7220696bc4d680f9ce433ba9d1a50042a3832";
 export const ACCESS_WAITS = 12;
 export const ACCESS_DELAY_MS = 5000;
 
@@ -220,27 +226,31 @@ export async function previewTask(
     { cwd: repo, env, main },
   );
 
-  const deploy = (config, worker, variable) => {
-    const output = wrangler(
-      [
-        "preview",
-        "-c",
-        config,
-        "--name",
-        name,
-        "--worker-name",
-        worker,
-        "--var",
-        `${variable}:${variable === "API_ORIGIN" ? urls.api : urls.web}`,
-        "--json",
-      ],
-      { cwd: repo, env, main },
-    );
-    return previewUrlOf(output);
+  const deploy = (config, worker, vars) => {
+    const args = [
+      "preview",
+      "-c",
+      config,
+      "--name",
+      name,
+      "--worker-name",
+      worker,
+    ];
+    for (const [key, value] of Object.entries(vars)) {
+      args.push("--var", `${key}:${value}`);
+    }
+    args.push("--json");
+    return previewUrlOf(wrangler(args, { cwd: repo, env, main }));
   };
 
-  const api = deploy("api/wrangler.toml", "esencial-api", "WEB_ORIGIN");
-  const web = deploy("wrangler.toml", "esencial", "API_ORIGIN");
+  const team = env.ACCESS_TEAM_DOMAIN ?? ACCESS_TEAM_DOMAIN;
+  const aud = env.ACCESS_POLICY_AUD ?? PREVIEW_POLICY_AUD;
+  const api = deploy("api/wrangler.toml", "esencial-api", {
+    WEB_ORIGIN: urls.web,
+    TEAM_DOMAIN: team,
+    POLICY_AUD: aud,
+  });
+  const web = deploy("wrangler.toml", "esencial", { API_ORIGIN: urls.api });
   if (api !== urls.api || web !== urls.web) {
     throw new Error(
       `Las URLs del preview no son las esperadas: ${web} / ${api} (esperadas ${urls.web} / ${urls.api})`,
