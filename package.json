@@ -27,7 +27,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
     "husky": "^9.1.7",
-    "wrangler": "4.128.0"
+    "wrangler": "4.152.0"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,

@@ -18,3 +18,7 @@ not_found_handling = "single-page-application"
 [vars]
 # Origen público de la API: se autoriza en la CSP del frontal (fetch e <img>).
 API_ORIGIN = "https://esencial-api.nutrirutina.workers.dev"
+
+# Preview por rama (M5a): el CLI pasa API_ORIGIN con --var en cada preview; el
+# valor de producción de arriba no se hereda.
+[previews]

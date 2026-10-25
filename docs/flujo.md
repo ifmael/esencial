@@ -105,6 +105,37 @@ ve el código dentro de workerd) y `web` con v8; los umbrales solo suben. Hoy:
 api 95/90/99/97 y web 86/85/86/88 (sentencias/ramas/funciones/líneas). Un test
 nuevo o modificado debe fallar contra `main` (RED).
 
+## Preview por rama (M5a)
+
+Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
+`https://<clave>-esencial.nutrirutina.workers.dev` y
+`https://<clave>-esencial-api.nutrirutina.workers.dev` (la clave en minúsculas).
+
+- `orquestator preview ESN-123` construye la web con `VITE_API_URL` del preview,
+  aplica las migraciones a la D1 de preview y despliega los dos Workers con
+  `wrangler preview`. `run` lo hace entre `pr` y `ship`.
+- El enlace queda en el body de la PR (bloque `<!-- preview -->`) y en
+  `state.preview`; `clean` borra los dos previews antes de borrar el clon.
+- Datos: D1 `esencial-preview` y R2 `esencial-photos-preview`, **compartidos por
+  todos los previews** y nunca los de producción. Las migraciones se aplican en
+  cada preview (deben ser aditivas). Las **83 fotos** del recetario se copiaron
+  una vez del bucket de producción al de preview; si se recrea el bucket,
+  repetir la copia (`wrangler r2 object get/put`).
+- Access: app `all_preview_workers` con una política que permite el email del
+  dueño y **«Bypass OPTIONS requests»** (`options_preflight_bypass`, si no el
+  preflight CORS da 403); el CLI **falla** si el preview responde 200 o si el
+  preflight no autoriza la web. La cookie es por host: abre primero la URL de la
+  API y después la web.
+- **Identidad en previews**: `ctx.access` llega `undefined` en las Preview URLs
+  (limitación de Cloudflare), así que la API valida el `Cf-Access-Jwt-Assertion`
+  con `jose` contra el JWKS del equipo (`TEAM_DOMAIN` + `POLICY_AUD` que pasa el
+  CLI, por defecto la app `Esencial previews`). En producción sigue mandando
+  `ctx.access`.
+- Requisitos del token de `~/.config/orquestator/env`: **Workers Scripts: Edit**,
+  **D1: Edit**, **R2: Edit** y **Access: Edit** (para la app de previews).
+- Wrangler **≥ 4.135.0** (el del `devDependencies` del checkout principal); el
+  host lo usa para migrar y desplegar.
+
 ## Límites
 
 - `.github/workflows/` no es aprobable: un cambio de CI va en tu PR.

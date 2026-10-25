@@ -11,6 +11,7 @@ import { inspect } from "./inspect.mjs";
 import { getIssue, notifyBlocked, setState } from "./linear.mjs";
 import { approvePr } from "./manual.mjs";
 import { publish } from "./pr.mjs";
+import { previewTask } from "./preview.mjs";
 import { runFlow } from "./run.mjs";
 import { publishPrReview, ship } from "./ship.mjs";
 import { createIssue, specReview } from "./spec.mjs";
@@ -38,6 +39,7 @@ Uso:
   orquestator check ESN-123       lint, tipos, tests y e2e en el contenedor
   orquestator review ESN-123      el reviewer revisa el diff (review.md)
   orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
+  orquestator preview ESN-123     despliega los previews de la rama (D1/R2 de preview)
   orquestator pr-review ESN-123   re-revisión de la PR (pr-review.md)
   orquestator ship ESN-123        actualiza el body y comenta checks/review
   orquestator inspect ESN-123     estado, brief, diff, artefactos y CI
@@ -300,6 +302,18 @@ export async function main(argv, io = {}) {
           out: (text) => line(stdout, text),
         });
         line(stdout, `PR #${result.number}: ${result.url}`);
+        return 0;
+      }
+      case "preview": {
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        const result = await previewTask(key, {
+          dryRun,
+          out: (text) => line(stdout, text),
+        });
+        if (result.dryRun) return 0;
+        line(stdout, `Preview web: ${result.web}`);
+        line(stdout, `Preview API: ${result.api}`);
         return 0;
       }
       case "fix": {

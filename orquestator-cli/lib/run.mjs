@@ -9,6 +9,7 @@ import { guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import { getIssue, setState } from "./linear.mjs";
 import { publish } from "./pr.mjs";
+import { previewTask } from "./preview.mjs";
 import { publishPrReview, ship } from "./ship.mjs";
 import { home, load, repoDir } from "./state.mjs";
 import { startTask } from "./task.mjs";
@@ -19,6 +20,7 @@ export const CHAIN = [
   "check",
   "review",
   "pr",
+  "preview",
   "ship",
   "pr-review",
 ];
@@ -27,7 +29,15 @@ function stepsFor(key, state) {
   if (!state) return [...CHAIN];
   switch (state.state) {
     case "In Progress":
-      return ["implement", "check", "review", "pr", "ship", "pr-review"];
+      return [
+        "implement",
+        "check",
+        "review",
+        "pr",
+        "preview",
+        "ship",
+        "pr-review",
+      ];
     case "In validation":
       return ["pr-review"];
     case "Blocked":
@@ -127,6 +137,16 @@ const defaultSteps = {
   pr({ key, base, main, out }) {
     const result = publish(key, { base, main, out });
     out(`PR #${result.number}: ${result.url}`);
+    return {};
+  },
+  async preview({ key, base, main, out }) {
+    const result = await previewTask(key, {
+      base,
+      main,
+      image: imageTag(),
+      out,
+    });
+    out(`preview: ${result.web} (${result.api})`);
     return {};
   },
   async ship({ key, base, main, out }) {

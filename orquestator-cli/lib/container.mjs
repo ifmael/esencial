@@ -22,6 +22,9 @@ export const PHASES = {
     home: true,
   },
   check: { rw: ["checks.md"], network: "none" },
+  // Build del preview: sin red (store de pnpm) y sin escribir artefactos; el
+  // despliegue lo hace wrangler en el host.
+  preview: { rw: [], network: "none", upstream: false },
   reviewer: { rw: ["review.md"], network: "model", home: true },
   "pr-review": { rw: ["pr-review.md"], network: "model", home: true },
 };

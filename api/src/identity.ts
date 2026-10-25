@@ -7,9 +7,14 @@
 //     la cabecera se ignora.
 // Todo lo demás falla cerrado: sin un email con forma válida no hay identidad.
 import type { Context } from "hono";
+import { createRemoteJWKSet, type JWTVerifyGetKey, jwtVerify } from "jose";
 import type { AppContext } from "./db";
 
 export const DEV_EMAIL_HEADER = "x-dev-email";
+export const ACCESS_JWT_HEADER = "cf-access-jwt-assertion";
+
+type Jwks = JWTVerifyGetKey;
+const jwksByTeam = new Map<string, Jwks>();
 
 /** Forma mínima de un email. Que Access lo haya probado no se ve aquí; esto
  *  solo descarta basura antes de tocar la base. */
@@ -34,7 +39,42 @@ export type IdentitySource = {
   /** `env.DEV_AUTH`: la cabecera de dev solo se honra con "1". */
   devAuth?: string;
   devEmail?: string;
+  /** JWT de Access; en las Preview URLs `ctx.access` llega undefined. */
+  jwt?: string | null;
+  teamDomain?: string | null;
+  policyAud?: string | null;
+  /** Solo tests: JWKS local en vez de la red. */
+  jwks?: Jwks;
 };
+
+/** Email del JWT de Access, verificado contra su JWKS (fail closed). */
+export async function accessJwtEmail(
+  token: string | null | undefined,
+  teamDomain: string | null | undefined,
+  policyAud: string | null | undefined,
+  jwks?: Jwks,
+): Promise<string | null> {
+  if (!token || !teamDomain || !policyAud) return null;
+  const team = teamDomain.replace(/\/+$/, "");
+  let key = jwks;
+  if (!key) {
+    key = jwksByTeam.get(team);
+    if (!key) {
+      key = createRemoteJWKSet(new URL(`${team}/cdn-cgi/access/certs`));
+      jwksByTeam.set(team, key);
+    }
+  }
+  try {
+    const { payload } = await jwtVerify(token, key, {
+      issuer: team,
+      audience: policyAud,
+    });
+    const email = payload.email;
+    return normalizeEmail(typeof email === "string" ? email : null);
+  } catch {
+    return null;
+  }
+}
 
 /** Email de la petición, o null si no hay identidad fiable (fail closed). El
  *  seam de dev manda cuando está encendido: en e2e no hay Access delante. */
@@ -43,8 +83,16 @@ export async function identityEmail(
 ): Promise<string | null> {
   if (source.devAuth === "1") return normalizeEmail(source.devEmail);
   const access = source.access as AccessContext | undefined;
-  if (!access?.getIdentity) return null;
-  return normalizeEmail((await access.getIdentity())?.email);
+  if (access?.getIdentity) {
+    const email = normalizeEmail((await access.getIdentity())?.email);
+    if (email) return email;
+  }
+  return accessJwtEmail(
+    source.jwt,
+    source.teamDomain,
+    source.policyAud,
+    source.jwks,
+  );
 }
 
 /** `ctx.access` si el Worker lo tiene, es decir si quien autenticó la petición
@@ -70,5 +118,8 @@ export async function requestIdentity(
     access: accessContext(c),
     devAuth: c.env.DEV_AUTH,
     devEmail: c.req.header(DEV_EMAIL_HEADER),
+    jwt: c.req.header(ACCESS_JWT_HEADER),
+    teamDomain: c.env.TEAM_DOMAIN,
+    policyAud: c.env.POLICY_AUD,
   });
 }

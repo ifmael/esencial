@@ -106,3 +106,29 @@ test("un 302 hacia otro sitio sigue siendo fallo", async () => {
   assert.match(out.join("\n"), /FALLA frontal/);
   assert.match(out.join("\n"), /wrangler rollback/);
 });
+
+test("clean borra los previews de la tarea antes de borrar el clon", async () => {
+  const state = done();
+  save(
+    KEY,
+    {
+      ...state,
+      preview: { name: "esn-7", web: "w", api: "a" },
+    },
+    dir,
+  );
+  const calls = [];
+  await clean(KEY, {
+    base: dir,
+    fetchImpl: okFetch,
+    wrangler: (args) => {
+      calls.push(args);
+      return "";
+    },
+  });
+  const deletes = calls.filter(
+    (args) => args[0] === "preview" && args[1] === "delete",
+  );
+  assert.equal(deletes.length, 2);
+  assert.equal(fs.existsSync(dirFor(KEY, dir)), false);
+});

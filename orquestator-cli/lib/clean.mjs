@@ -1,13 +1,14 @@
 import fs from "node:fs";
 
+import { ACCESS_LOGIN } from "./cloudflare.mjs";
 import { releaseMigration } from "./migrations.mjs";
+import { deletePreview } from "./preview.mjs";
 import { dirFor, home, load } from "./state.mjs";
+
+export { ACCESS_LOGIN };
 
 export const FRONT = "https://esencial.nutrirutina.workers.dev";
 export const API = "https://esencial-api.nutrirutina.workers.dev";
-// shortcut: hoy el login es Cloudflare Access; si cambia, ajustar aquí y en el
-// plan (M6). Un 302 a otro sitio sigue siendo un fallo.
-export const ACCESS_LOGIN = "https://ifmael.cloudflareaccess.com/";
 
 function accessRedirect(response) {
   if (response.status !== 302) return false;
@@ -57,6 +58,8 @@ export async function clean(
     out = () => {},
     fetchImpl = fetch,
     checks = true,
+    main = process.cwd(),
+    wrangler,
   } = {},
 ) {
   const state = load(key, base);
@@ -68,8 +71,11 @@ export async function clean(
   }
   if (dryRun) {
     out(`[dry-run] borraría ${dirFor(key, base)} y liberaría la migración`);
+    if (state.preview)
+      out(`[dry-run] borraría los previews ${state.preview.name}`);
     return { dryRun: true };
   }
+  await deletePreview(key, { base, main, out, wrangler });
   releaseMigration({ base, key });
   fs.rmSync(dirFor(key, base), { recursive: true, force: true });
 
