@@ -935,9 +935,10 @@ Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
 
 - [x] Implementar `orquestator-cli watch --max-parallel N`: cola desde Linear, lock por
       tarea y llamada a `run`; el piloto lanza `run` a mano.
-- [ ] `watch` como servicio de usuario de systemd (con `loginctl enable-linger`) o timer;
+- [x] `watch` como servicio de usuario de systemd (con `loginctl enable-linger`) o timer;
       si la máquina se apaga, se pausa y reanuda. Al detectar el merge, ejecuta `clean`.
-      Unidad en `orquestator-cli/systemd/`; falta instalarla y comprobar el reinicio.
+      Unidad instalada; entra con `newgrp docker` porque el user manager arrancó sin el
+      grupo. `watch` comprueba `docker info` al arrancar.
 - [ ] **Explorar una URL pública** para que Linear avise al instante (webhook firmado, vía
       Cloudflare Tunnel o un Worker). Opción principal: el sondeo local; el webhook solo si
       la latencia del sondeo molesta. Requiere autenticar la firma y un endpoint estable.
