@@ -118,8 +118,9 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   `state.preview`; `clean` borra los dos previews antes de borrar el clon.
 - Datos: D1 `esencial-preview` y R2 `esencial-photos-preview`, **compartidos por
   todos los previews** y nunca los de producción. Las migraciones se aplican en
-  cada preview (deben ser aditivas). Las fotos no se copian: las recetas salen
-  con monograma hasta que se suban a ese bucket.
+  cada preview (deben ser aditivas). Las **83 fotos** del recetario se copiaron
+  una vez del bucket de producción al de preview; si se recrea el bucket,
+  repetir la copia (`wrangler r2 object get/put`).
 - Access: app `all_preview_workers` con una política que permite el email del
   dueño y **«Bypass OPTIONS requests»** (`options_preflight_bypass`, si no el
   preflight CORS da 403); el CLI **falla** si el preview responde 200 o si el

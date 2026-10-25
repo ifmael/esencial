@@ -910,7 +910,8 @@ Objetivo: previews aisladas y validadas desde el móvil. Depende de: M4.
       nunca producción), nombres/URLs predecibles (`<clave>-esencial[-api]`), `VITE_API_URL`,
       `WEB_ORIGIN` y `API_ORIGIN` por `--var`.
 - [x] Migrar la D1 de preview al desplegar (`esencial-preview` creada y migrada; las
-      migraciones ya siembran el catálogo, no hace falta otro script).
+      migraciones ya siembran el catálogo, no hace falta otro script). Las 83 fotos del
+      recetario se copiaron al bucket de preview.
 - [x] Limpieza con `clean` (`wrangler preview delete` de los dos Workers); no hay webhook
       de «PR cerrada», se limpia al mergear/cerrar.
 - [x] Access sobre las URLs de preview de ambos Workers; verificar frontal↔API. Dominio
