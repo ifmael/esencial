@@ -28,6 +28,10 @@ export function readEnv(
   return env;
 }
 
+export function linearTeam(env = process.env, file) {
+  return env.LINEAR_TEAM ?? readEnv(file).LINEAR_TEAM ?? "ESN";
+}
+
 export function linearKey(env = process.env, file) {
   const key = env.LINEAR_API_KEY ?? readEnv(file).LINEAR_API_KEY;
   if (!key) {

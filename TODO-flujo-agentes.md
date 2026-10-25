@@ -37,8 +37,8 @@ Convención de marcado:
 | M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | — |
 | M3 — Perfiles de fase | Hecho (2026-10-24) | — |
 | M4 — Piloto | Hecho (2026-10-24) | — |
-| M5a — Preview | Pendiente | Diseñar el preview con D1/R2 propios |
-| M5b — Automatización | Pendiente | `watch`, job `guard` y bucle automático de spec |
+| M5a — Preview | Hecho (2026-10-25) | — |
+| M5b — Automatización | En curso | `watch` y job `guard` hechos; quedan spec, webhook y medidas |
 | M6 — Después del piloto | Pendiente | Evaluar tras M5b |
 
 ## Referencias y hechos verificados
@@ -933,17 +933,19 @@ desplegó, verificó y borró un preview de prueba. Falta la validación en el m
 
 Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
 
-- [ ] Implementar `orquestator-cli watch --max-parallel N`: cola desde Linear, lock por
+- [x] Implementar `orquestator-cli watch --max-parallel N`: cola desde Linear, lock por
       tarea y llamada a `run`; el piloto lanza `run` a mano.
 - [ ] `watch` como servicio de usuario de systemd (con `loginctl enable-linger`) o timer;
       si la máquina se apaga, se pausa y reanuda. Al detectar el merge, ejecuta `clean`.
+      Unidad en `orquestator-cli/systemd/`; falta instalarla y comprobar el reinicio.
 - [ ] **Explorar una URL pública** para que Linear avise al instante (webhook firmado, vía
       Cloudflare Tunnel o un Worker). Opción principal: el sondeo local; el webhook solo si
       la latencia del sondeo molesta. Requiere autenticar la firma y un endpoint estable.
 - [ ] Bucle automático de spec (el perfil ya está en el piloto): bloque
       `<!-- orquestator-cli:acordado -->` y sondeo de respuestas humanas desde `watch`.
-- [ ] Job de CI `guard`: lee `orquestator-cli/protected-paths.txt` de `origin/main` y
-      falla si el diff toca rutas protegidas sin el status `guard`.
+- [x] Job de CI `guard`: lee `orquestator-cli/protected-paths.txt` de `origin/main` y
+      falla si el diff toca rutas protegidas sin el status `guard`. Falta añadirlo a los
+      checks requeridos de `main` (lo hace el usuario en GitHub).
 - [ ] Si el piloto no llevó migración, construir `migrate` y probarlo con una migración de
       juguete.
 - [ ] Gateway MCP solo si un perfil lo necesita (por defecto, ninguno).

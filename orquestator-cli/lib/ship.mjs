@@ -61,6 +61,11 @@ export function ship(
     ghRun(reviewArgs(pr.number, artifactPath(key, "review.md", base)));
   }
 
+  // El status va antes de esperar a la CI: el job `guard` lo lee y, si no,
+  // esperaría a un status que solo se publica al final (deadlock).
+  const description = guard.needsApproval ? "aprobado" : "sin rutas protegidas";
+  ghRun(statusArgs(pr.headRefOid, "success", description));
+
   if (waitChecks) {
     const ci = checksRun(pr.number);
     if (ci.status !== 0) {
@@ -70,9 +75,6 @@ export function ship(
       );
     }
   }
-
-  const description = guard.needsApproval ? "aprobado" : "sin rutas protegidas";
-  ghRun(statusArgs(pr.headRefOid, "success", description));
   const next =
     state.state === "In Progress" ? transition(state, "In validation") : state;
   save(key, { ...next, pr: { ...state.pr, sha: pr.headRefOid } }, base);
