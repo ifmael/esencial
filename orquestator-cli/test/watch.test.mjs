@@ -31,6 +31,7 @@ function options(overrides = {}) {
     once: true,
     ready: async () => [],
     run: async () => ({ ok: true }),
+    dockerCheck: () => true,
     cleanTask: async () => {},
     sleep: async () => {},
     out: () => {},
@@ -71,6 +72,13 @@ test("watch reanuda In Progress y no repite una Ready ya empezada", async () => 
   assert.deepEqual(calls, ["ESN-1", "ESN-2"]);
 });
 
+test("watch se niega a arrancar sin Docker", async () => {
+  await assert.rejects(
+    () => watch(options({ dockerCheck: () => false })),
+    /Docker no es accesible/,
+  );
+});
+
 test("una tarea que falla no se reintenta hasta que cambie su estado", async () => {
   save("ESN-1", inProgress(), dir);
   const calls = [];
@@ -79,13 +87,13 @@ test("una tarea que falla no se reintenta hasta que cambie su estado", async () 
     options({
       run: async () => {
         calls.push("run");
-        return { ok: false, stop: "check", hint: "fix" };
+        return { ok: false, stop: "check", error: "exit 1: sin red" };
       },
       out: (text) => lines.push(text),
     }),
   );
   assert.equal(calls.length, 1);
-  assert.match(lines.join("\n"), /parado en check/);
+  assert.match(lines.join("\n"), /parado en check — exit 1: sin red/);
 });
 
 test("In validation con la PR mergeada pasa a Done y limpia", async () => {

@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -49,6 +50,11 @@ function taskLock(key, base) {
   return lock(dirFor(key, base), "run.lock");
 }
 
+export function dockerReady() {
+  const result = spawnSync("docker", ["info"], { stdio: "ignore" });
+  return result.status === 0;
+}
+
 function sleepSeconds(seconds, signal) {
   return new Promise((resolve) => {
     if (signal?.aborted) return resolve();
@@ -86,6 +92,7 @@ export async function watch({
   loadState = load,
   saveState = save,
   ready = readyIssues,
+  dockerCheck = dockerReady,
   sleep = sleepSeconds,
   signal,
 } = {}) {
@@ -96,6 +103,11 @@ export async function watch({
     throw new Error("--interval debe ser un número de segundos > 0");
   }
   if (dryRun) once = true;
+  if (!dryRun && !dockerCheck()) {
+    throw new Error(
+      "Docker no es accesible desde watch (falta el grupo docker; en la unidad usa newgrp).",
+    );
+  }
 
   const releaseWatch = dryRun ? () => {} : watchLock(base);
   if (!releaseWatch) throw new Error(`Ya hay un watch abierto en ${base}`);
@@ -166,8 +178,10 @@ export async function watch({
         if (result?.ok || result?.dryRun) return;
         const current = loadState(key, base);
         failures.set(key, current?.updatedAt ?? updatedAt ?? "?");
-        const hint = result?.hint ? ` — ${result.hint}` : "";
-        out(`${key}: parado en ${result?.stop ?? "?"}${hint}`);
+        const detail = result?.error ?? result?.hint;
+        out(
+          `${key}: parado en ${result?.stop ?? "?"}${detail ? ` — ${detail}` : ""}`,
+        );
       })
       .catch((error) => {
         const current = loadState(key, base);

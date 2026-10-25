@@ -237,6 +237,12 @@ journalctl --user -u orquestator-watch -f
 de la unidad acota la espera. Si la máquina se apaga, al volver el servicio
 reanuda desde el estado del host.
 
+La unidad entra con `newgrp docker`: el gestor de usuario arrancó antes de que la
+cuenta estuviera en el grupo `docker`, así que el servicio no lo hereda y Docker
+responde «permission denied». `watch` comprueba `docker info` al arrancar y falla
+con un mensaje claro si no hay acceso, en vez de dejar que la primera tarea
+muera en `implement`.
+
 ### Job `guard`
 
 El job `guard` de la CI lee `orquestator-cli/protected-paths.txt` de la base
