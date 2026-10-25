@@ -10,14 +10,14 @@ import {
   viewArgs,
 } from "../lib/github.mjs";
 
-test("statusArgs publica el contexto guard sobre el SHA", () => {
+test("statusArgs publica el contexto gh-guard sobre el SHA", () => {
   const args = statusArgs("abc123", "success", "aprobado");
   assert.deepEqual(args.slice(0, 3), [
     "api",
     "repos/{owner}/{repo}/statuses/abc123",
     "-f",
   ]);
-  assert.ok(args.includes("context=guard"));
+  assert.ok(args.includes("context=gh-guard"));
   assert.ok(args.includes("state=success"));
   assert.ok(args.includes("description=aprobado"));
 });

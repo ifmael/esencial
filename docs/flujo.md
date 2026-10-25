@@ -141,7 +141,7 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
 - `.github/workflows/` no es aprobable: un cambio de CI va en tu PR.
 - Rutas protegidas: la lista es `orquestator-cli/protected-paths.txt` (M2) y se lee
   de `main`. Si el diff las toca, `approve` (TTY, con motivo) guarda un hash; si el
-  diff cambia, la aprobación caduca. Tras cada push se publica el status `guard`.
+  diff cambia, la aprobación caduca. Tras cada push se publica el status `gh-guard`.
 - Migraciones: solo aditivas y compatibles hacia atrás. Una aplicada es inmutable:
   cualquier cambio va en un número nuevo. Se aplican a la D1 remota tras
   `approve --migracion` y **antes** de `In validation`; el job `migracion` de la CI
@@ -251,9 +251,11 @@ muera en `implement`.
 
 El job `guard` de la CI lee `orquestator-cli/protected-paths.txt` de la base
 (`origin/main`), no de la rama, y si el diff toca una ruta protegida exige el
-status `guard` (lo publica `orquestator ship` antes de esperar a la CI). Sin
-status, el job espera 90 s y falla. Los cambios de `.github/workflows/` se
+status `gh-guard` (lo publica `orquestator ship` antes de esperar a la CI). Sin
+status, el job espera 90 s y falla. El **job** se llama `guard`; el **estado** que
+lee se llama `gh-guard`, para no confundirlos. Los cambios de `.github/workflows/` se
 revisan a mano y el job no los exige: el CLI no puede aprobarlos. Para que
-bloquee el merge, añade **`guard` a los checks requeridos** de `main` en GitHub.
+bloquee el merge, añade **`guard` (el job) a los checks requeridos** de `main` en
+GitHub; el job ya verifica el estado `gh-guard`.
 
 `approve` sigue siendo local y con TTY: el status solo se publica tras ese paso.

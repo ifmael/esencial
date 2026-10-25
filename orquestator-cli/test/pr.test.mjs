@@ -80,7 +80,7 @@ test("publish se niega sin la aprobación del diff protegido", () => {
   assert.deepEqual(calls, []);
 });
 
-test("con aprobación, empuja, abre la PR y publica el status guard", () => {
+test("con aprobación, empuja, abre la PR y publica el status gh-guard", () => {
   commit(task, "AGENTS.md", "reglas cambiadas");
   const guard = guardTask(KEY, { base, main });
   save(
@@ -109,7 +109,7 @@ test("con aprobación, empuja, abre la PR y publica el status guard", () => {
   const create = calls.find((args) => args[1] === "create");
   assert.equal(create[3], `${KEY} Cambiar el saludo`);
   const status = calls.find((args) => args[0] === "api");
-  assert.ok(status.includes("context=guard"));
+  assert.ok(status.includes("context=gh-guard"));
   assert.ok(status.includes("state=success"));
   assert.ok(status.some((arg) => arg.includes("aprobado")));
   assert.equal(load(KEY, base).pr.number, 9);
