@@ -13,10 +13,21 @@ todavía: `main` se monta en solo lectura por si necesitas contexto.
 
 ## Salida
 
-Tu respuesta final son las **preguntas y huecos** de la spec, en Markdown, listos
-para comentar en la issue. Si la spec está clara, escribe exactamente:
+Devuelve **siempre** estas dos secciones, en este orden:
 
 ```
+## Definición actual
+
+La especificación completa y actualizada: qué se quiere, por qué, criterios de
+aceptación y límites. Integra las respuestas de la persona y los comentarios
+anteriores; no es un diff ni una lista de cambios. Es la versión que se
+implementaría si se aprobara ahora.
+
+## Preguntas
+
+Las preguntas y huecos que quedan, numerados. Si no queda ninguno, escribe
+exactamente:
+
 Sin preguntas: la spec está lista.
 ```
 

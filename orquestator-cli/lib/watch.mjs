@@ -16,6 +16,7 @@ import { runFlow } from "./run.mjs";
 import { specReview } from "./spec.mjs";
 import {
   readSpecMarker,
+  specDefinition,
   specInputHash,
   specReady,
   writeSpecMarker,
@@ -287,10 +288,19 @@ export async function watch({
       if (marker?.hash === hash) {
         if (marker.status === "ready" && !dryRun) {
           try {
-            await move(apiKey, found, "Ready", fetchImpl);
+            let latest = found;
+            if (marker.definition && marker.definition !== found.description) {
+              await edit(apiKey, found, marker.definition, fetchImpl);
+              latest = { ...found, description: marker.definition };
+              writeSpecMarker(base, key, {
+                ...marker,
+                hash: specInputHash(latest),
+              });
+            }
+            await move(apiKey, latest, "Ready", fetchImpl);
             out(`${key}: spec revisada; a Ready`);
           } catch (error) {
-            out(`${key}: no pude mover a Ready (${error.message})`);
+            out(`${key}: no pude cerrar la spec (${error.message})`);
           }
         }
         continue;
@@ -316,17 +326,34 @@ export async function watch({
             return;
           }
           const ready = specReady(result?.artifact);
-          writeSpecMarker(base, key, {
-            hash,
-            status: ready ? "ready" : "questions",
-            at: new Date().toISOString(),
-          });
+          const definition = specDefinition(result?.artifact);
           if (!ready) {
+            writeSpecMarker(base, key, {
+              hash,
+              status: "questions",
+              definition,
+              at: new Date().toISOString(),
+            });
             out(`${key}: spec-review publicó preguntas`);
             return;
           }
-          await move(apiKey, fresh, "Ready", fetchImpl);
-          out(`${key}: spec revisada; a Ready`);
+          let latest = fresh;
+          try {
+            if (definition && definition !== fresh.description) {
+              await edit(apiKey, fresh, definition, fetchImpl);
+              latest = { ...fresh, description: definition };
+            }
+            writeSpecMarker(base, key, {
+              hash: specInputHash(latest),
+              status: "ready",
+              definition,
+              at: new Date().toISOString(),
+            });
+            await move(apiKey, latest, "Ready", fetchImpl);
+            out(`${key}: spec revisada; a Ready`);
+          } catch (error) {
+            out(`${key}: no pude cerrar la spec (${error.message})`);
+          }
         })
         .catch((error) => {
           out(`${key}: spec-review falló (${error.message})`);

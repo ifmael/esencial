@@ -21,7 +21,7 @@ export async function request(
 
 const ISSUE = `query($team:String!, $number:Float!) {
   issues(filter:{team:{key:{eq:$team}}, number:{eq:$number}}, first:1) {
-    nodes { id identifier title description state{id name} team{id key} }
+    nodes { id identifier title description state{id name} team{id key} comments { nodes { id body createdAt user { name } } } }
   }
 }`;
 
@@ -39,7 +39,7 @@ export async function readyIssues(apiKey, team, fetchImpl = fetch) {
 
 const SPEC_REVIEW = `query($team:String!) {
   issues(filter:{team:{key:{eq:$team}}, state:{name:{eq:"Spec review"}}}, orderBy:updatedAt, first:50) {
-    nodes { id identifier title description state{id name} team{id key} }
+    nodes { id identifier title description state{id name} team{id key} comments { nodes { id body createdAt user { name } } } }
   }
 }`;
 

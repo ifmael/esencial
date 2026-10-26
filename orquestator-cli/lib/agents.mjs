@@ -61,7 +61,7 @@ export const EFFORTS = [
 ];
 
 const CONTEXT = {
-  "spec-review": ["title", "description"],
+  "spec-review": ["title", "description", "comments"],
   implementer: ["brief", "human-feedback", "checks", "review", "pr-review"],
   reviewer: ["brief", "impl", "checks"],
   "pr-review": ["brief", "impl", "checks", "review", "pr-body"],

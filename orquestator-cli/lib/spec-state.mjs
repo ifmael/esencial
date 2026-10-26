@@ -3,15 +3,28 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const SPEC_DIR = "spec-review";
+export const SPEC_COMMENT = "<!-- orquestator-cli:spec-review -->";
 
 export function specInputHash(issue) {
-  const input = `${issue?.title ?? ""}\n${issue?.description ?? ""}`;
+  const comments = (issue?.comments?.nodes ?? [])
+    .filter((comment) => !String(comment.body ?? "").includes(SPEC_COMMENT))
+    .map((comment) => `${comment.id ?? ""}\n${comment.body ?? ""}`)
+    .join("\n---\n");
+  const input = `${issue?.title ?? ""}\n${issue?.description ?? ""}\n${comments}`;
   return createHash("sha256").update(input).digest("hex");
 }
 
 /** El revisor usa esta frase exacta cuando no tiene preguntas. */
 export function specReady(artifact) {
   return /Sin preguntas:\s*la spec está lista\.?/i.test(String(artifact ?? ""));
+}
+
+/** Bloque «Definición actual» del comentario del revisor. */
+export function specDefinition(artifact) {
+  const match = /^##\s+Definición actual\s*\n([\s\S]*?)(?=^##\s+|$)/im.exec(
+    String(artifact ?? ""),
+  );
+  return match?.[1]?.trim() || null;
 }
 
 export function specMarkerPath(base, key) {

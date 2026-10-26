@@ -17,7 +17,7 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 | Estado | Quién lo mueve |
 |---|---|
 | Backlog | tú |
-| Spec review | `watch` lanza el `spec-reviewer` al entrar o al cambiar la descripción; si no hay preguntas, la pasa a `Ready` |
+| Spec review | `watch` lanza el `spec-reviewer`; cada comentario trae la definición actual y las preguntas; si no hay preguntas, la pasa a `Ready` |
 | Ready | **watch** cuando el revisor no tiene preguntas; el bloque manual sigue valiendo |
 | In Progress | el CLI (`run`, `start`, `fix`) |
 | In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable` |
@@ -239,11 +239,13 @@ cada 60 s (equipo `ESN`; `LINEAR_TEAM` o `--team` lo cambian) y despacha:
 
 1. Las issues en **Ready** sin estado local: llama a `run` (empieza por `start`).
 2. Las tareas locales en **In Progress**: reanuda `run` (si la máquina se apagó).
-3. Las **Spec review** sin bloque de acuerdo: lanza el `spec-reviewer` una vez por
-   versión de la descripción y guarda el resultado en
-   `~/.orquestator/spec-review/<clave>.json`. Si el revisor responde
-   «Sin preguntas: la spec está lista.», la pasa a `Ready`; si publica preguntas,
-   espera a que edites la descripción y entonces repite. El bloque manual
+3. Las **Spec review** sin bloque de acuerdo: lanza el `spec-reviewer` al entrar o
+   cuando cambia la descripción o hay un comentario humano nuevo. Cada respuesta del
+   revisor incluye **la definición actual completa** y las preguntas; así se ve la
+   evolución desde la primera descripción. Si responde «Sin preguntas: la spec está
+   lista.», actualiza la descripción con esa definición y la pasa a `Ready`; si
+   publica preguntas, espera a que comentes o edites. Los comentarios del revisor
+   llevan un marcador oculto para no confundirlos con los tuyos. El bloque manual
    `<!-- orquestator-cli:acordado -->` sigue funcionando y se borra al mover.
    Al arrancar también revisa las issues que ya estén en `Spec review`: si no
    quieres que se toquen, muévelas a `Backlog`.

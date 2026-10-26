@@ -301,28 +301,36 @@ test("watch lanza spec-review y pasa a Ready si no hay preguntas", async () => {
   };
   const reviewed = [];
   const moved = [];
+  const edited = [];
   await watch(
     options({
       specs: async () => [issue],
       issue: async () => issue,
       review: async (key) => {
         reviewed.push(key);
-        return { artifact: "Sin preguntas: la spec está lista." };
+        return {
+          artifact:
+            "## Definición actual\n\nSpec final.\n\nSin preguntas: la spec está lista.",
+        };
       },
+      edit: async (_apiKey, _issue, text) => edited.push(text),
       move: async (_apiKey, _issue, name) => moved.push(name),
     }),
   );
   assert.deepEqual(reviewed, ["ESN-1"]);
+  assert.deepEqual(edited, ["Spec final."]);
   assert.deepEqual(moved, ["Ready"]);
 });
 
-test("watch no repite el revisor hasta que cambia la descripción", async () => {
+test("watch no repite el revisor hasta que cambia la descripción o hay comentario", async () => {
   let description = "Spec con dudas.";
+  let comments = [];
   const issue = () => ({
     id: "i1",
     identifier: "ESN-1",
     title: "Exportar",
     description,
+    comments: { nodes: comments },
     state: { name: "Spec review" },
     team: { id: "t", key: "ESN" },
   });
@@ -341,9 +349,14 @@ test("watch no repite el revisor hasta que cambia la descripción", async () => 
   await run();
   await run();
   assert.equal(reviewed, 1);
-  description = "Spec con dudas resueltas.";
+  comments = [{ id: "c1", body: "En A4." }];
   await run();
   assert.equal(reviewed, 2);
+  await run();
+  assert.equal(reviewed, 2);
+  description = "Spec con dudas resueltas.";
+  await run();
+  assert.equal(reviewed, 3);
 });
 
 test("dry-run no mueve una spec acordada", async () => {

@@ -14,7 +14,13 @@ import { ensureArtifactsAt, readArtifact } from "./artifacts.mjs";
 import { runPhase } from "./container.mjs";
 import { imageTag } from "./image.mjs";
 import { comment, getIssue, request } from "./linear.mjs";
-import { specInputHash, specReady, writeSpecMarker } from "./spec-state.mjs";
+import {
+  SPEC_COMMENT,
+  specDefinition,
+  specInputHash,
+  specReady,
+  writeSpecMarker,
+} from "./spec-state.mjs";
 import { home, taskDir } from "./state.mjs";
 
 const TEAM = `query($key:String!) {
@@ -50,6 +56,21 @@ export async function createIssue(
   return data.issueCreate.issue;
 }
 
+/** Hilo de comentarios; los del revisor llevan un marcador oculto. */
+function commentsText(issue) {
+  return (issue.comments?.nodes ?? [])
+    .map((comment) => {
+      const body = String(comment.body ?? "")
+        .replaceAll(SPEC_COMMENT, "")
+        .trim();
+      const who = String(comment.body ?? "").includes(SPEC_COMMENT)
+        ? "Revisor"
+        : "Persona";
+      return `### ${who} (${comment.createdAt ?? ""})\n${body}`;
+    })
+    .join("\n\n");
+}
+
 /** Lanza el spec-reviewer sobre una issue en `Spec review` y publica sus preguntas. */
 export async function specReview(
   key,
@@ -75,6 +96,7 @@ export async function specReview(
   const prompt = promptFor("spec-review", {
     title: issue.title,
     description: issue.description ?? "",
+    comments: commentsText(issue),
   });
   const command = hermesCommand(
     modelFor("spec-review"),
@@ -112,10 +134,11 @@ export async function specReview(
   }
   const artifact = readArtifact(key, "spec-review.md", base);
   if (!artifact.trim()) throw new Error("spec-review.md quedó vacío");
-  await comment(apiKey, issue, artifact, fetchImpl);
+  await comment(apiKey, issue, `${SPEC_COMMENT}\n${artifact}`, fetchImpl);
   writeSpecMarker(base, key, {
     hash: specInputHash(issue),
     status: specReady(artifact) ? "ready" : "questions",
+    definition: specDefinition(artifact),
     at: new Date().toISOString(),
   });
   return { artifact, issue };
