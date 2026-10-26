@@ -109,6 +109,24 @@ describe("usePlanWeek", () => {
     expect(result.current.sessions[0].name).toBeNull();
   });
 
+  it("expone también TODAS las sesiones: la copia ofrece días de otras semanas", async () => {
+    mockFetch();
+    // W35 y W37 no son la semana vista (W36) y siguen disponibles como origen.
+    rows = [
+      planned(1, "2026-09-02"),
+      logged(2, "2026-08-26"),
+      planned(3, "2026-09-09"),
+    ];
+    const { result } = renderHook(() => usePlanWeek(WEEK));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.sessions.map((s) => s.date)).toEqual(["2026-09-02"]);
+    expect(result.current.all.map((s) => s.date)).toEqual([
+      "2026-09-02",
+      "2026-08-26",
+      "2026-09-09",
+    ]);
+  });
+
   it("remove hace DELETE /api/plan-sessions/:id y recarga sin la sesión", async () => {
     const fetchMock = mockFetch();
     const { result } = renderHook(() => usePlanWeek(WEEK));

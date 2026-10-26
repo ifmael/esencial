@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiGet, apiSend } from "./api";
 import { toISODate } from "./day";
 import type { ExerciseKind, ExerciseMetric } from "./exercises";
+import { isoWeekOfDay } from "./iso-week";
 import { weekStreak } from "./reward";
 
 export type PlanSession = {
@@ -96,6 +97,9 @@ function msg(e: unknown): string {
 
 export function usePlanWeek(isoWeek: string) {
   const [sessions, setSessions] = useState<PlanSession[]>([]);
+  // Todas las sesiones del usuario (todas las semanas): la copia de un día
+  // ofrece cualquier día guardado y la semanal, las semanas anteriores.
+  const [allSessions, setAllSessions] = useState<PlanSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Racha semanal: sale del GET completo (todas las semanas), no de la filtrada.
@@ -106,11 +110,13 @@ export function usePlanWeek(isoWeek: string) {
     try {
       const all = await apiGet<PlanSession[]>("/api/plan-sessions");
       // Week filter via Monday-anchored ISO week of "YYYY-MM-DD" (no clock).
-      setSessions(all.filter((s) => isoWeekOf(s.date) === isoWeek));
+      setSessions(all.filter((s) => isoWeekOfDay(s.date) === isoWeek));
+      setAllSessions(all);
       setStreak(weekStreak(all, toISODate(new Date())));
       setError(null);
     } catch {
       setSessions([]);
+      setAllSessions([]);
       setError("No se pudo cargar la semana.");
     } finally {
       setLoading(false);
@@ -186,6 +192,8 @@ export function usePlanWeek(isoWeek: string) {
 
   return {
     sessions,
+    /** Todas las sesiones del usuario, de cualquier semana. */
+    all: allSessions,
     loading,
     error,
     streak,
@@ -194,20 +202,4 @@ export function usePlanWeek(isoWeek: string) {
     saveItems,
     recreate,
   };
-}
-
-/** ISO week ("YYYY-Www") of a "YYYY-MM-DD" date (UTC, no clock). */
-function isoWeekOf(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  const thu = new Date(date.getTime());
-  thu.setUTCDate(thu.getUTCDate() - ((thu.getUTCDay() + 6) % 7) + 3);
-  const year = thu.getUTCFullYear();
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  const monday = new Date(
-    jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86_400_000,
-  );
-  const week =
-    Math.floor((thu.getTime() - monday.getTime()) / (7 * 86_400_000)) + 1;
-  return `${year}-W${String(week).padStart(2, "0")}`;
 }

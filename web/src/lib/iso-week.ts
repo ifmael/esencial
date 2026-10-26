@@ -24,6 +24,25 @@ export function currentIsoWeek(): string {
   return isoWeekOf(new Date());
 }
 
+/** ISO week ("YYYY-Www") of a "YYYY-MM-DD" day (UTC, no clock). */
+export function isoWeekOfDay(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return isoWeekOf(new Date(Date.UTC(y, m - 1, d)));
+}
+
+/** Las siete fechas (lunes→domingo) de la semana ISO, como "YYYY-MM-DD". */
+export function isoWeekDates(isoWeek: string): string[] {
+  const [year, week] = isoWeek.split("-W").map(Number);
+  const monday = new Date(
+    firstIsoMonday(year).getTime() + (week - 1) * WEEK_MS,
+  );
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(monday.getTime() + i * 86_400_000);
+    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+  });
+}
+
 /** shiftIsoWeek("2026-W53", 1) === "2027-W01"; year boundaries handled. */
 export function shiftIsoWeek(isoWeek: string, delta: number): string {
   const [year, week] = isoWeek.split("-W").map(Number);
