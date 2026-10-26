@@ -56,7 +56,7 @@ export function publish(
   const title = `${key} ${state.issueTitle ?? ""}`.trim();
   if (dryRun) {
     out(
-      `[dry-run] guard, push de ${state.branch}, PR "${title}" y status guard`,
+      `[dry-run] guard, push de ${state.branch}, PR "${title}" y status gh-guard`,
     );
     return { dryRun: true };
   }

@@ -5,11 +5,30 @@ import path from "node:path";
 import { clean } from "./clean.mjs";
 import { linearKey, linearTeam } from "./config.mjs";
 import { runGh, viewArgs } from "./github.mjs";
-import { readyIssues } from "./linear.mjs";
+import {
+  getIssue,
+  readyIssues,
+  setState,
+  specReviewIssues,
+  updateDescription,
+} from "./linear.mjs";
 import { runFlow } from "./run.mjs";
 import { dirFor, home, list, load, save, transition } from "./state.mjs";
 
 const LOCK_STALE_MS = 24 * 60 * 60 * 1000;
+
+export const AGREEMENT = "<!-- orquestator-cli:acordado -->";
+
+/** El humano acepta la spec añadiendo este bloque a la descripción. */
+export function specAgreed(description) {
+  return String(description ?? "").includes(AGREEMENT);
+}
+
+function withoutAgreement(description) {
+  return String(description ?? "")
+    .replaceAll(AGREEMENT, "")
+    .trimEnd();
+}
 
 function alive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -92,6 +111,10 @@ export async function watch({
   loadState = load,
   saveState = save,
   ready = readyIssues,
+  specs = specReviewIssues,
+  issue = getIssue,
+  move = setState,
+  edit = updateDescription,
   dockerCheck = dockerReady,
   sleep = sleepSeconds,
   signal,
@@ -122,6 +145,13 @@ export async function watch({
       return;
     }
     out(`${key}: PR #${state.pr.number} mergeada; cierro la tarea`);
+    try {
+      const found = await issue(apiKey, key, fetchImpl);
+      await move(apiKey, found, "Done", fetchImpl);
+    } catch (error) {
+      out(`${key}: no pude cerrar en Linear (${error.message})`);
+      return;
+    }
     try {
       saveState(key, transition(state, "Done"), base);
     } catch (error) {
@@ -195,6 +225,39 @@ export async function watch({
     running.set(key, promise);
   }
 
+  async function acceptSpecs() {
+    if (signal?.aborted) return;
+    let queue;
+    try {
+      queue = (await specs(apiKey, team, fetchImpl)) ?? [];
+    } catch (error) {
+      out(`Linear: no pude leer Spec review (${error.message})`);
+      return;
+    }
+    for (const found of queue) {
+      const key = found?.identifier;
+      if (!key || !specAgreed(found.description)) continue;
+      if (dryRun) {
+        out(`[dry-run] ${key}: spec acordada; la movería a Ready`);
+        continue;
+      }
+      try {
+        await move(apiKey, found, "Ready", fetchImpl);
+      } catch (error) {
+        out(`${key}: no pude mover la spec a Ready (${error.message})`);
+        continue;
+      }
+      out(`${key}: spec acordada; a Ready`);
+      const rest = withoutAgreement(found.description);
+      if (rest === found.description) continue;
+      try {
+        await edit(apiKey, found, rest, fetchImpl);
+      } catch (error) {
+        out(`${key}: no pude borrar el bloque de acuerdo (${error.message})`);
+      }
+    }
+  }
+
   async function tick() {
     let states;
     try {
@@ -228,6 +291,8 @@ export async function watch({
         dispatch(state.key, state.updatedAt);
       }
     }
+
+    await acceptSpecs();
 
     if (running.size >= maxParallel || signal?.aborted) return;
     let queue;

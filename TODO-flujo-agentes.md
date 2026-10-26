@@ -143,15 +143,15 @@ Convención de marcado:
 | Review | Uno previo a la PR (`reviewer`, contexto limpio) y otro sobre la PR publicada (`pr-reviewer`, contexto limpio y modelo distinto) |
 | Validación | PR con resumen + diagrama + preview de Cloudflare; el humano valida y mergea |
 | Comprobaciones | `lint`, `typecheck`, `test` (con cobertura), `e2e` + la CI existente |
-| Integridad de las comprobaciones | **C1-A**: rutas protegidas en `orquestator-cli/protected-paths.txt`; si el diff las toca → `Blocked`, aprobación humana (TTY, hash en el estado) y **commit status `guard`** tras el push (no etiqueta) |
+| Integridad de las comprobaciones | **C1-A**: rutas protegidas en `orquestator-cli/protected-paths.txt`; si el diff las toca → `Blocked`, aprobación humana (TTY, hash en el estado) y **commit status `gh-guard`** tras el push (no etiqueta) |
 | Retorno (F2) | `fix --from review` → implementer → **check → review** → push → pr-review; `--from check` → implementer → check → review (sin PR) o push (con PR); `--from pr-review` → implementer → check → push → pr-review; `--from conflicto` → implementer mergea `main` → check → review → push. `fix --humano` (desde `In validation`) lee **solo tus comentarios** y cuenta como **ronda humana** aparte. Siempre la misma PR |
-| Spec en el piloto (F3) | **Cambio 2026-10-23: el `spec-reviewer` sí entra en el piloto.** Lanza él las preguntas sobre la issue en `Spec review` y tú decides cuándo pasa a `Ready`. El bucle automático (bloque `orquestator-cli:acordado` y sondeo desde `watch`) queda para M5b |
+| Spec en el piloto (F3) | **Cambio 2026-10-23: el `spec-reviewer` sí entra en el piloto.** Lanza él las preguntas sobre la issue en `Spec review` y tú decides cuándo pasa a `Ready`. El bucle automático (bloque `orquestator-cli:acordado` y sondeo desde `watch`) se cerró en M5b |
 | Orden y controles (F4) | Comprobaciones **antes** del review; RED de los tests nuevos/modificados contra `main` (unit/integración; e2e best-effort); `.only` bloquea; `.skip`, tests borrados y `expect` eliminados son hallazgos en `.task/checks.md` |
 | Límites (F5) | Timeout por fase, máximo de peticiones al modelo por fase y tope de gasto en la clave de nan; al agotarse → `Blocked` con logs. Cuenta tiempo activo. Las rondas humanas (`fix --humano`) van aparte y no bloquean solas |
 | Contenedores (I2) | **Uno por fase**, `--rm`, con el mismo clon montado: implementer escribe `impl.md`/`pr-body.md` y ve brief/informes previos en ro; check escribe `checks.md`; reviewer escribe `review.md`; pr-review escribe `pr-review.md`. El estado y el hash de `approve` viven en el host, no en el clon |
 | Estado y aprobaciones (R1) | `~/.orquestator/ESN-123/state.json` y el hash de `approve` en el host; `run` es el dueño. Los contenedores no montan el estado; los informes se publican desde el host |
 | Upstream (R2) | Espejo bare de `main` en `~/.orquestator/upstream.git`, actualizado por el host y montado ro en `/upstream`; el worker hace `git fetch /upstream main` y el implementer mergea. `run` comprueba `gh pr view --json mergeable` antes de `In validation`; conflicto → `fix --from conflicto` |
-| Guard (R4) | Hash aprobado en el estado del host antes de `check`/`ship`; commit status `guard` atado al SHA tras el push (no etiqueta). Cada push lo invalida y el CLI lo repone si el hash sigue valiendo |
+| Guard (R4) | Hash aprobado en el estado del host antes de `check`/`ship`; commit status `gh-guard` atado al SHA tras el push (no etiqueta). Cada push lo invalida y el CLI lo repone si el hash sigue valiendo |
 | CLI (I3) | M2 depende de **M0 y M1**; criterio: cada comando acepta `--dry-run` y la suite de transiciones pasa; estimación **3-4 días** (4-6 con `watch` y `migrate` completos) |
 | PR body (I4) | El **implementer** escribe `.task/pr-body.md`; `ship` lo publica y sube `review.md` y `checks.md` como comentarios de la PR |
 | Cobertura y ADR (I5) | Cobertura **sí en el piloto** para `api`/`web` (`vitest --coverage`): `coverage.thresholds` en `api/vitest.config.ts` y `web/vite.config.ts`, solo suben; objetivo 60% en M6. ADR solo cuando haya una decisión de arquitectura real; revisión final en M6 |
@@ -185,7 +185,7 @@ el proxy);
 Adoptados: **R1** (estado y aprobaciones en el host; cada contenedor monta solo lo que
 escribe), **R2** (espejo bare de `main` ro, `mergeable` y `fix --from conflicto`), **R3-A**
 (job de CI `migracion` con token read-only; fallback R3-B si no lista `_cf_D1_MIGRATIONS`),
-**R4-A** (commit status `guard`, no etiqueta), **G1** (`coverage.thresholds` en las configs
+**R4-A** (commit status `gh-guard`, no etiqueta), **G1** (`coverage.thresholds` en las configs
 protegidas; solo suben), **G2** (lock de migraciones en `check`), **G3** (sin gateway MCP en
 el piloto, provider de nan en M1, sin `verifier`), **G4** (`watch` a M5b, `migrate`
 condicional, M2 3-4 días) y `clean` con comprobaciones post-deploy. Texto: `pr-review` con
@@ -198,7 +198,7 @@ preview con D1/R2/Access.
 ### Revisión v4 (2026-10-21)
 
 Adoptados **A1** (la migración se aprueba y aplica antes de `In validation`, no dentro),
-**A2** (hash aprobado en local; status `guard` tras el push) y **A3** (artefactos en
+**A2** (hash aprobado en local; status `gh-guard` tras el push) y **A3** (artefactos en
 `~/.orquestator/ESN-123/task/`, directorio base `:ro` y overlays `:rw`, `human-feedback.md`
 y `pr-diff.patch`), más las 4 erratas. Sin cambios de alcance.
 
@@ -259,7 +259,7 @@ lo fetchea y el implementer mergea.
    `checkout` (clon `git clone --local --no-hardlinks`, sin remoto, más el espejo bare
    `~/.orquestator/upstream.git`; importación de la rama en `refs/orquestator-cli/…`),
    `container` (`docker run` con mounts por fase), `check` (comandos del repo), `guard` (rutas
-   protegidas, hash y aprobación; status `guard`), `pr` (`gh`: push, PR, review; sin status
+   protegidas, hash y aprobación; status `gh-guard`), `pr` (`gh`: push, PR, review; sin status
    de migración) y `artifacts` (brief/impl/review/checks; publicación desde el host).
    El CLI no redacta contenido: solo transiciones y ejecución; el brief es una copia
 determinista de la issue.
@@ -504,17 +504,19 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
 - **Antes de `check` y de `ship`** el CLI exige el **hash aprobado** en
   `~/.orquestator/ESN-123/state.json` (no hay SHA remoto todavía). **Tras el push** de
   `ship` y de cada `fix`, si el hash sigue coincidiendo, publica el commit status
-  `guard` sobre ese SHA. M5b añade el job de CI que lee la lista de `origin/main` (no de
-  la rama) y falla si hay rutas protegidas sin el status `guard`.
+  `gh-guard` sobre ese SHA. M5b añade el job de CI que lee la lista de `origin/main` (no de
+  la rama) y falla si hay rutas protegidas sin el status `gh-guard`.
 - `.github/workflows/` **no es aprobable**: `approve` no lo cubre; un cambio de CI va en
   una PR tuya, fuera del flujo.
-- No se abren comprobaciones ni PR sin el hash aprobado; el status `guard` solo existe
+- No se abren comprobaciones ni PR sin el hash aprobado; el status `gh-guard` solo existe
   después del push.
 
 ### Reglas duras (seguridad y proceso)
 
-- **Quién mueve los estados**: tú `Spec review → Ready` y `In validation → Done`
-  (merge); el CLI (`run`/comandos) `In Progress`, `In validation` y `Blocked`.
+- **Quién mueve los estados**: tú aceptas la spec (bloque `orquestator-cli:acordado`)
+  y mergeas; `watch` hace `Spec review → Ready` al verlo y `In validation → Done` al
+  ver la PR mergeada; el CLI (`run`/comandos) mueve `In Progress`, `In validation` y
+  `Blocked`.
 - El agente **no modifica `.github/workflows/`**: el CLI bloquea el diff y el review lo
   marca; un cambio de CI va en PR aparte que revisas tú.
 - Reintentos: máx. 2 por fallo de contenedor/comprobaciones. Review previo: máx. 3 rondas.
@@ -531,7 +533,7 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
   `main` es un PR mergeado por ti. El CLI rechaza cualquier push cuyo destino sea `main`
   y prohíbe `--force`.
 - Si el diff toca una ruta protegida: antes de `check`/`ship` manda el **hash aprobado**;
-  tras cada push, el status `guard` se publica si el hash sigue valiendo. La aprobación
+  tras cada push, el status `gh-guard` se publica si el hash sigue valiendo. La aprobación
   caduca si el diff protegido cambia y cada push invalida el status.
 - **El host no ejecuta agentes**: todos los perfiles corren en contenedor. El estado y el
   hash de `approve` viven en el host, fuera del clon.
@@ -758,10 +760,10 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       86/85/86/88—, paso en CI y en `check` (2026-10-22).
 - [x] `pr`: push de la rama a `origin` desde el checkout principal, PR con
       `pr-body.md` (crear o editar), `gh pr review --comment` con `review.md`,
-      `checks.md` como comentario, status `guard` sobre el SHA y bloqueo sin
-      aprobación; solo publica `guard`, nunca `migracion` (2026-10-22).
+      `checks.md` como comentario, status `gh-guard` sobre el SHA y bloqueo sin
+      aprobación; solo publica `gh-guard`, nunca `migracion` (2026-10-22).
 - [x] `ship`: editar el cuerpo de la PR, comentar `checks.md` y `review.md` si tienen
-      contenido y reponer el status `guard` sobre el SHA de la PR si la aprobación sigue
+      contenido y reponer el status `gh-guard` sobre el SHA de la PR si la aprobación sigue
       valiendo (2026-10-22).
 - [x] Módulo `artifacts`: leer/escribir los `task/*` con nombres validados (sin rutas
       fuera), pre-crear vacíos, listar qué está lleno; el estado y las aprobaciones viven
@@ -771,7 +773,7 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       con los hooks neutralizados), hash del diff y `approve` (TTY, motivo);
       `.github/workflows/` no es aprobable; `check` exige la aprobación; test con
       `diff.external` y `pre-push` maliciosos (2026-10-22).
-- [x] `guard` remoto: status `guard` en GitHub tras `pr`/`ship` y `approve --pr N` para
+- [x] `guard` remoto: status `gh-guard` en GitHub tras `pr`/`ship` y `approve --pr N` para
       PRs manuales (hash del diff de la PR, sin workflows). El job de CI que lo lee es de
       M5b (2026-10-22).
 - [ ] Módulo `migrate` (solo si la feature del piloto lleva migración; si no, M5b):
@@ -812,7 +814,8 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] `clean`: tras el merge (o `--force`) borra la tarea y libera la migración; corre
       las dos comprobaciones fiables del §7 de `DEPLOY.md` y sugiere `wrangler rollback`
       si fallan (2026-10-22).
-- [ ] Script `orquestator-cli` en `package.json`.
+- [x] Scripts en `package.json`: `pnpm orquestator …` y el atajo
+      `pnpm aprobar --pr N --motivo "…"` (2026-10-26).
 
 Hecho cuando: cada comando acepta `--dry-run` sin efectos, `run --dry-run` recorre el
 flujo completo sobre un clon de juguete y la suite de transiciones pasa, sin tocar Linear
@@ -939,13 +942,16 @@ Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
       si la máquina se apaga, se pausa y reanuda. Al detectar el merge, ejecuta `clean`.
       Unidad instalada; entra con `newgrp docker` porque el user manager arrancó sin el
       grupo. `watch` comprueba `docker info` al arrancar.
+- [x] Al detectar el merge, `watch` mueve también la issue a `Done` en Linear antes de
+      limpiar la tarea local.
 - [ ] **Explorar una URL pública** para que Linear avise al instante (webhook firmado, vía
       Cloudflare Tunnel o un Worker). Opción principal: el sondeo local; el webhook solo si
       la latencia del sondeo molesta. Requiere autenticar la firma y un endpoint estable.
-- [ ] Bucle automático de spec (el perfil ya está en el piloto): bloque
-      `<!-- orquestator-cli:acordado -->` y sondeo de respuestas humanas desde `watch`.
+- [x] Bucle automático de spec (el perfil ya está en el piloto): bloque
+      `<!-- orquestator-cli:acordado -->` y sondeo de respuestas humanas desde `watch`;
+      al verlo pasa la issue a `Ready` y borra el bloque.
 - [x] Job de CI `guard`: lee `orquestator-cli/protected-paths.txt` de `origin/main` y
-      falla si el diff toca rutas protegidas sin el status `guard`. Falta añadirlo a los
+      falla si el diff toca rutas protegidas sin el status `gh-guard`. Falta añadirlo a los
       checks requeridos de `main` (lo hace el usuario en GitHub).
 - [ ] Si el piloto no llevó migración, construir `migrate` y probarlo con una migración de
       juguete.
@@ -954,7 +960,7 @@ Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
       no, `run` sigue siendo el camino por defecto.
 - [ ] Medir el tiempo de una tarea de principio a fin.
 
-Hecho cuando: la cola corre sola y una PR con rutas protegidas sin el status `guard` no mergea.
+Hecho cuando: la cola corre sola y una PR con rutas protegidas sin el status `gh-guard` no mergea.
 
 ### M6 — Después del piloto (a decidir)
 
@@ -991,8 +997,8 @@ Depende de: M5b.
 | 2026-10-21 | I2-I5 | Contenedor por fase; M2 en 2-3 días; pr-body del implementer; cobertura en el piloto (ratchet) y ADR solo si hay decisión | El clon persiste; los contenedores son efímeros | M0 |
 | 2026-10-21 | Revisión v2 | N1-N5 y D2-D5 adoptados: sin git en el clon, `--no-hardlinks`, comentarios filtrados, commit status `migracion`, rutas de test protegidas, M5a/M5b; D1 pendiente | La seguridad se cierra antes de M2; el coordinador está en duda | Decidir D1 |
 | 2026-10-21 | D1 | **D1-A**: `run` encadena las fases sin coordinador; plugin/C4 a M5b; M3 baja a ~0,5 día | El piloto valida el entorno y el CLI; el coordinador se añade solo si hace falta | M0 |
-| 2026-10-21 | Revisión v3 | R1-R4 y G1-G4 adoptados: estado/aprobaciones en host, espejo `/upstream`, job CI `migracion` read-only, status `guard`, thresholds, lock en `check`, sin MCP/verifier, `watch` a M5b; M2 3-4 días | El agente ya no puede tocar estado ni informes; M2 se recorta | M0 |
-| 2026-10-21 | Revisión v4 | A1-A3 adoptados: migración antes de `In validation`, hash local + status `guard` tras push, artefactos en host con dir base ro y overlays; 4 erratas | Sin cambios de alcance; el plan queda listo para M0 | M0 |
+| 2026-10-21 | Revisión v3 | R1-R4 y G1-G4 adoptados: estado/aprobaciones en host, espejo `/upstream`, job CI `migracion` read-only, status `gh-guard`, thresholds, lock en `check`, sin MCP/verifier, `watch` a M5b; M2 3-4 días | El agente ya no puede tocar estado ni informes; M2 se recorta | M0 |
+| 2026-10-21 | Revisión v4 | A1-A3 adoptados: migración antes de `In validation`, hash local + status `gh-guard` tras push, artefactos en host con dir base ro y overlays; 4 erratas | Sin cambios de alcance; el plan queda listo para M0 | M0 |
 | 2026-10-21 | M0 | Repo público, `main` protegido (`ci`/`lint`/`migracion`, admins incluidos), aprobación para forks; job `migracion`, `docs/flujo.md`, `.task/` ignorado; gitleaks limpio | La decisión fue publicar tal cual; el repo ya es público y no hay vuelta atrás práctica | Tokens CF + Linear |
 | 2026-10-22 | M0 | PR #49: job `migracion` verificado con el token read-only (`D1 Read` lee `d1_migrations`); `biome.json` excluye el HTML de `docs/` | El job distingue permisos de «no aplicada»; el token no hace falta en el host, solo en Actions | Docker (grupo) + token de edición + env + Linear |
 | 2026-10-22 | M0 | Docker: servicio habilitado, usuario en el grupo `docker` y `hello-world` OK | El grupo no llega a la sesión en curso; `newgrp` o relogin | Linear |
@@ -1015,8 +1021,8 @@ Depende de: M5b.
 | 2026-10-22 | M2 | Cobertura con umbrales: api 95/90/99/97 (istanbul) y web 86/85/86/88 (v8); `test:coverage` en CI y `check` | v8 no ve workerd; istanbul sí instrumenta al transformar | `fix` y `run` real (M3) |
 | 2026-10-22 | M2 | Lock de migraciones (reserva global, `Blocked` con la otra tarea) y `clean` con las comprobaciones de deploy; 93 tests | El lock se libera en `clean`; una tarea abandonada se limpia con `clean --force` | `fix` y la cobertura |
 | 2026-10-22 | M2 | `inspect` (estado, brief, artefactos, diff, CI) y `run --dry-run` con la cadena según el estado; 85 tests | El `run` real espera a las fases de agente (M3) | Lock de migración y `clean` |
-| 2026-10-22 | M2 | `artifacts` y `ship`: artefactos validados, body + comentarios y status `guard` repuesto; 78 tests | Un artefacto vacío no se publica; el host nunca escribe estado en el clon | `inspect` y `run` |
-| 2026-10-22 | M2 | `pr`: push, PR con body, status `guard` y bloqueo sin aprobación; 70 tests | El título sale de la issue, guardado en `start` | `ship` y `artifacts` |
+| 2026-10-22 | M2 | `artifacts` y `ship`: artefactos validados, body + comentarios y status `gh-guard` repuesto; 78 tests | Un artefacto vacío no se publica; el host nunca escribe estado en el clon | `inspect` y `run` |
+| 2026-10-22 | M2 | `pr`: push, PR con body, status `gh-guard` y bloqueo sin aprobación; 70 tests | El título sale de la issue, guardado en `start` | `ship` y `artifacts` |
 | 2026-10-22 | M2 | `guard` local: rutas protegidas, hash y `approve`; `check` bloquea sin aprobación y el clon malicioso no ejecuta nada; 61 tests | Se importa la rama por el espejo, nunca con un `fetch` del clon | `pr` y status remoto |
 | 2026-10-22 | M2 | `container` (montajes ro/rw por fase, red, límites) y `check` base con `checks.md`; 52 tests | Las fases de agente usan la red interna y el home de Hermes de la imagen | `pr`, `guard` |
 | 2026-10-22 | M2 | CLI con estado, `status`/`block`/`resume` y `start` (Linear + clon + rama + brief); 38 tests y `--dry-run` | El espejo bare necesita el refspec de `remote.origin.fetch` para actualizarse | `check` y `container` |
@@ -1057,7 +1063,7 @@ Depende de: M5b.
 
 - `orquestator-cli/` (nuevo): CLI, Dockerfile, briefs, perfiles y `protected-paths.txt`.
 - `docs/flujo.md` (nuevo): convención.
-- `package.json`: script `orquestator-cli`.
+- `package.json`: scripts `orquestator` y `aprobar`.
 - `.gitignore`: `.task/`.
 - `api/` y `web/` solo para la cobertura: `@vitest/coverage-v8`, `api/vitest.config.ts`
   y `web/vite.config.ts` (cambio humano, rutas protegidas).

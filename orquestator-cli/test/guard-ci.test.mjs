@@ -1,10 +1,28 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ciDecision } from "../../.github/scripts/guard-ci.mjs";
+import {
+  ciDecision,
+  isApprovedStatus,
+} from "../../.github/scripts/guard-ci.mjs";
 import { parsePaths } from "../lib/guard.mjs";
 
 const RULES = parsePaths("AGENTS.md\n.github/workflows/\n");
+
+test("guard-ci solo acepta el contexto gh-guard en success", () => {
+  assert.equal(
+    isApprovedStatus([{ context: "guard", state: "success" }]),
+    false,
+  );
+  assert.equal(
+    isApprovedStatus([{ context: "gh-guard", state: "pending" }]),
+    false,
+  );
+  assert.equal(
+    isApprovedStatus([{ context: "gh-guard", state: "success" }]),
+    true,
+  );
+});
 
 test("guard-ci exige status para una ruta protegida normal", () => {
   const decision = ciDecision(["AGENTS.md", "README.md"], RULES);

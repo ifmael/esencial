@@ -17,11 +17,11 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 | Estado | Quién lo mueve |
 |---|---|
 | Backlog | tú |
-| Spec review | tú creas; el agente comenta sus preguntas; tú decides (el bucle automático llega en M5b) |
-| Ready | **solo tú**; el agente nunca se autopromociona |
+| Spec review | tú creas; el agente comenta sus preguntas; al aceptar añades `<!-- orquestator-cli:acordado -->` y `watch` la pasa a `Ready` |
+| Ready | **tú** (el agente nunca se autopromociona; `watch` solo obedece ese bloque) |
 | In Progress | el CLI (`run`, `start`, `fix`) |
 | In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable` |
-| Done | tú al mergear (o la integración GitHub) |
+| Done | `watch` al ver la PR mergeada (o tú) |
 | Blocked | el CLI o tú, con una pregunta concreta; `resume` vuelve a la fase anterior |
 
 ## Artefactos
@@ -141,7 +141,7 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
 - `.github/workflows/` no es aprobable: un cambio de CI va en tu PR.
 - Rutas protegidas: la lista es `orquestator-cli/protected-paths.txt` (M2) y se lee
   de `main`. Si el diff las toca, `approve` (TTY, con motivo) guarda un hash; si el
-  diff cambia, la aprobación caduca. Tras cada push se publica el status `guard`.
+  diff cambia, la aprobación caduca. Tras cada push se publica el status `gh-guard`.
 - Migraciones: solo aditivas y compatibles hacia atrás. Una aplicada es inmutable:
   cualquier cambio va en un número nuevo. Se aplican a la D1 remota tras
   `approve --migracion` y **antes** de `In validation`; el job `migracion` de la CI
@@ -210,8 +210,12 @@ cada 60 s (equipo `ESN`; `LINEAR_TEAM` o `--team` lo cambian) y despacha:
 
 1. Las issues en **Ready** sin estado local: llama a `run` (empieza por `start`).
 2. Las tareas locales en **In Progress**: reanuda `run` (si la máquina se apagó).
-3. Las **In validation**: si la PR está mergeada, pasa a `Done` y ejecuta `clean`
-   (borra previews y tarea).
+3. Las **Spec review** con el bloque `<!-- orquestator-cli:acordado -->` en la
+   descripción: las pasa a `Ready` y borra el bloque. Tú decides cuándo añadirlo;
+   sin él no se mueve nada.
+4. Las **In validation**: si la PR está mergeada, mueve la issue a `Done` en
+   Linear, pasa la tarea local a `Done` y ejecuta `clean` (borra previews y tarea).
+   Si Linear falla, no limpia: lo reintenta en el siguiente sondeo.
 
 `--max-parallel` (por defecto 1) limita los `run` simultáneos. Cada tarea tiene
 un `run.lock` con el pid: dos `watch` no la arrancan a la vez, y un cerrojo de
@@ -247,9 +251,19 @@ muera en `implement`.
 
 El job `guard` de la CI lee `orquestator-cli/protected-paths.txt` de la base
 (`origin/main`), no de la rama, y si el diff toca una ruta protegida exige el
-status `guard` (lo publica `orquestator ship` antes de esperar a la CI). Sin
-status, el job espera 90 s y falla. Los cambios de `.github/workflows/` se
+status `gh-guard` (lo publica `orquestator ship` antes de esperar a la CI). Sin
+status, el job espera 90 s y falla. El **job** se llama `guard`; el **estado** que
+lee se llama `gh-guard`, para no confundirlos. Los cambios de `.github/workflows/` se
 revisan a mano y el job no los exige: el CLI no puede aprobarlos. Para que
-bloquee el merge, añade **`guard` a los checks requeridos** de `main` en GitHub.
+bloquee el merge, añade **`guard` (el job) a los checks requeridos** de `main` en
+GitHub; el job ya verifica el estado `gh-guard`.
 
 `approve` sigue siendo local y con TTY: el status solo se publica tras ese paso.
+Para una PR manual, el atajo es:
+
+```bash
+pnpm aprobar --pr 62 --motivo "revisado"
+```
+
+Equivale a `pnpm orquestator approve --pr 62 --motivo "revisado"`. Sin TTY no
+funciona: es la aprobación humana.

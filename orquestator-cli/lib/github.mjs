@@ -1,5 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 
+export const GUARD_CONTEXT = "gh-guard";
+
 export function runGh(args) {
   try {
     return execFileSync("gh", args, {
@@ -19,7 +21,7 @@ export function statusArgs(sha, state, description) {
     "-f",
     `state=${state}`,
     "-f",
-    "context=guard",
+    "context=gh-guard",
     "-f",
     `description=${description}`,
     "-f",

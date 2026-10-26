@@ -131,7 +131,7 @@ test("ship omite los comentarios vacíos y el dry-run no hace nada", () => {
   assert.deepEqual(calls, []);
 });
 
-test("ship publica el status guard antes de esperar a la CI", () => {
+test("ship publica el status gh-guard antes de esperar a la CI", () => {
   writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
   approve(guardTask(KEY, { base, main }).hash);
   const calls = [];

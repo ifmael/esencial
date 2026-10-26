@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
-
+import { GUARD_CONTEXT } from "../../orquestator-cli/lib/github.mjs";
 import {
   analyze,
   PROTECTED_FILE,
@@ -29,6 +29,12 @@ function git(args) {
   }).trim();
 }
 
+export function isApprovedStatus(statuses) {
+  return (statuses ?? []).some(
+    (status) => status.context === GUARD_CONTEXT && status.state === "success",
+  );
+}
+
 async function guardStatus(repository, sha, token) {
   const response = await fetch(
     `${API}/repos/${repository}/commits/${sha}/status`,
@@ -44,9 +50,7 @@ async function guardStatus(repository, sha, token) {
     throw new Error(`GitHub respondió HTTP ${response.status}`);
   }
   const data = await response.json();
-  return (data.statuses ?? []).some(
-    (status) => status.context === "guard" && status.state === "success",
-  );
+  return isApprovedStatus(data.statuses);
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -84,12 +88,12 @@ export async function guardCi({
   const deadline = Date.now() + waitMs;
   for (;;) {
     if (await status(repository, sha, token)) {
-      out("Status guard: success.");
+      out("Status gh-guard: success.");
       return 0;
     }
     if (Date.now() >= deadline) {
       throw new Error(
-        "Falta el status guard (orquestator approve y ship, o aprobación manual).",
+        "Falta el status gh-guard (orquestator approve y ship, o aprobación manual).",
       );
     }
     await pause(5000);

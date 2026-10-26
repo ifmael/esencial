@@ -8,6 +8,8 @@ import {
   readyIssues,
   request,
   setState,
+  specReviewIssues,
+  updateDescription,
 } from "../lib/linear.mjs";
 
 function fakeFetch(handler) {
@@ -56,6 +58,19 @@ test("readyIssues pide al equipo las issues en Ready", async () => {
   assert.match(calls[0].body.query, /state:\{name:\{eq:"Ready"\}\}/);
 });
 
+test("specReviewIssues pide las issues en Spec review con su descripción", async () => {
+  const { impl, calls } = fakeFetch(() => ({
+    issues: {
+      nodes: [{ identifier: "ESN-1", description: "Falta decidir X." }],
+    },
+  }));
+  const nodes = await specReviewIssues("k", "ESN", impl);
+  assert.equal(nodes[0].description, "Falta decidir X.");
+  assert.equal(calls[0].body.variables.team, "ESN");
+  assert.match(calls[0].body.query, /state:\{name:\{eq:"Spec review"\}\}/);
+  assert.match(calls[0].body.query, /description/);
+});
+
 test("getIssue busca por número y equipo", async () => {
   const { impl, calls } = fakeFetch(() => ({ issues: { nodes: [ISSUE] } }));
   const issue = await getIssue("k", "ESN-7", impl);
@@ -97,6 +112,16 @@ test("setState rechaza un estado que el equipo no tiene", async () => {
     () => setState("k", ISSUE, "Terminado", impl),
     /no tiene el estado/,
   );
+});
+
+test("updateDescription reescribe la descripción", async () => {
+  const { impl, calls } = fakeFetch(() => ({
+    issueUpdate: { success: true },
+  }));
+  await updateDescription("k", ISSUE, "Texto limpio.", impl);
+  assert.equal(calls[0].body.variables.id, "uuid-1");
+  assert.equal(calls[0].body.variables.description, "Texto limpio.");
+  assert.match(calls[0].body.query, /description:\$description/);
 });
 
 test("comment crea el comentario en la issue", async () => {

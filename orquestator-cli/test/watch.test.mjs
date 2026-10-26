@@ -30,6 +30,13 @@ function options(overrides = {}) {
     team: "ESN",
     once: true,
     ready: async () => [],
+    specs: async () => [],
+    issue: async (_apiKey, key) => ({
+      identifier: key,
+      team: { id: "t", key: "ESN" },
+    }),
+    move: async () => {},
+    edit: async () => {},
     run: async () => ({ ok: true }),
     dockerCheck: () => true,
     cleanTask: async () => {},
@@ -192,6 +199,118 @@ test("un run.lock vivo impide el segundo arranque", async () => {
   );
   assert.deepEqual(calls, []);
   assert.match(lines.join("\n"), /otro run/);
+});
+
+test("al mergear, mueve Linear a Done antes de limpiar", async () => {
+  const state = inValidation();
+  save(state.key, state, dir);
+  const moves = [];
+  const cleaned = [];
+  await watch(
+    options({
+      ghRun: () => JSON.stringify({ state: "MERGED" }),
+      issue: async (_apiKey, key) => ({
+        id: "i1",
+        identifier: key,
+        team: { id: "t", key: "ESN" },
+      }),
+      move: async (_apiKey, issue, name) =>
+        moves.push([issue.identifier, name]),
+      cleanTask: async (key) => cleaned.push(key),
+    }),
+  );
+  assert.deepEqual(moves, [["ESN-1", "Done"]]);
+  assert.deepEqual(cleaned, ["ESN-1"]);
+  assert.equal(load(state.key, dir).state, "Done");
+});
+
+test("si Linear falla, no cierra ni limpia", async () => {
+  const state = inValidation();
+  save(state.key, state, dir);
+  const lines = [];
+  let cleaned = false;
+  await watch(
+    options({
+      ghRun: () => JSON.stringify({ state: "MERGED" }),
+      move: async () => {
+        throw new Error("Linear caído");
+      },
+      cleanTask: async () => {
+        cleaned = true;
+      },
+      out: (text) => lines.push(text),
+    }),
+  );
+  assert.equal(load(state.key, dir).state, "In validation");
+  assert.equal(cleaned, false);
+  assert.match(lines.join("\n"), /no pude cerrar en Linear.*Linear caído/);
+});
+
+test("Spec review con el bloque acordado pasa a Ready y lo borra", async () => {
+  const marker = "<!-- orquestator-cli:acordado -->";
+  const calls = [];
+  await watch(
+    options({
+      specs: async () => [
+        {
+          id: "i1",
+          identifier: "ESN-1",
+          description: `Decidido.\n\n${marker}`,
+          team: { id: "t", key: "ESN" },
+        },
+      ],
+      move: async (_apiKey, _issue, name) => calls.push(["state", name]),
+      edit: async (_apiKey, _issue, text) => calls.push(["desc", text]),
+    }),
+  );
+  assert.deepEqual(calls, [
+    ["state", "Ready"],
+    ["desc", "Decidido."],
+  ]);
+});
+
+test("Spec review sin el bloque no se mueve", async () => {
+  let moved = false;
+  await watch(
+    options({
+      specs: async () => [
+        {
+          id: "i1",
+          identifier: "ESN-1",
+          description: "Sigo con dudas.",
+          team: { id: "t", key: "ESN" },
+        },
+      ],
+      move: async () => {
+        moved = true;
+      },
+    }),
+  );
+  assert.equal(moved, false);
+});
+
+test("dry-run no mueve una spec acordada", async () => {
+  let moved = false;
+  const lines = [];
+  await watch(
+    options({
+      dryRun: true,
+      specs: async () => [
+        {
+          id: "i1",
+          identifier: "ESN-1",
+          description: "<!-- orquestator-cli:acordado -->",
+          team: { id: "t", key: "ESN" },
+        },
+      ],
+      move: async () => {
+        moved = true;
+      },
+      out: (text) => lines.push(text),
+    }),
+  );
+  assert.equal(moved, false);
+  assert.match(lines.join("\n"), /la movería a Ready/);
 });
 
 test("watch exige max-parallel y el cerrojo no deja dos instancias", async () => {
