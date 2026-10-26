@@ -21,6 +21,7 @@
     "lint": "biome check . && pnpm --filter @esencial/web check:tokens",
     "lint:fix": "biome check --write .",
     "orquestator": "node orquestator-cli/bin/orquestator.mjs",
+    "aprobar": "node orquestator-cli/bin/orquestator.mjs approve",
     "format": "biome format --write .",
     "prepare": "husky"
   },

@@ -814,7 +814,8 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] `clean`: tras el merge (o `--force`) borra la tarea y libera la migración; corre
       las dos comprobaciones fiables del §7 de `DEPLOY.md` y sugiere `wrangler rollback`
       si fallan (2026-10-22).
-- [ ] Script `orquestator-cli` en `package.json`.
+- [x] Scripts en `package.json`: `pnpm orquestator …` y el atajo
+      `pnpm aprobar --pr N --motivo "…"` (2026-10-26).
 
 Hecho cuando: cada comando acepta `--dry-run` sin efectos, `run --dry-run` recorre el
 flujo completo sobre un clon de juguete y la suite de transiciones pasa, sin tocar Linear
@@ -1062,7 +1063,7 @@ Depende de: M5b.
 
 - `orquestator-cli/` (nuevo): CLI, Dockerfile, briefs, perfiles y `protected-paths.txt`.
 - `docs/flujo.md` (nuevo): convención.
-- `package.json`: script `orquestator-cli`.
+- `package.json`: scripts `orquestator` y `aprobar`.
 - `.gitignore`: `.task/`.
 - `api/` y `web/` solo para la cobertura: `@vitest/coverage-v8`, `api/vitest.config.ts`
   y `web/vite.config.ts` (cambio humano, rutas protegidas).

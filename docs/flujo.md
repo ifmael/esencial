@@ -259,3 +259,11 @@ bloquee el merge, añade **`guard` (el job) a los checks requeridos** de `main` 
 GitHub; el job ya verifica el estado `gh-guard`.
 
 `approve` sigue siendo local y con TTY: el status solo se publica tras ese paso.
+Para una PR manual, el atajo es:
+
+```bash
+pnpm aprobar --pr 62 --motivo "revisado"
+```
+
+Equivale a `pnpm orquestator approve --pr 62 --motivo "revisado"`. Sin TTY no
+funciona: es la aprobación humana.
