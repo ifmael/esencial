@@ -69,6 +69,7 @@ test("specReviewIssues pide las issues en Spec review con su descripción", asyn
   assert.equal(calls[0].body.variables.team, "ESN");
   assert.match(calls[0].body.query, /state:\{name:\{eq:"Spec review"\}\}/);
   assert.match(calls[0].body.query, /description/);
+  assert.match(calls[0].body.query, /comments/);
 });
 
 test("getIssue busca por número y equipo", async () => {

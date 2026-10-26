@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { createIssue, specReview } from "../lib/spec.mjs";
+import { readSpecMarker } from "../lib/spec-state.mjs";
 
 function fakeFetch({
   states = ["Backlog", "Spec review", "Ready"],
@@ -97,6 +98,15 @@ test("specReview exige Spec review, escribe spec-review y comenta en la issue", 
     title: "Exportar el plan",
     description: "Quiero el plan en PDF.",
     state: { id: "st-1", name: "Spec review" },
+    comments: {
+      nodes: [
+        {
+          id: "c1",
+          body: "En A4 y con los ejercicios agrupados.",
+          createdAt: "2026-10-26T10:00:00Z",
+        },
+      ],
+    },
   };
   const fetchImpl = async (_url, init) => {
     const body = JSON.parse(init.body);
@@ -116,7 +126,7 @@ test("specReview exige Spec review, escribe spec-review y comenta en la issue", 
       seen = options;
       fs.writeFileSync(
         path.join(options.task, "spec-review.md"),
-        "Sin preguntas: la spec está lista.",
+        "## Definición actual\n\nExportar el plan en A4.\n\n## Preguntas\n\nSin preguntas: la spec está lista.",
       );
       return { status: 0, stdout: "", stderr: "" };
     },
@@ -126,11 +136,17 @@ test("specReview exige Spec review, escribe spec-review y comenta en la issue", 
   assert.equal(seen.repo, main);
   assert.match(seen.input, /Exportar el plan/);
   assert.match(seen.input, /Quiero el plan en PDF/);
-  assert.equal(
+  assert.match(seen.input, /En A4 y con los ejercicios agrupados/);
+  assert.match(
     calls.find((c) => c.query.includes("commentCreate")).variables.body,
-    "Sin preguntas: la spec está lista.",
+    /## Definición actual/,
   );
   assert.equal(result.issue.identifier, "ESN-7");
+  assert.equal(readSpecMarker(dir, "ESN-7").status, "ready");
+  assert.equal(
+    readSpecMarker(dir, "ESN-7").definition,
+    "Exportar el plan en A4.",
+  );
   const hermes = path.join(dir, "ESN-7", "hermes", "spec-review");
   assert.match(
     fs.readFileSync(path.join(hermes, "SOUL.md"), "utf8"),
