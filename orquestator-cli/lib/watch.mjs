@@ -13,6 +13,13 @@ import {
   updateDescription,
 } from "./linear.mjs";
 import { runFlow } from "./run.mjs";
+import { specReview } from "./spec.mjs";
+import {
+  readSpecMarker,
+  specInputHash,
+  specReady,
+  writeSpecMarker,
+} from "./spec-state.mjs";
 import { dirFor, home, list, load, save, transition } from "./state.mjs";
 
 const LOCK_STALE_MS = 24 * 60 * 60 * 1000;
@@ -115,6 +122,7 @@ export async function watch({
   issue = getIssue,
   move = setState,
   edit = updateDescription,
+  review = specReview,
   dockerCheck = dockerReady,
   sleep = sleepSeconds,
   signal,
@@ -136,6 +144,7 @@ export async function watch({
   if (!releaseWatch) throw new Error(`Ya hay un watch abierto en ${base}`);
 
   const running = new Map();
+  const specRunning = new Map();
   const failures = new Map();
   const cleaning = new Set();
 
@@ -258,6 +267,75 @@ export async function watch({
     }
   }
 
+  /** Lanza el revisor al entrar en Spec review; repite solo si cambia el texto. */
+  async function autoSpecs() {
+    if (signal?.aborted) return;
+    let queue;
+    try {
+      queue = (await specs(apiKey, team, fetchImpl)) ?? [];
+    } catch (error) {
+      out(`Linear: no pude leer Spec review (${error.message})`);
+      return;
+    }
+    for (const found of queue) {
+      const key = found?.identifier;
+      if (!key || specAgreed(found.description)) continue;
+      if (specRunning.has(key)) continue;
+      if (specRunning.size >= maxParallel) break;
+      const hash = specInputHash(found);
+      const marker = readSpecMarker(base, key);
+      if (marker?.hash === hash) {
+        if (marker.status === "ready" && !dryRun) {
+          try {
+            await move(apiKey, found, "Ready", fetchImpl);
+            out(`${key}: spec revisada; a Ready`);
+          } catch (error) {
+            out(`${key}: no pude mover a Ready (${error.message})`);
+          }
+        }
+        continue;
+      }
+      if (dryRun) {
+        out(`[dry-run] ${key}: lanzaría spec-review`);
+        continue;
+      }
+      const promise = Promise.resolve()
+        .then(() =>
+          review(key, {
+            apiKey,
+            base,
+            main,
+            out: (text) => out(`${key}: ${text}`),
+          }),
+        )
+        .then(async (result) => {
+          const fresh = await issue(apiKey, key, fetchImpl);
+          if (fresh.state?.name !== "Spec review") return;
+          if (specInputHash(fresh) !== hash) {
+            out(`${key}: la spec cambió mientras se revisaba; repito`);
+            return;
+          }
+          const ready = specReady(result?.artifact);
+          writeSpecMarker(base, key, {
+            hash,
+            status: ready ? "ready" : "questions",
+            at: new Date().toISOString(),
+          });
+          if (!ready) {
+            out(`${key}: spec-review publicó preguntas`);
+            return;
+          }
+          await move(apiKey, fresh, "Ready", fetchImpl);
+          out(`${key}: spec revisada; a Ready`);
+        })
+        .catch((error) => {
+          out(`${key}: spec-review falló (${error.message})`);
+        })
+        .finally(() => specRunning.delete(key));
+      specRunning.set(key, promise);
+    }
+  }
+
   async function tick() {
     let states;
     try {
@@ -292,6 +370,7 @@ export async function watch({
       }
     }
 
+    await autoSpecs();
     await acceptSpecs();
 
     if (running.size >= maxParallel || signal?.aborted) return;
@@ -319,7 +398,7 @@ export async function watch({
       if (once || signal?.aborted) break;
       await sleep(intervalSecs, signal);
     } while (!signal?.aborted);
-    await Promise.allSettled([...running.values()]);
+    await Promise.allSettled([...running.values(), ...specRunning.values()]);
     return { ok: true, once };
   } finally {
     releaseWatch();

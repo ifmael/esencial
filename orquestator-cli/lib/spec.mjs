@@ -14,6 +14,7 @@ import { ensureArtifactsAt, readArtifact } from "./artifacts.mjs";
 import { runPhase } from "./container.mjs";
 import { imageTag } from "./image.mjs";
 import { comment, getIssue, request } from "./linear.mjs";
+import { specInputHash, specReady, writeSpecMarker } from "./spec-state.mjs";
 import { home, taskDir } from "./state.mjs";
 
 const TEAM = `query($key:String!) {
@@ -112,5 +113,10 @@ export async function specReview(
   const artifact = readArtifact(key, "spec-review.md", base);
   if (!artifact.trim()) throw new Error("spec-review.md quedó vacío");
   await comment(apiKey, issue, artifact, fetchImpl);
+  writeSpecMarker(base, key, {
+    hash: specInputHash(issue),
+    status: specReady(artifact) ? "ready" : "questions",
+    at: new Date().toISOString(),
+  });
   return { artifact, issue };
 }

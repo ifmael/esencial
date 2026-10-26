@@ -145,7 +145,7 @@ Convención de marcado:
 | Comprobaciones | `lint`, `typecheck`, `test` (con cobertura), `e2e` + la CI existente |
 | Integridad de las comprobaciones | **C1-A**: rutas protegidas en `orquestator-cli/protected-paths.txt`; si el diff las toca → `Blocked`, aprobación humana (TTY, hash en el estado) y **commit status `gh-guard`** tras el push (no etiqueta) |
 | Retorno (F2) | `fix --from review` → implementer → **check → review** → push → pr-review; `--from check` → implementer → check → review (sin PR) o push (con PR); `--from pr-review` → implementer → check → push → pr-review; `--from conflicto` → implementer mergea `main` → check → review → push. `fix --humano` (desde `In validation`) lee **solo tus comentarios** y cuenta como **ronda humana** aparte. Siempre la misma PR |
-| Spec en el piloto (F3) | **Cambio 2026-10-23: el `spec-reviewer` sí entra en el piloto.** Lanza él las preguntas sobre la issue en `Spec review` y tú decides cuándo pasa a `Ready`. El bucle automático (bloque `orquestator-cli:acordado` y sondeo desde `watch`) se cerró en M5b |
+| Spec en el piloto (F3) | **Cambio 2026-10-26: el bucle es automático.** `watch` lanza el `spec-reviewer` al entrar o cambiar la descripción; si no hay preguntas pasa a `Ready`, y si las hay espera a que actualices la descripción. El bloque manual `orquestator-cli:acordado` sigue valiendo |
 | Orden y controles (F4) | Comprobaciones **antes** del review; RED de los tests nuevos/modificados contra `main` (unit/integración; e2e best-effort); `.only` bloquea; `.skip`, tests borrados y `expect` eliminados son hallazgos en `.task/checks.md` |
 | Límites (F5) | Timeout por fase, máximo de peticiones al modelo por fase y tope de gasto en la clave de nan; al agotarse → `Blocked` con logs. Cuenta tiempo activo. Las rondas humanas (`fix --humano`) van aparte y no bloquean solas |
 | Contenedores (I2) | **Uno por fase**, `--rm`, con el mismo clon montado: implementer escribe `impl.md`/`pr-body.md` y ve brief/informes previos en ro; check escribe `checks.md`; reviewer escribe `review.md`; pr-review escribe `pr-review.md`. El estado y el hash de `approve` viven en el host, no en el clon |
@@ -300,8 +300,8 @@ Linear (producto) e interno (`~/.orquestator/ESN-123/state.json`, en el host) se
 | Linear | Fase interna | Quién mueve |
 |---|---|---|
 | Backlog | — | tú |
-| Spec review | `spec` (piloto) | tú creas; el `spec-reviewer` comenta preguntas; tú decides |
-| Ready | `ready` | **tú** (el agente nunca se autopromociona) |
+| Spec review | `spec` (piloto) | `watch` lanza el `spec-reviewer`; con «Sin preguntas» pasa a Ready |
+| Ready | `ready` | **watch** cuando el revisor no tiene preguntas |
 | In Progress | `implement → comprobaciones → review → ship → pr-review` | CLI (`run`, `start`, `check`, `ship`, `pr-review`) |
 | In validation | `waiting-human` | CLI, cuando `pr-review` no tiene críticos y la migración (si hay) está aplicada y con checks verdes |
 | Done | `done` | **tú** (merge); la integración GitHub puede marcarlo también |
@@ -513,10 +513,11 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
 
 ### Reglas duras (seguridad y proceso)
 
-- **Quién mueve los estados**: tú aceptas la spec (bloque `orquestator-cli:acordado`)
-  y mergeas; `watch` hace `Spec review → Ready` al verlo y `In validation → Done` al
-  ver la PR mergeada; el CLI (`run`/comandos) mueve `In Progress`, `In validation` y
-  `Blocked`.
+- **Quién mueve los estados**: `watch` lanza el `spec-reviewer` y hace
+  `Spec review → Ready` cuando no hay preguntas; también `In validation → Done` al
+  ver la PR mergeada. El bloque manual `orquestator-cli:acordado` sigue valiendo. El
+  CLI (`run`/comandos) mueve `In Progress`, `In validation` y `Blocked`; el merge lo
+  haces tú.
 - El agente **no modifica `.github/workflows/`**: el CLI bloquea el diff y el review lo
   marca; un cambio de CI va en PR aparte que revisas tú.
 - Reintentos: máx. 2 por fallo de contenedor/comprobaciones. Review previo: máx. 3 rondas.
@@ -945,9 +946,10 @@ Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
 - [ ] **Explorar una URL pública** para que Linear avise al instante (webhook firmado, vía
       Cloudflare Tunnel o un Worker). Opción principal: el sondeo local; el webhook solo si
       la latencia del sondeo molesta. Requiere autenticar la firma y un endpoint estable.
-- [x] Bucle automático de spec (el perfil ya está en el piloto): bloque
-      `<!-- orquestator-cli:acordado -->` y sondeo de respuestas humanas desde `watch`;
-      al verlo pasa la issue a `Ready` y borra el bloque.
+- [x] Bucle automático de spec (2026-10-26): `watch` lanza el `spec-reviewer` al
+      entrar o cambiar la descripción, guarda el hash y, si responde «Sin preguntas»,
+      pasa a `Ready`; si hay preguntas, espera a que cambies la descripción. El bloque
+      `<!-- orquestator-cli:acordado -->` sigue valiendo como atajo manual.
 - [x] Job de CI `guard`: lee `orquestator-cli/protected-paths.txt` de `origin/main` y
       falla si el diff toca rutas protegidas sin el status `gh-guard`. Falta añadirlo a los
       checks requeridos de `main` (lo hace el usuario en GitHub).

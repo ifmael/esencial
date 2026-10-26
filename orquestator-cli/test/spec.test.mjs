@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { createIssue, specReview } from "../lib/spec.mjs";
+import { readSpecMarker } from "../lib/spec-state.mjs";
 
 function fakeFetch({
   states = ["Backlog", "Spec review", "Ready"],
@@ -131,6 +132,7 @@ test("specReview exige Spec review, escribe spec-review y comenta en la issue", 
     "Sin preguntas: la spec está lista.",
   );
   assert.equal(result.issue.identifier, "ESN-7");
+  assert.equal(readSpecMarker(dir, "ESN-7").status, "ready");
   const hermes = path.join(dir, "ESN-7", "hermes", "spec-review");
   assert.match(
     fs.readFileSync(path.join(hermes, "SOUL.md"), "utf8"),
