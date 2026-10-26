@@ -5,6 +5,8 @@ import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
 import {
+  destructiveSql,
+  hashMigrations,
   migrationsOf,
   readLock,
   releaseMigration,
@@ -51,4 +53,30 @@ test("la misma tarea puede repasar su reserva", () => {
   });
   assert.equal(again.acquired, false);
   assert.deepEqual(readLock(dir).files, ["a.sql", "b.sql"]);
+});
+
+test("hashMigrations ata nombre y contenido, sin depender del orden", () => {
+  const a = { file: "api/migrations/0002_b.sql", sql: "CREATE TABLE b (x);" };
+  const b = { file: "api/migrations/0001_a.sql", sql: "CREATE TABLE a (x);" };
+  const hash = hashMigrations([a, b]);
+  assert.equal(hash, hashMigrations([b, a]));
+  assert.notEqual(
+    hash,
+    hashMigrations([{ ...a, sql: "CREATE TABLE c (x);" }, b]),
+  );
+});
+
+test("destructiveSql avisa de DROP y NOT NULL sin DEFAULT", () => {
+  assert.deepEqual(destructiveSql("CREATE TABLE a (id INTEGER);"), []);
+  assert.match(destructiveSql("DROP TABLE a;")[0], /DROP/);
+  assert.match(destructiveSql("ALTER TABLE a DROP COLUMN b;")[0], /DROP/);
+  assert.match(
+    destructiveSql("ALTER TABLE a ADD COLUMN b TEXT NOT NULL;")[0],
+    /NOT NULL/,
+  );
+  assert.deepEqual(
+    destructiveSql("ALTER TABLE a ADD COLUMN b TEXT NOT NULL DEFAULT '';"),
+    [],
+  );
+  assert.deepEqual(destructiveSql("-- DROP TABLE a;\nSELECT 1;"), []);
 });

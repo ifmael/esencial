@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -10,6 +9,7 @@ import { editArgs, runGh } from "./github.mjs";
 import { imageTag } from "./image.mjs";
 import { home, load, repoDir, save, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
+import { runWrangler } from "./wrangler.mjs";
 
 export const PREVIEW_DB = "esencial-preview";
 export const PREVIEW_BUCKET = "esencial-photos-preview";
@@ -78,23 +78,7 @@ export function previewUrlOf(output) {
   return String(url).replace(/\/$/, "");
 }
 
-function defaultWrangler(args, { cwd, env, main }) {
-  const local = path.join(main, "node_modules", ".bin", "wrangler");
-  const bin = fs.existsSync(local) ? local : "wrangler";
-  try {
-    return execFileSync(bin, args, {
-      cwd,
-      env,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
-  } catch (error) {
-    const detail = String(error.stderr ?? "").trim();
-    throw new Error(
-      `wrangler ${args.join(" ")} falló${detail ? `: ${detail}` : ""}`,
-    );
-  }
-}
+const defaultWrangler = runWrangler;
 
 function credentials(env) {
   if (!env.CLOUDFLARE_API_TOKEN) {

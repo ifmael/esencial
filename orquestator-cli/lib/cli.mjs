@@ -10,6 +10,12 @@ import { imageTag } from "./image.mjs";
 import { inspect } from "./inspect.mjs";
 import { getIssue, notifyBlocked, setState } from "./linear.mjs";
 import { approvePr } from "./manual.mjs";
+import {
+  approveMigrationPr,
+  approveMigrationTask,
+  migratePr,
+  migrateTask,
+} from "./migrate.mjs";
 import { publish } from "./pr.mjs";
 import { previewTask } from "./preview.mjs";
 import { runFlow } from "./run.mjs";
@@ -50,7 +56,11 @@ Uso:
   orquestator watch [--max-parallel N] [--interval S] [--once]
   orquestator guard ESN-123       rutas protegidas y hash del diff
   orquestator approve ESN-123 --motivo "…"
+  orquestator approve ESN-123 --migracion --motivo "…"
   orquestator approve --pr 42 --motivo "…"   PR que no abre el CLI
+  orquestator approve --pr 42 --migracion --motivo "…"
+  orquestator migrate ESN-123 [--force]       aplica la migración aprobada en D1
+  orquestator migrate --pr 42 [--force]
   orquestator status [ESN-123]    estado de una tarea (o de todas)
   orquestator block ESN-123 <pregunta>
   orquestator resume ESN-123
@@ -446,10 +456,20 @@ export async function main(argv, io = {}) {
         const at = rest.indexOf("--motivo");
         const reason = at === -1 ? "" : (rest[at + 1] ?? "");
         const prAt = rest.indexOf("--pr");
+        const migration = rest.includes("--migracion");
         if (prAt !== -1) {
           const number = Number(rest[prAt + 1]);
           if (!Number.isInteger(number) || number <= 0) {
             throw new Error("--pr necesita un número de PR");
+          }
+          if (migration) {
+            approveMigrationPr(number, {
+              isTTY: process.stdin.isTTY,
+              reason,
+              dryRun,
+              out: (text) => line(stdout, text),
+            });
+            return 0;
           }
           approvePr(number, {
             isTTY: process.stdin.isTTY,
@@ -461,6 +481,17 @@ export async function main(argv, io = {}) {
         }
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
+        if (migration) {
+          withLock(key, () =>
+            approveMigrationTask(key, {
+              isTTY: process.stdin.isTTY,
+              reason,
+              dryRun,
+              out: (text) => line(stdout, text),
+            }),
+          );
+          return 0;
+        }
         if (dryRun) {
           line(stdout, `[dry-run] aprobaría el diff protegido de ${key}`);
           return 0;
@@ -489,6 +520,33 @@ export async function main(argv, io = {}) {
           );
         });
         line(stdout, `Aprobado ${result.hash}`);
+        return 0;
+      }
+      case "migrate": {
+        const prAt = rest.indexOf("--pr");
+        const force = rest.includes("--force");
+        if (prAt !== -1) {
+          const number = Number(rest[prAt + 1]);
+          if (!Number.isInteger(number) || number <= 0) {
+            throw new Error("--pr necesita un número de PR");
+          }
+          migratePr(number, {
+            dryRun,
+            force,
+            out: (text) => line(stdout, text),
+          });
+          return 0;
+        }
+        const key = parseKey(rest[0], stderr);
+        if (!key) return 2;
+        migrateTask(key, {
+          dryRun,
+          force,
+          out: (text) => line(stdout, text),
+        });
+        if (!dryRun && load(key)?.state === "In validation") {
+          await moveLinear(key, stdout);
+        }
         return 0;
       }
       case "status": {

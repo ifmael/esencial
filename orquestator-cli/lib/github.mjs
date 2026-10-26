@@ -71,17 +71,42 @@ export function checksArgs(pr) {
 }
 
 /** Espera a que la CI de la PR termine. Devuelve {status, stdout, stderr}. */
-export function runChecks(pr) {
+export function runChecks(pr, { allowFailure = [], spawn = spawnSync } = {}) {
   let result;
   // Justo tras abrir la PR, `gh` puede decir que aún no hay checks; se reintenta.
   for (let attempt = 0; attempt < 6; attempt += 1) {
-    result = spawnSync("gh", checksArgs(pr), {
+    result = spawn("gh", checksArgs(pr), {
       encoding: "utf8",
       timeout: 30 * 60 * 1000,
     });
     const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
     if (!/no checks reported/i.test(output)) break;
     execFileSync("sleep", ["10"]);
+  }
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (result.status !== 0 && allowFailure.length) {
+    const rows = output
+      .split("\n")
+      .map((line) => line.split("\t"))
+      .filter(([name, state]) => name && state);
+    const failed = rows
+      .filter(([, state]) =>
+        ["fail", "failure", "cancelled", "timed_out"].includes(state),
+      )
+      .map(([name]) => name);
+    const pending = rows.some(([, state]) => state === "pending");
+    if (
+      failed.length &&
+      !pending &&
+      failed.every((name) => allowFailure.includes(name))
+    ) {
+      return {
+        status: 0,
+        stdout: result.stdout ?? "",
+        stderr: result.stderr ?? "",
+        ignored: failed,
+      };
+    }
   }
   return {
     status: result.status,

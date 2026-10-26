@@ -38,7 +38,7 @@ Convención de marcado:
 | M3 — Perfiles de fase | Hecho (2026-10-24) | — |
 | M4 — Piloto | Hecho (2026-10-24) | — |
 | M5a — Preview | Hecho (2026-10-25) | — |
-| M5b — Automatización | En curso | `watch` y job `guard` hechos; quedan spec, webhook y medidas |
+| M5b — Automatización | En curso | `watch`, `guard`, cierre/spec, aprobación y `migrate` hechos; quedan medida real, webhook y opcionales |
 | M6 — Después del piloto | Pendiente | Evaluar tras M5b |
 
 ## Referencias y hechos verificados
@@ -776,13 +776,12 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] `guard` remoto: status `gh-guard` en GitHub tras `pr`/`ship` y `approve --pr N` para
       PRs manuales (hash del diff de la PR, sin workflows). El job de CI que lo lee es de
       M5b (2026-10-22).
-- [ ] Módulo `migrate` (solo si la feature del piloto lleva migración; si no, M5b):
-      detectar `api/migrations/**`, listar pendientes en remoto, aplicar las aprobadas tras
-      `approve --migracion` con
-      `wrangler` fijado y token de edición, re-ejecutar el job de CI `migracion`, registrar
-      nombres/hashes y la heurística SQL destructiva (`DROP`, `ALTER … DROP`, `NOT NULL`
-      sin `DEFAULT`); `--pr N` para PRs manuales; si el hash de una aplicada cambia →
-      `Blocked`; tests.
+- [x] Módulo `migrate` y `approve --migracion` (2026-10-26): detecta
+      `api/migrations/**` en la tarea o con `--pr N`, aplica **solo** los ficheros
+      aprobados (hash de nombres + contenido) en la D1 remota con `wrangler` fijado y
+      token de edición; lista la D1 antes y bloquea pendientes ajenas; re-ejecuta `migracion` y espera la CI; `--force` para SQL
+      destructivo y `--dry-run`; `ship` no falla por el `migracion` pendiente y deja
+      `In Progress`. Tests con wrangler/gh inyectados; la D1 remota no se ha tocado.
 - [x] Comando `inspect` read-only (estado, brief, artefactos, diff y CI) para depurar y
       reanudar sin abrir el clon (2026-10-22).
 - [ ] Token de GitHub fino solo en el entorno del CLI; push HTTPS con credential helper;
@@ -795,10 +794,9 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       si hay migración, `approve --migracion` →
       `migrate` → re-ejecutar `migracion`; con todo verde → `In validation`; si falla,
       `fix` o `Blocked`.
-- [ ] Comandos: `spec`, `run`, `start`, `review`, `check`, `guard`, `approve` (también
-      `--migracion` y `--pr N`), `migrate` (también `--pr N`; si el piloto lleva
-      migración), `ship`, `pr-review`, `fix`, `block`, `resume`, `clean`, `status` y
-      `--dry-run`.
+- [x] Comandos: `spec`, `run`, `start`, `review`, `check`, `guard`, `approve` (también
+      `--migracion` y `--pr N`), `migrate` (también `--pr N`), `ship`, `pr-review`,
+      `fix`, `block`, `resume`, `clean`, `status` y `--dry-run` (2026-10-26).
 - [x] `run --dry-run`: recorre `start → check → review → ship → pr-review` según el
       estado, sin efectos; tests para los tres puntos de partida (2026-10-22).
 - [x] `spec`: crea la issue en Linear (título y cuerpo de un fichero) y la deja en

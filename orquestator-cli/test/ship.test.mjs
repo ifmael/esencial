@@ -178,6 +178,35 @@ test("ship espera a la CI y no pasa a In validation si falla", () => {
   assert.equal(load(KEY, base).state, "In Progress");
 });
 
+test("ship deja In Progress si hay migración pendiente", () => {
+  writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
+  commit(
+    task,
+    "api/migrations/0027_juguete.sql",
+    "CREATE TABLE juguete (id);\n",
+  );
+  approve(guardTask(KEY, { base, main }).hash);
+  const calls = [];
+  const ghRun = (args) => {
+    calls.push(args);
+    if (args[1] === "view")
+      return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
+    return "";
+  };
+  let options = null;
+  const result = ship(KEY, {
+    main,
+    ghRun,
+    checksRun: (_n, opts) => {
+      options = opts;
+      return { status: 0, ignored: ["migracion"] };
+    },
+  });
+  assert.deepEqual(options, { allowFailure: ["migracion"] });
+  assert.equal(result.pendingMigration, true);
+  assert.equal(load(KEY, base).state, "In Progress");
+});
+
 test("publishPrReview exige PR y pr-review, y la comenta sin tocar el body", () => {
   const calls = [];
   const ghRun = (args) => {
