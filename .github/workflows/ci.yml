@@ -53,7 +53,7 @@ jobs:
 
       - run: pnpm lint
 
-  # Rutas protegidas: si el diff las toca, exige el status `gh-guard` que publica
+  # Rutas protegidas: si el diff las toca, exige el status `guard` que publica
   # el CLI tras la aprobación humana. Los cambios de CI (workflows) se revisan
   # a mano y no los puede producir el CLI (guard local los marca no aprobables).
   guard:
