@@ -166,8 +166,10 @@ orquestator migrate --pr 42
   protegidas: si el diff toca ambas, hacen falta las dos.
 - `migrate` exige la aprobación, comprueba que ninguna migración ya aplicada en
   `origin/main` haya cambiado y aplica **solo los ficheros aprobados** (los copia a
-  un directorio temporal; no aplica pendientes ajenos). Usa el `wrangler` del repo y
-  el token de edición de D1; nunca `wrangler login`.
+  un directorio temporal; no aplica pendientes ajenos). Antes de aplicar lista la D1
+  remota con todas las migraciones de `main`: si hay una pendiente que no está en la
+  aprobación, se para. Usa el `wrangler` del repo y el token de edición de D1; nunca
+  `wrangler login`.
 - Si el SQL lleva `DROP`, `ALTER … DROP` o un `ADD … NOT NULL` sin `DEFAULT`, se para:
   revisa y repite con `--force`. El `--dry-run` los enseña sin tocar la D1.
 - Después re-ejecuta el job `migracion` y espera a la CI; con todo verde la tarea pasa

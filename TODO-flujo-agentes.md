@@ -779,7 +779,7 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] Módulo `migrate` y `approve --migracion` (2026-10-26): detecta
       `api/migrations/**` en la tarea o con `--pr N`, aplica **solo** los ficheros
       aprobados (hash de nombres + contenido) en la D1 remota con `wrangler` fijado y
-      token de edición, re-ejecuta `migracion` y espera la CI; `--force` para SQL
+      token de edición; lista la D1 antes y bloquea pendientes ajenas; re-ejecuta `migracion` y espera la CI; `--force` para SQL
       destructivo y `--dry-run`; `ship` no falla por el `migracion` pendiente y deja
       `In Progress`. Tests con wrangler/gh inyectados; la D1 remota no se ha tocado.
 - [x] Comando `inspect` read-only (estado, brief, artefactos, diff y CI) para depurar y
