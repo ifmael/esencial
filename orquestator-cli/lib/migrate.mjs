@@ -162,6 +162,60 @@ function stage(entries, { main }) {
   return { dir, config };
 }
 
+function baseMigrations(main, baseRef) {
+  const files = git(
+    ["ls-tree", "-r", "--name-only", baseRef, "--", "api/migrations"],
+    { cwd: main },
+  )
+    .split("\n")
+    .filter(Boolean);
+  return files
+    .filter((file) => file.endsWith(".sql"))
+    .map((file) => ({
+      file,
+      sql: git(["show", `${baseRef}:${file}`], { cwd: main }),
+    }));
+}
+
+function pendingNames(output) {
+  return [
+    ...new Set(
+      [...String(output).matchAll(/([0-9][\w.-]*\.sql)/g)].map(
+        (match) => match[1],
+      ),
+    ),
+  ];
+}
+
+function assertOnlyApprovedPending(entries, { main, baseRef, env, wrangler }) {
+  const stageAll = stage([...baseMigrations(main, baseRef), ...entries], {
+    main,
+  });
+  try {
+    const output = wrangler(
+      [
+        "d1",
+        "migrations",
+        "list",
+        MIGRATION_DB,
+        "--remote",
+        "-c",
+        stageAll.config,
+      ],
+      { cwd: stageAll.dir, env, main },
+    );
+    const approved = new Set(entries.map((entry) => path.basename(entry.file)));
+    const foreign = pendingNames(output).filter((name) => !approved.has(name));
+    if (foreign.length) {
+      throw new Error(
+        `Hay migraciones pendientes sin aprobar: ${foreign.join(", ")}`,
+      );
+    }
+  } finally {
+    fs.rmSync(stageAll.dir, { recursive: true, force: true });
+  }
+}
+
 function applyMigrations(entries, { main, env, wrangler, out }) {
   if (!env.CLOUDFLARE_API_TOKEN) {
     throw new Error(
@@ -366,6 +420,12 @@ export function migrateTask(
   if (!found.state.pr?.number) {
     throw new Error(`La tarea ${key} no tiene PR; ejecuta pr primero`);
   }
+  assertOnlyApprovedPending(found.entries, {
+    main,
+    baseRef,
+    env,
+    wrangler,
+  });
   reserveMigration({ base, key, files: found.files });
   applyMigrations(found.entries, { main, env, wrangler, out });
   const state = load(key, base);
@@ -431,6 +491,12 @@ export function migratePr(
     for (const warning of warnings) out(`[dry-run] destructiva: ${warning}`);
     return { dryRun: true, files: found.files, hash: found.hash };
   }
+  assertOnlyApprovedPending(found.entries, {
+    main,
+    baseRef,
+    env,
+    wrangler,
+  });
   reserveMigration({ base, key: `PR-${number}`, files: found.files });
   try {
     applyMigrations(found.entries, { main, env, wrangler, out });

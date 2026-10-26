@@ -173,6 +173,27 @@ test("DROP exige --force pero el dry-run lo enseña", () => {
   assert.ok(calls.some((args) => args[0] === "d1" && args[2] === "apply"));
 });
 
+test("migrate no aplica si hay una pendiente ajena", () => {
+  approveMigrationTask(KEY, {
+    ...options(),
+    isTTY: true,
+    reason: "aditiva",
+  });
+  const foreign = (args) => {
+    calls.push(args);
+    if (args[2] === "list") return "0001_base.sql";
+    return "";
+  };
+  assert.throws(
+    () => migrateTask(KEY, options({ wrangler: foreign })),
+    /sin aprobar: 0001_base.sql/,
+  );
+  assert.equal(
+    calls.some((args) => args[0] === "d1" && args[2] === "apply"),
+    false,
+  );
+});
+
 test("migrate --pr usa la aprobación de la PR", () => {
   const prFiles = [
     {
