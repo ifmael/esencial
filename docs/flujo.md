@@ -186,6 +186,22 @@ orquestator migrate --pr 42
 - El host no ejecuta agentes ni `pnpm` del repo; push y PR los hace el CLI. Sin
   credenciales de git dentro del contenedor.
 
+## Observabilidad (M6, nice to have)
+
+Hoy no hay dashboard en el flujo. Hermes v0.22.4 sí trae `hermes dashboard`
+(puerto 9119 por defecto), pero cada fase corre como un `hermes chat --oneshot`
+efímero: no publica puertos y `watch` usa la salida y el artefacto, no una web.
+Si se añade:
+
+- Compartir `HERMES_HOME`/sesiones entre la fase y el dashboard (sidecar o host).
+- Escuchar en `127.0.0.1` y llegar por túnel; si no, autenticación obligatoria.
+- Mantenerlo como observación read-only: el fin de `watch` sigue siendo el proceso
+  y su artefacto, no «la web está abierta».
+- Si se quiere ver el stream sin perder el fin, usar `--format stream-json` y un
+  evento final; el dashboard no sustituye esa señal.
+- Las sesiones llevan prompts y salidas de herramientas: no exponerlas ni
+  persistirlas sin limpieza.
+
 ## Imagen del worker (M1)
 
 ```bash

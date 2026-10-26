@@ -980,6 +980,20 @@ Depende de: M5b.
 - [ ] Revisión final de `AGENTS.md` (se actualiza al cerrar cada fase).
 - [ ] Si se añadió el coordinador en M5b, revisar si aporta algo que `run` no haga; si no,
       retirarlo.
+- [ ] **Dashboard de Hermes (nice to have)**: ver las sesiones en vivo desde
+      `hermes dashboard` (puerto 9119) sin cambiar la salida que consume `watch`.
+      - Hoy cada fase es un `hermes chat --query-file - --oneshot` efímero, sin puerto
+        publicado; `impl.md` es el artefacto y `watch` espera a que el proceso termine.
+      - Para verlo hay que compartir `HERMES_HOME`/sesiones con un dashboard vivo
+        (sidecar o host), publicar o tunelizar el 9119 y añadir autenticación si no
+        escucha solo en `127.0.0.1`.
+      - El dashboard es **solo observación**: no sirve como señal de fin. `watch`
+        sigue necesitando salida/éxito/artefacto; si se quiere flujo en vivo,
+        `--format stream-json` con un evento final, sin cambiar el artefacto.
+      - Seguridad: las sesiones contienen prompts y salidas de herramientas; no
+        exponer en `0.0.0.0`, autenticar, no guardar secretos y limpiar al cerrar.
+      - Aceptación: ver una fase en curso, `watch` termina igual y el puerto queda
+        solo en loopback o túnel. Si no aporta, no se implementa.
 
 ## Bitácora
 
