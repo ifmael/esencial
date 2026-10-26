@@ -6,6 +6,7 @@ import {
   createArgs,
   editArgs,
   reviewArgs,
+  runChecks,
   statusArgs,
   viewArgs,
 } from "../lib/github.mjs";
@@ -69,4 +70,18 @@ test("reviewArgs publica review.md como review", () => {
     "--body-file",
     "/tmp/r.md",
   ]);
+});
+
+test("runChecks solo tolera la migración cuando se pide", () => {
+  const spawn = () => ({
+    status: 1,
+    stdout: "ci\tpass\nmigracion\tfail\n",
+    stderr: "",
+  });
+  const allowed = runChecks(9, { allowFailure: ["migracion"], spawn });
+  assert.equal(allowed.status, 0);
+  assert.deepEqual(allowed.ignored, ["migracion"]);
+
+  const blocked = runChecks(9, { allowFailure: [], spawn });
+  assert.equal(blocked.status, 1);
 });

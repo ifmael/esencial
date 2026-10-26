@@ -9,6 +9,7 @@ import {
   viewArgs,
 } from "./github.mjs";
 import { guardTask } from "./guard.mjs";
+import { migrationsOf } from "./migrations.mjs";
 import { home, load, save, transition } from "./state.mjs";
 
 export function ship(
@@ -67,12 +68,27 @@ export function ship(
   ghRun(statusArgs(pr.headRefOid, "success", description));
 
   if (waitChecks) {
-    const ci = checksRun(pr.number);
+    const migration = migrationsOf(guard.files);
+    const ci = checksRun(pr.number, { allowFailure: ["migracion"] });
     if (ci.status !== 0) {
       const detail = String(ci.stderr ?? "").trim();
       throw new Error(
         `La CI de la PR #${pr.number} no está verde (exit ${ci.status})${detail ? `: ${detail}` : ""}; ejecuta orquestator fix ${key} --from checks`,
       );
+    }
+    if (migration.length && ci.ignored?.includes("migracion")) {
+      out(
+        `Migración pendiente: orquestator approve ${key} --migracion --motivo "…" y después migrate ${key}`,
+      );
+      save(key, { ...state, pr: { ...state.pr, sha: pr.headRefOid } }, base);
+      return {
+        sha: pr.headRefOid,
+        number: pr.number,
+        url: pr.url,
+        state: state.state,
+        pendingMigration: true,
+        files: migration,
+      };
     }
   }
   const next =

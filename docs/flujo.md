@@ -148,6 +148,33 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   exige que estén aplicadas. Necesita el secreto `CLOUDFLARE_READ_TOKEN` y la variable
   `CLOUDFLARE_ACCOUNT_ID`; una PR desde un fork no los recibe y un maintainer
   re-ejecuta el job.
+
+### Migraciones (M5b)
+
+El CLI detecta los `api/migrations/**` del diff de la tarea o de una PR manual:
+
+```bash
+orquestator approve ESN-123 --migracion --motivo "aditiva"
+orquestator migrate ESN-123
+
+orquestator approve --pr 42 --migracion --motivo "aditiva"
+orquestator migrate --pr 42
+```
+
+- `approve --migracion` es TTY y guarda el hash de **nombres y contenido**; cualquier
+  cambio posterior invalida la aprobación. No sustituye a `approve` de rutas
+  protegidas: si el diff toca ambas, hacen falta las dos.
+- `migrate` exige la aprobación, comprueba que ninguna migración ya aplicada en
+  `origin/main` haya cambiado y aplica **solo los ficheros aprobados** (los copia a
+  un directorio temporal; no aplica pendientes ajenos). Usa el `wrangler` del repo y
+  el token de edición de D1; nunca `wrangler login`.
+- Si el SQL lleva `DROP`, `ALTER … DROP` o un `ADD … NOT NULL` sin `DEFAULT`, se para:
+  revisa y repite con `--force`. El `--dry-run` los enseña sin tocar la D1.
+- Después re-ejecuta el job `migracion` y espera a la CI; con todo verde la tarea pasa
+  a `In validation`. `ship` deja la tarea en `In Progress` cuando hay migración, en
+  vez de fallar por el job `migracion` previsiblemente rojo.
+- Una migración aplicada no se toca: si `migrate` ve que su contenido cambió respecto
+  a `origin/main`, aborta. D1 no tiene `down`; el arreglo es otra migración.
 - Reintentos: 2 por fallo de contenedor o de comprobaciones; 3 rondas de review; 2
   de `pr-review`. Las rondas humanas (`fix --humano`) cuentan aparte. Al agotarse,
   `Blocked` con la pregunta.

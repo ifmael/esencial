@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -7,6 +8,51 @@ export const MIGRATION_DIR = "api/migrations/";
 
 export function migrationsOf(files) {
   return files.filter((file) => file.startsWith(MIGRATION_DIR));
+}
+
+export function sqlHash(sql) {
+  return createHash("sha256").update(String(sql)).digest("hex");
+}
+
+/** Hash estable de ficheros + contenido: lo que firma `approve --migracion`. */
+export function hashMigrations(entries) {
+  const lines = entries
+    .map(({ file, sql }) => `${file}\t${sqlHash(sql)}`)
+    .sort();
+  return sqlHash(lines.join("\n"));
+}
+
+function statements(sql) {
+  return String(sql)
+    .replace(/--[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split(";")
+    .map((text) => text.trim())
+    .filter(Boolean);
+}
+
+/** Heurística: una migración destructiva exige `migrate --force`. */
+export function destructiveSql(sql) {
+  const found = [];
+  for (const statement of statements(sql)) {
+    if (/\bDROP\s+(?:TABLE|INDEX|COLUMN|TRIGGER|VIEW)\b/i.test(statement)) {
+      found.push(`DROP: ${statement.slice(0, 80)}`);
+      continue;
+    }
+    if (/\bALTER\s+TABLE\b[\s\S]*\bDROP\b/i.test(statement)) {
+      found.push(`ALTER … DROP: ${statement.slice(0, 80)}`);
+      continue;
+    }
+    if (
+      /\bALTER\s+TABLE\b[\s\S]*\bADD\s+(?:COLUMN\s+)?[\w"`]+\s+[^;]*\bNOT\s+NULL\b/i.test(
+        statement,
+      ) &&
+      !/\bDEFAULT\b/i.test(statement)
+    ) {
+      found.push(`ADD … NOT NULL sin DEFAULT: ${statement.slice(0, 80)}`);
+    }
+  }
+  return found;
 }
 
 export function lockPath(base = home()) {

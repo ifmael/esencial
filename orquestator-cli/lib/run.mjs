@@ -151,6 +151,12 @@ const defaultSteps = {
   },
   async ship({ key, base, main, out }) {
     const result = ship(key, { base, main, out });
+    if (result.pendingMigration) {
+      return {
+        stop: "migrate",
+        hint: `Migración pendiente: approve ${key} --migracion y migrate ${key}`,
+      };
+    }
     out(`PR #${result.number} actualizada (${result.sha.slice(0, 7)})`);
     await moveLinear(key, base, out);
     return {};
