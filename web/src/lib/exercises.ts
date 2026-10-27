@@ -2,6 +2,7 @@
 // kind: fuerza (series/reps) o cardio (distancia/tiempo).
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, apiGetCached } from "./api";
+import { fold } from "./text";
 
 export type ExerciseKind = "strength" | "running" | "bike";
 
@@ -98,11 +99,6 @@ export type ExerciseInput = {
   /** Ausente = el servidor aplica "weight_reps". */
   metric?: ExerciseMetric;
 };
-
-/** Minúsculas y sin tildes: «Elevación» y «elevacion» son lo mismo. */
-function fold(s: string): string {
-  return s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-}
 
 /** Textos por los que se busca un ejercicio: nombre canónico, alias y grupos.
  *  La paleta ⌘K los usa como `keywords` (su ranking es difuso). */

@@ -177,17 +177,23 @@ export function RecetarioPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const visible = filterRecipes(api.list, query);
+  const total = api.list.length;
 
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-headline-l text-e">Recetario</h1>
-          {!api.loading && !api.error && (
-            <p className="text-body-l text-on-surface-variant tabular">
-              {api.list.length === 1
-                ? "1 receta"
-                : `${api.list.length} recetas`}
+          {!api.loading && !api.error && total > 0 && (
+            <p
+              aria-live="polite"
+              className="text-body-l text-on-surface-variant tabular"
+            >
+              {visible.length === total
+                ? total === 1
+                  ? "1 receta"
+                  : `${total} recetas`
+                : `${visible.length} de ${total}`}
             </p>
           )}
         </div>
