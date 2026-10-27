@@ -5,14 +5,16 @@
 // uno con borrador sin registrar perdería lo hecho.
 import { useState } from "react";
 import {
+  CopyError,
+  copyFailureMessage,
   countExercises,
   dayBlockedMessage,
-  dayLabel,
   replaceNotice,
   weekCopyBlockers,
   weekCopyDays,
   weekCopyLines,
 } from "../lib/copy-session";
+import { dayLabel } from "../lib/day";
 import { isoWeekDates } from "../lib/iso-week";
 import type { PlanSession } from "../lib/plan-week";
 import { Shape } from "./expressive";
@@ -101,8 +103,15 @@ export function CopyDayDialog({
     try {
       await onCopy(chosen);
       onClose();
-    } catch {
-      setFailure("No se pudo copiar la sesión; se deshizo lo aplicado.");
+    } catch (e) {
+      // El deshacer es best effort: si quedó algo a medias, el aviso no
+      // promete que volvió todo.
+      setFailure(
+        copyFailureMessage(
+          "la sesión",
+          e instanceof CopyError ? e.undoFailed : 0,
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -218,9 +227,12 @@ export function CopyWeekDialog({
     try {
       await onCopy(from);
       onClose();
-    } catch {
+    } catch (e) {
       setFailure(
-        "No se pudo copiar la semana; se deshizo lo aplicado y la rejilla se ha recargado.",
+        copyFailureMessage(
+          "la semana",
+          e instanceof CopyError ? e.undoFailed : 0,
+        ),
       );
     } finally {
       setBusy(false);

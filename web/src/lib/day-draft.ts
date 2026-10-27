@@ -143,6 +143,24 @@ export function parseSnapshot(raw: string | null): DraftSnapshot | null {
 /** Clave por fecha: un día, un borrador (la sesión del día es única). */
 export const draftKey = (date: string) => `esencial.borrador.${date}`;
 
+/** ¿El borrador tiene trabajo que perder? Abrir `/sesion/:date` ya escribe un
+ *  snapshot con las series del plan sin marcar, así que «hay borrador» no
+ *  significa «hay algo que perder»: cuentan una serie marcada o tocada, el
+ *  cardio hecho, el esfuerzo o la nota. */
+export function draftHasWork(snapshot: DraftSnapshot): boolean {
+  if (snapshot.effort !== null) return true;
+  if (snapshot.note.trim() !== "") return true;
+  if (snapshot.exercises.some((ex) => ex.sets.some((s) => s.done || s.touched)))
+    return true;
+  return snapshot.cardio.some((c) => c.done);
+}
+
+/** Igual, con el borrador guardado de ese día: lo que copiar encima perdería. */
+export function hasRealDraft(date: string): boolean {
+  const snapshot = readDraft(date);
+  return snapshot !== null && draftHasWork(snapshot);
+}
+
 export function readDraft(date: string): DraftSnapshot | null {
   try {
     return parseSnapshot(window.localStorage.getItem(draftKey(date)));

@@ -24,7 +24,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { type ComponentProps, useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router";
 import { CopyDayDialog, CopyWeekDialog } from "../components/copy-session";
@@ -82,7 +82,8 @@ import {
   weekCopyOps,
   weekCopySummary,
 } from "../lib/copy-session";
-import { readDraft } from "../lib/day-draft";
+import { dayLabel } from "../lib/day";
+import { hasRealDraft } from "../lib/day-draft";
 import {
   type Exercise,
   type ExerciseKind,
@@ -1016,17 +1017,20 @@ function SessionCell({
 
   /** Copiar a este día: vive en la celda (no en la cabecera de la columna, que
    *  a 1280 no da ancho para el nombre del día) y no añade alto: en un día con
-   *  sesión va en la fila de la insignia y en uno vacío, junto a «añadir». */
-  const copyControl = (
+   *  sesión va en la fila de la insignia y en uno vacío, junto a «añadir». Mide
+   *  40 px de área táctil (la cuarta excepción a los 48, en AGENTS.md); en la
+   *  fila de 24 px de la insignia las marcas negativas evitan estirarla. */
+  const copyControl = (compact: boolean) => (
     <button
       type="button"
-      aria-label={`Copiar al ${date}`}
-      aria-disabled={copyBlocked !== null}
+      aria-label={`Copiar al ${dayLabel(date)}`}
       title={copyBlocked ?? "Copiar aquí desde otro día"}
       className={cx(
-        "state -my-1 grid size-8 shrink-0 place-items-center rounded-full text-on-surface-variant",
+        "state grid size-10 shrink-0 place-items-center rounded-full text-on-surface-variant",
+        compact ? "-my-2" : "self-center",
         copyBlocked ? "opacity-60" : "hover:text-accent",
       )}
+      onPointerDown={ripple}
       onClick={(e) => {
         e.stopPropagation();
         onCopy();
@@ -1052,7 +1056,7 @@ function SessionCell({
           <AddIcon />
           añadir
         </Button>
-        {copyControl}
+        {copyControl(false)}
       </div>
     );
   }
@@ -1140,7 +1144,7 @@ function SessionCell({
       </div>
       <div className="flex items-center gap-1">
         {badge}
-        <span className="ml-auto">{copyControl}</span>
+        <span className="ml-auto">{copyControl(true)}</span>
       </div>
       {order.length > 0 ? (
         <DndContext
@@ -1433,13 +1437,28 @@ export function PlanFuerzaPage() {
 
   const byDate = new Map(week.sessions.map((s) => [s.date, s]));
 
-  /** Borrador del modo sesión sin registrar: copiar encima lo tiraría. */
-  const hasDraft = (date: string) => readDraft(date) !== null;
+  /** Borradores con trabajo sin registrar: copiar encima los tiraría. Se leen
+   *  una vez por semana (localStorage + JSON en el render de cada columna, en
+   *  cada render, era tirar el trabajo hecho). Los dos diálogos solo escriben
+   *  en días de la semana que se ve, que es la que se lee aquí. */
+  const draftsWithWork = useMemo(() => {
+    const flags = new Map<string, boolean>();
+    for (const date of isoWeekDates(isoWeek))
+      flags.set(date, hasRealDraft(date));
+    return flags;
+  }, [isoWeek]);
+  const hasDraft = (date: string) => draftsWithWork.get(date) ?? false;
 
-  /** El «Deshacer» de la copia: vuelve a escribir lo de antes y recarga. */
+  /** El «Deshacer» de la copia: vuelve a escribir lo de antes y recarga. Si el
+   *  servidor no deja deshacer algún paso, se dice (la rejilla ya recarga). */
   const undoAndReload = async (steps: UndoStep[]) => {
-    await undoCopy(steps);
+    const failed = await undoCopy(steps);
     await week.reload();
+    if (failed.length > 0)
+      snackbar({
+        message:
+          "No se pudo deshacer todo: la rejilla se ha recargado con lo que hay en el servidor.",
+      });
   };
 
   /** Copia el plan de `source` sobre el día `target` (crear o sustituir). Un
@@ -1484,8 +1503,8 @@ export function PlanFuerzaPage() {
   };
 
   /** Copiar a un día que no se puede escribir no es una acción disponible: el
-   *  control se anuncia como tal y el diálogo dice por qué. */
-  const copyControl = (date: string) =>
+   *  control lo dice en su `title` y el diálogo, que sí se abre, explica por qué. */
+  const copyBlocker = (date: string) =>
     dayBlockedMessage(byDate.get(date), hasDraft(date), date);
 
   return (
@@ -1521,7 +1540,7 @@ export function PlanFuerzaPage() {
             session={byDate.get(date)}
             isToday={isToday}
             morphing={morphDate === date && day === null}
-            copyBlocked={copyControl(date)}
+            copyBlocked={copyBlocker(date)}
             onOpen={() => void openDay(date)}
             onCopy={() => setCopyDay(date)}
             onRemove={(session) => void unschedule(session)}

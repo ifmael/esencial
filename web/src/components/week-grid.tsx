@@ -7,7 +7,7 @@
 // Transitions; la de salida y la de entrada se deslizan en el sentido del
 // cambio) y el día de hoy lleva su número dentro de una galleta de 9 lados.
 import { type ReactNode, useLayoutEffect, useRef } from "react";
-import { toISODate } from "../lib/day";
+import { MONTHS, toISODate } from "../lib/day";
 import { isoWeekDates } from "../lib/iso-week";
 import { canViewTransition, runViewTransition } from "../lib/view-transition";
 import { Loader, Shape } from "./expressive";
@@ -34,21 +34,6 @@ type WeekDay = {
 
 /** Techo de espera de la foto «después» al cambiar de semana. */
 const WEEK_TRANSITION_MAX_WAIT_MS = 400;
-
-const MONTHS = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sept",
-  "oct",
-  "nov",
-  "dic",
-];
 
 export function WeekGrid({
   isoWeek,

@@ -134,7 +134,7 @@ describe("copiar un día a otro día", () => {
     await openPlan();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Copiar al 2026-09-01" }),
+      screen.getByRole("button", { name: "Copiar al mar 1 sept" }),
     );
     const dialog = await screen.findByRole("dialog", {
       name: /Copiar sesión · mar 1 sept/,
@@ -211,7 +211,7 @@ describe("copiar un día a otro día", () => {
     await openPlan();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Copiar al 2026-09-01" }),
+      screen.getByRole("button", { name: "Copiar al mar 1 sept" }),
     );
     const dialog = await screen.findByRole("dialog", {
       name: /Copiar sesión · mar 1 sept/,
@@ -275,9 +275,14 @@ describe("copiar un día a otro día", () => {
     await openPlan();
 
     const button = screen.getByRole("button", {
-      name: "Copiar al 2026-09-01",
+      name: "Copiar al mar 1 sept",
     });
-    expect(button.getAttribute("aria-disabled")).toBe("true");
+    // El motivo se anuncia sin fingir que el control está deshabilitado: sigue
+    // abriendo el diálogo, que es donde se explica y donde no hay «Copiar».
+    expect(button.getAttribute("aria-disabled")).toBeNull();
+    expect(button.getAttribute("title")).toBe(
+      "El mar 1 sept ya está registrado: no se puede copiar encima.",
+    );
     fireEvent.click(button);
     const dialog = await screen.findByRole("dialog", {
       name: /Copiar sesión · mar 1 sept/,
@@ -308,7 +313,7 @@ describe("copiar un día a otro día", () => {
     await openPlan();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Copiar al 2026-09-01" }),
+      screen.getByRole("button", { name: "Copiar al mar 1 sept" }),
     );
     const dialog = await screen.findByRole("dialog", {
       name: /Copiar sesión · mar 1 sept/,
@@ -335,7 +340,7 @@ describe("copiar un día a otro día", () => {
     ]);
   });
 
-  it("un destino con borrador sin registrar tampoco admite la copia", async () => {
+  it("un destino con un borrador con trabajo sin registrar tampoco admite la copia", async () => {
     vi.unstubAllGlobals();
     api = mockApi({
       exercises: [press],
@@ -356,14 +361,40 @@ describe("copiar un día a otro día", () => {
         },
       ],
     });
-    // Borrador del modo sesión sin cerrar, en el día destino.
-    writeDraft("2026-09-02", snapshotOf([], [], null, ""));
+    // Borrador del modo sesión sin cerrar, con una serie ya marcada, en el
+    // día destino: copiar encima perdería trabajo.
+    writeDraft(
+      "2026-09-02",
+      snapshotOf(
+        [
+          {
+            se: { id: 21 },
+            noWeight: false,
+            sets: [
+              {
+                weightKg: 60,
+                reps: 8,
+                durationSecs: null,
+                done: true,
+                touched: true,
+              },
+            ],
+          },
+        ],
+        [],
+        null,
+        "",
+      ),
+    );
 
     await openPlan();
     const button = screen.getByRole("button", {
-      name: "Copiar al 2026-09-02",
+      name: "Copiar al mié 2 sept",
     });
-    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("aria-disabled")).toBeNull();
+    expect(button.getAttribute("title")).toBe(
+      "El mié 2 sept tiene un borrador sin registrar: no se puede copiar encima.",
+    );
     fireEvent.click(button);
     const dialog = await screen.findByRole("dialog", {
       name: /Copiar sesión · mié 2 sept/,
@@ -373,7 +404,72 @@ describe("copiar un día a otro día", () => {
         "El mié 2 sept tiene un borrador sin registrar: no se puede copiar encima.",
       ),
     ).toBeDefined();
+    expect(within(dialog).queryByRole("button", { name: "Copiar" })).toBeNull();
     expect(mutations()).toHaveLength(0);
+  });
+
+  it("un día solo visto (el borrador que deja abrirlo, sin marcas) no bloquea la copia", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press],
+      sessions: [
+        {
+          id: 1,
+          date: "2026-08-31",
+          name: "Empuje A",
+          status: "planned",
+          exercises: [row(11, press, 0)],
+        },
+        {
+          id: 2,
+          date: "2026-09-02",
+          name: "En curso",
+          status: "planned",
+          exercises: [row(21, press, 0)],
+        },
+      ],
+    });
+    // Lo que escribe abrir /sesion/2026-09-02: las series del plan, sin marcar.
+    writeDraft(
+      "2026-09-02",
+      snapshotOf(
+        [
+          {
+            se: { id: 21 },
+            noWeight: false,
+            sets: [
+              {
+                weightKg: null,
+                reps: null,
+                durationSecs: null,
+                done: false,
+                touched: false,
+              },
+            ],
+          },
+        ],
+        [],
+        null,
+        "",
+      ),
+    );
+
+    await openPlan();
+    const button = screen.getByRole("button", {
+      name: "Copiar al mié 2 sept",
+    });
+    expect(button.getAttribute("title")).toBe("Copiar aquí desde otro día");
+    fireEvent.click(button);
+    const dialog = await screen.findByRole("dialog", {
+      name: /Copiar sesión · mié 2 sept/,
+    });
+    expect(within(dialog).queryByText(/borrador/)).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Copiar" }));
+    await waitFor(() =>
+      expect(
+        api.state.sessions.find((s) => s.date === "2026-09-02")?.name,
+      ).toBe("Empuje A"),
+    );
   });
 });
 
@@ -400,9 +496,13 @@ describe("copiar una semana a otra", () => {
           row(11, press, 0),
           row(12, remo, 1),
         ]),
-        source(2, "2026-08-26", "Cardio", [row(21, run, 0)]),
-        source(3, "2026-09-01", "Viejo", [row(31, press, 0)]),
-        source(4, "2026-09-03", "Otro", [row(41, press, 0), row(42, remo, 1)]),
+        source(2, "2026-08-25", "Pierna", [
+          row(51, remo, 0),
+          row(52, press, 1),
+        ]),
+        source(3, "2026-08-26", "Cardio", [row(21, run, 0)]),
+        source(4, "2026-09-01", "Viejo", [row(31, press, 0)]),
+        source(5, "2026-09-03", "Otro", [row(41, press, 0), row(42, remo, 1)]),
       ],
     });
     await openPlan();
@@ -426,7 +526,9 @@ describe("copiar una semana a otra", () => {
       ),
     ).toBeDefined();
     expect(
-      within(dialog).getByText("Mar 1 sept: se borra «Viejo» (1 ejercicio)"),
+      within(dialog).getByText(
+        "Mar 1 sept: se sustituye por «Pierna» (2 ejercicios)",
+      ),
     ).toBeDefined();
     expect(
       within(dialog).getByText("Mié 2 sept: se copia «Cardio» (1 ejercicio)"),
@@ -444,17 +546,22 @@ describe("copiar una semana a otra", () => {
     expect(
       api.state.sessions
         .filter((s) => s.date >= "2026-08-31" && s.date <= "2026-09-06")
-        .map((s) => [s.date, s.name, s.exercises.length]),
+        .map((s) => [s.date, s.name, s.exercises.length])
+        .sort(),
     ).toEqual([
       ["2026-08-31", "Empuje A", 2],
+      ["2026-09-01", "Pierna", 2],
       ["2026-09-02", "Cardio", 1],
     ]);
     expect(
       await screen.findByText(
-        "Semana copiada · 2 creados · 0 sustituidos · 2 borrados · 3 ejercicios",
+        "Semana copiada · 2 creados · 1 sustituido · 1 borrado · 5 ejercicios",
       ),
     ).toBeDefined();
 
+    // «Deshacer» devuelve los siete días: el PUT de la sustituida y el POST de
+    // la borrada entran aquí (la copia ya hizo su propio PUT al sustituir).
+    const beforeUndo = mutations().length;
     fireEvent.click(screen.getByRole("button", { name: "Deshacer" }));
     await waitFor(() =>
       expect(
@@ -467,6 +574,11 @@ describe("copiar una semana a otra", () => {
         ["2026-09-03", "Otro"],
       ]),
     );
+    const undo = mutations()
+      .slice(beforeUndo)
+      .map((c) => `${c.method} ${c.url}`);
+    expect(undo).toContain("PUT /api/plan-sessions/4");
+    expect(undo).toContain("POST /api/plan-sessions");
   });
 
   it("si el servidor rechaza una escritura a mitad, se deshace lo aplicado y no se enseña el 409", async () => {
@@ -551,6 +663,37 @@ describe("copiar una semana a otra", () => {
     const confirm = within(dialog).getByRole("button", { name: "Copiar" });
     expect(confirm).toHaveProperty("disabled", true);
     expect(mutations()).toHaveLength(0);
+  });
+
+  it("un día visto sin marcas no aborta la copia de la semana", async () => {
+    vi.unstubAllGlobals();
+    api = mockApi({
+      exercises: [press],
+      sessions: [source(1, "2026-08-24", "Empuje A", [row(11, press, 0)])],
+    });
+    // Abrir un día de la semana deja un borrador con las series sin marcar;
+    // aquí, en un día que se crea y en uno que no se toca (`none`).
+    for (const date of ["2026-09-02", "2026-09-04"])
+      writeDraft(date, snapshotOf([], [], null, ""));
+
+    await openPlan();
+    fireEvent.click(screen.getByRole("button", { name: "Copiar semana" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /Copiar semana · 2026-W36/,
+    });
+    fireEvent.change(within(dialog).getByLabelText("Semana de origen"), {
+      target: { value: "2026-W35" },
+    });
+    expect(within(dialog).queryByText(/borrador/)).toBeNull();
+    const confirm = within(dialog).getByRole("button", { name: "Copiar" });
+    expect(confirm).toHaveProperty("disabled", false);
+
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(
+        api.state.sessions.find((s) => s.date === "2026-08-31")?.name,
+      ).toBe("Empuje A"),
+    );
   });
 
   it("sin semanas anteriores con sesión, el diálogo lo dice y no hay nada que elegir", async () => {

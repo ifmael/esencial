@@ -1,17 +1,21 @@
 // copy-session: copiar el PLAN de una sesión (día → día y semana → semana).
 // Se copia lo guardado —ejercicios, orden, objetivos, descansos, cadenas y
 // nombre—, nunca el registro (marcas, esfuerzo, nota) ni el borrador local.
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  applyCopyOps,
+  CopyError,
   type CopyOp,
+  copyFailureMessage,
   copyPayload,
   dayBlockedMessage,
   dayCopyMessage,
   dayCopyOp,
-  dayLabel,
   daySources,
   replaceNotice,
   sourceWeeks,
+  type UndoStep,
+  undoCopy,
   weekCopyBlockers,
   weekCopyDays,
   weekCopyLines,
@@ -72,14 +76,6 @@ const W35 = [
   "2026-08-29",
   "2026-08-30",
 ];
-
-describe("dayLabel", () => {
-  it("rótulo corto de la fecha (UTC, sin reloj)", () => {
-    expect(dayLabel("2026-08-31")).toBe("lun 31 ago");
-    expect(dayLabel("2026-09-06")).toBe("dom 6 sept");
-    expect(dayLabel("2026-01-01")).toBe("jue 1 ene");
-  });
-});
 
 describe("copyPayload", () => {
   it("copia el nombre y el plan entero: orden, objetivos, descansos y cadenas", () => {
@@ -327,7 +323,8 @@ describe("weekCopyBlockers", () => {
   it("nombra los días destino que no se pueden escribir, sin ofrecer quitarlos", () => {
     const days = weekCopyDays(W36, W35, [
       session(1, "2026-08-24", "Empuje", "planned", [row(11, 7, 0)]),
-      session(2, "2026-09-01", "Registrada", "logged"),
+      session(2, "2026-08-26", "Nueva", "planned", [row(12, 8, 0)]),
+      session(3, "2026-09-01", "Registrada", "logged"),
     ]);
     expect(weekCopyBlockers(days, (date) => date === "2026-09-02")).toEqual([
       "El mar 1 sept ya está registrado: no se puede copiar la semana.",
@@ -350,6 +347,95 @@ describe("weekCopyBlockers", () => {
     expect(weekCopyBlockers(days, () => false)).toEqual([
       "El vie 4 sept ya está registrado: no se puede copiar la semana.",
     ]);
+  });
+
+  it("un día que no se va a escribir (sin sesión en el origen ni en el destino) no bloquea", () => {
+    const days = weekCopyDays(W36, W35, [
+      session(1, "2026-08-24", "Empuje", "planned", [row(11, 7, 0)]),
+    ]);
+    // El viernes 4 no se toca: da igual que tenga un borrador abierto (abrir
+    // el día ya escribe uno), la copia no lo pisa.
+    expect(days.find((d) => d.date === "2026-09-04")?.action).toBe("none");
+    expect(weekCopyBlockers(days, (date) => date === "2026-09-04")).toEqual([]);
+  });
+});
+
+describe("undoCopy", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("deshace en orden inverso y devuelve los pasos que el servidor rechazó", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        calls.push(`${method} ${String(input)}`);
+        // El PUT de vuelta del día sustituido es el que ya no se puede hacer.
+        return method === "PUT"
+          ? new Response(JSON.stringify({ error: "Sesión ya registrada" }), {
+              status: 409,
+              headers: { "content-type": "application/json" },
+            })
+          : new Response("{}", { status: 200 });
+      },
+    );
+
+    const steps: UndoStep[] = [
+      { action: "delete", id: 5 },
+      { action: "put", id: 6, payload: { name: null, items: [] } },
+    ];
+    expect(await undoCopy(steps)).toEqual([steps[1]]);
+    // Del último al primero, y un fallo no corta los demás.
+    expect(calls).toEqual([
+      "PUT /api/plan-sessions/6",
+      "DELETE /api/plan-sessions/5",
+    ]);
+  });
+});
+
+describe("applyCopyOps", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("si una escritura falla, deshace lo aplicado y dice si el deshacer quedó a medias", async () => {
+    let posts = 0;
+    vi.stubGlobal(
+      "fetch",
+      async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        if (method === "POST") {
+          posts += 1;
+          return posts === 1
+            ? new Response(JSON.stringify({ id: 900 }), { status: 201 })
+            : new Response(JSON.stringify({ error: "Ya hay una sesión" }), {
+                status: 409,
+              });
+        }
+        // El deshacer no consigue borrar lo creado.
+        return new Response(JSON.stringify({ error: "boom" }), { status: 500 });
+      },
+    );
+
+    const source = session(1, "2026-08-24", "Empuje", "planned", [
+      row(11, 7, 0),
+    ]);
+    const failure = await applyCopyOps([
+      { kind: "create", date: "2026-08-31", source },
+      { kind: "create", date: "2026-09-01", source },
+    ]).catch((e: unknown) => e);
+
+    expect(failure).toBeInstanceOf(CopyError);
+    expect((failure as CopyError).undoFailed).toBe(1);
+  });
+});
+
+describe("copyFailureMessage", () => {
+  it("dice si se deshizo, y no lo promete cuando el deshacer quedó a medias", () => {
+    expect(copyFailureMessage("la semana", 0)).toBe(
+      "No se pudo copiar la semana; se deshizo lo aplicado y la rejilla se ha recargado.",
+    );
+    expect(copyFailureMessage("la sesión", 2)).toBe(
+      "No se pudo copiar la sesión y no se pudo deshacer todo; la rejilla se ha recargado.",
+    );
   });
 });
 

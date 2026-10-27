@@ -5,10 +5,12 @@
 // habla con la API y sabe deshacerse (el «Deshacer» del snackbar).
 //
 // Un destino registrado no se puede escribir (la API responde 409 a cualquier
-// PUT/DELETE), así que la comprobación va ANTES de escribir: o se aplica todo,
-// o no se aplica nada. Con un borrador sin registrar pasa lo mismo: copiar
-// encima tiraría trabajo hecho y sin guardar.
+// PUT/DELETE), así que la comprobación va ANTES de escribir. Con un borrador
+// con trabajo sin registrar pasa lo mismo: copiar encima tiraría lo hecho y sin
+// guardar. Si aun así una escritura falla a mitad, se deshace lo aplicado —best
+// effort— y la rejilla recarga para enseñar el estado real del servidor.
 import { apiSend } from "./api";
+import { dayLabel } from "./day";
 import { isoWeekOfDay } from "./iso-week";
 import {
   type PlanSession,
@@ -17,44 +19,16 @@ import {
   type SessionPayload,
 } from "./plan-week";
 
-const WEEKDAYS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-const MONTHS = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sept",
-  "oct",
-  "nov",
-  "dic",
-];
+const plural = (n: number, one: string, many: string) =>
+  `${n} ${n === 1 ? one : many}`;
 
-/** UTC-math de un "YYYY-MM-DD" (sin reloj). */
-function parts(date: string): Date {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
-/** Rótulo corto de una fecha: «lun 31 ago». */
-export function dayLabel(date: string): string {
-  const d = parts(date);
-  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
-}
+const exercisesText = (n: number) => plural(n, "ejercicio", "ejercicios");
 
 /** Rótulo con mayúscula inicial, para encabezar una línea de aviso. */
 function dayTitle(date: string): string {
   const label = dayLabel(date);
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
-
-const plural = (n: number, one: string, many: string) =>
-  `${n} ${n === 1 ? one : many}`;
-
-const exercisesText = (n: number) => plural(n, "ejercicio", "ejercicios");
 
 /** «1 ejercicio» / «3 ejercicios», para los rótulos de la copia. */
 export const countExercises = (n: number): string => exercisesText(n);
@@ -212,12 +186,14 @@ export function weekCopyLines(days: readonly WeekDayCopy[]): string[] {
 }
 
 /** Los destinos que no se pueden escribir. Con uno basta para no copiar nada;
- *  el aviso nombra el día porque no hay forma de «quitarlo» desde la app. */
+ *  el aviso nombra el día porque no hay forma de «quitarlo» desde la app. Un
+ *  día sin escrituras (`none`) nunca bloquea: no se toca. */
 export function weekCopyBlockers(
   days: readonly WeekDayCopy[],
   hasDraft: (date: string) => boolean,
 ): string[] {
   return days.flatMap((day) => {
+    if (day.action === "none") return [];
     const cause = blockedCause(day.target ?? undefined, hasDraft(day.date));
     return cause
       ? [`El ${dayLabel(day.date)} ${cause}: no se puede copiar la semana.`]
@@ -291,8 +267,33 @@ export type UndoStep =
   | { action: "put"; id: number; payload: SessionPayload }
   | { action: "post"; payload: SessionPayload & { date: string } };
 
+/** Fallo de una copia: además del error que la cortó, dice cuántos pasos del
+ *  «Deshacer» no se pudieron aplicar (el deshacer es best effort). */
+export class CopyError extends Error {
+  constructor(
+    /** Pasos que el servidor rechazó al deshacer. */
+    public readonly undoFailed: number,
+    /** El error original de la API, para depurar. */
+    public readonly reason: unknown,
+  ) {
+    super("No se pudo copiar");
+    this.name = "CopyError";
+  }
+}
+
+/** Qué decir cuando una copia falla a mitad: si el deshacer dejó algo a medias,
+ *  no se promete que volvió todo (la rejilla recarga y enseña lo que hay). */
+export function copyFailureMessage(
+  what: "la sesión" | "la semana",
+  undoFailed: number,
+): string {
+  return undoFailed === 0
+    ? `No se pudo copiar ${what}; se deshizo lo aplicado y la rejilla se ha recargado.`
+    : `No se pudo copiar ${what} y no se pudo deshacer todo; la rejilla se ha recargado.`;
+}
+
 /** Aplica las escrituras en orden y devuelve cómo deshacerlas. Si una falla,
- *  deshace lo ya aplicado y relanza: nunca se queda media copia. */
+ *  deshace lo ya aplicado y relanza diciendo si ese deshacer quedó a medias. */
 export async function applyCopyOps(
   ops: readonly CopyOp[],
 ): Promise<UndoStep[]> {
@@ -328,15 +329,18 @@ export async function applyCopyOps(
       steps.push({ action: "delete", id: created.id });
     }
   } catch (e) {
-    await undoCopy(steps);
-    throw e;
+    throw new CopyError((await undoCopy(steps)).length, e);
   }
   return steps;
 }
 
 /** Deshace la copia entera, de la última escritura a la primera. Es best
- *  effort: si una falla, la rejilla recarga y se queda como esté el servidor. */
-export async function undoCopy(steps: readonly UndoStep[]): Promise<void> {
+ *  effort: devuelve los pasos que el servidor no dejó deshacer, para no
+ *  prometer que todo volvió. */
+export async function undoCopy(
+  steps: readonly UndoStep[],
+): Promise<UndoStep[]> {
+  const failed: UndoStep[] = [];
   for (const step of [...steps].reverse()) {
     try {
       if (step.action === "delete") {
@@ -347,7 +351,10 @@ export async function undoCopy(steps: readonly UndoStep[]): Promise<void> {
         await apiSend("/api/plan-sessions", "POST", step.payload);
       }
     } catch {
-      // Sin ruido: el «Deshacer» no puede prometer nada que el servidor niegue.
+      // Un paso que no se pudo deshacer no corta el resto: la rejilla recarga
+      // y el aviso dice que puede haber quedado algo a medias.
+      failed.push(step);
     }
   }
+  return failed;
 }

@@ -3,7 +3,7 @@
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type DayData, dayProgress, useDay } from "../src/lib/day";
+import { type DayData, dayLabel, dayProgress, useDay } from "../src/lib/day";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -18,6 +18,14 @@ function dayPayload(date: string): DayData {
     note: { text: "" },
   };
 }
+
+describe("dayLabel", () => {
+  it("rótulo corto de la fecha (UTC, sin reloj): «lun 31 ago»", () => {
+    expect(dayLabel("2026-08-31")).toBe("lun 31 ago");
+    expect(dayLabel("2026-09-06")).toBe("dom 6 sept");
+    expect(dayLabel("2026-01-01")).toBe("jue 1 ene");
+  });
+});
 
 describe("dayProgress", () => {
   const meal = (meal: string, recipeName: string | null) => ({

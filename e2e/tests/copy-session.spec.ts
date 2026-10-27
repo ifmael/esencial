@@ -9,7 +9,11 @@ type SessionRow = {
   date: string;
   name: string | null;
   status: string;
-  exercises: { exerciseName: string; restSecs: number | null }[];
+  exercises: {
+    exerciseName: string;
+    restSecs: number | null;
+    superset?: boolean;
+  }[];
 };
 
 /** ISO week "YYYY-Www" de una fecha (misma convención que la app). */
@@ -49,9 +53,35 @@ function addDays(date: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Semana de origen de cada test, lejos de las que usan los demás specs: el
- *  lunes que cae a `offset` días de hoy (cada reintento estrena la suya, 4
- *  semanas más allá, para no heredar los restos del intento anterior). */
+/** Rótulo corto del día, espejo de `dayLabel` (`web/src/lib/day.ts`). */
+const WEEKDAYS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+const MONTHS = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sept",
+  "oct",
+  "nov",
+  "dic",
+];
+
+function dayLabel(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+/** Semana de origen de cada test, lejos de las que usan los demás specs.
+ *
+ *  Es la excepción al criterio de «fechas reales» del resto de la suite: copiar
+ *  escribe sesiones en días que otros specs también siembran (la semana vista,
+ *  la de hoy), así que aquí cada test se va a un lunes a `offset` días de hoy y
+ *  cada reintento estrena la suya (28 días más allá) para no heredar los restos
+ *  del intento anterior. `clearDays` deja limpios los días que va a usar. */
 function sourceWeekFrom(offset: number, retry: number): string {
   const day = new Date();
   day.setUTCDate(day.getUTCDate() + offset + retry * 28);
@@ -95,15 +125,23 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
           targetSets: 3,
           targetRepsMin: 8,
           targetRepsMax: 10,
+          // Biserie: el primero va pegado al segundo y sin descanso propio.
+          superset: true,
+        },
+        {
+          exerciseId: remo.id,
+          targetSets: 3,
+          targetRepsMin: 10,
           restSecs: 90,
           restAfterSecs: 120,
         },
-        { exerciseId: remo.id, targetSets: 3, targetRepsMin: 10 },
       ],
     });
 
     await page.goto(`/plan-fuerza?week=${week}`);
-    await page.getByRole("button", { name: `Copiar al ${target}` }).click();
+    await page
+      .getByRole("button", { name: `Copiar al ${dayLabel(target)}` })
+      .click();
     const dialog = page.getByRole("dialog", { name: /Copiar sesión/ });
     await expect(dialog).toBeVisible();
     // El origen arranca en la sesión guardada más reciente.
@@ -117,6 +155,8 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
     const copied = page.getByRole("list", { name: `Ejercicios del ${target}` });
     await expect(copied.getByText("Press banca")).toBeVisible();
     await expect(copied.getByText("Remo con barra")).toBeVisible();
+    // La cadena viaja con la copia: los dos miembros van en su caja.
+    await expect(copied.getByText("Superserie")).toBeVisible();
     await expect(page.getByText(/^Sesión copiada al /)).toBeVisible();
 
     // En el servidor: el plan del origen, sin tocar el origen.
@@ -128,7 +168,9 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
       "Press banca",
       "Remo con barra",
     ]);
-    expect(day?.exercises[0].restSecs).toBe(90);
+    expect(day?.exercises[0].superset).toBe(true);
+    expect(day?.exercises[0].restSecs).toBeNull();
+    expect(day?.exercises[1].restSecs).toBe(90);
     expect(rows.filter((s) => s.date === source)).toHaveLength(1);
 
     // «Deshacer» retira el día copiado y lo deja vacío otra vez.
@@ -166,7 +208,9 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
     });
 
     await page.goto(`/plan-fuerza?week=${week}`);
-    await page.getByRole("button", { name: `Copiar al ${target}` }).click();
+    await page
+      .getByRole("button", { name: `Copiar al ${dayLabel(target)}` })
+      .click();
     const dialog = page.getByRole("dialog", { name: /Copiar sesión/ });
     await expect(
       dialog.getByText("El día ya tiene 1 ejercicio: se sustituirá."),
@@ -185,12 +229,14 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
     ]);
 
     await page.getByRole("button", { name: "Deshacer" }).click();
-    await expect(
-      page.getByRole("list", { name: `Ejercicios del ${target}` }),
-    ).toBeVisible();
+    await expect
+      .poll(
+        async () =>
+          (await sessions(page.request)).find((s) => s.date === target)?.name,
+      )
+      .toBe("Viejo plan");
     await expect(cell.getByText("Remo con barra")).toBeVisible();
     const back = (await sessions(page.request)).find((s) => s.date === target);
-    expect(back?.name).toBe("Viejo plan");
     expect(back?.exercises.map((e) => e.exerciseName)).toEqual([
       "Remo con barra",
     ]);
@@ -206,7 +252,8 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
     const sourceDates = weekDates(sourceWeek);
     const targetDates = weekDates(week);
     await clearDays(page.request, [...sourceDates, ...targetDates]);
-    // Origen: lunes y miércoles con sesión. Destino: martes con una planificada.
+    // Origen: lunes, martes y miércoles con sesión. Destino: martes con una
+    // planificada (se sustituye) y jueves con otra (se borra).
     await apiRequest(page.request, "POST", "/api/plan-sessions", {
       date: sourceDates[0],
       name: "Empuje semana",
@@ -214,6 +261,11 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
         { exerciseId: press.id, targetSets: 3, targetRepsMin: 8 },
         { exerciseId: remo.id, targetSets: 3, targetRepsMin: 10 },
       ],
+    });
+    await apiRequest(page.request, "POST", "/api/plan-sessions", {
+      date: sourceDates[1],
+      name: "Pierna semana",
+      items: [{ exerciseId: press.id, targetSets: 4, targetRepsMin: 6 }],
     });
     await apiRequest(page.request, "POST", "/api/plan-sessions", {
       date: sourceDates[2],
@@ -224,6 +276,11 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
       date: targetDates[1],
       name: "Vieja del martes",
       items: [{ exerciseId: press.id, targetSets: 2, targetRepsMin: 12 }],
+    });
+    await apiRequest(page.request, "POST", "/api/plan-sessions", {
+      date: targetDates[3],
+      name: "Viejo del jueves",
+      items: [{ exerciseId: remo.id, targetSets: 2, targetRepsMin: 10 }],
     });
 
     await page.goto(`/plan-fuerza?week=${week}`);
@@ -236,35 +293,47 @@ test.describe("COPIAR SESIÓN — día y semana", () => {
       dialog.getByText(/se copia «Empuje semana» \(2 ejercicios\)/),
     ).toBeVisible();
     await expect(
+      dialog.getByText(/se sustituye por «Pierna semana» \(1 ejercicio\)/),
+    ).toBeVisible();
+    await expect(
       dialog.getByText(/se copia «Espalda semana» \(1 ejercicio\)/),
     ).toBeVisible();
     await expect(
-      dialog.getByText(/se borra «Vieja del martes» \(1 ejercicio\)/),
+      dialog.getByText(/se borra «Viejo del jueves» \(1 ejercicio\)/),
     ).toBeVisible();
 
     await dialog.getByRole("button", { name: "Copiar", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByText(/^Semana copiada · 2 creados/)).toBeVisible();
+    await expect(
+      page.getByText(/^Semana copiada · 2 creados · 1 sustituido · 1 borrado/),
+    ).toBeVisible();
 
-    // La semana destino queda como la origen: lunes y miércoles copiados y el
-    // martes vacío.
+    // La semana destino queda como la origen: lunes, martes y miércoles
+    // copiados y el jueves vacío.
     const rows = await sessions(page.request);
     const inTarget = rows
       .filter((s) => targetDates.includes(s.date))
       .map((s) => [s.date, s.name]);
     expect(inTarget.sort()).toEqual([
       [targetDates[0], "Empuje semana"],
+      [targetDates[1], "Pierna semana"],
       [targetDates[2], "Espalda semana"],
     ]);
 
-    // «Deshacer» devuelve los siete días: el martes vuelve y los copiados se van.
+    // «Deshacer» devuelve los siete días: el martes y el jueves vuelven (con su
+    // PUT y su POST) y los copiados se van. El deshacer es asíncrono y encadena
+    // cuatro escrituras, así que se espera al estado final en vez de leer una vez.
     await page.getByRole("button", { name: "Deshacer" }).click();
-    await expect(
-      page.getByRole("list", { name: `Ejercicios del ${targetDates[1]}` }),
-    ).toBeVisible();
-    const undone = (await sessions(page.request))
-      .filter((s) => targetDates.includes(s.date))
-      .map((s) => [s.date, s.name]);
-    expect(undone).toEqual([[targetDates[1], "Vieja del martes"]]);
+    await expect
+      .poll(async () =>
+        (await sessions(page.request))
+          .filter((s) => targetDates.includes(s.date))
+          .map((s) => [s.date, s.name])
+          .sort(),
+      )
+      .toEqual([
+        [targetDates[1], "Vieja del martes"],
+        [targetDates[3], "Viejo del jueves"],
+      ]);
   });
 });
