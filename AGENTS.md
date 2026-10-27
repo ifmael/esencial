@@ -958,6 +958,11 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
   `api/wrangler.toml` y en e2e/vitest la cabecera `X-Dev-Email` con `DEV_AUTH=1`.
   No hay login propio ni cookie de sesión; un fallo de sesión en el SPA se
   resuelve recargando (`web/src/lib/api.ts`, una vez por pestaña y sesión).
+- Access pone la cookie **por host**. Antes de montar la app,
+  `web/src/lib/session-bridge.ts` prueba `/api/health`; si la API no responde,
+  navega a `/api/session/return?to=<web>` (la API solo acepta un origen de
+  `WEB_ORIGIN`), Access autentica ese host y vuelve a la web. Así la primera
+  visita no confunde la falta de cookie con un fallo de base de datos.
 - En dev/e2e esos dos orígenes se sobreescriben con `--var` (ver los scripts
   `dev:api` / `dev:web` y `e2e/playwright.config.ts`).
 - Publicación: **un build de Workers Builds por Worker** (ver `DEPLOY.md` §6).
