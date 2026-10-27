@@ -1,4 +1,9 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { artifactPath, listArtifacts, readArtifact } from "./artifacts.mjs";
+import { checksSummary, markComment } from "./comments.mjs";
 import {
   commentArgs,
   editArgs,
@@ -11,6 +16,16 @@ import {
 import { guardTask } from "./guard.mjs";
 import { migrationsOf } from "./migrations.mjs";
 import { home, load, save, transition } from "./state.mjs";
+
+function commentFile(name, body) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "orquestator-comment-"));
+  const file = path.join(dir, name);
+  fs.writeFileSync(file, body);
+  return {
+    file,
+    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+  };
+}
 
 export function ship(
   key,
@@ -55,11 +70,27 @@ export function ship(
     listArtifacts(key, base).map((a) => [a.name, a.filled]),
   );
   if (filled.get("checks.md")) {
-    ghRun(commentArgs(pr.number, artifactPath(key, "checks.md", base)));
+    const comment = commentFile(
+      "checks.md",
+      markComment(checksSummary(readArtifact(key, "checks.md", base))),
+    );
+    try {
+      ghRun(commentArgs(pr.number, comment.file));
+    } finally {
+      comment.cleanup();
+    }
   }
   // review.md va como review (gh pr review --comment), no como comentario suelto.
   if (filled.get("review.md")) {
-    ghRun(reviewArgs(pr.number, artifactPath(key, "review.md", base)));
+    const comment = commentFile(
+      "review.md",
+      markComment(readArtifact(key, "review.md", base)),
+    );
+    try {
+      ghRun(reviewArgs(pr.number, comment.file));
+    } finally {
+      comment.cleanup();
+    }
   }
 
   // El status va antes de esperar a la CI: el job `guard` lo lee y, si no,
@@ -112,7 +143,6 @@ export function publishPrReview(
   if (!state.pr?.number) {
     throw new Error(`La tarea ${key} no tiene PR; ejecuta pr antes`);
   }
-  const file = artifactPath(key, "pr-review.md", base);
   if (!readArtifact(key, "pr-review.md", base).trim()) {
     throw new Error("pr-review.md está vacío");
   }
@@ -120,6 +150,14 @@ export function publishPrReview(
     out(`[dry-run] comentar pr-review.md en la PR #${state.pr.number}`);
     return { dryRun: true };
   }
-  ghRun(commentArgs(state.pr.number, file));
+  const comment = commentFile(
+    "pr-review.md",
+    markComment(readArtifact(key, "pr-review.md", base)),
+  );
+  try {
+    ghRun(commentArgs(state.pr.number, comment.file));
+  } finally {
+    comment.cleanup();
+  }
   return { number: state.pr.number };
 }

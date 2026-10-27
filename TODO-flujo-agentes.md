@@ -994,6 +994,17 @@ Depende de: M5b.
         exponer en `0.0.0.0`, autenticar, no guardar secretos y limpiar al cerrar.
       - Aceptación: ver una fase en curso, `watch` termina igual y el puerto queda
         solo en loopback o túnel. Si no aporta, no se implementa.
+- [ ] **Identidad propia en los comentarios (M6)**: los comentarios de la IA salen
+      con la cuenta de `ifmael` aunque lleven `Orquestator (IA)`. Para que el
+      **autor** sea distinto hacen falta credenciales de bot: GitHub App o usuario
+      máquina con token de escritura, y app OAuth de Linear (`createAsUser`/
+      `displayIconUrl`) o un usuario dedicado. Los marcadores actuales permiten
+      distinguirlos sin cambiar de cuenta.
+- [ ] **Preview útil para validar (M6)**: la D1 de preview responde y tiene
+      catálogo (100 recetas, 108 ejercicios, 1 usuario), pero **0 sesiones de plan**;
+      la rejilla sale vacía. Revisar el fallo real con la cookie de Access por host
+      (abrir la API primero), sembrar fixtures de sesiones para probar copiar y
+      añadir un smoke autenticado, no solo el 302 del borde.
 
 ## Bitácora
 

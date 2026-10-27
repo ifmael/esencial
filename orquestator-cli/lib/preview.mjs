@@ -44,8 +44,12 @@ export function withPreviewBlock(body, urls) {
     "<!-- preview -->",
     "## Preview",
     "",
+    "> **Acceso:** abre primero la API e inicia sesión; la cookie de Access es por",
+    "> host. Después abre la web. Si abres la web primero, las llamadas a la API",
+    "> parecen un fallo de base de datos.",
+    "",
+    `- API (abrir primero): ${urls.api}`,
     `- Web: ${urls.web}`,
-    `- API: ${urls.api}`,
     "<!-- /preview -->",
   ].join("\n");
   const existing = /<!-- preview -->[\s\S]*?<!-- \/preview -->/;

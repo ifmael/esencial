@@ -263,6 +263,7 @@ test("withPreviewBlock añade el bloque una sola vez", () => {
   const urls = previewUrls(NAME);
   const once = withPreviewBlock("Fixes ESN-7\n", urls);
   assert.equal(once.match(/<!-- preview -->/g).length, 1);
+  assert.match(once, /abre primero la API/i);
   const twice = withPreviewBlock(once, { web: "w2", api: "a2" });
   assert.equal(twice.match(/<!-- preview -->/g).length, 1);
   assert.match(twice, /w2/);
