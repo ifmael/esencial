@@ -91,10 +91,12 @@ Modelo y esfuerzo se cambian sin tocar código con `ORQUESTATOR_MODEL_<FASE>` y
 `ORQUESTATOR_EFFORT_<FASE>` (`SPEC_REVIEW`, `IMPLEMENTER`, `REVIEWER`, `PR_REVIEW`).
 
 `review.md` y `pr-review.md` empiezan con `Veredicto: APROBADO` o
-`Veredicto: CAMBIOS`; con CAMBIOS el comando sale con 1 y toca
-`fix --from review|pr-review`. La cadena real es
-`start → implement → check → review → pr → ship → pr-review` y para en `Blocked`,
-en una comprobación que falla o al dejar la tarea en `In validation`.
+`Veredicto: CAMBIOS`; con CAMBIOS `run` llama a `fix` y vuelve a `implement`,
+hasta agotar las rondas (checks 2, review 3, pr-review 2). La cadena real es
+`start → implement → check → review → pr → preview → ship → pr-review` y para en
+`Blocked`, en una comprobación no corregible (guard) o al dejar la tarea en
+`In validation`. `check` también reintenta solo si fallan las comprobaciones; si
+faltan aprobaciones, no gasta una ronda.
 
 ## Comprobaciones
 

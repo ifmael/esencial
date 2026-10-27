@@ -805,8 +805,8 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
 - [x] `fix`: rondas por origen (checks 2, review 3, pr-review 2, conflicto 2),
       vuelta a `In Progress` desde `In validation`, `--humano` con los comentarios del
       dueño en `human-feedback.md` y `Blocked` al agotar (2026-10-22).
-- [ ] `run` real: encadenar las fases de agente (M3), `fix` con rondas, migración y
-      `mergeable`, parando en `Blocked`/`In validation`.
+- [x] `run` real: encadena las fases de agente (M3), `fix` con rondas, migración y
+      `mergeable`, parando en `Blocked`/`In validation` (2026-10-27).
 - [x] Tests: tabla de transiciones, rechazo de saltos, `--dry-run` sin efectos, `guard`
       con `diff.external`, `pre-push` y `uploadpack.packObjectsHook` maliciosos
       (2026-10-22).

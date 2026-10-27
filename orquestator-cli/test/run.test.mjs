@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
 import { runFlow } from "../lib/run.mjs";
-import { createState, save, transition } from "../lib/state.mjs";
+import { createState, load, save, transition } from "../lib/state.mjs";
 
 let dir;
 beforeEach(() => {
@@ -165,6 +165,95 @@ test("run real completa la cadena y deja In validation al pasar ship", async () 
     "ship",
     "pr-review",
   ]);
+});
+
+test("run real corrige review y vuelve a empezar la cadena", async () => {
+  save(
+    "ESN-7",
+    transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+  );
+  const { steps, calls } = fakeSteps();
+  let reviews = 0;
+  steps.review = async () => {
+    calls.push("review");
+    reviews += 1;
+    return reviews === 1
+      ? { stop: "review", retry: "review", hint: "cambios" }
+      : {};
+  };
+  const result = await runFlow("ESN-7", { steps, out: () => {} });
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, [
+    "implement",
+    "check",
+    "review",
+    "implement",
+    "check",
+    "review",
+    "pr",
+    "preview",
+    "ship",
+    "pr-review",
+  ]);
+  assert.equal(load("ESN-7", dir).rounds.review, 1);
+});
+
+test("run real bloquea cuando se agotan las rondas de checks", async () => {
+  save(
+    "ESN-7",
+    transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+  );
+  const { steps, calls } = fakeSteps();
+  steps.check = async () => {
+    calls.push("check");
+    return { stop: "check", retry: "checks", hint: "falla" };
+  };
+  const result = await runFlow("ESN-7", { steps, out: () => {} });
+  assert.equal(result.ok, false);
+  assert.equal(result.blocked, true);
+  assert.equal(result.stop, "check");
+  assert.match(result.hint, /checks agotadas/);
+  assert.deepEqual(calls, [
+    "implement",
+    "check",
+    "implement",
+    "check",
+    "implement",
+    "check",
+  ]);
+  assert.equal(load("ESN-7", dir).state, "Blocked");
+});
+
+test("run real corrige pr-review y vuelve a la cadena completa", async () => {
+  save(
+    "ESN-7",
+    transition(
+      transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+      "In validation",
+    ),
+  );
+  const { steps, calls } = fakeSteps();
+  let reviews = 0;
+  steps["pr-review"] = async () => {
+    calls.push("pr-review");
+    reviews += 1;
+    return reviews === 1
+      ? { stop: "pr-review", retry: "pr-review", hint: "cambios" }
+      : {};
+  };
+  const result = await runFlow("ESN-7", { steps, out: () => {} });
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, [
+    "pr-review",
+    "implement",
+    "check",
+    "review",
+    "pr",
+    "preview",
+    "ship",
+    "pr-review",
+  ]);
+  assert.equal(load("ESN-7", dir).rounds.prReview, 1);
 });
 
 test("run real no arranca una tarea cerrada", async () => {
