@@ -7,7 +7,8 @@
 // Transitions; la de salida y la de entrada se deslizan en el sentido del
 // cambio) y el día de hoy lleva su número dentro de una galleta de 9 lados.
 import { type ReactNode, useLayoutEffect, useRef } from "react";
-import { toISODate } from "../lib/day";
+import { MONTHS, toISODate } from "../lib/day";
+import { isoWeekDates } from "../lib/iso-week";
 import { canViewTransition, runViewTransition } from "../lib/view-transition";
 import { Loader, Shape } from "./expressive";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
@@ -23,21 +24,6 @@ const DAYS = [
   "Domingo",
 ];
 
-/** YYYY-MM-DD of day `dayIndex` (0=Lunes) of ISO week, UTC-math, no clock. */
-function dayOf(isoWeek: string, dayIndex: number): string {
-  const [yearStr, weekStr] = isoWeek.split("-W");
-  const year = Number(yearStr);
-  const week = Number(weekStr);
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  const monday = new Date(
-    jan4.getTime() - ((jan4.getUTCDay() + 6) % 7) * 86_400_000,
-  );
-  const date = new Date(monday.getTime() + (week - 1) * 7 * 86_400_000);
-  date.setUTCDate(date.getUTCDate() + dayIndex);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
-}
-
 /** Columna de un día, tal como la recibe el render prop de la página. */
 type WeekDay = {
   index: number;
@@ -49,21 +35,6 @@ type WeekDay = {
 /** Techo de espera de la foto «después» al cambiar de semana. */
 const WEEK_TRANSITION_MAX_WAIT_MS = 400;
 
-const MONTHS = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sept",
-  "oct",
-  "nov",
-  "dic",
-];
-
 export function WeekGrid({
   isoWeek,
   loading = false,
@@ -72,6 +43,7 @@ export function WeekGrid({
   onRetry,
   onShiftWeek,
   aside,
+  weekAction,
   children,
 }: {
   isoWeek: string;
@@ -85,10 +57,13 @@ export function WeekGrid({
   onShiftWeek: (delta: number) => void;
   /** Contenido a la derecha de la cabecera (progreso de la semana, racha). */
   aside?: ReactNode;
+  /** Acción junto al selector de semana (copiar la semana). */
+  weekAction?: ReactNode;
   /** Contenido de la columna de cada día (lo pone la página). */
   children: (day: WeekDay) => ReactNode;
 }) {
   const today = toISODate(new Date());
+  const dates = isoWeekDates(isoWeek);
   const pending = useRef<{ from: string; release: () => void } | null>(null);
   const grid = useRef<HTMLDivElement>(null);
 
@@ -126,8 +101,8 @@ export function WeekGrid({
     ).finally(() => el?.style.removeProperty("view-transition-name"));
   };
 
-  const first = dayOf(isoWeek, 0);
-  const last = dayOf(isoWeek, 6);
+  const first = dates[0];
+  const last = dates[6];
   const range = `${Number(first.slice(8))} ${MONTHS[Number(first.slice(5, 7)) - 1]} – ${Number(last.slice(8))} ${MONTHS[Number(last.slice(5, 7)) - 1]}`;
 
   return (
@@ -160,6 +135,9 @@ export function WeekGrid({
           <h2 className="text-title-l text-e tabular">{isoWeek}</h2>
           <span className="text-body-s text-on-surface-variant">{range}</span>
         </div>
+        {weekAction ? (
+          <div className="flex items-center">{weekAction}</div>
+        ) : null}
         {aside ? (
           <div className="ml-auto flex items-center gap-3">{aside}</div>
         ) : null}
@@ -184,7 +162,7 @@ export function WeekGrid({
           className="stagger flex flex-col gap-3 md:grid md:min-h-0 md:flex-1 md:grid-flow-col md:auto-cols-fr md:gap-2 md:overflow-y-auto"
         >
           {DAYS.map((name, index) => {
-            const date = dayOf(isoWeek, index);
+            const date = dates[index];
             const isToday = date === today;
             return (
               <div

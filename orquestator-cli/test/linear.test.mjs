@@ -131,7 +131,8 @@ test("comment crea el comentario en la issue", async () => {
   }));
   await comment("k", ISSUE, "Rama: ESN-7-x", impl);
   assert.equal(calls[0].body.variables.issueId, "uuid-1");
-  assert.equal(calls[0].body.variables.body, "Rama: ESN-7-x");
+  assert.match(calls[0].body.variables.body, /Rama: ESN-7-x/);
+  assert.match(calls[0].body.variables.body, /Orquestator \(IA\)/);
 });
 
 test("notifyBlocked asigna la issue a ti y te menciona", async () => {

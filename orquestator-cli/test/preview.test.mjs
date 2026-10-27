@@ -175,8 +175,14 @@ test("preview construye, migra, despliega los dos Workers y guarda el estado", a
   assert.equal(state.preview.database, PREVIEW_DB);
   assert.equal(state.preview.bucket, PREVIEW_BUCKET);
   assert.match(readArtifact(KEY, "pr-body.md", base), /## Preview/);
-  assert.equal(gh.length, 1);
+  assert.equal(gh.length, 2);
   assert.equal(gh[0][1], "edit");
+  assert.equal(gh[1][1], "comment");
+  assert.match(
+    gh[1].join(" "),
+    /esn-7-esencial-api\.nutrirutina\.workers\.dev/,
+  );
+  assert.match(gh[1].join(" "), /esn-7-esencial\.nutrirutina\.workers\.dev/);
 });
 
 test("un preview público sin Access falla y no guarda el estado", async () => {
@@ -263,6 +269,7 @@ test("withPreviewBlock añade el bloque una sola vez", () => {
   const urls = previewUrls(NAME);
   const once = withPreviewBlock("Fixes ESN-7\n", urls);
   assert.equal(once.match(/<!-- preview -->/g).length, 1);
+  assert.match(once, /abre primero la API/i);
   const twice = withPreviewBlock(once, { web: "w2", api: "a2" });
   assert.equal(twice.match(/<!-- preview -->/g).length, 1);
   assert.match(twice, /w2/);

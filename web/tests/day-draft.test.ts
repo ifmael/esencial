@@ -3,7 +3,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   clearDraft,
+  draftHasWork,
   draftKey,
+  hasRealDraft,
   parseSnapshot,
   readDraft,
   restoreCardio,
@@ -318,6 +320,105 @@ describe("restoreCardio", () => {
       { se: { id: 13 }, distanceKm: null, durationMin: null, done: false },
     ];
     expect(restoreCardio(before, undefined)).toBe(before);
+  });
+});
+
+describe("draftHasWork", () => {
+  /** El borrador que deja abrir un día planificado: las series del plan, sin
+   *  marcar ni tocar, y sin cardio, esfuerzo ni nota. */
+  const opened = () =>
+    snapshotOf(
+      [
+        {
+          se: { id: 11 },
+          noWeight: false,
+          sets: [
+            {
+              weightKg: null,
+              reps: null,
+              durationSecs: null,
+              done: false,
+              touched: false,
+            },
+            {
+              weightKg: null,
+              reps: null,
+              durationSecs: null,
+              done: false,
+              touched: false,
+            },
+          ],
+        },
+      ],
+      [{ se: { id: 13 }, distanceKm: null, durationMin: null, done: false }],
+      null,
+      "",
+    );
+
+  it("un borrador recién abierto no es trabajo que perder", () => {
+    expect(draftHasWork(opened())).toBe(false);
+  });
+
+  it("una serie marcada o editada ya lo es", () => {
+    const done = opened();
+    done.exercises[0].sets[1].done = true;
+    expect(draftHasWork(done)).toBe(true);
+
+    const touched = opened();
+    touched.exercises[0].sets[0].touched = true;
+    expect(draftHasWork(touched)).toBe(true);
+  });
+
+  it("el cardio hecho, el esfuerzo o la nota también", () => {
+    const cardio = opened();
+    cardio.cardio[0].done = true;
+    expect(draftHasWork(cardio)).toBe(true);
+
+    const effort = opened();
+    effort.effort = 3;
+    expect(draftHasWork(effort)).toBe(true);
+
+    const note = opened();
+    note.note = "buena sesión";
+    expect(draftHasWork(note)).toBe(true);
+    // Una nota en blanco no es nada escrito.
+    note.note = "   ";
+    expect(draftHasWork(note)).toBe(false);
+  });
+});
+
+describe("hasRealDraft", () => {
+  it("sin borrador guardado, o con uno recién abierto, no hay trabajo que perder", () => {
+    expect(hasRealDraft("2026-09-02")).toBe(false);
+    writeDraft("2026-09-02", snapshotOf([], [], null, ""));
+    expect(hasRealDraft("2026-09-02")).toBe(false);
+  });
+
+  it("con una marca guardada, sí", () => {
+    writeDraft(
+      "2026-09-02",
+      snapshotOf(
+        [
+          {
+            se: { id: 11 },
+            noWeight: false,
+            sets: [
+              {
+                weightKg: 60,
+                reps: 8,
+                durationSecs: null,
+                done: true,
+                touched: true,
+              },
+            ],
+          },
+        ],
+        [],
+        null,
+        "",
+      ),
+    );
+    expect(hasRealDraft("2026-09-02")).toBe(true);
   });
 });
 

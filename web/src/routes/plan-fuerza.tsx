@@ -5,6 +5,12 @@
 // es una sesión con nombre, compuesta de ejercicios copiados desde plantillas
 // (que se expanden y desaparecen) y/o sueltos, sin duplicados. El CRUD de
 // plantillas vive en /plantillas.
+//
+// Copiar el plan: cada columna de día es el destino de «copiar desde otro día»
+// y la cabecera copia una semana anterior entera sobre la que se ve
+// (components/copy-session.tsx; las reglas puras, en lib/copy-session.ts). Se
+// copia el plan, nunca el registro, y un destino registrado o con borrador no
+// se escribe.
 import {
   closestCenter,
   DndContext,
@@ -18,9 +24,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { type ComponentProps, useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router";
+import { CopyDayDialog, CopyWeekDialog } from "../components/copy-session";
 import {
   EmptyState,
   Loader,
@@ -33,6 +40,7 @@ import {
   AddIcon,
   CheckIcon,
   CloseIcon,
+  CopyIcon,
   DeleteIcon,
   DumbbellIcon,
   FireIcon,
@@ -61,6 +69,22 @@ import {
 import { WeekGrid } from "../components/week-grid";
 import { ApiError, apiGet, apiSend } from "../lib/api";
 import {
+  applyCopyOps,
+  dayBlockedMessage,
+  dayCopyMessage,
+  dayCopyOp,
+  daySources,
+  sourceWeeks,
+  type UndoStep,
+  undoCopy,
+  weekCopyDays,
+  weekCopyMessage,
+  weekCopyOps,
+  weekCopySummary,
+} from "../lib/copy-session";
+import { dayLabel } from "../lib/day";
+import { hasRealDraft } from "../lib/day-draft";
+import {
   type Exercise,
   type ExerciseKind,
   type ExerciseMetric,
@@ -69,7 +93,7 @@ import {
   targetSummary,
   useExercises,
 } from "../lib/exercises";
-import { currentIsoWeek, shiftIsoWeek } from "../lib/iso-week";
+import { currentIsoWeek, isoWeekDates, shiftIsoWeek } from "../lib/iso-week";
 import {
   type PlanSession,
   type SessionExercise,
@@ -966,7 +990,9 @@ function SessionCell({
   session,
   isToday,
   morphing,
+  copyBlocked,
   onOpen,
+  onCopy,
   onRemove,
   onRemoveExercise,
   onSaveItems,
@@ -976,7 +1002,10 @@ function SessionCell({
   isToday: boolean;
   /** Esta celda es el origen de la transición hacia el modal. */
   morphing: boolean;
+  /** Motivo por el que no se puede copiar a este día (null = se puede). */
+  copyBlocked: string | null;
   onOpen: () => void;
+  onCopy: () => void;
   onRemove: (session: PlanSession) => void;
   onRemoveExercise: (session: PlanSession, exercise: SessionExercise) => void;
   onSaveItems: (session: PlanSession, exercises: SessionExercise[]) => void;
@@ -986,21 +1015,49 @@ function SessionCell({
   const sensors = useDragSensors();
   const morph = morphing ? { viewTransitionName: DAY_SHEET } : undefined;
 
+  /** Copiar a este día: vive en la celda (no en la cabecera de la columna, que
+   *  a 1280 no da ancho para el nombre del día) y no añade alto: en un día con
+   *  sesión va en la fila de la insignia y en uno vacío, junto a «añadir». Mide
+   *  40 px de área táctil (la cuarta excepción a los 48, en AGENTS.md); en la
+   *  fila de 24 px de la insignia las marcas negativas evitan estirarla. */
+  const copyControl = (compact: boolean) => (
+    <button
+      type="button"
+      aria-label={`Copiar al ${dayLabel(date)}`}
+      title={copyBlocked ?? "Copiar aquí desde otro día"}
+      className={cx(
+        "state grid size-10 shrink-0 place-items-center rounded-full text-on-surface-variant",
+        compact ? "-my-2" : "self-center",
+        copyBlocked ? "opacity-60" : "hover:text-accent",
+      )}
+      onPointerDown={ripple}
+      onClick={(e) => {
+        e.stopPropagation();
+        onCopy();
+      }}
+    >
+      <CopyIcon width={18} height={18} />
+    </button>
+  );
+
   if (!session) {
     return (
-      <Button
-        variant="text"
-        aria-label="+ añadir"
-        style={morph}
-        onClick={onOpen}
-        className={cx(
-          "min-h-12 flex-1 flex-col justify-start gap-1 rounded-m border border-dashed pt-3 text-on-surface-variant hover:text-accent",
-          isToday ? "border-accent" : "border-outline-variant",
-        )}
-      >
-        <AddIcon />
-        añadir
-      </Button>
+      <div className="flex flex-1 gap-1">
+        <Button
+          variant="text"
+          aria-label="+ añadir"
+          style={morph}
+          onClick={onOpen}
+          className={cx(
+            "min-h-12 flex-1 flex-col justify-start gap-1 rounded-m border border-dashed pt-3 text-on-surface-variant hover:text-accent",
+            isToday ? "border-accent" : "border-outline-variant",
+          )}
+        >
+          <AddIcon />
+          añadir
+        </Button>
+        {copyControl(false)}
+      </div>
     );
   }
 
@@ -1085,7 +1142,10 @@ function SessionCell({
           </>
         )}
       </div>
-      {badge}
+      <div className="flex items-center gap-1">
+        {badge}
+        <span className="ml-auto">{copyControl(true)}</span>
+      </div>
       {order.length > 0 ? (
         <DndContext
           sensors={sensors}
@@ -1139,7 +1199,7 @@ function SessionCell({
       {confirming ? (
         // Misma confirmación en línea que la fila: «Confirmar desprogramar» a
         // lo ancho no cabe en los ~152 px de la columna.
-        <div className="flex min-h-11 items-center gap-1 rounded-m bg-error-container py-1 pl-2 pr-1 text-on-error-container">
+        <div className="flex min-h-11 items-center gap-1 rounded-m bg-error-container py-1 pr-1 pl-2 text-on-error-container">
           <span className="min-w-0 flex-1 truncate text-label-m">
             ¿Desprogramar?
           </span>
@@ -1242,6 +1302,9 @@ export function PlanFuerzaPage() {
   } | null>(null);
   /** Día cuya celda se transforma en el modal (viewTransitionName). */
   const [morphDate, setMorphDate] = useState<string | null>(null);
+  /** Día destino de «copiar sesión» (null = diálogo cerrado). */
+  const [copyDay, setCopyDay] = useState<string | null>(null);
+  const [copyWeek, setCopyWeek] = useState(false);
   const [daySaving, setDaySaving] = useState(false);
   const [dayLoading, setDayLoading] = useState(false);
   const [dayError, setDayError] = useState<string | null>(null);
@@ -1374,6 +1437,76 @@ export function PlanFuerzaPage() {
 
   const byDate = new Map(week.sessions.map((s) => [s.date, s]));
 
+  /** Borradores con trabajo sin registrar: copiar encima los tiraría. Se leen
+   *  una vez por semana (localStorage + JSON en el render de cada columna, en
+   *  cada render, era tirar el trabajo hecho). Los dos diálogos solo escriben
+   *  en días de la semana que se ve, que es la que se lee aquí. */
+  const draftsWithWork = useMemo(() => {
+    const flags = new Map<string, boolean>();
+    for (const date of isoWeekDates(isoWeek))
+      flags.set(date, hasRealDraft(date));
+    return flags;
+  }, [isoWeek]);
+  const hasDraft = (date: string) => draftsWithWork.get(date) ?? false;
+
+  /** El «Deshacer» de la copia: vuelve a escribir lo de antes y recarga. Si el
+   *  servidor no deja deshacer algún paso, se dice (la rejilla ya recarga). */
+  const undoAndReload = async (steps: UndoStep[]) => {
+    const failed = await undoCopy(steps);
+    await week.reload();
+    if (failed.length > 0)
+      snackbar({
+        message:
+          "No se pudo deshacer todo: la rejilla se ha recargado con lo que hay en el servidor.",
+      });
+  };
+
+  /** Copia el plan de `source` sobre el día `target` (crear o sustituir). Un
+   *  fallo a medio camino deshace lo aplicado y recarga: la rejilla nunca
+   *  enseña un 409 crudo ni queda a medias. */
+  const copyDayTo = async (target: string, source: PlanSession) => {
+    let steps: UndoStep[];
+    try {
+      steps = await applyCopyOps([
+        dayCopyOp(target, source, byDate.get(target)),
+      ]);
+    } catch (e) {
+      await week.reload();
+      throw e;
+    }
+    await week.reload();
+    snackbar({
+      message: dayCopyMessage(target, source.exercises.length),
+      onUndo: () => void undoAndReload(steps),
+    });
+  };
+
+  /** Copia la semana `from` sobre la que se ve: se vacía y se copia día a día. */
+  const copyWeekFrom = async (from: string) => {
+    const days = weekCopyDays(
+      isoWeekDates(isoWeek),
+      isoWeekDates(from),
+      week.all,
+    );
+    let steps: UndoStep[];
+    try {
+      steps = await applyCopyOps(weekCopyOps(days));
+    } catch (e) {
+      await week.reload();
+      throw e;
+    }
+    await week.reload();
+    snackbar({
+      message: weekCopyMessage(weekCopySummary(days)),
+      onUndo: () => void undoAndReload(steps),
+    });
+  };
+
+  /** Copiar a un día que no se puede escribir no es una acción disponible: el
+   *  control lo dice en su `title` y el diálogo, que sí se abre, explica por qué. */
+  const copyBlocker = (date: string) =>
+    dayBlockedMessage(byDate.get(date), hasDraft(date), date);
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col gap-4">
       <WeekGrid
@@ -1383,6 +1516,16 @@ export function PlanFuerzaPage() {
         error={week.error}
         onRetry={() => void week.reload()}
         onShiftWeek={(d) => gotoWeek(shiftIsoWeek(isoWeek, d))}
+        weekAction={
+          <Button
+            variant="tonal"
+            onClick={() => setCopyWeek(true)}
+            title="Copiar otra semana sobre esta"
+          >
+            <CopyIcon />
+            Copiar semana
+          </Button>
+        }
         aside={
           <WeekAside
             logged={progress.logged}
@@ -1397,7 +1540,9 @@ export function PlanFuerzaPage() {
             session={byDate.get(date)}
             isToday={isToday}
             morphing={morphDate === date && day === null}
+            copyBlocked={copyBlocker(date)}
             onOpen={() => void openDay(date)}
+            onCopy={() => setCopyDay(date)}
             onRemove={(session) => void unschedule(session)}
             onRemoveExercise={(session, e) =>
               void unscheduleExercise(session, e)
@@ -1448,6 +1593,30 @@ export function PlanFuerzaPage() {
       )}
 
       {dayError && !day && <Alert>{dayError}</Alert>}
+
+      {/* Copiar el plan de otro día: el que se ve es el destino. */}
+      {copyDay && (
+        <CopyDayDialog
+          target={copyDay}
+          targetSession={byDate.get(copyDay)}
+          sources={daySources(week.all, copyDay)}
+          hasDraft={hasDraft(copyDay)}
+          onCopy={(source) => copyDayTo(copyDay, source)}
+          onClose={() => setCopyDay(null)}
+        />
+      )}
+
+      {/* Copiar una semana anterior sobre la que se ve. */}
+      {copyWeek && (
+        <CopyWeekDialog
+          week={isoWeek}
+          weeks={sourceWeeks(week.all, isoWeek)}
+          sessions={week.all}
+          hasDraft={hasDraft}
+          onCopy={copyWeekFrom}
+          onClose={() => setCopyWeek(false)}
+        />
+      )}
     </div>
   );
 }

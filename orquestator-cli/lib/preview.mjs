@@ -3,9 +3,10 @@ import path from "node:path";
 
 import { writeArtifact } from "./artifacts.mjs";
 import { ACCESS_LOGIN } from "./clean.mjs";
+import { markComment } from "./comments.mjs";
 import { readEnv } from "./config.mjs";
 import { runPhase } from "./container.mjs";
-import { editArgs, runGh } from "./github.mjs";
+import { commentBodyArgs, editArgs, runGh } from "./github.mjs";
 import { imageTag } from "./image.mjs";
 import { home, load, repoDir, save, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
@@ -44,8 +45,12 @@ export function withPreviewBlock(body, urls) {
     "<!-- preview -->",
     "## Preview",
     "",
+    "> **Acceso:** abre primero la API e inicia sesión; la cookie de Access es por",
+    "> host. Después abre la web. Si abres la web primero, las llamadas a la API",
+    "> parecen un fallo de base de datos.",
+    "",
+    `- API (abrir primero): ${urls.api}`,
     `- Web: ${urls.web}`,
-    `- API: ${urls.api}`,
     "<!-- /preview -->",
   ].join("\n");
   const existing = /<!-- preview -->[\s\S]*?<!-- \/preview -->/;
@@ -145,6 +150,19 @@ async function expectAccess(url, { fetchImpl, sleep, waits, delay, out }) {
     }
   }
   throw new Error(`Access no protege ${url} (${last})`);
+}
+
+export function previewComment(urls) {
+  return markComment(
+    [
+      "## Preview",
+      "",
+      `- API (abrir primero): ${urls.api}`,
+      `- Frontal: ${urls.web}`,
+      "",
+      "Abre primero la API e inicia sesión; después la web. La cookie de Access es por host.",
+    ].join("\n"),
+  );
 }
 
 export async function previewTask(
@@ -271,6 +289,9 @@ export async function previewTask(
   );
   if (state.pr?.number) {
     ghRun(editArgs(String(state.pr.number), path.join(task, "pr-body.md")));
+    if (!state.preview) {
+      ghRun(commentBodyArgs(state.pr.number, previewComment({ web, api })));
+    }
   }
 
   return { name, web, api };

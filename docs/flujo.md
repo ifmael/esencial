@@ -124,8 +124,9 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
 - Access: app `all_preview_workers` con una política que permite el email del
   dueño y **«Bypass OPTIONS requests»** (`options_preflight_bypass`, si no el
   preflight CORS da 403); el CLI **falla** si el preview responde 200 o si el
-  preflight no autoriza la web. La cookie es por host: abre primero la URL de la
-  API y después la web.
+  preflight no autoriza la web. La cookie es por host: la web detecta que la API
+  no responde y redirige al puente `/api/session/return`, que autentica el host de
+  la API y vuelve a la web. Si el puente falla, abre primero la API y después la web.
 - **Identidad en previews**: `ctx.access` llega `undefined` en las Preview URLs
   (limitación de Cloudflare), así que la API valida el `Cf-Access-Jwt-Assertion`
   con `jose` contra el JWKS del equipo (`TEAM_DOMAIN` + `POLICY_AUD` que pasa el
