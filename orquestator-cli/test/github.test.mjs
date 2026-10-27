@@ -5,11 +5,31 @@ import {
   commentArgs,
   createArgs,
   editArgs,
+  gitAuthEnv,
+  githubUrl,
   reviewArgs,
   runChecks,
   statusArgs,
   viewArgs,
 } from "../lib/github.mjs";
+
+test("githubUrl convierte el remoto SSH y conserva el HTTPS", () => {
+  assert.equal(
+    githubUrl("git@github.com:ifmael/esencial.git"),
+    "https://github.com/ifmael/esencial.git",
+  );
+  assert.equal(
+    githubUrl("https://github.com/ifmael/esencial.git"),
+    "https://github.com/ifmael/esencial.git",
+  );
+  assert.equal(githubUrl("/tmp/origin.git"), null);
+});
+
+test("gitAuthEnv no imprime el token y configura el helper", () => {
+  const env = gitAuthEnv("tok");
+  assert.equal(env.GH_TOKEN, "tok");
+  assert.match(env.GIT_CONFIG_VALUE_0, /password=\$GH_TOKEN/);
+});
 
 test("statusArgs publica el contexto gh-guard sobre el SHA", () => {
   const args = statusArgs("abc123", "success", "aprobado");

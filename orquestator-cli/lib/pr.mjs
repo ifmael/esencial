@@ -5,6 +5,9 @@ import { git } from "./checkout.mjs";
 import {
   createArgs,
   editArgs,
+  gitAuthEnv,
+  githubToken,
+  githubUrl,
   runGh,
   statusArgs,
   viewArgs,
@@ -13,15 +16,18 @@ import { guardTask } from "./guard.mjs";
 import { home, load, save, taskDir } from "./state.mjs";
 
 export function pushBranch({ main, key, branch }) {
+  const remote = git(["remote", "get-url", "origin"], { cwd: main });
+  const token = githubToken();
+  const target = token ? githubUrl(remote) : null;
   git(
     [
       "push",
       "--no-verify",
       "--quiet",
-      "origin",
+      target ?? "origin",
       `refs/orquestator/${key}:refs/heads/${branch}`,
     ],
-    { cwd: main },
+    { cwd: main, ...(target ? { env: gitAuthEnv(token) } : {}) },
   );
   return git(["rev-parse", `refs/orquestator/${key}`], { cwd: main });
 }
