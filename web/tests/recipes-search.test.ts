@@ -23,6 +23,17 @@ describe("filterRecipes", () => {
     expect(filterRecipes(list, "batc").map((r) => r.id)).toEqual([1]);
   });
 
+  it("ignora las tildes tanto en la consulta como en los campos", () => {
+    const conTildes = [
+      makeRecipe({ id: 1, name: "Poke bowl básico", tags: [] }),
+      makeRecipe({ id: 2, name: "Caldo básico de verduras", tags: [] }),
+      makeRecipe({ id: 3, name: "Ensalada", tags: ["rápida"] }),
+    ];
+    expect(filterRecipes(conTildes, "basico").map((r) => r.id)).toEqual([1, 2]);
+    expect(filterRecipes(conTildes, "BÁSICO").map((r) => r.id)).toEqual([1, 2]);
+    expect(filterRecipes(conTildes, "rapida").map((r) => r.id)).toEqual([3]);
+  });
+
   it("no match returns empty", () => {
     expect(filterRecipes(list, "pizza")).toEqual([]);
   });

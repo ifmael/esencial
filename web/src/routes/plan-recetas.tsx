@@ -7,6 +7,7 @@ import { Link, useSearchParams } from "react-router";
 import { Loader, Monogram } from "../components/expressive";
 import { AddIcon, CartIcon, CloseIcon } from "../components/icons";
 import { Dialog, OverlayHeader, useTooltip } from "../components/overlay";
+import { filterRecipes } from "../components/recipes/filter";
 import type { Nutrition } from "../components/recipes/use-recipes";
 import { ShoppingListSheet } from "../components/shopping-list-sheet";
 import { Button, ripple, SearchBar } from "../components/ui";
@@ -23,7 +24,12 @@ export type Slot = {
   recipeName: string | null;
   recipePhoto: string | null;
 };
-export type RecipeSummary = { id: number; name: string; photo: string | null };
+export type RecipeSummary = {
+  id: number;
+  name: string;
+  photo: string | null;
+  tags: string[];
+};
 
 const slotKey = (day: number, meal: string) => `${day}|${meal}`;
 
@@ -167,28 +173,30 @@ function RecipePicker({
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    apiGetCached<{ id: number; name: string; photo_path?: string | null }[]>(
-      "/api/recipes",
-    )
+    apiGetCached<
+      {
+        id: number;
+        name: string;
+        photo_path?: string | null;
+        tags?: string[];
+      }[]
+    >("/api/recipes")
       .then((all) => {
-        // El backend devuelve recetas completas; solo se necesita id, nombre y foto.
+        // El backend devuelve recetas completas; solo se necesita id, nombre,
+        // foto y etiquetas (las etiquetas las mira `filterRecipes`).
         setRecipes(
           all.map((r) => ({
             id: r.id,
             name: r.name,
             photo: r.photo_path ?? null,
+            tags: r.tags ?? [],
           })),
         );
       })
       .catch(() => setRecipes([]));
   }, []);
 
-  const needle = query.trim().toLowerCase();
-  const shown = recipes
-    ? needle
-      ? recipes.filter((r) => r.name.toLowerCase().includes(needle))
-      : recipes
-    : [];
+  const shown = recipes ? filterRecipes(recipes, query) : [];
 
   // A pantalla completa en móvil: la búsqueda convive con el teclado.
   return (
@@ -202,11 +210,23 @@ function RecipePicker({
         tone="high"
         className="mx-4 md:mx-6"
         autoFocus
-        placeholder="Buscar receta…"
+        placeholder="Buscar por nombre o etiqueta…"
         aria-label="Buscar receta"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
+      {recipes !== null && recipes.length > 0 && (
+        <p
+          aria-live="polite"
+          className="mx-4 px-2 py-1 tabular text-body-m text-on-surface-variant md:mx-6"
+        >
+          {shown.length === recipes.length
+            ? recipes.length === 1
+              ? "1 receta"
+              : `${recipes.length} recetas`
+            : `${shown.length} de ${recipes.length}`}
+        </p>
+      )}
       <ul className="stagger flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2 pb-4 md:px-4">
         {recipes === null ? (
           <li>

@@ -1,5 +1,6 @@
 // Lógica pura de la paleta de comandos (⌘K): puntuar, ordenar y moverse.
 // Sin React ni DOM, para probarla sola (web/tests/command-palette.test.ts).
+import { fold } from "./text";
 
 export type CommandGroup =
   | "Acciones"
@@ -23,10 +24,6 @@ type CommandBase = {
 export type Command =
   | (CommandBase & { href: string; action?: never })
   | (CommandBase & { action: "theme"; href?: never });
-
-/** Minúsculas y sin tildes: «Nutrición» y «nutricion» son lo mismo. */
-const fold = (s: string) =>
-  s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 /** Una palabra de la consulta contra el texto: prefijo 4, inicio de palabra 3,
  * subcadena 2, letras en orden desde un inicio de palabra 1 («pbc» → «Press

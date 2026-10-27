@@ -21,10 +21,17 @@ type Slot = {
   recipePhoto: string | null;
 };
 
+// Misma forma que GET /api/recipes: el picker filtra con `filterRecipes`, que
+// mira nombre y etiquetas, así que el fixture trae `tags` (y `photo_path`).
 const RECIPES = [
-  { id: 7, name: "Pollo al horno", photo: null },
-  { id: 3, name: "Lentejas", photo: "recipe-3.png" },
-  { id: 8, name: "Tarta de polen", photo: null },
+  {
+    id: 7,
+    name: "Pollo al horno",
+    photo_path: null,
+    tags: ["horno", "rápido"],
+  },
+  { id: 3, name: "Lentejas", photo_path: "recipe-3.png", tags: ["cena"] },
+  { id: 8, name: "Tarta de polen", photo_path: null, tags: ["postre"] },
 ];
 
 let slots: Slot[] = [];
@@ -89,7 +96,8 @@ beforeEach(() => {
             recipePhoto:
               s.recipeId === null
                 ? null
-                : (RECIPES.find((r) => r.id === s.recipeId)?.photo ?? null),
+                : (RECIPES.find((r) => r.id === s.recipeId)?.photo_path ??
+                  null),
           }));
         }
         return jsonResponse({ isoWeek: week, slots, totals });
@@ -290,6 +298,51 @@ describe("picker de recetas", () => {
       expect(screen.getAllByText("Lentejas").length).toBeGreaterThan(0),
     );
     expect(slots.length).toBe(1);
+  });
+});
+
+describe("cifra de coincidencias del picker", () => {
+  const openPicker = async () => {
+    renderAt("/plan-recetas?week=2026-W36");
+    await screen.findAllByRole("button", { name: "+ añadir" });
+    fireEvent.click(screen.getAllByRole("button", { name: "+ añadir" })[0]);
+    const dialog = await screen.findByRole("dialog");
+    const search = within(dialog).getByRole("searchbox", {
+      name: "Buscar receta",
+    });
+    return { dialog, search };
+  };
+
+  it("dice cuántas hay y cuántas coinciden, sin más peticiones", async () => {
+    const { dialog, search } = await openPicker();
+    const line = await within(dialog).findByText("3 recetas");
+    expect(line.getAttribute("aria-live")).toBe("polite");
+
+    fireEvent.change(search, { target: { value: "pol" } });
+    expect(within(dialog).getByText("2 de 3")).toBeDefined();
+
+    // El picker ya no filtra solo por nombre: la etiqueta también casa, y con
+    // tildes («rápido» → «rapido»).
+    fireEvent.change(search, { target: { value: "rapido" } });
+    expect(within(dialog).getByText("1 de 3")).toBeDefined();
+    expect(within(dialog).getByText("Pollo al horno")).toBeDefined();
+
+    fireEvent.change(search, { target: { value: "zzz" } });
+    expect(within(dialog).getByText("0 de 3")).toBeDefined();
+    expect(within(dialog).getByText("Sin resultados.")).toBeDefined();
+
+    fireEvent.change(search, { target: { value: "   " } });
+    expect(within(dialog).getByText("3 recetas")).toBeDefined();
+
+    expect(recipeCalls).toBe(1);
+  });
+
+  it("la búsqueda invita a buscar también por etiqueta sin cambiar su nombre accesible", async () => {
+    const { search } = await openPicker();
+    expect(search.getAttribute("placeholder")).toBe(
+      "Buscar por nombre o etiqueta…",
+    );
+    expect(search.getAttribute("aria-label")).toBe("Buscar receta");
   });
 });
 

@@ -204,4 +204,108 @@ test.describe("RECIPES — loop end to end", () => {
     await expect(page.getByRole("checkbox", { name: manual })).toBeChecked();
     await expect(page.getByText(food, { exact: false })).toBeVisible();
   });
+
+  test("la cifra de coincidencias sigue a la búsqueda y cuadra con las tarjetas", async ({
+    page,
+  }) => {
+    const name = uniqueName("Cifra E2E");
+    // La semilla 0012 no trae etiquetas: la nuestra es única y buscable.
+    const tag = uniqueName("etiqueta");
+    await apiRequest(page.request, "POST", "/api/recipes", {
+      name,
+      description: "e2e",
+      ingredients: [],
+      steps: [],
+      materials: [],
+      tags: [tag],
+    });
+
+    // El total se mueve (otras pruebas crean recetas), así que sale de la API.
+    const all = await apiRequest<{ name: string }[]>(
+      page.request,
+      "GET",
+      "/api/recipes",
+    );
+    const total = all.length;
+    const totalText = total === 1 ? "1 receta" : `${total} recetas`;
+
+    await page.goto("/recetario");
+    const cards = page.locator('ul.stagger a[href^="/recetario/"]');
+    const line = page.locator('header p[aria-live="polite"]');
+    await expect(cards.first()).toBeVisible();
+    await expect(line).toHaveText(totalText);
+    expect(await cards.count()).toBe(total);
+
+    const search = page.getByLabel("Buscar recetas");
+
+    // Etiqueta: casa por etiqueta y la cifra cuadra con las tarjetas.
+    await search.fill(tag);
+    await expect(line).toHaveText(`1 de ${total}`);
+    expect(await cards.count()).toBe(1);
+    await expect(page.locator("a", { hasText: name })).toHaveCount(1);
+
+    // Tildes: la consulta sin acento casa los nombres acentuados de la semilla.
+    await search.fill("basico");
+    const accented = await cards.count();
+    expect(accented).toBeGreaterThanOrEqual(2);
+    await expect(line).toHaveText(`${accented} de ${total}`);
+    await expect(
+      page.locator("a", { hasText: "Poke bowl básico" }),
+    ).toHaveCount(1);
+
+    // Sin búsqueda vuelve la forma corta con el total.
+    await search.fill("");
+    await expect(line).toHaveText(totalText);
+    expect(await cards.count()).toBe(total);
+  });
+
+  test("el selector de receta anuncia la cifra y filtra con el mismo predicado", async ({
+    page,
+  }) => {
+    const name = uniqueName("Picker Cifra E2E");
+    const tag = uniqueName("etiqueta");
+    await apiRequest(page.request, "POST", "/api/recipes", {
+      name,
+      description: "e2e",
+      ingredients: [],
+      steps: [],
+      materials: [],
+      tags: [tag],
+    });
+    const all = await apiRequest<{ name: string }[]>(
+      page.request,
+      "GET",
+      "/api/recipes",
+    );
+    const total = all.length;
+
+    await page.goto("/plan-recetas");
+    await page.getByRole("button", { name: "+ añadir" }).first().click();
+    const dialog = page.getByRole("dialog");
+    const line = dialog.locator('p[aria-live="polite"]');
+    const rows = dialog.locator("ul li:has(> button)");
+    await expect(dialog.getByText(name)).toBeVisible();
+    await expect(line).toHaveText(
+      total === 1 ? "1 receta" : `${total} recetas`,
+    );
+    expect(await rows.count()).toBe(total);
+
+    const search = dialog.getByLabel("Buscar receta");
+    await expect(search).toHaveAttribute(
+      "placeholder",
+      "Buscar por nombre o etiqueta…",
+    );
+
+    // Por etiqueta (antes el selector solo miraba el nombre).
+    await search.fill(tag);
+    await expect(line).toHaveText(`1 de ${total}`);
+    expect(await rows.count()).toBe(1);
+
+    // Por nombre, sin tilde, sobre la semilla.
+    await search.fill("basico");
+    const shown = await rows.count();
+    expect(shown).toBeGreaterThanOrEqual(2);
+    await expect(line).toHaveText(`${shown} de ${total}`);
+    await expect(dialog.getByText("Caldo básico de verduras")).toBeVisible();
+  });
 });
