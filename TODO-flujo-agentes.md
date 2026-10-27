@@ -956,7 +956,11 @@ Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
       checks requeridos de `main` (lo hace el usuario en GitHub).
 - [ ] Si el piloto no llevó migración, construir `migrate` y probarlo con una migración de
       juguete.
-- [ ] Gateway MCP solo si un perfil lo necesita (por defecto, ninguno).
+- [x] Gateway MCP con **Context7** para el implementer (2026-10-27): sidecar Caddy
+      en la red interna, solo `resolve-library-id`/`query-docs`, sin recursos ni
+      prompts; el worker no tiene salida propia.
+- [ ] MCP **GitHub** y **Linear** de solo lectura: dependen del token fino y de un
+      perfil que los use (coordinador o reviewer).
 - [ ] Evaluar si hace falta coordinador (Nivel 2): si sí, plugin/C4 y flujo de eventos; si
       no, `run` sigue siendo el camino por defecto.
 - [ ] Medir el tiempo de una tarea de principio a fin.

@@ -251,6 +251,29 @@ docker run --rm --init --network esencial-workers \
     --model qwen3.6 -q "Responde solo: ok"'
 ```
 
+## Gateway MCP (Context7)
+
+El implementer consulta Context7 por MCP, solo lectura. El worker no sale a
+internet: un sidecar Caddy hace de gateway en la red interna y reenvía a
+`https://mcp.context7.com/mcp`.
+
+```bash
+docker network inspect esencial-workers >/dev/null 2>&1 || docker network create --internal esencial-workers
+docker run -d --name esencial-context7 --restart unless-stopped \
+  -v "$PWD/orquestator-cli/proxy/context7.Caddyfile:/etc/caddy/Caddyfile:ro" \
+  caddy:2-alpine
+docker network connect esencial-workers esencial-context7
+```
+
+El perfil `implementer` declara `mcp_servers.context7` con
+`resolve-library-id` y `query-docs`, sin recursos ni prompts. Los demás perfiles
+no llevan MCP. Si el gateway no está levantado, el arranque de Hermes falla al
+conectar: levántalo antes de un `run`/`watch`. Al cambiar el Caddyfile:
+
+```bash
+docker restart esencial-context7
+```
+
 ## Cola automática (M5b)
 
 `orquestator watch [--max-parallel N] [--interval S] [--once]` sondea Linear

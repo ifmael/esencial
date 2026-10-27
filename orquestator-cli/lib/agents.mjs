@@ -120,31 +120,50 @@ export function trustedAgents(main) {
   }
 }
 
-export function hermesConfig(home, { model, effort }) {
+/** MCP por fase; solo lectura y a través del gateway interno. */
+const MCP = {
+  implementer: [
+    "mcp_servers:",
+    "  context7:",
+    "    url: http://esencial-context7:8080/mcp",
+    "    enabled: true",
+    "    trust: untrusted",
+    "    tools:",
+    "      include:",
+    "        - resolve-library-id",
+    "        - query-docs",
+    "      resources: false",
+    "      prompts: false",
+  ].join("\n"),
+};
+
+export function mcpServersFor(phase) {
+  return MCP[phase] ?? null;
+}
+
+export function hermesConfig(home, { model, effort, mcp }) {
   fs.mkdirSync(home, { recursive: true });
-  fs.writeFileSync(
-    path.join(home, "config.yaml"),
-    [
-      "model:",
-      "  provider: custom",
-      `  default: ${model}`,
-      `  base_url: ${PROXY_URL}`,
-      "  api_mode: chat_completions",
-      "providers:",
-      "  custom:",
-      `    api: ${PROXY_URL}`,
-      "    api_key: dummy",
-      "    discover_models: false",
-      "    models:",
-      `      - ${model}`,
-      "skills:",
-      "  external_dirs:",
-      "    - /skills",
-      "agent:",
-      `  reasoning_effort: ${effort}`,
-      "",
-    ].join("\n"),
-  );
+  const lines = [
+    "model:",
+    "  provider: custom",
+    `  default: ${model}`,
+    `  base_url: ${PROXY_URL}`,
+    "  api_mode: chat_completions",
+    "providers:",
+    "  custom:",
+    `    api: ${PROXY_URL}`,
+    "    api_key: dummy",
+    "    discover_models: false",
+    "    models:",
+    `      - ${model}`,
+    "skills:",
+    "  external_dirs:",
+    "    - /skills",
+    "agent:",
+    `  reasoning_effort: ${effort}`,
+  ];
+  if (mcp) lines.push("", mcp);
+  fs.writeFileSync(path.join(home, "config.yaml"), `${lines.join("\n")}\n`);
 }
 
 export function profileText(phase) {
@@ -252,7 +271,11 @@ export function runAgent(
   const hermes = path.join(path.dirname(task), "hermes", phase);
   let agentsFile;
   if (!dryRun) {
-    hermesConfig(hermes, { model: modelFor(phase), effort: effortFor(phase) });
+    hermesConfig(hermes, {
+      model: modelFor(phase),
+      effort: effortFor(phase),
+      mcp: mcpServersFor(phase),
+    });
     installSkills(phase, hermes);
     installSoul(phase, hermes);
     // Capa local vacía: oculta las 53 skills builtin y da a Hermes dónde
