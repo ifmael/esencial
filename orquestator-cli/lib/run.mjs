@@ -5,6 +5,7 @@ import { runAgent, verdictOf } from "./agents.mjs";
 import { git } from "./checkout.mjs";
 import { checkTask } from "./checks.mjs";
 import { linearKey } from "./config.mjs";
+import { fixTask } from "./fix.mjs";
 import { guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
 import { getIssue, setState } from "./linear.mjs";
@@ -108,7 +109,8 @@ const defaultSteps = {
     if (!result.ok) {
       return {
         stop: "check",
-        hint: `Comprobaciones FALLAN; revisa checks.md y ejecuta orquestator fix ${key} --from checks`,
+        retry: "checks",
+        hint: "Comprobaciones FALLAN; revisa checks.md",
       };
     }
     return {};
@@ -129,7 +131,8 @@ const defaultSteps = {
     if (verdict === "CAMBIOS") {
       return {
         stop: "review",
-        hint: `La revisión pide cambios; ejecuta orquestator fix ${key} --from review`,
+        retry: "review",
+        hint: "La revisión pide cambios",
       };
     }
     return {};
@@ -178,7 +181,8 @@ const defaultSteps = {
     if (verdict === "CAMBIOS") {
       return {
         stop: "pr-review",
-        hint: `La re-revisión pide cambios; ejecuta orquestator fix ${key} --from pr-review`,
+        retry: "pr-review",
+        hint: "La re-revisión pide cambios",
       };
     }
     return {};
@@ -193,6 +197,7 @@ export async function runFlow(
     main = process.cwd(),
     out = () => {},
     steps = defaultSteps,
+    fix = fixTask,
   } = {},
 ) {
   const state = load(key, base);
@@ -215,7 +220,9 @@ export async function runFlow(
     );
     return { steps: list, dryRun: true };
   }
-  for (const name of list) {
+  let pending = list;
+  for (let index = 0; index < pending.length; index += 1) {
+    const name = pending[index];
     out(`▶ ${name}`);
     let result;
     try {
@@ -224,8 +231,27 @@ export async function runFlow(
       return { ok: false, stop: name, error: error.message };
     }
     if (result?.stop) {
-      if (result.hint) out(result.hint);
-      return { ok: false, stop: result.stop, hint: result.hint };
+      if (!result.retry) {
+        if (result.hint) out(result.hint);
+        return { ok: false, stop: result.stop, hint: result.hint };
+      }
+      out(`↻ ${name}: ${result.hint ?? "ronda de corrección"}`);
+      let fixed;
+      try {
+        fixed = fix(key, { origin: result.retry, base, out });
+      } catch (error) {
+        return { ok: false, stop: name, error: error.message };
+      }
+      if (fixed.blocked) {
+        return {
+          ok: false,
+          stop: name,
+          blocked: true,
+          hint: fixed.state?.question ?? `${result.retry}: sin rondas`,
+        };
+      }
+      pending = CHAIN.slice(1);
+      index = -1;
     }
   }
   return { ok: true };
