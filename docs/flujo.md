@@ -272,13 +272,38 @@ docker network connect esencial-workers esencial-context7
 ```
 
 El perfil `implementer` declara `mcp_servers.context7` con
-`resolve-library-id` y `query-docs`, sin recursos ni prompts. Los demás perfiles
-no llevan MCP. Si el gateway no está levantado, el arranque de Hermes falla al
-conectar: levántalo antes de un `run`/`watch`. Al cambiar el Caddyfile:
+`resolve-library-id` y `query-docs`, sin recursos ni prompts. `spec-review` usa
+Linear y `pr-review` usa GitHub, los dos de solo lectura; el resto no lleva MCP.
+Si un gateway no está levantado, el arranque de Hermes falla al conectar:
+levántalos antes de un `run`/`watch`. Al cambiar un Caddyfile:
 
 ```bash
 docker restart esencial-context7
 ```
+
+## Gateways MCP de GitHub y Linear
+
+Los dos guardan su credencial en el sidecar, no en el worker. GitHub usa el
+mismo `GH_TOKEN` del CLI con `X-MCP-Readonly: true`; Linear usa la API key y el
+endpoint `/mcp/readonly`.
+
+```bash
+set -a; . ~/.config/orquestator/env; set +a
+docker run -d --name esencial-github --restart unless-stopped -e GH_TOKEN \
+  -v "$PWD/orquestator-cli/proxy/github.Caddyfile:/etc/caddy/Caddyfile:ro" \
+  caddy:2-alpine
+docker network connect esencial-workers esencial-github
+docker run -d --name esencial-linear --restart unless-stopped -e LINEAR_API_KEY \
+  -v "$PWD/orquestator-cli/proxy/linear.Caddyfile:/etc/caddy/Caddyfile:ro" \
+  caddy:2-alpine
+docker network connect esencial-workers esencial-linear
+```
+
+`pr-review` consulta `http://esencial-github:8080/mcp` con
+`pull_request_read`, `list_pull_requests`, `issue_read`, `search_code` y
+`get_file_contents`. `spec-review` consulta `http://esencial-linear:8080/mcp`
+con todas las herramientas del endpoint read-only. Los Caddyfiles no publican
+puertos al host.
 
 ## Cola automática (M5b)
 

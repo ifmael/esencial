@@ -959,8 +959,9 @@ Objetivo: cola y revisión de spec sin intervención. Depende de: M5a.
 - [x] Gateway MCP con **Context7** para el implementer (2026-10-27): sidecar Caddy
       en la red interna, solo `resolve-library-id`/`query-docs`, sin recursos ni
       prompts; el worker no tiene salida propia.
-- [ ] MCP **GitHub** y **Linear** de solo lectura: dependen del token fino y de un
-      perfil que los use (coordinador o reviewer).
+- [x] MCP **GitHub** y **Linear** de solo lectura (2026-10-27): GitHub en
+      `pr-review`, Linear en `spec-review`; sidecars Caddy con el token en el host y
+      filtros read-only. Context7 sigue en el implementer.
 - [ ] Evaluar si hace falta coordinador (Nivel 2): si sí, plugin/C4 y flujo de eventos; si
       no, `run` sigue siendo el camino por defecto.
 - [ ] Medir el tiempo de una tarea de principio a fin.

@@ -121,20 +121,51 @@ export function trustedAgents(main) {
 }
 
 /** MCP por fase; solo lectura y a través del gateway interno. */
+const CONTEXT7 = [
+  "  context7:",
+  "    url: http://esencial-context7:8080/mcp",
+  "    enabled: true",
+  "    trust: untrusted",
+  "    tools:",
+  "      include:",
+  "        - resolve-library-id",
+  "        - query-docs",
+  "      resources: false",
+  "      prompts: false",
+];
+
+const GITHUB = [
+  "  github:",
+  "    url: http://esencial-github:8080/mcp",
+  "    enabled: true",
+  "    trust: untrusted",
+  "    tools:",
+  "      include:",
+  "        - list_pull_requests",
+  "        - pull_request_read",
+  "        - issue_read",
+  "        - search_code",
+  "        - get_file_contents",
+  "      resources: false",
+  "      prompts: false",
+];
+
+const LINEAR = [
+  "  linear:",
+  "    url: http://esencial-linear:8080/mcp",
+  "    enabled: true",
+  "    trust: untrusted",
+  "    tools:",
+  "      resources: false",
+  "      prompts: false",
+];
+
+const block = (...servers) => ["mcp_servers:", ...servers.flat()].join("\n");
+
 const MCP = {
-  implementer: [
-    "mcp_servers:",
-    "  context7:",
-    "    url: http://esencial-context7:8080/mcp",
-    "    enabled: true",
-    "    trust: untrusted",
-    "    tools:",
-    "      include:",
-    "        - resolve-library-id",
-    "        - query-docs",
-    "      resources: false",
-    "      prompts: false",
-  ].join("\n"),
+  implementer: block(CONTEXT7),
+  "pr-review": block(GITHUB),
+  "spec-review": block(LINEAR),
 };
 
 export function mcpServersFor(phase) {

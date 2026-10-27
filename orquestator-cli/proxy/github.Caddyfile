@@ -1,0 +1,16 @@
+# Gateway MCP de GitHub: el worker no sale a internet ni recibe el token.
+# El token entra por entorno y el endpoint remoto fuerza solo lectura.
+:8080 {
+	handle /mcp* {
+		rewrite * /mcp/
+		reverse_proxy https://api.githubcopilot.com {
+			header_up Host api.githubcopilot.com
+			header_up Authorization "Bearer {env.GH_TOKEN}"
+			header_up X-MCP-Readonly true
+			header_up X-MCP-Toolsets "pull_requests,issues,repos"
+		}
+	}
+	handle {
+		respond 404
+	}
+}

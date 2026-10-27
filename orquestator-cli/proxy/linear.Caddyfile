@@ -1,0 +1,14 @@
+# Gateway MCP de Linear: solo el endpoint read-only, con la API key en el
+# sidecar. El worker solo ve http://esencial-linear:8080/mcp.
+:8080 {
+	handle /mcp* {
+		rewrite * /mcp/readonly
+		reverse_proxy https://mcp.linear.app {
+			header_up Host mcp.linear.app
+			header_up Authorization "Bearer {env.LINEAR_API_KEY}"
+		}
+	}
+	handle {
+		respond 404
+	}
+}

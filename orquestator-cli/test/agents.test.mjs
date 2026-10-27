@@ -69,6 +69,10 @@ test("solo el implementer declara Context7, con herramientas de lectura", () => 
   assert.match(config, /resources: false/);
   assert.match(config, /prompts: false/);
   assert.equal(mcpServersFor("reviewer"), null);
+
+  assert.match(mcpServersFor("pr-review"), /github:/);
+  assert.match(mcpServersFor("pr-review"), /pull_request_read/);
+  assert.match(mcpServersFor("spec-review"), /linear:/);
 });
 
 test("el prompt lleva el perfil, el brief y solo el contexto de la fase", () => {
