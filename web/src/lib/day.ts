@@ -52,6 +52,33 @@ export function toISODate(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+const WEEKDAYS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+
+/** Meses abreviados en español: los comparten el rótulo de un día y la
+ *  cabecera de la rejilla semanal. */
+export const MONTHS = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sept",
+  "oct",
+  "nov",
+  "dic",
+];
+
+/** Rótulo corto de una fecha («lun 31 ago»), en UTC y sin reloj: el día es el
+ *  que dice la cadena, aquí no se decide «hoy». */
+export function dayLabel(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const at = new Date(Date.UTC(y, m - 1, d));
+  return `${WEEKDAYS[at.getUTCDay()]} ${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]}`;
+}
+
 /** Comidas del día que admite el plan (desayuno, almuerzo, cena). */
 const MEALS_PER_DAY = 3;
 
