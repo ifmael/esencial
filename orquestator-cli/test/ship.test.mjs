@@ -90,23 +90,31 @@ test("ship se niega sin PR, sin body o sin aprobación", () => {
   assert.throws(() => ship(KEY, { main, ghRun: () => "" }), /approve/);
 });
 
-test("ship edita el body, comenta review/checks y publica el status", () => {
+test("ship edita el body, comenta review y publica el status", () => {
   writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
-  writeArtifact(KEY, "checks.md", "PASS");
+  writeArtifact(
+    KEY,
+    "checks.md",
+    "# Checks\nFecha: 2026-10-27T08:00:00Z\nResultado: PASS\n\n$ pnpm lint\nNot implemented: Window's scrollTo() method\n",
+  );
   writeArtifact(KEY, "review.md", "sin hallazgos");
   approve(guardTask(KEY, { base, main }).hash);
   const calls = [];
+  let reviewBody = "";
   const ghRun = (args) => {
     calls.push(args);
     if (args[1] === "view")
       return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
+    if (args[1] === "review") reviewBody = fs.readFileSync(args[5], "utf8");
     return "";
   };
   const result = ship(KEY, { main, ghRun, checksRun: () => ({ status: 0 }) });
   assert.equal(result.sha, "sha9");
+  assert.doesNotMatch(reviewBody, /scrollTo/);
+  assert.match(reviewBody, /Orquestator \(IA\)/);
   const kinds = calls.map((a) => a[1]);
   assert.ok(kinds.includes("edit"));
-  assert.equal(kinds.filter((k) => k === "comment").length, 1);
+  assert.equal(kinds.filter((k) => k === "comment").length, 0);
   assert.equal(kinds.filter((k) => k === "review").length, 1);
   assert.equal(load(KEY, base).state, "In validation");
   const status = calls.find((a) => a[0] === "api");
@@ -209,8 +217,10 @@ test("ship deja In Progress si hay migración pendiente", () => {
 
 test("publishPrReview exige PR y pr-review, y la comenta sin tocar el body", () => {
   const calls = [];
+  let body = "";
   const ghRun = (args) => {
     calls.push(args);
+    if (args[1] === "comment") body = fs.readFileSync(args[4], "utf8");
     return "";
   };
   writeArtifact(KEY, "pr-review.md", "");
@@ -221,13 +231,7 @@ test("publishPrReview exige PR y pr-review, y la comenta sin tocar el body", () 
   writeArtifact(KEY, "pr-review.md", "Veredicto: APROBADO\n");
   const result = publishPrReview(KEY, { base, ghRun });
   assert.equal(result.number, 9);
-  assert.deepEqual(calls, [
-    [
-      "pr",
-      "comment",
-      "9",
-      "--body-file",
-      path.join(base, KEY, "task", "pr-review.md"),
-    ],
-  ]);
+  assert.equal(calls[0].slice(0, 4).join(" "), "pr comment 9 --body-file");
+  assert.match(body, /Orquestator \(IA\)/);
+  assert.match(body, /Veredicto: APROBADO/);
 });

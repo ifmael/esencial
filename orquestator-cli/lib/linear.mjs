@@ -1,3 +1,5 @@
+import { markComment } from "./comments.mjs";
+
 const ENDPOINT = "https://api.linear.app/graphql";
 
 export async function request(
@@ -102,7 +104,7 @@ export async function comment(apiKey, issue, body, fetchImpl = fetch) {
   await request(
     apiKey,
     `mutation($issueId:String!, $body:String!){ commentCreate(input:{issueId:$issueId, body:$body}){ success } }`,
-    { issueId: issue.id, body },
+    { issueId: issue.id, body: markComment(body) },
     fetchImpl,
   );
 }

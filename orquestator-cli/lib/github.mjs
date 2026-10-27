@@ -62,6 +62,10 @@ export function commentArgs(pr, bodyFile) {
   return ["pr", "comment", String(pr), "--body-file", bodyFile];
 }
 
+export function commentBodyArgs(pr, body) {
+  return ["pr", "comment", String(pr), "--body", body];
+}
+
 export function reviewArgs(pr, bodyFile) {
   return ["pr", "review", String(pr), "--comment", "--body-file", bodyFile];
 }
