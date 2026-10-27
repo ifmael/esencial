@@ -1005,6 +1005,19 @@ Depende de: M5b.
       la rejilla sale vacía. Revisar el fallo real con la cookie de Access por host
       (abrir la API primero), sembrar fixtures de sesiones para probar copiar y
       añadir un smoke autenticado, no solo el 302 del borde.
+- [ ] **Permisos de Docker para autonomía (M6)**: hoy `ifmael` no está en el grupo
+      `docker` y la unidad usa `newgrp docker`; los comandos manuales fallan con
+      `permission denied`. No depender de ese parche cuando el flujo corra solo:
+      - preflight de `docker info` en `run` y en cada comando que use contenedores,
+        con error claro y sin dejar estado a medias;
+      - decidir grupo explícito (`SupplementaryGroups=docker`), usuario dedicado o
+        Docker sin root; no asumir que el grupo no pide contraseña;
+      - `run` debe imprimir el error real (hoy solo devuelve exit 1) y `watch` debe
+        avisar/bloquear si Docker desaparece, no reintentar en silencio;
+      - tests con Docker no disponible.
+      Aceptación: `run` sin permiso explica qué falta y no crea contenedores; el
+      servicio arranca con permiso explícito. Se decide antes de una autonomía
+      fuera de este equipo.
 
 ## Bitácora
 
