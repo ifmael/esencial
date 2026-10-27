@@ -153,7 +153,7 @@ Convención de marcado:
 | Upstream (R2) | Espejo bare de `main` en `~/.orquestator/upstream.git`, actualizado por el host y montado ro en `/upstream`; el worker hace `git fetch /upstream main` y el implementer mergea. `run` comprueba `gh pr view --json mergeable` antes de `In validation`; conflicto → `fix --from conflicto` |
 | Guard (R4) | Hash aprobado en el estado del host antes de `check`/`ship`; commit status `gh-guard` atado al SHA tras el push (no etiqueta). Cada push lo invalida y el CLI lo repone si el hash sigue valiendo |
 | CLI (I3) | M2 depende de **M0 y M1**; criterio: cada comando acepta `--dry-run` y la suite de transiciones pasa; estimación **3-4 días** (4-6 con `watch` y `migrate` completos) |
-| PR body (I4) | El **implementer** escribe `.task/pr-body.md`; `ship` lo publica y sube `review.md` y `checks.md` como comentarios de la PR |
+| PR body (I4) | El **implementer** escribe `.task/pr-body.md`; `ship` lo publica y comenta `review.md`; `checks.md` queda local y la CI es la referencia pública |
 | Cobertura y ADR (I5) | Cobertura **sí en el piloto** para `api`/`web` (`vitest --coverage`): `coverage.thresholds` en `api/vitest.config.ts` y `web/vite.config.ts`, solo suben; objetivo 60% en M6. ADR solo cuando haya una decisión de arquitectura real; revisión final en M6 |
 | Avisos | **Linear**: la issue bloqueada se te asigna y te @menciona; vista «Necesita mi decisión». Push extra (`hermes send`/ntfy) pospuesto |
 | CI y merge | **F1**: `In validation` exige `gh pr checks` verde; `main` protegido en repo **público** (B) con `ci`, `lint` y `migracion` desde M0 (job de CI) y `guard` en M5b, sin bypass. El CLI espera la CI con timeout; si falla, `fix` o `Blocked` |
@@ -246,7 +246,7 @@ lo fetchea y el implementer mergea.
    | `orquestator-cli approve ESN-123 --motivo "…"` | aprueba el diff protegido (solo TTY); guarda el hash | tú |
    | `orquestator-cli inspect ESN-123 --what issue\|brief\|diff\|review\|check\|ci` | datos read-only para depurar o reanudar | `run`/tú |
    | `orquestator-cli migrate ESN-123` | aplica las migraciones aprobadas a la D1 remota (token de edición, `wrangler` fijado) y re-ejecuta el job de CI `migracion`; sin commit status propio | CLI |
-   | `orquestator-cli ship ESN-123` | push y PR desde `.task/pr-body.md`; sube review/checks como comentarios; Linear sigue en `In Progress` | `run` |
+   | `orquestator-cli ship ESN-123` | push y PR desde `.task/pr-body.md`; comenta review y deja checks local; Linear sigue en `In Progress` | `run` |
    | `orquestator-cli pr-review ESN-123` | lanza `pr-reviewer` en contenedor ro con **red interna (solo proxy)** sobre `gh pr diff`; el CLI publica los comentarios; si no hay críticos: con migración, `approve --migracion` + `migrate` + espera `migracion`; luego `In validation` | `run` |
    | `orquestator-cli fix ESN-123` | devuelve los hallazgos al `implementer` en la misma rama/PR; `--from conflicto` mergea `main` | `run`/tú |
    | `orquestator-cli block ESN-123 --pregunta "…"` | `Blocked` + comentario con la pregunta | cualquiera |
@@ -761,9 +761,9 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       86/85/86/88—, paso en CI y en `check` (2026-10-22).
 - [x] `pr`: push de la rama a `origin` desde el checkout principal, PR con
       `pr-body.md` (crear o editar), `gh pr review --comment` con `review.md`,
-      `checks.md` como comentario, status `gh-guard` sobre el SHA y bloqueo sin
+      `review.md` como comentario, sin volcar el log de checks; status `gh-guard` sobre el SHA y bloqueo sin
       aprobación; solo publica `gh-guard`, nunca `migracion` (2026-10-22).
-- [x] `ship`: editar el cuerpo de la PR, comentar `checks.md` y `review.md` si tienen
+- [x] `ship`: editar el cuerpo de la PR y comentar `review.md` si tiene contenido
       contenido y reponer el status `gh-guard` sobre el SHA de la PR si la aprobación sigue
       valiendo (2026-10-22).
 - [x] Módulo `artifacts`: leer/escribir los `task/*` con nombres validados (sin rutas

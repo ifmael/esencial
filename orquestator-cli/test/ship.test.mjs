@@ -90,7 +90,7 @@ test("ship se niega sin PR, sin body o sin aprobación", () => {
   assert.throws(() => ship(KEY, { main, ghRun: () => "" }), /approve/);
 });
 
-test("ship edita el body, comenta checks/review y publica el status", () => {
+test("ship edita el body, comenta review y publica el status", () => {
   writeArtifact(KEY, "pr-body.md", "Fixes ESN-7\n");
   writeArtifact(
     KEY,
@@ -100,22 +100,21 @@ test("ship edita el body, comenta checks/review y publica el status", () => {
   writeArtifact(KEY, "review.md", "sin hallazgos");
   approve(guardTask(KEY, { base, main }).hash);
   const calls = [];
-  let checksBody = "";
+  let reviewBody = "";
   const ghRun = (args) => {
     calls.push(args);
     if (args[1] === "view")
       return JSON.stringify({ number: 9, url: "u", headRefOid: "sha9" });
-    if (args[1] === "comment") checksBody = fs.readFileSync(args[4], "utf8");
+    if (args[1] === "review") reviewBody = fs.readFileSync(args[5], "utf8");
     return "";
   };
   const result = ship(KEY, { main, ghRun, checksRun: () => ({ status: 0 }) });
   assert.equal(result.sha, "sha9");
-  assert.match(checksBody, /Resultado: PASS/);
-  assert.doesNotMatch(checksBody, /scrollTo/);
-  assert.match(checksBody, /Orquestator \(IA\)/);
+  assert.doesNotMatch(reviewBody, /scrollTo/);
+  assert.match(reviewBody, /Orquestator \(IA\)/);
   const kinds = calls.map((a) => a[1]);
   assert.ok(kinds.includes("edit"));
-  assert.equal(kinds.filter((k) => k === "comment").length, 1);
+  assert.equal(kinds.filter((k) => k === "comment").length, 0);
   assert.equal(kinds.filter((k) => k === "review").length, 1);
   assert.equal(load(KEY, base).state, "In validation");
   const status = calls.find((a) => a[0] === "api");

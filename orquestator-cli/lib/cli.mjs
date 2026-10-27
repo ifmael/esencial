@@ -48,7 +48,7 @@ Uso:
   orquestator pr ESN-123          sube la rama y abre la PR con pr-body.md
   orquestator preview ESN-123     despliega los previews de la rama (D1/R2 de preview)
   orquestator pr-review ESN-123   re-revisión de la PR (pr-review.md)
-  orquestator ship ESN-123        actualiza el body y comenta checks/review
+  orquestator ship ESN-123        actualiza el body y comenta review
   orquestator inspect ESN-123     estado, brief, diff, artefactos y CI
   orquestator clean ESN-123 [--force]
   orquestator fix ESN-123 [--from checks|review|pr-review|conflicto] [--humano]

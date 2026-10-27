@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { artifactPath, listArtifacts, readArtifact } from "./artifacts.mjs";
-import { checksSummary, markComment } from "./comments.mjs";
+import { markComment } from "./comments.mjs";
 import {
   commentArgs,
   editArgs,
@@ -49,7 +49,7 @@ export function ship(
 
   if (dryRun) {
     out(
-      `[dry-run] editar el cuerpo de la PR #${state.pr.number} y publicar checks/review`,
+      `[dry-run] editar el cuerpo de la PR #${state.pr.number} y publicar review`,
     );
     return { dryRun: true };
   }
@@ -69,17 +69,6 @@ export function ship(
   const filled = new Map(
     listArtifacts(key, base).map((a) => [a.name, a.filled]),
   );
-  if (filled.get("checks.md")) {
-    const comment = commentFile(
-      "checks.md",
-      markComment(checksSummary(readArtifact(key, "checks.md", base))),
-    );
-    try {
-      ghRun(commentArgs(pr.number, comment.file));
-    } finally {
-      comment.cleanup();
-    }
-  }
   // review.md va como review (gh pr review --comment), no como comentario suelto.
   if (filled.get("review.md")) {
     const comment = commentFile(
