@@ -8,6 +8,8 @@ import { afterEach, beforeEach, test } from "node:test";
 import {
   effortFor,
   hermesCommand,
+  hermesConfig,
+  mcpServersFor,
   modelFor,
   promptFor,
   runAgent,
@@ -49,6 +51,24 @@ test("el comando de Hermes es one-shot y escribe la salida en el artefacto", () 
   assert.match(command, /--model qwen3\.8-flash/);
   assert.match(command, /--query-file -/);
   assert.match(command, /> \/work\/\.task\/review\.md$/);
+});
+
+test("solo el implementer declara Context7, con herramientas de lectura", () => {
+  const home = path.join(dir, "mcp-config");
+  hermesConfig(home, {
+    model: "deepseek-v4-flash",
+    effort: "xhigh",
+    mcp: mcpServersFor("implementer"),
+  });
+  const config = fs.readFileSync(path.join(home, "config.yaml"), "utf8");
+  assert.match(config, /mcp_servers:\n {2}context7:/);
+  assert.match(config, /url: http:\/\/esencial-context7:8080\/mcp/);
+  assert.match(config, /trust: untrusted/);
+  assert.match(config, /- resolve-library-id/);
+  assert.match(config, /- query-docs/);
+  assert.match(config, /resources: false/);
+  assert.match(config, /prompts: false/);
+  assert.equal(mcpServersFor("reviewer"), null);
 });
 
 test("el prompt lleva el perfil, el brief y solo el contexto de la fase", () => {
@@ -109,6 +129,7 @@ test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefac
   assert.match(config, /reasoning_effort: max/);
   assert.match(config, /external_dirs:/);
   assert.match(config, /- \/skills/);
+  assert.doesNotMatch(config, /mcp_servers:/);
   assert.ok(
     fs.existsSync(
       path.join(

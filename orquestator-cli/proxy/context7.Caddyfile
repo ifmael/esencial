@@ -1,0 +1,12 @@
+# Gateway MCP de Context7: el worker no sale a internet; este sidecar sí.
+# Solo expone /mcp, sin credenciales porque Context7 es de lectura pública.
+:8080 {
+	handle /mcp* {
+		reverse_proxy https://mcp.context7.com {
+			header_up Host mcp.context7.com
+		}
+	}
+	handle {
+		respond 404
+	}
+}
