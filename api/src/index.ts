@@ -24,6 +24,29 @@ import { workoutLogs } from "./routes/workout-logs";
 export const api = new Hono<AppContext>()
   // TEMP debug: env presence probe (no value disclosure).
   .get("/health", () => json({ ok: true }))
+  // Puente para la cookie de Access por host: la web manda al navegador aquí,
+  // Access autentica este host y volvemos a una URL de la web permitida.
+  .get("/session/return", (c) => {
+    const to = c.req.query("to") ?? "";
+    let target: URL;
+    try {
+      target = new URL(to);
+    } catch {
+      return json({ error: "to" }, 400);
+    }
+    const allowed = (c.env.WEB_ORIGIN ?? "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+    if (
+      !allowed.includes(target.origin) ||
+      target.username ||
+      target.password
+    ) {
+      return json({ error: "to" }, 403);
+    }
+    return c.redirect(target.toString(), 302);
+  })
   .route("/users", users)
   .route("/families", families)
   .route("/recipes", recipes)
