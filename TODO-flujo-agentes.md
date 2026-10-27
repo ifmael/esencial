@@ -785,10 +785,10 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       `In Progress`. Tests con wrangler/gh inyectados; la D1 remota no se ha tocado.
 - [x] Comando `inspect` read-only (estado, brief, artefactos, diff y CI) para depurar y
       reanudar sin abrir el clon (2026-10-22).
-- [ ] Token de GitHub fino solo en el entorno del CLI; push HTTPS con credential helper;
-      `Commit statuses` de escritura, sin `Workflows`; tests de que el token no aparece en
-      logs. **Hoy se usa el remoto SSH del host y la sesión de `gh`**; el token fino se
-      decide en M5b, cuando el CLI corra sin tu sesión.
+- [x] Token de GitHub fino solo en el entorno del CLI; push HTTPS con credential helper;
+      `Commit statuses` de escritura, sin `Workflows` (2026-10-27). `GH_TOKEN` se lee
+      del entorno o de `~/.config/orquestator/env`; `gh` lo usa y git convierte el remoto
+      SSH a HTTPS para clonar y pushear. El servicio lo recibe por `EnvironmentFile`.
 - [ ] `pr-review`: bajar `gh pr diff` a `~/.orquestator/ESN-123/task/pr-diff.patch` en el
       host, lanzar el revisor en contenedor con el clon ro y **red interna (solo el proxy
       de modelo)**, publicar los comentarios desde `pr-review.md`; esperar `ci` y `lint`;

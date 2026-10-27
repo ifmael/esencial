@@ -1,11 +1,44 @@
 import { execFileSync, spawnSync } from "node:child_process";
 
+import { readEnv } from "./config.mjs";
+
 export const GUARD_CONTEXT = "gh-guard";
+
+/** gh usa GH_TOKEN si está; el token vive fuera de los logs. */
+export function githubToken(env = process.env) {
+  return env.GH_TOKEN || readEnv().GH_TOKEN || null;
+}
+
+export function ghEnv(env = process.env) {
+  const token = githubToken(env);
+  return token ? { ...env, GH_TOKEN: token } : env;
+}
+
+/** URL HTTPS para un remoto GitHub; null si no es GitHub. */
+export function githubUrl(remote) {
+  const ssh = /^git@github\.com:(.+)$/.exec(remote);
+  if (ssh) return `https://github.com/${ssh[1]}`;
+  if (/^https:\/\/github\.com\//.test(remote)) return remote;
+  return null;
+}
+
+/** Config de git para autenticar el push/fetch por HTTPS sin sesión. */
+export function gitAuthEnv(token) {
+  return {
+    ...process.env,
+    GH_TOKEN: token,
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: "credential.helper",
+    GIT_CONFIG_VALUE_0:
+      "!f() { echo username=x-access-token; echo password=$GH_TOKEN; }; f",
+  };
+}
 
 export function runGh(args) {
   try {
     return execFileSync("gh", args, {
       encoding: "utf8",
+      env: ghEnv(),
       stdio: ["ignore", "pipe", "pipe"],
     }).trim();
   } catch (error) {
@@ -81,6 +114,7 @@ export function runChecks(pr, { allowFailure = [], spawn = spawnSync } = {}) {
   for (let attempt = 0; attempt < 6; attempt += 1) {
     result = spawn("gh", checksArgs(pr), {
       encoding: "utf8",
+      env: ghEnv(),
       timeout: 30 * 60 * 1000,
     });
     const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;

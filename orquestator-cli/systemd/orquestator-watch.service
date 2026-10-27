@@ -6,6 +6,7 @@ After=network-online.target docker.service
 [Service]
 Type=simple
 WorkingDirectory=%h/Projects/esencial
+EnvironmentFile=-%h/.config/orquestator/env
 # mise: el node/gh del usuario están fuera del PATH mínimo de systemd.
 ExecStart=/usr/bin/newgrp docker -c "/bin/bash -lc 'exec node orquestator-cli/bin/orquestator.mjs watch --max-parallel 1'"
 Restart=on-failure

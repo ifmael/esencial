@@ -136,6 +136,12 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   `ctx.access`.
 - Requisitos del token de `~/.config/orquestator/env`: **Workers Scripts: Edit**,
   **D1: Edit**, **R2: Edit** y **Access: Edit** (para la app de previews).
+- **Token de GitHub** (`GH_TOKEN` en `~/.config/orquestator/env`): fine-grained,
+  solo el repo `ifmael/esencial`, con **Contents** RW, **Pull requests** RW,
+  **Commit statuses** RW y **Metadata** R; sin Actions/Workflows. El CLI lo usa
+  para `gh` y para clonar/pushear por HTTPS, así no depende de la sesión SSH ni
+  del keyring. `watch` lo recibe por `EnvironmentFile`; un `pnpm orquestator`
+  manual lo lee del mismo fichero.
 - Wrangler **≥ 4.135.0** (el del `devDependencies` del checkout principal); el
   host lo usa para migrar y desplegar.
 
