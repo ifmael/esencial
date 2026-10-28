@@ -1019,19 +1019,18 @@ Depende de: M5b.
       primero sigue siendo el plan B).
 - [ ] Ejecutar una vez el smoke autenticado con una cookie real y validar la
       rejilla/copiar en el móvil; no bloquea el resto de M6.
-- [ ] **Permisos de Docker para autonomía (M6)**: hoy `ifmael` no está en el grupo
-      `docker` y la unidad usa `newgrp docker`; los comandos manuales fallan con
-      `permission denied`. No depender de ese parche cuando el flujo corra solo:
-      - preflight de `docker info` en `run` y en cada comando que use contenedores,
-        con error claro y sin dejar estado a medias;
-      - decidir grupo explícito (`SupplementaryGroups=docker`), usuario dedicado o
-        Docker sin root; no asumir que el grupo no pide contraseña;
-      - `run` debe imprimir el error real (hoy solo devuelve exit 1) y `watch` debe
-        avisar/bloquear si Docker desaparece, no reintentar en silencio;
-      - tests con Docker no disponible.
+- [x] **Permisos de Docker para autonomía (M6)**: `ifmael` ya está en el grupo
+      `docker`, pero la sesión abierta no lo carga; la unidad de usuario no puede
+      usar `SupplementaryGroups=docker` (falla con `216/GROUP`), así que conserva
+      `newgrp docker` como grupo primario explícito. `dockerProblem` comprueba
+      `docker info` en `run` y en cada `runPhase` antes de crear contenedores;
+      `watch` lo comprueba al arrancar y propaga el error real; la CLI imprime
+      `result.error` (antes solo salía exit 1). Hay tests con Docker no disponible.
+      Decisión: no se mueve a unidad de sistema ni a usuario dedicado hasta una
+      autonomía fuera de este equipo; entonces `User=ifmael` +
+      `SupplementaryGroups=docker` es la vía.
       Aceptación: `run` sin permiso explica qué falta y no crea contenedores; el
-      servicio arranca con permiso explícito. Se decide antes de una autonomía
-      fuera de este equipo.
+      servicio arranca con permiso explícito.
 
 ## Bitácora
 

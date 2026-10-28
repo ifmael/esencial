@@ -374,6 +374,7 @@ export async function main(argv, io = {}) {
         });
         if (result.ok || result.dryRun) return 0;
         if (result.hint) line(stdout, result.hint);
+        else if (result.error) line(stderr, result.error);
         return 1;
       }
       case "watch": {

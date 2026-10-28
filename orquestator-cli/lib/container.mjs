@@ -6,6 +6,25 @@ import { ensureArtifactsAt } from "./artifacts.mjs";
 
 export const NETWORK = "esencial-workers";
 
+/** Motivo legible si Docker no está disponible; null si responde. No imprime
+ *  secretos ni asume que el grupo docker no pide contraseña. */
+export function dockerProblem({ spawn = spawnSync } = {}) {
+  const result = spawn("docker", ["info"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error) {
+    return `No se pudo ejecutar docker: ${result.error.message}`;
+  }
+  if (result.status === 0) return null;
+  const detail = String(result.stderr || result.stdout || "").trim();
+  return [
+    "Docker no es accesible",
+    detail ? `: ${detail}` : ` (exit ${result.status})`,
+    ". Añade el usuario al grupo docker y vuelve a iniciar sesión; para el servicio, usa una unidad con el grupo explícito o newgrp si la unidad de usuario no puede cambiarlo.",
+  ].join("");
+}
+
 /** Qué escribe cada fase y con qué red corre. */
 export const PHASES = {
   "spec-review": {
@@ -131,8 +150,13 @@ export function runPhase({
   input,
   agentsFile,
   dryRun,
+  dockerCheck = () => dockerProblem(),
   out = () => {},
 }) {
+  if (!dryRun) {
+    const problem = dockerCheck();
+    if (problem) throw new Error(problem);
+  }
   ensureArtifactsAt(task);
   const args = dockerArgs({ phase, image, repo, task, upstream, agentsFile });
   // Sin -i, `docker run` no conecta stdin y `--query-file -` llega vacío.

@@ -1,9 +1,9 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 import { clean } from "./clean.mjs";
 import { linearKey, linearTeam } from "./config.mjs";
+import { dockerProblem } from "./container.mjs";
 import { runGh, viewArgs } from "./github.mjs";
 import {
   getIssue,
@@ -77,9 +77,9 @@ function taskLock(key, base) {
   return lock(dirFor(key, base), "run.lock");
 }
 
-export function dockerReady() {
-  const result = spawnSync("docker", ["info"], { stdio: "ignore" });
-  return result.status === 0;
+/** Motivo si Docker no está disponible; null si responde. */
+function dockerUnavailable() {
+  return dockerProblem();
 }
 
 function sleepSeconds(seconds, signal) {
@@ -124,7 +124,7 @@ export async function watch({
   move = setState,
   edit = updateDescription,
   review = specReview,
-  dockerCheck = dockerReady,
+  dockerCheck = dockerUnavailable,
   sleep = sleepSeconds,
   signal,
 } = {}) {
@@ -135,10 +135,15 @@ export async function watch({
     throw new Error("--interval debe ser un número de segundos > 0");
   }
   if (dryRun) once = true;
-  if (!dryRun && !dockerCheck()) {
-    throw new Error(
-      "Docker no es accesible desde watch (falta el grupo docker; en la unidad usa newgrp).",
-    );
+  if (!dryRun) {
+    const problem = dockerCheck();
+    if (problem) {
+      throw new Error(
+        typeof problem === "string"
+          ? problem
+          : "Docker no es accesible desde watch",
+      );
+    }
   }
 
   const releaseWatch = dryRun ? () => {} : watchLock(base);
