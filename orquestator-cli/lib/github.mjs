@@ -1,12 +1,135 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { createSign } from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
 
 import { readEnv } from "./config.mjs";
 
 export const GUARD_CONTEXT = "gh-guard";
 
-/** gh usa GH_TOKEN si está; el token vive fuera de los logs. */
+const APP_TOKEN_MARGIN_MS = 60_000;
+let appTokenCache = null;
+
+const b64url = (value) => Buffer.from(value).toString("base64url");
+
+/** JWT de la GitHub App (RS256, 9 minutos). Se usa solo para pedir el token de
+ *  instalación; no viaja a git ni se guarda. */
+export function appJwt({ appId, privateKey, now = Date.now() }) {
+  if (!appId) throw new Error("Falta GITHUB_APP_ID");
+  if (!privateKey) throw new Error("Falta la private key de la GitHub App");
+  const iat = Math.floor(now / 1000) - 60;
+  const exp = Math.floor(now / 1000) + 540;
+  const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const payload = b64url(JSON.stringify({ iat, exp, iss: String(appId) }));
+  const signature = createSign("RSA-SHA256")
+    .update(`${header}.${payload}`)
+    .sign(privateKey)
+    .toString("base64url");
+  return `${header}.${payload}.${signature}`;
+}
+
+function expandHome(file) {
+  return String(file).replace(/^~(?=$|\/)/, os.homedir());
+}
+
+function appConfig(env, file) {
+  const config = {
+    appId: env.GITHUB_APP_ID ?? file.GITHUB_APP_ID,
+    installationId:
+      env.GITHUB_APP_INSTALLATION_ID ?? file.GITHUB_APP_INSTALLATION_ID,
+    keyPath: env.GITHUB_APP_PRIVATE_KEY ?? file.GITHUB_APP_PRIVATE_KEY,
+  };
+  if (!config.appId && !config.installationId && !config.keyPath) return null;
+  if (!config.appId || !config.installationId || !config.keyPath) {
+    throw new Error(
+      "GitHub App incompleta: define GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID y GITHUB_APP_PRIVATE_KEY",
+    );
+  }
+  return { ...config, keyPath: expandHome(config.keyPath) };
+}
+
+function requestInstallationToken(url, jwt) {
+  const result = spawnSync(
+    "curl",
+    [
+      "-sS",
+      "-X",
+      "POST",
+      "-H",
+      "Accept: application/vnd.github+json",
+      "-H",
+      `Authorization: Bearer ${jwt}`,
+      "-H",
+      "X-GitHub-Api-Version: 2022-11-28",
+      "-H",
+      "User-Agent: orquestator",
+      url,
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.error) {
+    throw new Error(`No se pudo ejecutar curl: ${result.error.message}`);
+  }
+  const body = String(result.stdout ?? "").trim();
+  if (result.status !== 0) {
+    throw new Error(
+      `GitHub App no pudo obtener el token de instalación${body ? `: ${body}` : ` (curl exit ${result.status})`}`,
+    );
+  }
+  let data;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    throw new Error("GitHub App devolvió una respuesta que no es JSON");
+  }
+  if (!data.token) {
+    throw new Error(
+      `GitHub App no devolvió token${data.message ? `: ${data.message}` : ""}`,
+    );
+  }
+  return {
+    token: data.token,
+    expiresAt: Date.parse(data.expires_at) || Date.now() + 50 * 60_000,
+  };
+}
+
+/** Token de instalación, cacheado hasta un minuto antes de caducar. */
+export function installationToken(
+  { appId, installationId, keyPath },
+  { request = requestInstallationToken, now = Date.now() } = {},
+) {
+  const cacheKey = `${appId}:${installationId}:${keyPath}`;
+  if (
+    appTokenCache?.key === cacheKey &&
+    appTokenCache.expiresAt - APP_TOKEN_MARGIN_MS > now
+  ) {
+    return appTokenCache.token;
+  }
+  let privateKey;
+  try {
+    privateKey = fs.readFileSync(keyPath, "utf8");
+  } catch (error) {
+    throw new Error(
+      `No se pudo leer la private key de GitHub App (${keyPath}): ${error.message}`,
+    );
+  }
+  const jwt = appJwt({ appId, privateKey, now });
+  const url = `https://api.github.com/app/installations/${installationId}/access_tokens`;
+  const result = request(url, jwt);
+  appTokenCache = {
+    key: cacheKey,
+    token: result.token,
+    expiresAt: result.expiresAt,
+  };
+  return result.token;
+}
+
+/** GH_TOKEN de una App instalada si está configurada; si no, el PAT. */
 export function githubToken(env = process.env) {
-  return env.GH_TOKEN || readEnv().GH_TOKEN || null;
+  const file = readEnv();
+  const app = appConfig(env, file);
+  if (app) return installationToken(app);
+  return env.GH_TOKEN || file.GH_TOKEN || null;
 }
 
 export function ghEnv(env = process.env) {

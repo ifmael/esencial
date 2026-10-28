@@ -142,6 +142,13 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   con `jose` contra el JWKS del equipo (`TEAM_DOMAIN` + `POLICY_AUD` que pasa el
   CLI, por defecto la app `Esencial previews`). En producción sigue mandando
   `ctx.access`.
+- **Identidad GitHub**: el CLI usa la GitHub App `esencial-orquestator` si
+  existen `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` y
+  `GITHUB_APP_PRIVATE_KEY` (ruta del PEM) en el entorno. Firma un JWT RS256,
+  pide el token de instalación y lo cachea; `GH_TOKEN` queda como fallback. Los
+  comentarios salen como `esencial-orquestator[bot]`. Permisos de la App:
+  Contents RW, Pull requests RW, Commit statuses RW, Checks R y Metadata R.
+  El Client ID no se usa para el token de instalación.
 - Requisitos del token de `~/.config/orquestator/env`: **Workers Scripts: Edit**,
   **D1: Edit**, **R2: Edit** y **Access: Edit** (para la app de previews).
 - **Token de GitHub** (`GH_TOKEN` en `~/.config/orquestator/env`): fine-grained,

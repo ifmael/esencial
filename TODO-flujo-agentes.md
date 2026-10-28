@@ -1002,12 +1002,16 @@ Depende de: M5b.
         exponer en `0.0.0.0`, autenticar, no guardar secretos y limpiar al cerrar.
       - Aceptación: ver una fase en curso, `watch` termina igual y el puerto queda
         solo en loopback o túnel. Si no aporta, no se implementa.
-- [ ] **Identidad propia en los comentarios (M6)**: los comentarios de la IA salen
-      con la cuenta de `ifmael` aunque lleven `Orquestator (IA)`. Para que el
-      **autor** sea distinto hacen falta credenciales de bot: GitHub App o usuario
-      máquina con token de escritura, y app OAuth de Linear (`createAsUser`/
-      `displayIconUrl`) o un usuario dedicado. Los marcadores actuales permiten
-      distinguirlos sin cambiar de cuenta.
+- [x] **Identidad GitHub (M6)**: GitHub App `esencial-orquestator` (App ID
+      `5512872`, Installation ID `176284310`). El CLI firma un JWT RS256 con la
+      private key, pide el token de instalación y lo cachea; `GH_TOKEN` queda como
+      fallback. Comentario real verificado como `esencial-orquestator[bot]`.
+      Variables: `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`,
+      `GITHUB_APP_PRIVATE_KEY` (ruta del PEM). El Client ID no se usa.
+- [ ] **Identidad Linear (M6)**: los comentarios de Linear siguen saliendo como
+      `ifmael`. Falta app OAuth de Linear (`createAsUser`/`displayIconUrl`) o un
+      usuario dedicado. Los marcadores actuales permiten distinguirlos sin cambiar
+      de cuenta.
 - [x] **Preview útil para validar (M6)**: la D1 de preview responde y tiene
       catálogo (100 recetas, 108 ejercicios, 1 usuario). `previewTask` siembra
       ahora dos semanas de sesiones de ejemplo (la anterior y la actual) de forma
