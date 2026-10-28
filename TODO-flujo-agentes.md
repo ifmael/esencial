@@ -1008,11 +1008,17 @@ Depende de: M5b.
       máquina con token de escritura, y app OAuth de Linear (`createAsUser`/
       `displayIconUrl`) o un usuario dedicado. Los marcadores actuales permiten
       distinguirlos sin cambiar de cuenta.
-- [ ] **Preview útil para validar (M6)**: la D1 de preview responde y tiene
-      catálogo (100 recetas, 108 ejercicios, 1 usuario), pero **0 sesiones de plan**;
-      la rejilla sale vacía. Revisar el fallo real con la cookie de Access por host
-      (abrir la API primero), sembrar fixtures de sesiones para probar copiar y
-      añadir un smoke autenticado, no solo el 302 del borde.
+- [x] **Preview útil para validar (M6)**: la D1 de preview responde y tiene
+      catálogo (100 recetas, 108 ejercicios, 1 usuario). `previewTask` siembra
+      ahora dos semanas de sesiones de ejemplo (la anterior y la actual) de forma
+      idempotente, sin borrar lo que ya haya; la rejilla y «Copiar» tienen datos.
+      El smoke autenticado es opcional con `CF_ACCESS_COOKIE` (cookie
+      `CF_Authorization` del host de la API): sin ella se omite y sigue el 302
+      del borde; con ella, el preview falla si la API no devuelve las fixtures.
+      El puente `/api/session/return` cubre la cookie por host (abrir la API
+      primero sigue siendo el plan B).
+- [ ] Ejecutar una vez el smoke autenticado con una cookie real y validar la
+      rejilla/copiar en el móvil; no bloquea el resto de M6.
 - [ ] **Permisos de Docker para autonomía (M6)**: hoy `ifmael` no está en el grupo
       `docker` y la unidad usa `newgrp docker`; los comandos manuales fallan con
       `permission denied`. No depender de ese parche cuando el flujo corra solo:

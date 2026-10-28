@@ -10,6 +10,7 @@ import {
   deletePreview,
   PREVIEW_BUCKET,
   PREVIEW_DB,
+  previewFixtureSql,
   previewName,
   previewTask,
   previewUrlOf,
@@ -50,7 +51,7 @@ beforeEach(() => {
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 function accessOk() {
-  return async (url, options = {}) => {
+  return async (_url, options = {}) => {
     if (options.method === "OPTIONS") {
       return {
         status: 204,
@@ -94,9 +95,25 @@ function options(extra = {}) {
     sleep: async () => {},
     ghRun: () => "",
     image: "img",
+    now: new Date("2026-10-28T12:00:00Z"),
     ...extra,
   };
 }
+
+test("previewFixtureSql siembra dos semanas sin borrar datos", () => {
+  const sql = previewFixtureSql(new Date("2026-10-28T12:00:00Z"));
+  assert.equal((sql.match(/INSERT INTO plan_sessions /g) ?? []).length, 4);
+  assert.equal(
+    (sql.match(/INSERT INTO plan_session_exercises /g) ?? []).length,
+    12,
+  );
+  assert.match(sql, /'2026-10-19', 'Empuje \(ejemplo\)'/);
+  assert.match(sql, /'2026-10-21', 'Pierna \(ejemplo\)'/);
+  assert.match(sql, /'2026-10-26', 'Empuje \(ejemplo\)'/);
+  assert.match(sql, /'2026-10-29', 'Tirón \(ejemplo\)'/);
+  assert.match(sql, /NOT EXISTS/);
+  assert.doesNotMatch(sql, /\b(DELETE|DROP|UPDATE|REPLACE)\b/);
+});
 
 test("previewUrlOf lee el JSON aunque wrangler imprima progreso antes", () => {
   const output = [
@@ -157,6 +174,14 @@ test("preview construye, migra, despliega los dos Workers y guarda el estado", a
   assert.ok(migration.includes("--remote"));
   assert.ok(migration.includes(PREVIEW_DB));
 
+  const seed = wrangler.find(
+    (args) => args[0] === "d1" && args[1] === "execute",
+  );
+  assert.ok(seed);
+  assert.ok(seed.includes("--remote"));
+  assert.ok(seed.includes(PREVIEW_DB));
+  assert.match(seed[seed.length - 1], /'2026-10-29', 'Tirón \(ejemplo\)'/);
+
   const previews = wrangler.filter(
     (args) => args[0] === "preview" && args[1] !== "delete",
   );
@@ -185,6 +210,94 @@ test("preview construye, migra, despliega los dos Workers y guarda el estado", a
   assert.match(gh[1].join(" "), /esn-7-esencial\.nutrirutina\.workers\.dev/);
 });
 
+test("el smoke autenticado consulta la API con la cookie de Access", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push({ url, init });
+    if (init.method === "OPTIONS") {
+      return {
+        status: 204,
+        headers: {
+          get: (name) =>
+            name === "access-control-allow-origin"
+              ? previewUrls(NAME).web
+              : null,
+        },
+      };
+    }
+    if (url.endsWith("/api/plan-sessions")) {
+      return {
+        status: 200,
+        headers: { get: () => null },
+        json: async () => [{ name: "Empuje (ejemplo)" }],
+      };
+    }
+    return {
+      status: 302,
+      headers: { get: () => `${ACCESS_LOGIN}?redirect_uri=x` },
+    };
+  };
+  const out = [];
+  await previewTask(
+    KEY,
+    options({
+      fetchImpl,
+      env: {
+        CLOUDFLARE_API_TOKEN: "t",
+        CLOUDFLARE_ACCOUNT_ID: "a",
+        CF_ACCESS_COOKIE: "CF_Authorization=token",
+      },
+      runner: () => ({ status: 0 }),
+      wrangler: happyWrangler([]),
+      out: (text) => out.push(text),
+    }),
+  );
+  const smoke = calls.find((call) => call.url.endsWith("/api/plan-sessions"));
+  assert.equal(smoke?.init.headers.cookie, "CF_Authorization=token");
+  assert.ok(out.some((line) => /smoke autenticado OK/.test(line)));
+});
+
+test("el smoke autenticado falla si la cookie no da identidad", async () => {
+  const fetchImpl = async (url, init = {}) => {
+    if (init.method === "OPTIONS") {
+      return {
+        status: 204,
+        headers: {
+          get: (name) =>
+            name === "access-control-allow-origin"
+              ? previewUrls(NAME).web
+              : null,
+        },
+      };
+    }
+    if (url.endsWith("/api/plan-sessions")) {
+      return { status: 401, headers: { get: () => null } };
+    }
+    return {
+      status: 302,
+      headers: { get: () => `${ACCESS_LOGIN}?redirect_uri=x` },
+    };
+  };
+  await assert.rejects(
+    () =>
+      previewTask(
+        KEY,
+        options({
+          fetchImpl,
+          env: {
+            CLOUDFLARE_API_TOKEN: "t",
+            CLOUDFLARE_ACCOUNT_ID: "a",
+            CF_ACCESS_COOKIE: "CF_Authorization=caducada",
+          },
+          runner: () => ({ status: 0 }),
+          wrangler: happyWrangler([]),
+        }),
+      ),
+    /smoke autenticado/,
+  );
+  assert.equal(load(KEY, base).preview, undefined);
+});
+
 test("un preview público sin Access falla y no guarda el estado", async () => {
   const publicFetch = async () => ({ status: 200, headers: { get: () => "" } });
   await assert.rejects(
@@ -203,7 +316,7 @@ test("un preview público sin Access falla y no guarda el estado", async () => {
 });
 
 test("un preflight bloqueado por Access se detecta antes de guardar", async () => {
-  const preflightBlocked = async (url, options = {}) =>
+  const preflightBlocked = async (_url, options = {}) =>
     options.method === "OPTIONS"
       ? { status: 403, headers: { get: () => null } }
       : {

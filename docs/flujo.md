@@ -123,6 +123,14 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   cada preview (deben ser aditivas). Las **83 fotos** del recetario se copiaron
   una vez del bucket de producción al de preview; si se recrea el bucket,
   repetir la copia (`wrangler r2 object get/put`).
+- **Sesiones de ejemplo**: cada preview siembra la semana anterior y la actual
+  (empuje, pierna y tirón) con el usuario que ya exista. Es idempotente: si un
+  día ya tiene sesión, no lo toca, así que se puede copiar un día o una semana
+  sin que la rejilla salga vacía.
+- **Smoke autenticado**: con `CF_ACCESS_COOKIE` en el entorno del CLI (el valor
+  de la cookie `CF_Authorization` del host de la API) el preview pide
+  `/api/plan-sessions` y exige ver una sesión de ejemplo. Sin esa cookie se
+  omite; el smoke del borde (302 de Access) sigue siendo obligatorio.
 - Access: app `all_preview_workers` con una política que permite el email del
   dueño y **«Bypass OPTIONS requests»** (`options_preflight_bypass`, si no el
   preflight CORS da 403); el CLI **falla** si el preview responde 200 o si el
