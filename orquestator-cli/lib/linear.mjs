@@ -101,10 +101,17 @@ export async function updateDescription(
 }
 
 export async function comment(apiKey, issue, body, fetchImpl = fetch) {
+  const app = apiKey.startsWith("Bearer ");
   await request(
     apiKey,
-    `mutation($issueId:String!, $body:String!){ commentCreate(input:{issueId:$issueId, body:$body}){ success } }`,
-    { issueId: issue.id, body: markComment(body) },
+    app
+      ? `mutation($issueId:String!, $body:String!, $author:String!){ commentCreate(input:{issueId:$issueId, body:$body, createAsUser:$author}){ success } }`
+      : `mutation($issueId:String!, $body:String!){ commentCreate(input:{issueId:$issueId, body:$body}){ success } }`,
+    {
+      issueId: issue.id,
+      body: markComment(body),
+      ...(app ? { author: "Orquestator" } : {}),
+    },
     fetchImpl,
   );
 }
@@ -117,6 +124,16 @@ export async function viewer(apiKey, fetchImpl = fetch) {
     fetchImpl,
   );
   return data.viewer;
+}
+
+export async function user(apiKey, id, fetchImpl = fetch) {
+  const data = await request(
+    apiKey,
+    "query($id:String!){ user(id:$id){ id name email } }",
+    { id },
+    fetchImpl,
+  );
+  return data.user;
 }
 
 export async function assign(apiKey, issue, userId, fetchImpl = fetch) {
@@ -134,8 +151,11 @@ export async function notifyBlocked(
   issue,
   question,
   fetchImpl = fetch,
+  userId = null,
 ) {
-  const me = await viewer(apiKey, fetchImpl);
+  const me = userId
+    ? await user(apiKey, userId, fetchImpl)
+    : await viewer(apiKey, fetchImpl);
   await assign(apiKey, issue, me.id, fetchImpl);
   await comment(
     apiKey,

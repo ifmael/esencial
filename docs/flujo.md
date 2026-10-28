@@ -149,6 +149,12 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   comentarios salen como `esencial-orquestator[bot]`. Permisos de la App:
   Contents RW, Pull requests RW, Commit statuses RW, Checks R y Metadata R.
   El Client ID no se usa para el token de instalación.
+- **Identidad Linear**: OAuth app `esencial-orquestator` con
+  `client_credentials`; el CLI pide un token de app de 30 días y lo cachea.
+  `LINEAR_CLIENT_ID` + `LINEAR_CLIENT_SECRET` tienen prioridad; `LINEAR_API_KEY`
+  queda como fallback. Los comentarios usan `createAsUser: Orquestator` y salen
+  con el actor de la app. `LINEAR_USER_ID` mantiene las menciones/asignaciones
+  del aviso de bloqueo en el humano.
 - Requisitos del token de `~/.config/orquestator/env`: **Workers Scripts: Edit**,
   **D1: Edit**, **R2: Edit** y **Access: Edit** (para la app de previews).
 - **Token de GitHub** (`GH_TOKEN` en `~/.config/orquestator/env`): fine-grained,

@@ -135,6 +135,15 @@ test("comment crea el comentario en la issue", async () => {
   assert.match(calls[0].body.variables.body, /Orquestator \(IA\)/);
 });
 
+test("comment con token de app usa createAsUser", async () => {
+  const { impl, calls } = fakeFetch(() => ({
+    commentCreate: { success: true },
+  }));
+  await comment("Bearer app-token", ISSUE, "Aviso", impl);
+  assert.match(calls[0].body.query, /createAsUser/);
+  assert.equal(calls[0].body.variables.author, "Orquestator");
+});
+
 test("notifyBlocked asigna la issue a ti y te menciona", async () => {
   const { impl, calls } = fakeFetch((body) => {
     if (body.query.includes("viewer")) {
