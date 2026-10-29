@@ -16,31 +16,31 @@ y el lint del repo.
 
 ## Piezas estrella y cómo verlas
 
-| Pieza | Dónde | Qué mirar |
-|---|---|---|
-| Morph de forma | cualquier botón; `/ui` § Forma | al pulsar el botón pasa de 28 a 12 px con el muelle espacial rápido (baja a 10,9 y vuelve a 12). La forma grande de `/ui` se transforma en la que pulses. El grupo conectado cambia de forma la pieza elegida. |
-| Muelles | `/ui` § Movimiento, «Mover» | seis bolas, una por muelle: las espaciales rebotan y las de efectos no |
-| Transformación de contenedor | `/recetario` → una receta; FAB → «Receta»; clic en un día de `/plan-fuerza` | la tarjeta crece hasta la cabecera; el FAB se convierte en el formulario; el día se abre en el diálogo |
-| Eje compartido | `/plan-fuerza`, `/plan-recetas`: ‹ › | la semana sale hacia un lado y la nueva entra por el otro, siguiendo el sentido del cambio |
-| Progreso ondulado | `/` (anillo «Pasos del día»), `/sesion/:fecha`, `/plan-fuerza` (barra de la semana) | la onda avanza con cada serie o sesión |
-| Sello de recompensa | `/sesion/<hoy>`: marca todas las series | un sol de 12 lóbulos entra con muelle lento y la cifra de series cuenta hacia arriba. Desmarcar una serie lo retira. |
-| Snackbar con Deshacer | `/plan-fuerza` (✕ de un ejercicio o de una sesión), lista de la compra (quitar un artículo manual) | «Deshacer» restaura con el mismo PUT, o recrea la sesión con POST |
-| Búsqueda ⌘K | ⌘K / Ctrl+K, «Buscar…» del raíl, barra de búsqueda arriba en móvil | *search view* M3 con grupos (recetas, ejercicios, plantillas, pantallas, acciones). A pantalla completa en móvil. |
-| Color dinámico por receta | `/recetario/1` (calabaza), `/2`, `/3` | la cabecera y los contenedores se tiñen con el color de la foto |
-| Tema sin destello | conmutador en el raíl, la barra móvil o la búsqueda | con el JS bloqueado la página ya sale en su tema (medido: `data-theme=dark`, fondo `#101510`, `#root` vacío) |
+| Pieza                        | Dónde                                                                                              | Qué mirar                                                                                                                                                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Morph de forma               | cualquier botón; `/ui` § Forma                                                                     | al pulsar el botón pasa de 28 a 12 px con el muelle espacial rápido (baja a 10,9 y vuelve a 12). La forma grande de `/ui` se transforma en la que pulses. El grupo conectado cambia de forma la pieza elegida. |
+| Muelles                      | `/ui` § Movimiento, «Mover»                                                                        | seis bolas, una por muelle: las espaciales rebotan y las de efectos no                                                                                                                                         |
+| Transformación de contenedor | `/recetario` → una receta; FAB → «Receta»; clic en un día de `/plan-fuerza`                        | la tarjeta crece hasta la cabecera; el FAB se convierte en el formulario; el día se abre en el diálogo                                                                                                         |
+| Eje compartido               | `/plan-fuerza`, `/plan-recetas`: ‹ ›                                                               | la semana sale hacia un lado y la nueva entra por el otro, siguiendo el sentido del cambio                                                                                                                     |
+| Progreso ondulado            | `/` (anillo «Pasos del día»), `/sesion/:fecha`, `/plan-fuerza` (barra de la semana)                | la onda avanza con cada serie o sesión                                                                                                                                                                         |
+| Sello de recompensa          | `/sesion/<hoy>`: marca todas las series                                                            | un sol de 12 lóbulos entra con muelle lento y la cifra de series cuenta hacia arriba. Desmarcar una serie lo retira.                                                                                           |
+| Snackbar con Deshacer        | `/plan-fuerza` (✕ de un ejercicio o de una sesión), lista de la compra (quitar un artículo manual) | «Deshacer» restaura con el mismo PUT, o recrea la sesión con POST                                                                                                                                              |
+| Búsqueda ⌘K                  | ⌘K / Ctrl+K, «Buscar…» del raíl, barra de búsqueda arriba en móvil                                 | _search view_ M3 con grupos (recetas, ejercicios, plantillas, pantallas, acciones). A pantalla completa en móvil.                                                                                              |
+| Color dinámico por receta    | `/recetario/1` (calabaza), `/2`, `/3`                                                              | la cabecera y los contenedores se tiñen con el color de la foto                                                                                                                                                |
+| Tema sin destello            | conmutador en el raíl, la barra móvil o la búsqueda                                                | con el JS bloqueado la página ya sale en su tema (medido: `data-theme=dark`, fondo `#101510`, `#root` vacío)                                                                                                   |
 
 ## Decisiones ya tomadas por el usuario (§1), cómo quedaron
 
 1. **Roles tipográficos M3**: `display-l/m/s`, `headline-l/m/s`, `title-l/m/s`,
    `body-l/m/s` y `label-l/m/s` con su interlineado, peso y tracking; `text-e` da la
-   variante *emphasized* (peso 720, anchura 112 %, `ROND` 100). Están migradas todas
+   variante _emphasized_ (peso 720, anchura 112 %, `ROND` 100). Están migradas todas
    las pantallas, `check-design-tokens.ts`, `/ui` y `AGENTS.md`.
 2. **View Transitions con router de datos**: `createBrowserRouter` + `RouterProvider`
    (como A), `<Link viewTransition>` y `runViewTransition` con el techo de 400 ms
    para el cambio de semana (`busy`).
 3. **Recompensa**: sello en forma de sol con muelle espacial lento y `CountUp`, sin
    confeti.
-4. **⌘K**: *search view* M3.
+4. **⌘K**: _search view_ M3.
 
 ## Qué cambió
 
@@ -60,18 +60,18 @@ y el lint del repo.
   el raíl, los chips, el FAB, el botón `filled` y los destacados.
 - **Forma**: `none 0 · xs 4 · s 8 · m 12 · l 16 · l-inc 20 · xl 28 · xl-inc 32 · xxl 48
   · full`, más `--radius-pill` (28 px) para lo que cambia de forma (ver «Desvíos»).
-- **Muelles** (`src/lib/spring.ts`): los seis del esquema *expressive*, resueltos
+- **Muelles** (`src/lib/spring.ts`): los seis del esquema _expressive_, resueltos
   analíticamente (masa 1, ω = √k) y muestreados en `linear()` de 41 puntos, con
   duración = tiempo en asentarse a menos del 0,1 %.
 
-  | Muelle | k | ζ | ω (rad/s) | Uso |
-  |---|---|---|---|---|
-  | spatial-fast | 800 | 0,6 | 28,3 | pulsar, morph, chips |
-  | spatial-default | 380 | 0,8 | 19,5 | diálogos, hojas, entradas |
-  | spatial-slow | 200 | 0,8 | 14,1 | sello, progreso |
-  | effects-fast | 3800 | 1 | 61,6 | capa de estado |
-  | effects-default | 1600 | 1 | 40 | color, opacidad |
-  | effects-slow | 800 | 1 | 28,3 | onda (ripple) |
+  | Muelle          | k    | ζ   | ω (rad/s) | Uso                       |
+  | --------------- | ---- | --- | --------- | ------------------------- |
+  | spatial-fast    | 800  | 0,6 | 28,3      | pulsar, morph, chips      |
+  | spatial-default | 380  | 0,8 | 19,5      | diálogos, hojas, entradas |
+  | spatial-slow    | 200  | 0,8 | 14,1      | sello, progreso           |
+  | effects-fast    | 3800 | 1   | 61,6      | capa de estado            |
+  | effects-default | 1600 | 1   | 40        | color, opacidad           |
+  | effects-slow    | 800  | 1   | 28,3      | onda (ripple)             |
 
   En utilidades: `motion-spatial(-fast|-slow)` y `motion-effects(-fast|-slow)`, que
   emparejan easing y duración.
@@ -88,11 +88,11 @@ guiones, €, →) y `font-display: swap`. Conserva los **cuatro** ejes que pide
 brief, recortados a lo que usa la app: `wght` 400–800, `wdth` 100–125, `opsz` 12–60
 y `ROND` 0–100.
 
-| Recorte | woff2 |
-|---|---|
-| Google Fonts, latin, ejes completos | 472 KB |
-| Google, `wdth,wght,ROND@100..125,400..800,100` (sin opsz, ROND fijo) | 78 KB |
-| Instanciado sin `opsz` (fontTools) | 73 KB |
+| Recorte                                                                    | woff2      |
+| -------------------------------------------------------------------------- | ---------- |
+| Google Fonts, latin, ejes completos                                        | 472 KB     |
+| Google, `wdth,wght,ROND@100..125,400..800,100` (sin opsz, ROND fijo)       | 78 KB      |
+| Instanciado sin `opsz` (fontTools)                                         | 73 KB      |
 | **Elegido**: 4 ejes (instanciado con fontTools, `scripts` en el historial) | **169 KB** |
 
 Precio: 96 KB más que la opción mínima, a cambio de tamaño óptico real en los
@@ -138,13 +138,13 @@ Tipografía que se mueve: la etiqueta activa del raíl y de la barra pasa de 500
 
 ### Pantallas
 
-- **Hoy**: cabecera *hero* (fecha en `display` *emphasized*, esquina asimétrica,
+- **Hoy**: cabecera _hero_ (fecha en `display` _emphasized_, esquina asimétrica,
   forma de fondo), anillo ondulado «Pasos del día» (`dayProgress`: 3 comidas + la
-  sesión), carrusel multi-browse con *scroll-snap* de las comidas, FUERZA en verde
+  sesión), carrusel multi-browse con _scroll-snap_ de las comidas, FUERZA en verde
   deporte y NOTAS con `Field`.
-- **Recetario**: rejilla con una tarjeta *hero* de 2×2, miniaturas `Monogram` sin
+- **Recetario**: rejilla con una tarjeta _hero_ de 2×2, miniaturas `Monogram` sin
   foto, `SearchBar`, `stagger`. El detalle tiene cabecera de foto con `rounded-b-xxl`,
-  título `display-s` *emphasized* sobre un velo y el color dinámico.
+  título `display-s` _emphasized_ sobre un velo y el color dinámico.
 - **Plan fuerza**: barra ondulada de sesiones de la semana, racha de semanas
   (`weekStreak` de D), «hoy» dentro de una galleta de 9 lados, Deshacer, diálogo del
   día con botón dividido «Guardar / Guardar y registrar». En móvil el diálogo es una
@@ -157,11 +157,11 @@ Tipografía que se mueve: la etiqueta activa del raíl y de la barra pasa de 500
   `SearchBar`, chips de grupo y vista frontal/trasera como grupo conectado.
 - **Plan recetas**: tomas con miniatura, lista de la compra en hoja inferior con
   quitar + Deshacer (`manualSet`), selector de receta en diálogo.
-- **Ejercicios**: filtro por grupo con chips, cabecera *hero* del detalle, pasos
+- **Ejercicios**: filtro por grupo con chips, cabecera _hero_ del detalle, pasos
   numerados sobre formas, editor con `Field`.
 - **Nueva receta**: una columna en móvil, cabecera con Cancelar y Guardar
   (mismo patrón que el editor de ejercicios).
-- **Login**: formas grandes de fondo, marca `display-s` *emphasized* y tarjeta
+- **Login**: formas grandes de fondo, marca `display-s` _emphasized_ y tarjeta
   `rounded-xl`.
 
 ### Color dinámico por receta
@@ -204,12 +204,12 @@ La lista completa está en la cabecera de `tokens.css`. Mínimos: claro 4,53
 
 ## Peso (build de producción; antes = `main`)
 
-| | Antes | Después |
-|---|---|---|
-| JS principal | 421,8 kB (127,1 gz) | 569,1 kB (170,7 gz) |
-| JS perezoso (color dinámico) | — | 53,9 kB (16,6 gz), solo en `/recetario/:id` con foto |
-| CSS | 39,4 kB (8,3 gz) | 63,2 kB (12,5 gz) |
-| Fuentes | — (sistema) | 168,8 kB woff2 |
+|                              | Antes               | Después                                              |
+| ---------------------------- | ------------------- | ---------------------------------------------------- |
+| JS principal                 | 421,8 kB (127,1 gz) | 569,1 kB (170,7 gz)                                  |
+| JS perezoso (color dinámico) | —                   | 53,9 kB (16,6 gz), solo en `/recetario/:id` con foto |
+| CSS                          | 39,4 kB (8,3 gz)    | 63,2 kB (12,5 gz)                                    |
+| Fuentes                      | — (sistema)         | 168,8 kB woff2                                       |
 
 Dependencia nueva: `@material/material-color-utilities` 0.3.0 (Apache-2.0). Solo
 viaja en el chunk perezoso; los tokens estáticos se calculan en build. Del aumento de
@@ -221,7 +221,7 @@ JS, unos 29 kB en crudo son los paths de los iconos y el resto las primitivas nu
 - `pnpm lint` (biome sin errores + lint de tokens en 49 ficheros), `pnpm typecheck`
   y `pnpm test` en verde: API 210, web 377. Tests nuevos:
   - Sistema: muelles, color (AA, caída por foto gris, caída por AA), formas, tema
-    + `theme.js`, tokens generados.
+    - `theme.js`, tokens generados.
   - Primitivas: snackbar, hoja, pila de Escape (capa de encima, evento ya
     gestionado), Field (error como `alert`), SplitButton, Escape por capas en un
     diálogo, catálogo.

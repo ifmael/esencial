@@ -1,4 +1,5 @@
 ---
+
 name: preguntar-spec
 description: Cómo convertir una spec incompleta en preguntas concretas antes de implementar.
 ---

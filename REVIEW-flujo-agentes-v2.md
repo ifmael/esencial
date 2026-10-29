@@ -15,25 +15,25 @@ puede corromper los objetos de `main` (N2).
 Se abordaron 15 de los 16 hallazgos. **I1 sigue abierto**: la Bitácora pasa de I5 a
 «I2-I5» y nunca resuelve I1. Varios de los abordados dejan restos, recogidos abajo.
 
-| Hallazgo v1 | Estado | Resto |
-|---|---|---|
-| C1 rutas protegidas | Abordado | Falta la infraestructura de test (N5) |
-| C2 clon por tarea | Abordado | Hardlinks (N2) |
-| C3 host sin hooks | Abordado | La lista de lo que se desactiva no basta (N1) |
-| C4 coordinador restringido | Abordado | Cuestionable si hace falta (D1) |
-| C5 red y secretos | Abordado | Regla antigua en l.415 |
-| P1 preview | Abordado | M5 infraestimado (D5) |
-| P2 migraciones | Abordado | Sin mecanismo «antes del merge» (N4) |
-| F1 CI | Abordado | — |
-| F2 retorno | Abordado | El orden contradice F4 (l.140/346); contador de rondas (D4) |
-| F3 spec | Abordado (pospuesto a M5) | — |
-| F4 RED / no debilitar | Abordado | — |
-| F5 límites | Abordado | — |
-| I1 brief | **Abierto** | — |
-| I2 contenedor por fase | Abordado | El texto antiguo sigue en l.113/157 |
-| I3 M2 | Abordado | El «Hecho cuando» de l.610 no cambió |
-| I4 pr-body | Abordado | — |
-| I5 cobertura y ADR | Abordado | Contradice l.737 |
+| Hallazgo v1                | Estado                    | Resto                                                       |
+| -------------------------- | ------------------------- | ----------------------------------------------------------- |
+| C1 rutas protegidas        | Abordado                  | Falta la infraestructura de test (N5)                       |
+| C2 clon por tarea          | Abordado                  | Hardlinks (N2)                                              |
+| C3 host sin hooks          | Abordado                  | La lista de lo que se desactiva no basta (N1)               |
+| C4 coordinador restringido | Abordado                  | Cuestionable si hace falta (D1)                             |
+| C5 red y secretos          | Abordado                  | Regla antigua en l.415                                      |
+| P1 preview                 | Abordado                  | M5 infraestimado (D5)                                       |
+| P2 migraciones             | Abordado                  | Sin mecanismo «antes del merge» (N4)                        |
+| F1 CI                      | Abordado                  | —                                                           |
+| F2 retorno                 | Abordado                  | El orden contradice F4 (l.140/346); contador de rondas (D4) |
+| F3 spec                    | Abordado (pospuesto a M5) | —                                                           |
+| F4 RED / no debilitar      | Abordado                  | —                                                           |
+| F5 límites                 | Abordado                  | —                                                           |
+| I1 brief                   | **Abierto**               | —                                                           |
+| I2 contenedor por fase     | Abordado                  | El texto antiguo sigue en l.113/157                         |
+| I3 M2                      | Abordado                  | El «Hecho cuando» de l.610 no cambió                        |
+| I4 pr-body                 | Abordado                  | —                                                           |
+| I5 cobertura y ADR         | Abordado                  | Contradice l.737                                            |
 
 ## Evidencia consultada
 
@@ -198,17 +198,17 @@ bucle, `watch` como servicio de systemd y el job `guard` de CI.
 
 ~20 min en total.
 
-| Línea | Problema | Corrección |
-|---|---|---|
-| 216 vs 441 vs 141 | **I1**: el coordinador «redacta la spec y el brief», pero el brief lo genera `start` desde la issue y en el piloto la spec la escribes tú | El brief es una copia determinista de la issue (o del bloque `orquestator-cli:acordado` en M5); el coordinador no redacta |
-| 140, 346 | `fix --from review → implementer → review → check` contradice F4 (comprobaciones antes del review) | `→ implementer → check → review` |
-| 113, 157 | La tabla de fuentes dice «Contenedor efímero por tarea» y el descarte incluye «contenedor por fase», cuando se adoptó lo contrario (l.126, l.144) | Corregir la fila y sacar «contenedor por fase» de los descartes |
-| 415 | «La clave de nan viaja por entorno» | La clave real solo vive en el proxy de modelo; los agentes usan una dummy (C5) |
-| 198 | `pr-review` lo lanza «Hermes/CI» | Solo en local; la CI no tiene la clave de nan ni el token del CLI |
-| 737 | «Nada de `api/` ni `web/` en esta fase», pero la cobertura añade `@vitest/coverage-v8` y toca `api/vitest.config.ts` y `web/vite.config.ts` | Exceptuar la cobertura (cambio humano, rutas protegidas) |
-| 610 | El «Hecho cuando» de M2 sigue siendo `status --dry-run`, que no recorre el flujo | «Cada comando acepta `--dry-run` sin efectos y la suite de transiciones pasa» (como la l.145) |
-| 190 vs 166, 605 | El clon lo crean a la vez `start` y `watch` | Uno solo: `start` crea el clon y `watch` solo llama a `start` |
-| 10, 645 | La fecha se quedó en el 2026-10-19; M4 pasa por `Spec review` aunque en el piloto no se usa | Fecha del 2026-10-21; en M4, la issue va directa a `Ready` |
+| Línea             | Problema                                                                                                                                          | Corrección                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 216 vs 441 vs 141 | **I1**: el coordinador «redacta la spec y el brief», pero el brief lo genera `start` desde la issue y en el piloto la spec la escribes tú         | El brief es una copia determinista de la issue (o del bloque `orquestator-cli:acordado` en M5); el coordinador no redacta |
+| 140, 346          | `fix --from review → implementer → review → check` contradice F4 (comprobaciones antes del review)                                                | `→ implementer → check → review`                                                                                          |
+| 113, 157          | La tabla de fuentes dice «Contenedor efímero por tarea» y el descarte incluye «contenedor por fase», cuando se adoptó lo contrario (l.126, l.144) | Corregir la fila y sacar «contenedor por fase» de los descartes                                                           |
+| 415               | «La clave de nan viaja por entorno»                                                                                                               | La clave real solo vive en el proxy de modelo; los agentes usan una dummy (C5)                                            |
+| 198               | `pr-review` lo lanza «Hermes/CI»                                                                                                                  | Solo en local; la CI no tiene la clave de nan ni el token del CLI                                                         |
+| 737               | «Nada de `api/` ni `web/` en esta fase», pero la cobertura añade `@vitest/coverage-v8` y toca `api/vitest.config.ts` y `web/vite.config.ts`       | Exceptuar la cobertura (cambio humano, rutas protegidas)                                                                  |
+| 610               | El «Hecho cuando» de M2 sigue siendo `status --dry-run`, que no recorre el flujo                                                                  | «Cada comando acepta `--dry-run` sin efectos y la suite de transiciones pasa» (como la l.145)                             |
+| 190 vs 166, 605   | El clon lo crean a la vez `start` y `watch`                                                                                                       | Uno solo: `start` crea el clon y `watch` solo llama a `start`                                                             |
+| 10, 645           | La fecha se quedó en el 2026-10-19; M4 pasa por `Spec review` aunque en el piloto no se usa                                                       | Fecha del 2026-10-21; en M4, la issue va directa a `Ready`                                                                |
 
 ## 4. Preguntas abiertas que ya se pueden cerrar
 
@@ -225,8 +225,8 @@ bucle, `watch` como servicio de systemd y el job `guard` de CI.
 
 ## 5. Menor
 
-- **Nombre `orquestator-cli`**: no es ni inglés (*orchestrator*) ni español
-  (*orquestador*). Renombrarlo es gratis hoy y caro después de M2 (rutas, refs
+- **Nombre `orquestator-cli`**: no es ni inglés (_orchestrator_) ni español
+  (_orquestador_). Renombrarlo es gratis hoy y caro después de M2 (rutas, refs
   `refs/orquestator-cli/…`, plugin, `protected-paths`).
 - **RED por error de import**: un test nuevo que importa un módulo que no existe en
   `main` falla «por la razón equivocada» y pasa el check RED sin probar nada.

@@ -1,4 +1,5 @@
 ---
+
 name: implementar-esencial
 description: Procedimiento para implementar una tarea de Esencial con TDD y entregarla.
 ---

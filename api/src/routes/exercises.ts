@@ -334,7 +334,7 @@ export const exercises = new Hono<AppContext>()
            isCardio
              ? "(cl.distance_km IS NULL), cl.distance_km DESC, cl.duration_min DESC"
              : "(sl.weight_kg IS NULL), sl.weight_kg DESC, sl.duration_secs DESC, sl.reps DESC"
-}, wl.date DESC
+         }, wl.date DESC
          LIMIT 1`,
         id,
         userId,

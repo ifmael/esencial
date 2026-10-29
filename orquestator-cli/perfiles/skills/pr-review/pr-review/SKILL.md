@@ -1,4 +1,5 @@
 ---
+
 name: revisar-pr
 description: Checklist de riesgos para validar una PR de Esencial antes del merge.
 ---

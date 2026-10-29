@@ -14,17 +14,17 @@ bloquea M0 ni M1.
 
 ## Estado de la revisión v3
 
-| Hallazgo v3 | Estado | Resto |
-|---|---|---|
-| R1 estado y aprobaciones en el host | Adoptado | Detalle de montaje de `.task/` en Docker (A3) |
-| R2 espejo bare `/upstream` + `mergeable` | Adoptado | — |
-| R3-A job de CI `migracion` read-only | Adoptado | Interbloqueo con `In validation` (A1) |
-| R4-A commit status `guard` atado al SHA | Adoptado | Antes del push solo existe el hash local (A2) |
-| G1 `coverage.thresholds` en configs protegidas | Adoptado | — |
-| G2 lock de migraciones en `check` | Adoptado | — |
-| G3 sin gateway MCP en el piloto, provider en M1, sin `verifier` | Adoptado | — |
-| G4 `watch` a M5b, `migrate` condicional, M2 3-4 días | Adoptado | Falta marca `(M5b)` en la tabla de l.243 |
-| 5 correcciones de texto de la v3 | Adoptadas | — |
+| Hallazgo v3                                                     | Estado    | Resto                                         |
+| --------------------------------------------------------------- | --------- | --------------------------------------------- |
+| R1 estado y aprobaciones en el host                             | Adoptado  | Detalle de montaje de `.task/` en Docker (A3) |
+| R2 espejo bare `/upstream` + `mergeable`                        | Adoptado  | —                                             |
+| R3-A job de CI `migracion` read-only                            | Adoptado  | Interbloqueo con `In validation` (A1)         |
+| R4-A commit status `guard` atado al SHA                         | Adoptado  | Antes del push solo existe el hash local (A2) |
+| G1 `coverage.thresholds` en configs protegidas                  | Adoptado  | —                                             |
+| G2 lock de migraciones en `check`                               | Adoptado  | —                                             |
+| G3 sin gateway MCP en el piloto, provider en M1, sin `verifier` | Adoptado  | —                                             |
+| G4 `watch` a M5b, `migrate` condicional, M2 3-4 días            | Adoptado  | Falta marca `(M5b)` en la tabla de l.243      |
+| 5 correcciones de texto de la v3                                | Adoptadas | —                                             |
 
 ## 1. Los 3 últimos ajustes de lógica (para M2)
 
@@ -43,8 +43,8 @@ bloquea M0 ni M1.
      remota con el token de edición) y re-ejecuta el job de CI `migracion`.
   3. Cuando `migracion` se pone en verde (todos los checks verdes), el CLI mueve la
      issue a `In validation`.
-  En M5a el orden queda: migración de preview antes de `ship`/preview → `pr-review`
-  → `approve --migracion` → migración remota → `In validation`.
+     En M5a el orden queda: migración de preview antes de `ship`/preview → `pr-review`
+     → `approve --migracion` → migración remota → `In validation`.
 
 ### A2 — El commit status `guard` no puede existir antes del push (l.488, 509, 633)
 
@@ -65,13 +65,13 @@ bloquea M0 ni M1.
 
 - **Problema:**
   1.En Linux/Docker, si intentas montar en `:ro` un fichero que todavía no existe
-     (p. ej. `review.md` o `checks.md` en la primera vuelta del `implementer`),
-     Docker crea un **directorio** vacío en su lugar y rompe la escritura posterior.
+  (p. ej. `review.md` o `checks.md` en la primera vuelta del `implementer`),
+  Docker crea un **directorio** vacío en su lugar y rompe la escritura posterior.
   2. Si `.task/` vive dentro del clon y el `implementer` monta el clon en `:rw`, el
-     directorio padre `.task/` es escribible por el `implementer`.
+  directorio padre `.task/` es escribible por el `implementer`.
   3. En la tabla de las líneas 303-308 faltan `.task/human-feedback.md` (que lee el
-     `implementer` en `fix --humano`), el diff de la PR que recibe el `pr-reviewer`
-     (l.238, 730) y `brief.md`/`checks.md` como lectura del `pr-reviewer`.
+  `implementer` en `fix --humano`), el diff de la PR que recibe el `pr-reviewer`
+  (l.238, 730) y `brief.md`/`checks.md` como lectura del `pr-reviewer`.
 - ★ **Solución:**
   1. Guardar los artefactos en el host en `~/.orquestator/ESN-123/task/` (junto a
      `state.json`, fuera del clon). Antes de lanzar cada contenedor, el CLI
@@ -82,21 +82,21 @@ bloquea M0 ni M1.
      ficheros ajenos en `.task/`.
   3. Completar la tabla de montajes:
 
-  | Fase | Clon | `<clon>/.task/` (dir base `:ro`) |
-  |---|---|---|
-  | `implementer` | `rw`; commitea | `brief.md`, `review.md`, `checks.md`, `human-feedback.md` `ro`; `impl.md` y `pr-body.md` `rw` |
-  | `check` | `rw`; tests y caché | `impl.md` `ro`; `checks.md` `rw` |
-  | `reviewer` | `ro` | `brief.md`, `impl.md`, `checks.md` `ro`; `review.md` `rw` |
-  | `pr-reviewer` | `ro` | `brief.md`, `impl.md`, `checks.md`, `review.md`, `pr-diff.patch` `ro`; `pr-review.md` `rw` |
+  | Fase          | Clon                | `<clon>/.task/` (dir base `:ro`)                                                              |
+  | ------------- | ------------------- | --------------------------------------------------------------------------------------------- |
+  | `implementer` | `rw`; commitea      | `brief.md`, `review.md`, `checks.md`, `human-feedback.md` `ro`; `impl.md` y `pr-body.md` `rw` |
+  | `check`       | `rw`; tests y caché | `impl.md` `ro`; `checks.md` `rw`                                                              |
+  | `reviewer`    | `ro`                | `brief.md`, `impl.md`, `checks.md` `ro`; `review.md` `rw`                                     |
+  | `pr-reviewer` | `ro`                | `brief.md`, `impl.md`, `checks.md`, `review.md`, `pr-diff.patch` `ro`; `pr-review.md` `rw`    |
 
 ## 2. Erratas menores de texto (~2 min)
 
-| Línea | Dice | Debe decir |
-|---|---|---|
-| 10 | `Última actualización: 2026-10-21 (revisión v2).` | `Última actualización: 2026-10-21 (revisión v3).` |
-| 243 | `orquestator-cli status [--watch]` | `orquestator-cli status [--watch (M5b)]` (como `spec (M5b)` en l.228) |
-| 536 | `Todos viven en .task/ dentro del clon y están en .gitignore.` | Con A3: viven en `~/.orquestator/ESN-123/task/`, se montan en `<clon>/.task/` y `.task/` sigue en `.gitignore` |
-| 896 | `.github/workflows/ci.yml`: paso de cobertura. | `.github/workflows/ci.yml`: paso de cobertura, job `migracion` (M0) y job `guard` (M5b). |
+| Línea | Dice                                                           | Debe decir                                                                                                     |
+| ----- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 10    | `Última actualización: 2026-10-21 (revisión v2).`              | `Última actualización: 2026-10-21 (revisión v3).`                                                              |
+| 243   | `orquestator-cli status [--watch]`                             | `orquestator-cli status [--watch (M5b)]` (como `spec (M5b)` en l.228)                                          |
+| 536   | `Todos viven en .task/ dentro del clon y están en .gitignore.` | Con A3: viven en `~/.orquestator/ESN-123/task/`, se montan en `<clon>/.task/` y `.task/` sigue en `.gitignore` |
+| 896   | `.github/workflows/ci.yml`: paso de cobertura.                 | `.github/workflows/ci.yml`: paso de cobertura, job `migracion` (M0) y job `guard` (M5b).                       |
 
 ## Pendiente de verificar (sin cambios respecto a la v3)
 
