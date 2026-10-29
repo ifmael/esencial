@@ -1082,6 +1082,12 @@ Depende de: M5b.
       duplicados. Aceptación: una persona puede reconstruir la arquitectura y las
       decisiones leyendo `docs/adr/` sin abrir el TODO; enlaces y fechas correctos;
       `biome check docs/adr` verde.
+- [ ] **Validar 4 tareas en paralelo (cierre)**: en la primera tanda con cuatro
+      tareas, medir con `docker stats` el pico por fase (sobre todo `check`),
+      `OOMKilled`, swap y memoria libre. Si el pico agregado se acerca a los 30 GiB
+      o hay OOM, bajar a 2 o separar `--memory` por fase. Aceptación: cuatro tareas
+      terminan sin OOM y con memoria libre >4 GiB, o queda documentado el límite
+      menor.
 
 ## Bitácora
 
