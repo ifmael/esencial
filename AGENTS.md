@@ -518,7 +518,10 @@ series, el play/pausa del descanso y el cierre con aviso) y
   series» si solo falta la de entre series). La **última serie del último
   ejercicio no arranca nada y corta la pausa que estuviera corriendo** (sin
   pitido): la sesión ya se acabó. «Descanso» la arranca a
-  mano, «Saltar» la corta (sin pitido) y las flechas del ejercicio pasan de uno a
+  mano con lo que el ejercicio tenga programado —el de entre series y, si no lo
+  hay, el de «al terminar», que es el único que admite el cardio (ahí la pausa es
+  la de fin y al agotarse pasa de ejercicio)—; se apaga solo si no programa
+  ninguno. «Saltar» la corta (sin pitido) y las flechas del ejercicio pasan de uno a
   otro. La barra va en el cuerpo, bajo los campos de la serie, con el **play/pausa**
   al principio y **los segundos que quedan al final**: el play/pausa congela el
   reloj (y el keep-alive) y lo reanuda desde lo que quedaba. Como el modo no
@@ -531,6 +534,9 @@ series, el play/pausa del descanso y el cierre con aviso) y
   cuenta es por marca
   de tiempo (`endsAt`), no
   por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
+  El tic comprueba que la pausa que trae sigue siendo la que corre
+  (`currentPause`): un tic lanzado antes de que expire y que llega después de
+  arrancar la siguiente no puede llevarse la nueva por delante.
 - **«A continuación: …»**: bajo la serie en curso (o del «Hecho» del cardio), el
   nombre del siguiente ejercicio **por orden** —el de al lado en el día, no el
   siguiente pendiente— cuando al ejercicio activo solo le queda su última serie
