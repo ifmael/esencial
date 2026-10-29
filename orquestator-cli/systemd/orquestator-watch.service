@@ -10,7 +10,8 @@ EnvironmentFile=-%h/.config/orquestator/env
 # Una unidad de usuario no puede añadir grupos suplementarios (systemd falla
 # con 216/GROUP), así que se conserva newgrp. No pide contraseña si el usuario
 # ya pertenece al grupo docker; el preflight de `run`/`watch` avisa si no.
-ExecStart=/usr/bin/newgrp docker -c "/bin/bash -lc 'exec node orquestator-cli/bin/orquestator.mjs watch --max-parallel 1'"
+# Cuatro tareas como máximo; --memory 8g es un techo, no una reserva.
+ExecStart=/usr/bin/newgrp docker -c "/bin/bash -lc 'exec node orquestator-cli/bin/orquestator.mjs watch --max-parallel 4'"
 Restart=on-failure
 RestartSec=30
 KillSignal=SIGTERM

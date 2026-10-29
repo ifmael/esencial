@@ -1014,7 +1014,11 @@ Depende de: M5b.
       real deja márgenes de 0,22–0,91 pp. **Decisión: se sube solo web sentencias
       86→87**; el resto se mantiene para no dejar el CI frágil sin ganancia de
       calidad. El 60% queda corregido en el plan.
-- [ ] Revisar límites de paralelismo (cuántas tareas a la vez con 16 núcleos/30 GiB).
+- [x] **Límite de paralelismo (2026-10-29)**: el servicio queda en
+      `--max-parallel 4` (el CLI mantiene 1 por defecto). Son techos de 8 GiB por
+      contenedor, no reservas; con 30 GiB de host, 4 contenedores pueden
+      sobrepasar la memoria si coinciden varios `check`. Vigilar `docker stats` y
+      bajar a 2 o separar límites por fase si aparece OOM.
 - [ ] Revisión final de `AGENTS.md` (se actualiza al cerrar cada fase).
 - [ ] Si se añadió el coordinador en M5b, revisar si aporta algo que `run` no haga; si no,
       retirarlo.

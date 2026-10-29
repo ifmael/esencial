@@ -325,7 +325,10 @@ cada 60 s (equipo `ESN`; `LINEAR_TEAM` o `--team` lo cambian) y despacha:
    Linear, pasa la tarea local a `Done` y ejecuta `clean` (borra previews y tarea).
    Si Linear falla, no limpia: lo reintenta en el siguiente sondeo.
 
-`--max-parallel` (por defecto 1) limita los `run` simultáneos. Cada tarea tiene
+`--max-parallel` (por defecto 1) limita los `run` simultáneos. La unidad de
+ejemplo fija **4**; cuatro contenedores con `--memory 8g` comparten techo, no lo
+reservan, así que conviene vigilar la memoria cuando coinciden varios `check`.
+Cada tarea tiene
 un `run.lock` con el pid: dos `watch` no la arrancan a la vez, y un cerrojo de
 proceso muerto se libera solo. Una tarea que falla **no se reintenta** hasta que
 su estado cambie (`fix`, `resume` o edición); así un check rojo no quema tokens.
