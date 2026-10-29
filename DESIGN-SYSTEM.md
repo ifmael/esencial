@@ -38,12 +38,12 @@ inventarlo.
 
 ## 1. Prerrequisitos y stack
 
-| Necesitas | Para qué | Si no lo tienes |
-|---|---|---|
-| **Tailwind v4** | Capa 2 (`@theme inline`) y las utilidades `@utility` (`text-e`, `motion-*`, `tabular`). Las medidas de las primitivas (`h-12`, `px-6`, `size-12`) son la escala por defecto de Tailwind: **no** se vacía | En v3 o sin Tailwind: las capas 1 y 3 son CSS puro y funcionan igual; declara las variables y las utilidades a mano y pierdes el lint por familia de §11 (reduce su alcance a las clases arbitrarias) |
-| **Una fuente variable** con ejes `wght`, `wdth`, `opsz`, `ROND` | `text-e` (peso 720, anchura 112 %, `ROND` 100) y `.type-move` | Cambia `--font-sans` y ajusta los tres números de `text-e`; documenta el cambio |
-| **Node** | Regenerar tokens (`gen-tokens.ts`) y correr el guardarraíl | Regenera los tokens una vez a mano desde la semilla (§8) |
-| **React 19** (o equivalente) | Las primitivas use `useSyncExternalStore`, `useId`, `aria-*`. La **piel no depende de React**: son clases | Reimplementa el markup con los mismos atributos; el CSS no cambia |
+| Necesitas                                                       | Para qué                                                                                                                                                                                                 | Si no lo tienes                                                                                                                                                                                       |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tailwind v4**                                                 | Capa 2 (`@theme inline`) y las utilidades `@utility` (`text-e`, `motion-*`, `tabular`). Las medidas de las primitivas (`h-12`, `px-6`, `size-12`) son la escala por defecto de Tailwind: **no** se vacía | En v3 o sin Tailwind: las capas 1 y 3 son CSS puro y funcionan igual; declara las variables y las utilidades a mano y pierdes el lint por familia de §11 (reduce su alcance a las clases arbitrarias) |
+| **Una fuente variable** con ejes `wght`, `wdth`, `opsz`, `ROND` | `text-e` (peso 720, anchura 112 %, `ROND` 100) y `.type-move`                                                                                                                                            | Cambia `--font-sans` y ajusta los tres números de `text-e`; documenta el cambio                                                                                                                       |
+| **Node**                                                        | Regenerar tokens (`gen-tokens.ts`) y correr el guardarraíl                                                                                                                                               | Regenera los tokens una vez a mano desde la semilla (§8)                                                                                                                                              |
+| **React 19** (o equivalente)                                    | Las primitivas use `useSyncExternalStore`, `useId`, `aria-*`. La **piel no depende de React**: son clases                                                                                                | Reimplementa el markup con los mismos atributos; el CSS no cambia                                                                                                                                     |
 
 La fuente del sistema, **Google Sans Flex**, es OFL (`OFL-google-sans-flex.txt`):
 puedes copiarla. En el origen va auto-alojada (subset latino, `font-display:
@@ -53,11 +53,11 @@ swap`), recortada a 4 ejes = 169 KB woff2. Con `opsz` fijo bajaría a ~73 KB.
 
 ## 2. Las tres capas (un dueño cada una)
 
-| Capa | Fichero | Qué contiene | Quién lo escribe |
-|---|---|---|---|
-| 1. Valores crudos | `tokens.css` (generado) + el bloque `:root` de `globals.css` | Color M3 (32 roles, claro y oscuro), muelles M3E muestreados, forma, espaciado, elevación, capa de estado | El generador y nadie más: a mano jamás |
-| 2. Puente | `@theme inline` en `globals.css` | Vacía los espacios de nombres de Tailwind (`--color-*`, `--text-*`, `--radius-*`, `--shadow-*`, `--animate-*` = `initial`) y expone los tokens con nombre de utilidad: `bg-surface-container-high`, `text-title-m`, `rounded-xl`, `shadow-2` | Una vez; al añadir un token |
-| 3. Piel | `@layer components` en `globals.css` | `.btn-*`, `.card-*`, `.input`, `.field`, `.chip`, `.fab`, `.connected`, `.checkbox`, `.switch`, `.badge-*`, `.alert-*`, `.dialog`, `.sheet`, `.menu`, `.toolbar`, `.snackbar`, `.state`, `.ripple`… | **Solo los ficheros de las primitivas.** Una pantalla nunca escribe estas clases |
+| Capa              | Fichero                                                      | Qué contiene                                                                                                                                                                                                                                 | Quién lo escribe                                                                 |
+| ----------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 1. Valores crudos | `tokens.css` (generado) + el bloque `:root` de `globals.css` | Color M3 (32 roles, claro y oscuro), muelles M3E muestreados, forma, espaciado, elevación, capa de estado                                                                                                                                    | El generador y nadie más: a mano jamás                                           |
+| 2. Puente         | `@theme inline` en `globals.css`                             | Vacía los espacios de nombres de Tailwind (`--color-*`, `--text-*`, `--radius-*`, `--shadow-*`, `--animate-*` = `initial`) y expone los tokens con nombre de utilidad: `bg-surface-container-high`, `text-title-m`, `rounded-xl`, `shadow-2` | Una vez; al añadir un token                                                      |
+| 3. Piel           | `@layer components` en `globals.css`                         | `.btn-*`, `.card-*`, `.input`, `.field`, `.chip`, `.fab`, `.connected`, `.checkbox`, `.switch`, `.badge-*`, `.alert-*`, `.dialog`, `.sheet`, `.menu`, `.toolbar`, `.snackbar`, `.state`, `.ripple`…                                          | **Solo los ficheros de las primitivas.** Una pantalla nunca escribe estas clases |
 
 Encima hay utilidades compartidas que **sí** se aplican tal cual en las
 pantallas: `.section-label`, `.list-row`, `.card-interactive`, `.skeleton`,
@@ -109,14 +109,14 @@ generan CSS**. No es un olvido: es el sistema, y el lint lo comprueba.
 
 No son sistema: son piezas del dominio de origen. Bórralas si no tienes ese caso.
 
-| Bloque | Por qué sobra |
-|---|---|
-| `--color-muscle`, `--color-muscle-strong`, `--color-body`, `--color-muscle-secondary`, `--color-muscle-stabilizer` (en `:root`) y sus 5 líneas en `@theme` | Colores de un mapa muscular |
-| `--color-on-photo` y `--color-photo-veil` | Texto sobre foto con velo del scrim; útil si tienes fotos a sangre, prescindible si no |
-| `--container-calendar` (`110rem`) + su línea en `@theme` | Ancho de una rejilla semanal |
-| `.chain`, `.chain-label`, `.chain-rows` | La caja de un bloque de ejercicios encadenados (biserie). Es genérico (caja tonal con etiqueta) si te sirve el patrón |
-| `::view-transition-*(day-sheet)` y `::view-transition-*(week-grid)`, `@keyframes axis-*`, `:root[data-week-dir]` | Patrones de transición de la app (abrir un modal desde una columna, cambiar de semana). El patrón `create` **sí** es del sistema: es «lo pulsado crece hasta lo que abre» |
-| `.wavy-*`, `.loader path`, `.seal*`, `@keyframes wave-drift` / `seal-in` / `spin` | Solo si no usas progreso ondulado, loader ni sello (usarlos es inocuo) |
+| Bloque                                                                                                                                                     | Por qué sobra                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--color-muscle`, `--color-muscle-strong`, `--color-body`, `--color-muscle-secondary`, `--color-muscle-stabilizer` (en `:root`) y sus 5 líneas en `@theme` | Colores de un mapa muscular                                                                                                                                               |
+| `--color-on-photo` y `--color-photo-veil`                                                                                                                  | Texto sobre foto con velo del scrim; útil si tienes fotos a sangre, prescindible si no                                                                                    |
+| `--container-calendar` (`110rem`) + su línea en `@theme`                                                                                                   | Ancho de una rejilla semanal                                                                                                                                              |
+| `.chain`, `.chain-label`, `.chain-rows`                                                                                                                    | La caja de un bloque de ejercicios encadenados (biserie). Es genérico (caja tonal con etiqueta) si te sirve el patrón                                                     |
+| `::view-transition-*(day-sheet)` y `::view-transition-*(week-grid)`, `@keyframes axis-*`, `:root[data-week-dir]`                                           | Patrones de transición de la app (abrir un modal desde una columna, cambiar de semana). El patrón `create` **sí** es del sistema: es «lo pulsado crece hasta lo que abre» |
+| `.wavy-*`, `.loader path`, `.seal*`, `@keyframes wave-drift` / `seal-in` / `spin`                                                                          | Solo si no usas progreso ondulado, loader ni sello (usarlos es inocuo)                                                                                                    |
 
 Todo lo demás es sistema y se copia tal cual, incluidos los `@keyframes`.
 
@@ -128,15 +128,14 @@ Todo lo demás es sistema y se copia tal cual, incluidos los `@keyframes`.
 `text-sm`. La escala completa, con su interlineado, peso y tracking, está en
 `@theme inline` (anexo B).
 
-| Rol | Tamaño | Uso |
-|---|---|---|
-| `display-l/m/s` | 57 · 45 · 36 | Titulares de héroe (peso 460: los grandes van finos) |
-| `headline-l/m/s` | 32 · 28 · 24 | Títulos de pantalla |
-| `title-l/m/s` | 22 · 16 · 14 | Títulos de tarjeta, cabeceras de fila |
-| `body-l/m/s` | 16 · 14 · 12 | Texto; `body-l` es el tamaño de un campo |
-| `label-l/m/s` | 14 · 12 · 11 | Botones, chips, insignias, etiquetas |
-
-- **`text-e`** = el mismo rol *emphasized*: peso **720**, anchura **112 %**,
+| Rol              | Tamaño       | Uso                                                  |
+| ---------------- | ------------ | ---------------------------------------------------- |
+| `display-l/m/s`  | 57 · 45 · 36 | Titulares de héroe (peso 460: los grandes van finos) |
+| `headline-l/m/s` | 32 · 28 · 24 | Títulos de pantalla                                  |
+| `title-l/m/s`    | 22 · 16 · 14 | Títulos de tarjeta, cabeceras de fila                |
+| `body-l/m/s`     | 16 · 14 · 12 | Texto; `body-l` es el tamaño de un campo             |
+| `label-l/m/s`    | 14 · 12 · 11 | Botones, chips, insignias, etiquetas                 |
+- **`text-e`** = el mismo rol _emphasized_: peso **720**, anchura **112 %**,
   `ROND` **100**. Para momentos clave (el título de una ficha, la fecha del día).
   Es una utilidad, se combina: `text-display-s text-e`.
 - `body` lleva `font-variation-settings: "ROND" 50` (terminaciones a medias:
@@ -149,15 +148,15 @@ Todo lo demás es sistema y se copia tal cual, incluidos los `@keyframes`.
 
 ## 6. Forma
 
-| Token | Valor | Uso |
-|---|---|---|
+| Token                    | Valor               | Uso                                                                                          |
+| ------------------------ | ------------------- | -------------------------------------------------------------------------------------------- |
 | `--radius-none/xs/s/m/l` | 0 · 4 · 8 · 12 · 16 | Piezas y contenedores; `s` para chips y piezas conectadas, `m` para filas, `l` para tarjetas |
-| `--radius-l-inc` | 20 | Incremento de `l` |
-| `--radius-xl` | 28 | Diálogos, hojas, campos destacados |
-| `--radius-xl-inc` | 32 | Incremento de `xl` |
-| `--radius-xxl` | 48 | Esquinas asimétricas (tarjetas destacadas: `rounded-xl rounded-tr-xxl`) |
-| `--radius-full` | 9999 | Solo lo que es círculo de verdad (avatares, el pulgar del switch) |
-| `--radius-pill` | **28** | Lo que cambia de forma: botones, chips, piezas del grupo conectado, FAB |
+| `--radius-l-inc`         | 20                  | Incremento de `l`                                                                            |
+| `--radius-xl`            | 28                  | Diálogos, hojas, campos destacados                                                           |
+| `--radius-xl-inc`        | 32                  | Incremento de `xl`                                                                           |
+| `--radius-xxl`           | 48                  | Esquinas asimétricas (tarjetas destacadas: `rounded-xl rounded-tr-xxl`)                      |
+| `--radius-full`          | 9999                | Solo lo que es círculo de verdad (avatares, el pulgar del switch)                            |
+| `--radius-pill`          | **28**              | Lo que cambia de forma: botones, chips, piezas del grupo conectado, FAB                      |
 
 **El morph (forma que cambia)** es el gesto de marca del sistema. Tres casos:
 
@@ -199,19 +198,19 @@ la forma toque sus cuatro bordes. `shapePath(name, size)` devuelve
 
 ## 7. Movimiento
 
-CSS no tiene muelles: los seis del esquema *expressive* de M3E se resuelven
+CSS no tiene muelles: los seis del esquema _expressive_ de M3E se resuelven
 **analíticamente** (masa 1, ω = √k) y se muestrean en un `linear()` de 41 puntos,
 con duración = el tiempo en asentarse a menos del 0,1 %. Se hace **una vez**, se
 congela en `tokens.css` y en tiempo de ejecución no se calcula nada.
 
-| Token | k | ζ | ω (rad/s) | Duración | Dónde |
-|---|---|---|---|---|---|
-| `spatial-fast` | 800 | 0,6 | 28,3 | 360 ms | Pulsar, morph, chips |
-| `spatial-default` | 380 | 0,8 | 19,5 | 435 ms | Diálogos, hojas, entradas |
-| `spatial-slow` | 200 | 0,8 | 14,1 | 600 ms | Sello, progreso |
-| `effects-fast` | 3800 | 1 | 61,6 | 150 ms | Capa de estado, borde de campo |
-| `effects-default` | 1600 | 1 | 40,0 | 231 ms | Color, opacidad, sombra |
-| `effects-slow` | 800 | 1 | 28,3 | 327 ms | Onda (ripple) |
+| Token             | k    | ζ   | ω (rad/s) | Duración | Dónde                          |
+| ----------------- | ---- | --- | --------- | -------- | ------------------------------ |
+| `spatial-fast`    | 800  | 0,6 | 28,3      | 360 ms   | Pulsar, morph, chips           |
+| `spatial-default` | 380  | 0,8 | 19,5      | 435 ms   | Diálogos, hojas, entradas      |
+| `spatial-slow`    | 200  | 0,8 | 14,1      | 600 ms   | Sello, progreso                |
+| `effects-fast`    | 3800 | 1   | 61,6      | 150 ms   | Capa de estado, borde de campo |
+| `effects-default` | 1600 | 1   | 40,0      | 231 ms   | Color, opacidad, sombra        |
+| `effects-slow`    | 800  | 1   | 28,3      | 327 ms   | Onda (ripple)                  |
 
 Regla de asignación: **espaciales** (`ζ < 1`, rebotan) para posición, tamaño y
 forma; **de efectos** (`ζ = 1`, no rebotan) para color y opacidad. Un color que
@@ -258,7 +257,7 @@ Transitions.
 ## 8. Color
 
 Semilla de marca → esquema tonal M3 → 32 roles congelados, en claro y oscuro. En
-el origen la semilla es `#15803d`, variante *fidelity* (primary = la semilla tal
+el origen la semilla es `#15803d`, variante _fidelity_ (primary = la semilla tal
 cual) y paletas secundaria/terciaria/neutras declaradas a mano (secundaria verde
 azulado, terciaria ámbar h 55, neutros con un punto de color para que las
 superficies no sean grises).
@@ -276,7 +275,7 @@ receta (`brandScheme`): `primary` = semilla, `secondary` = `{h:175, c:24}`,
 
 Los dos roles propios, fuera de `MaterialDynamicColors`: `tertiary-soft`
 (`tertiary.tone(dark ? 30 : 90)`) y `on-tertiary-soft` (`tone(dark ? 90 : 30)`).
-Existen porque con *fidelity* `tertiary-container` sale oscuro y no sirve como
+Existen porque con _fidelity_ `tertiary-container` sale oscuro y no sirve como
 fondo claro del indicador blando.
 
 ### Parejas que deben pasar AA (≥ 4,5:1)
@@ -297,11 +296,11 @@ regeneran.
 Un contenedor declara su sección y **reescribe el acento**; los hijos solo usan
 las variables, nunca un rol directo de color, cuando el color significa «sección»:
 
-| Variable | Qué es |
-|---|---|
-| `--accent` / `--on-accent` | El color fuerte de la sección (botón `filled`, elegido, foco) |
-| `--accent-container` / `--on-accent-container` | Su contenedor (FAB, cabeceras) |
-| `--accent-soft` / `--on-accent-soft` | Su contenedor **claro** (botón tonal, chip elegido, subitem de un cajón, aviso informativo) |
+| Variable                                       | Qué es                                                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `--accent` / `--on-accent`                     | El color fuerte de la sección (botón `filled`, elegido, foco)                               |
+| `--accent-container` / `--on-accent-container` | Su contenedor (FAB, cabeceras)                                                              |
+| `--accent-soft` / `--on-accent-soft`           | Su contenedor **claro** (botón tonal, chip elegido, subitem de un cajón, aviso informativo) |
 
 El mecanismo es un selector `[data-section="…"]` que reescribe las seis. En el
 origen, tres secciones: `deporte` = primary, `hoy` = secondary, `nutricion` =
@@ -334,14 +333,14 @@ anexo B los busca. El lenguaje de implementación, no.
 
 ### 9.1 Botones
 
-| Primitiva | Markup y clases | Variantes | Medidas |
-|---|---|---|---|
-| `Button` | `<button type="button" class="btn state btn-{variant} {size}">` | `filled` (principal, acento) · `tonal` (secundaria con peso) · `outlined` · `text` · `danger` | `sm` `h-10 px-4 text-label-l` · `md` `h-12 px-6 text-label-l` · `lg` `h-14 px-7 text-title-m` · `icon` `size-12` · `icon-sm` `size-10` |
-| `buttonClass({variant,size})` | — | — | Para `<a>`/`<Link>` que deben *parecer* un botón |
-| `SplitButton` | dos mitades unidas, esquinas interiores pequeñas | `filled` · `tonal` | El de `Button` |
-| `ConnectedGroup` + `ConnectedItem` | `.connected` sobre `role="group"` con etiqueta | — | Piezas `h-10`, `flex: 1 1 auto` |
-| `Fab` | `.fab`, `extended` lleva etiqueta | `sm` 40 · `md` 56 · `lg` 96 | — |
-| `Chip` | `.chip state` | — | 32 px visibles, 48 de área (`::after`) |
+| Primitiva                          | Markup y clases                                                 | Variantes                                                                                     | Medidas                                                                                                                                |
+| ---------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`                           | `<button type="button" class="btn state btn-{variant} {size}">` | `filled` (principal, acento) · `tonal` (secundaria con peso) · `outlined` · `text` · `danger` | `sm` `h-10 px-4 text-label-l` · `md` `h-12 px-6 text-label-l` · `lg` `h-14 px-7 text-title-m` · `icon` `size-12` · `icon-sm` `size-10` |
+| `buttonClass({variant,size})`      | —                                                               | —                                                                                             | Para `<a>`/`<Link>` que deben _parecer_ un botón                                                                                       |
+| `SplitButton`                      | dos mitades unidas, esquinas interiores pequeñas                | `filled` · `tonal`                                                                            | El de `Button`                                                                                                                         |
+| `ConnectedGroup` + `ConnectedItem` | `.connected` sobre `role="group"` con etiqueta                  | —                                                                                             | Piezas `h-10`, `flex: 1 1 auto`                                                                                                        |
+| `Fab`                              | `.fab`, `extended` lleva etiqueta                               | `sm` 40 · `md` 56 · `lg` 96                                                                   | —                                                                                                                                      |
+| `Chip`                             | `.chip state`                                                   | —                                                                                             | 32 px visibles, 48 de área (`::after`)                                                                                                 |
 
 Comportamiento:
 
@@ -363,30 +362,30 @@ Comportamiento:
 
 ### 9.2 Superficies
 
-| Primitiva | Clases | Notas |
-|---|---|---|
-| `Card` | `.card` + `.card-{elevated\|filled\|outlined\|tonal}` (por defecto `tonal`) | Cada variante declara **su `--field-bg`**, para que la etiqueta flotante de un campo de dentro tape el borde con el color correcto |
-| `cardClass(variant)` | — | Para un `<Link>`, `<button>` o `<ul>` que hace de tarjeta |
-| `.card-interactive` | — | Tarjeta que se pulsa: al pulsar escala 0,98 y el radio sube a `--radius-xl` |
-| `Alert` | `.alert` + `.alert-{error\|info}` | `error` → `role="alert"`; `info` → `role="status"` |
-| `Badge` | `.badge-{pending\|done\|neutral\|accent}` | Significan «pendiente» / «hecho» en cualquier pantalla: en el origen son colores **fijos**, no de sección |
-| `Kbd` | tecla de atajo | |
-| `.section-label` | Utilidad | Etiqueta de sección (mayúsculas, `label-m`, 0,1em, peso 700) |
-| `.list-row` | Utilidad | Fila de lista (flex, `--spacing-stack`, `--radius-m`) |
-| `.skeleton` | Utilidad | Carga: tono `surface-container-high` que respira (nunca un barrido blanco: deslumbra en oscuro) |
+| Primitiva            | Clases                                                                      | Notas                                                                                                                              |
+| -------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Card`               | `.card` + `.card-{elevated\|filled\|outlined\|tonal}` (por defecto `tonal`) | Cada variante declara **su `--field-bg`**, para que la etiqueta flotante de un campo de dentro tape el borde con el color correcto |
+| `cardClass(variant)` | —                                                                           | Para un `<Link>`, `<button>` o `<ul>` que hace de tarjeta                                                                          |
+| `.card-interactive`  | —                                                                           | Tarjeta que se pulsa: al pulsar escala 0,98 y el radio sube a `--radius-xl`                                                        |
+| `Alert`              | `.alert` + `.alert-{error\|info}`                                           | `error` → `role="alert"`; `info` → `role="status"`                                                                                 |
+| `Badge`              | `.badge-{pending\|done\|neutral\|accent}`                                   | Significan «pendiente» / «hecho» en cualquier pantalla: en el origen son colores **fijos**, no de sección                          |
+| `Kbd`                | tecla de atajo                                                              |                                                                                                                                    |
+| `.section-label`     | Utilidad                                                                    | Etiqueta de sección (mayúsculas, `label-m`, 0,1em, peso 700)                                                                       |
+| `.list-row`          | Utilidad                                                                    | Fila de lista (flex, `--spacing-stack`, `--radius-m`)                                                                              |
+| `.skeleton`          | Utilidad                                                                    | Carga: tono `surface-container-high` que respira (nunca un barrido blanco: deslumbra en oscuro)                                    |
 
 ### 9.3 Campos
 
-| Primitiva | Clases | Notas |
-|---|---|---|
-| `Input` | `.input` | Estilo **outlined** en toda la app: sobre superficies tonales un campo relleno se funde con la tarjeta. 48 px de alto, radio 4, borde `outline`; hover `on-surface`; foco borde `--accent` + sombra interior de 1 px; `aria-invalid` → borde `error` |
-| `Textarea` | `.input resize-none` | |
-| `Select` | `.input` | |
-| `Field` | `.field` + `.field-label` + `.field-support` / `.field-error` | Etiqueta **flotante**: flota con foco o con valor (`:placeholder-shown` con un placeholder de un espacio) a `translateY(-1.45rem) scale(0.75)`; con foco la etiqueta toma `--accent`; el error colorea etiqueta y texto y marca `aria-invalid`. Enlaza etiqueta, ayuda y error por id |
-| `Checkbox` | `.checkbox` (+ `.checkbox-target`) | Casilla de 18 px con **48 px** de área táctil alrededor; el visto entra con el muelle espacial |
-| `Switch` | `.switch` | 52×32; el pulgar **crece** al pulsar (1 → 1,75 rem) y salta con muelle |
-| `SearchBar` | pastilla de 56 px con la lupa delante | `tone="high"` para usarla sobre un contenedor (diálogo, hoja), donde el tono por defecto se funde; el anillo de foco lo pinta la pastilla entera |
-| `ScrollStrip` | `.scroll-x` + `data-edge` | Una sola línea que **nunca** envuelve: encoge y desplaza; el borde por el que queda contenido se desvanece (máscara de 28 px). Es el indicador de que hay más de lo que cabe |
+| Primitiva     | Clases                                                        | Notas                                                                                                                                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Input`       | `.input`                                                      | Estilo **outlined** en toda la app: sobre superficies tonales un campo relleno se funde con la tarjeta. 48 px de alto, radio 4, borde `outline`; hover `on-surface`; foco borde `--accent` + sombra interior de 1 px; `aria-invalid` → borde `error`                                  |
+| `Textarea`    | `.input resize-none`                                          |                                                                                                                                                                                                                                                                                       |
+| `Select`      | `.input`                                                      |                                                                                                                                                                                                                                                                                       |
+| `Field`       | `.field` + `.field-label` + `.field-support` / `.field-error` | Etiqueta **flotante**: flota con foco o con valor (`:placeholder-shown` con un placeholder de un espacio) a `translateY(-1.45rem) scale(0.75)`; con foco la etiqueta toma `--accent`; el error colorea etiqueta y texto y marca `aria-invalid`. Enlaza etiqueta, ayuda y error por id |
+| `Checkbox`    | `.checkbox` (+ `.checkbox-target`)                            | Casilla de 18 px con **48 px** de área táctil alrededor; el visto entra con el muelle espacial                                                                                                                                                                                        |
+| `Switch`      | `.switch`                                                     | 52×32; el pulgar **crece** al pulsar (1 → 1,75 rem) y salta con muelle                                                                                                                                                                                                                |
+| `SearchBar`   | pastilla de 56 px con la lupa delante                         | `tone="high"` para usarla sobre un contenedor (diálogo, hoja), donde el tono por defecto se funde; el anillo de foco lo pinta la pastilla entera                                                                                                                                      |
+| `ScrollStrip` | `.scroll-x` + `data-edge`                                     | Una sola línea que **nunca** envuelve: encoge y desplaza; el borde por el que queda contenido se desvanece (máscara de 28 px). Es el indicador de que hay más de lo que cabe                                                                                                          |
 
 **Contrato de `--field-bg`**: cada superficie que puede contener un campo
 declara `--field-bg` con **su propio fondo** (`.dialog` → `surface-container-high`,
@@ -396,14 +395,14 @@ en vez de dejar una franja.
 
 ### 9.4 Superficies superpuestas
 
-| Primitiva | Qué hace |
-|---|---|
-| `Scrim` | Velo que cierra al pulsar, **solo si el clic empieza y acaba en él** (no si se ha arrastrado desde dentro) |
-| `Dialog` | Escritorio: centrado, radio 28. Por debajo de `md`, según `mobile`: `fullscreen` (por defecto), `sheet` (hoja inferior con asa) o `center`. Un solo `role="dialog"` con su etiqueta. Escape cierra |
-| `Sheet` | Hoja inferior con asa arrastrable. Desde `md` es un panel lateral |
-| `OverlayHeader` | Cabecera estándar de hoja o diálogo: título + cerrar |
+| Primitiva                          | Qué hace                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Scrim`                            | Velo que cierra al pulsar, **solo si el clic empieza y acaba en él** (no si se ha arrastrado desde dentro)                                                                                                                                                                                                                                                                                                                 |
+| `Dialog`                           | Escritorio: centrado, radio 28. Por debajo de `md`, según `mobile`: `fullscreen` (por defecto), `sheet` (hoja inferior con asa) o `center`. Un solo `role="dialog"` con su etiqueta. Escape cierra                                                                                                                                                                                                                         |
+| `Sheet`                            | Hoja inferior con asa arrastrable. Desde `md` es un panel lateral                                                                                                                                                                                                                                                                                                                                                          |
+| `OverlayHeader`                    | Cabecera estándar de hoja o diálogo: título + cerrar                                                                                                                                                                                                                                                                                                                                                                       |
 | `useTooltip(content, delay = 500)` | Tooltip **enriquecido** (puede llevar foto y texto). Aparece tras 500 ms con el cursor o con el foco de teclado; se cierra al salir, al perder el foco, con Escape (pila de capas) o al desplazar. Se pinta `fixed` — el `overflow` de un contenedor lo recortaría — y **como hermano** del disparador, nunca dentro: dentro, su texto entraría en el nombre accesible del enlace. Ancho fijo 224 px. No recibe el puntero |
-| `SnackbarHost` + `useSnackbar()` | Un snackbar global con «Deshacer». **Uno a la vez** (el nuevo sustituye al viejo), 6 s, y cada `onUndo` se ejecuta **como mucho una vez**. La acción ya está hecha cuando se muestra: `onUndo` la revierte. Piel `.snackbar` (`inverse-surface`, radio 8) y acción en `inverse-primary` |
+| `SnackbarHost` + `useSnackbar()`   | Un snackbar global con «Deshacer». **Uno a la vez** (el nuevo sustituye al viejo), 6 s, y cada `onUndo` se ejecuta **como mucho una vez**. La acción ya está hecha cuando se muestra: `onUndo` la revierte. Piel `.snackbar` (`inverse-surface`, radio 8) y acción en `inverse-primary`                                                                                                                                    |
 
 **Arrastre de la hoja** (puro, con test): al tirar hacia abajo, 1:1; hacia arriba
 (ya está en su tope) con resistencia `-24 * (1 - exp(dy / 80))`. Al soltar, cierra
@@ -413,16 +412,16 @@ gesto vive en el asa.
 
 ### 9.5 Piezas expresivas (SVG + CSS, sin librería)
 
-| Primitiva | Qué es | Movimiento |
-|---|---|---|
-| `Shape({name,size})` | Forma M3E rellena de `currentColor` | Cambiar `name` la transforma: transición de `d`, muelle espacial |
-| `Loader` | Una forma que gira y se transforma en la siguiente de una secuencia | `.loader path` a 420 ms; el texto («Cargando…») queda solo para el lector |
-| `WavyProgress` | Progreso lineal ondulado: lo hecho ondula, la pista es recta. `waveOnly` = solo la ola que avanza | La onda deriva sola; el avance con el muelle espacial lento |
-| `WavyRing` | El mismo progreso en círculo, con la cifra dentro. `waveOnly`: sin círculo de fondo (a 0 no pinta nada y el arco crece con lo marcado) | Ídem |
-| `CountUp` | Cifra que cuenta hasta su valor en 900 ms (ease-out quart, entero) | El lector oye solo el valor final |
-| `RewardSeal` | Sello de recompensa: galleta de 12 lóbulos (sol) que entra con el muelle espacial lento, con la cifra dentro. **Sin confeti** | `.seal` + rotación muy lenta del borde |
-| `EmptyState` | Composición de tres formas del color de la sección + texto | |
-| `Monogram` | Miniatura sin foto: una forma M3E **estable por nombre** (el mismo nombre, la misma forma) con su inicial | |
+| Primitiva            | Qué es                                                                                                                                 | Movimiento                                                                |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `Shape({name,size})` | Forma M3E rellena de `currentColor`                                                                                                    | Cambiar `name` la transforma: transición de `d`, muelle espacial          |
+| `Loader`             | Una forma que gira y se transforma en la siguiente de una secuencia                                                                    | `.loader path` a 420 ms; el texto («Cargando…») queda solo para el lector |
+| `WavyProgress`       | Progreso lineal ondulado: lo hecho ondula, la pista es recta. `waveOnly` = solo la ola que avanza                                      | La onda deriva sola; el avance con el muelle espacial lento               |
+| `WavyRing`           | El mismo progreso en círculo, con la cifra dentro. `waveOnly`: sin círculo de fondo (a 0 no pinta nada y el arco crece con lo marcado) | Ídem                                                                      |
+| `CountUp`            | Cifra que cuenta hasta su valor en 900 ms (ease-out quart, entero)                                                                     | El lector oye solo el valor final                                         |
+| `RewardSeal`         | Sello de recompensa: galleta de 12 lóbulos (sol) que entra con el muelle espacial lento, con la cifra dentro. **Sin confeti**          | `.seal` + rotación muy lenta del borde                                    |
+| `EmptyState`         | Composición de tres formas del color de la sección + texto                                                                             |                                                                           |
+| `Monogram`           | Miniatura sin foto: una forma M3E **estable por nombre** (el mismo nombre, la misma forma) con su inicial                              |                                                                           |
 
 ### 9.6 Iconos
 
@@ -435,11 +434,11 @@ un botón hereda su color y su área de 48 px.
 
 ## 10. Comportamiento compartido
 
-| Mecanismo | Contrato |
-|---|---|
-| **Onda** (`.ripple`) | La dispara solo `pointerdown` (el teclado ya tiene la capa de estado de `:focus-visible`); el elemento se monta a sí mismo y se retira al acabar la animación. `--state-drag` = 16 % mientras se arrastra |
-| **Pila de Escape** | Diálogos, hojas y menús se apilan al abrirse y un **único** listener de `window` avisa solo a la capa de encima. Un Escape que otro ya gestionó (`event.defaultPrevented`: por ejemplo dnd-kit cancelando un arrastre de teclado) **no** cierra nada. Esto sustituye a la guarda frágil de «mira si alguien ya lo previno» |
-| **Tema** | `system` \| `light` \| `dark`, en `localStorage` bajo una clave propia, aplicado como `data-theme` en `<html>`. Un script clásico **en el `<head>`, antes del primer pintado**, pone el tema (la página sale en su tema aunque el bundle tarde o no llegue: medido con el JS bloqueado). Con «sistema», sigue el cambio del sistema en vivo (`matchMedia`). En el origen se elige solo en Ajustes y en la paleta de comandos. La regla del script y la del código (clave + resolución) se atan con un test |
+| Mecanismo                                           | Contrato                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Onda** (`.ripple`)                                | La dispara solo `pointerdown` (el teclado ya tiene la capa de estado de `:focus-visible`); el elemento se monta a sí mismo y se retira al acabar la animación. `--state-drag` = 16 % mientras se arrastra                                                                                                                                                                                                                                                                                                                                                  |
+| **Pila de Escape**                                  | Diálogos, hojas y menús se apilan al abrirse y un **único** listener de `window` avisa solo a la capa de encima. Un Escape que otro ya gestionó (`event.defaultPrevented`: por ejemplo dnd-kit cancelando un arrastre de teclado) **no** cierra nada. Esto sustituye a la guarda frágil de «mira si alguien ya lo previno»                                                                                                                                                                                                                                 |
+| **Tema**                                            | `system` \| `light` \| `dark`, en `localStorage` bajo una clave propia, aplicado como `data-theme` en `<html>`. Un script clásico **en el `<head>`, antes del primer pintado**, pone el tema (la página sale en su tema aunque el bundle tarde o no llegue: medido con el JS bloqueado). Con «sistema», sigue el cambio del sistema en vivo (`matchMedia`). En el origen se elige solo en Ajustes y en la paleta de comandos. La regla del script y la del código (clave + resolución) se atan con un test                                                 |
 | **Transformación de contenedor** (View Transitions) | Lo que se pulsa **crece hasta lo que abre**: el mismo `view-transition-name` (`create`) en el origen en la foto «antes» y en el destino en la «después» — dos iguales anulan la transición. El origen se despide pronto (`--duration-effects-fast`) y el contenido del destino llena el contenedor (`height: 100%`, `object-fit: cover`, `overflow: clip`), si no se ve estirado mientras crece. El destino apaga su propia animación de entrada: la hace la transición. Carga directa y editar no animan. Con movimiento reducido, no hay View Transition |
 
 ---
@@ -598,22 +597,274 @@ el contraste de cada pareja para que el valor esté a la vista de quien lo lee.
   --color-inverse-primary: #79db8d;
   --color-scrim: #000000;
   /* k=800, ζ=0.6 (ω=28.3 rad/s) */
-  --ease-spatial-fast: linear(0, 0.029, 0.105, 0.21, 0.331, 0.458, 0.581, 0.696, 0.797, 0.882, 0.952, 1.006, 1.045, 1.072, 1.088, 1.094, 1.094, 1.088, 1.079, 1.068, 1.056, 1.045, 1.033, 1.023, 1.014, 1.007, 1.001, 0.997, 0.994, 0.992, 0.991, 0.991, 0.991, 0.992, 0.993, 0.994, 0.995, 0.996, 0.997, 0.998, 1);
+  --ease-spatial-fast: linear(
+    0,
+    0.029,
+    0.105,
+    0.21,
+    0.331,
+    0.458,
+    0.581,
+    0.696,
+    0.797,
+    0.882,
+    0.952,
+    1.006,
+    1.045,
+    1.072,
+    1.088,
+    1.094,
+    1.094,
+    1.088,
+    1.079,
+    1.068,
+    1.056,
+    1.045,
+    1.033,
+    1.023,
+    1.014,
+    1.007,
+    1.001,
+    0.997,
+    0.994,
+    0.992,
+    0.991,
+    0.991,
+    0.991,
+    0.992,
+    0.993,
+    0.994,
+    0.995,
+    0.996,
+    0.997,
+    0.998,
+    1
+  );
   --duration-spatial-fast: 360ms;
   /* k=380, ζ=0.8 (ω=19.5 rad/s) */
-  --ease-spatial-default: linear(0, 0.02, 0.072, 0.143, 0.227, 0.316, 0.406, 0.492, 0.573, 0.646, 0.712, 0.77, 0.82, 0.863, 0.898, 0.927, 0.951, 0.969, 0.984, 0.995, 1.003, 1.008, 1.012, 1.014, 1.015, 1.015, 1.015, 1.014, 1.013, 1.011, 1.01, 1.009, 1.007, 1.006, 1.005, 1.004, 1.003, 1.003, 1.002, 1.001, 1);
+  --ease-spatial-default: linear(
+    0,
+    0.02,
+    0.072,
+    0.143,
+    0.227,
+    0.316,
+    0.406,
+    0.492,
+    0.573,
+    0.646,
+    0.712,
+    0.77,
+    0.82,
+    0.863,
+    0.898,
+    0.927,
+    0.951,
+    0.969,
+    0.984,
+    0.995,
+    1.003,
+    1.008,
+    1.012,
+    1.014,
+    1.015,
+    1.015,
+    1.015,
+    1.014,
+    1.013,
+    1.011,
+    1.01,
+    1.009,
+    1.007,
+    1.006,
+    1.005,
+    1.004,
+    1.003,
+    1.003,
+    1.002,
+    1.001,
+    1
+  );
   --duration-spatial-default: 435ms;
   /* k=200, ζ=0.8 (ω=14.1 rad/s) */
-  --ease-spatial-slow: linear(0, 0.02, 0.072, 0.144, 0.227, 0.317, 0.406, 0.492, 0.573, 0.647, 0.713, 0.771, 0.821, 0.863, 0.898, 0.927, 0.951, 0.969, 0.984, 0.995, 1.003, 1.008, 1.012, 1.014, 1.015, 1.015, 1.015, 1.014, 1.013, 1.011, 1.01, 1.009, 1.007, 1.006, 1.005, 1.004, 1.003, 1.003, 1.002, 1.001, 1);
+  --ease-spatial-slow: linear(
+    0,
+    0.02,
+    0.072,
+    0.144,
+    0.227,
+    0.317,
+    0.406,
+    0.492,
+    0.573,
+    0.647,
+    0.713,
+    0.771,
+    0.821,
+    0.863,
+    0.898,
+    0.927,
+    0.951,
+    0.969,
+    0.984,
+    0.995,
+    1.003,
+    1.008,
+    1.012,
+    1.014,
+    1.015,
+    1.015,
+    1.015,
+    1.014,
+    1.013,
+    1.011,
+    1.01,
+    1.009,
+    1.007,
+    1.006,
+    1.005,
+    1.004,
+    1.003,
+    1.003,
+    1.002,
+    1.001,
+    1
+  );
   --duration-spatial-slow: 600ms;
   /* k=3800, ζ=1 (ω=61.6 rad/s) */
-  --ease-effects-fast: linear(0, 0.023, 0.079, 0.154, 0.237, 0.321, 0.404, 0.481, 0.552, 0.615, 0.672, 0.721, 0.764, 0.802, 0.833, 0.861, 0.884, 0.903, 0.92, 0.933, 0.945, 0.954, 0.962, 0.969, 0.974, 0.979, 0.983, 0.986, 0.988, 0.991, 0.992, 0.994, 0.995, 0.996, 0.997, 0.997, 0.998, 0.998, 0.999, 0.999, 1);
+  --ease-effects-fast: linear(
+    0,
+    0.023,
+    0.079,
+    0.154,
+    0.237,
+    0.321,
+    0.404,
+    0.481,
+    0.552,
+    0.615,
+    0.672,
+    0.721,
+    0.764,
+    0.802,
+    0.833,
+    0.861,
+    0.884,
+    0.903,
+    0.92,
+    0.933,
+    0.945,
+    0.954,
+    0.962,
+    0.969,
+    0.974,
+    0.979,
+    0.983,
+    0.986,
+    0.988,
+    0.991,
+    0.992,
+    0.994,
+    0.995,
+    0.996,
+    0.997,
+    0.997,
+    0.998,
+    0.998,
+    0.999,
+    0.999,
+    1
+  );
   --duration-effects-fast: 150ms;
   /* k=1600, ζ=1 (ω=40.0 rad/s) */
-  --ease-effects-default: linear(0, 0.023, 0.079, 0.153, 0.236, 0.321, 0.403, 0.481, 0.551, 0.615, 0.671, 0.721, 0.764, 0.801, 0.833, 0.86, 0.883, 0.903, 0.919, 0.933, 0.945, 0.954, 0.962, 0.969, 0.974, 0.979, 0.983, 0.986, 0.988, 0.991, 0.992, 0.994, 0.995, 0.996, 0.997, 0.997, 0.998, 0.998, 0.998, 0.999, 1);
+  --ease-effects-default: linear(
+    0,
+    0.023,
+    0.079,
+    0.153,
+    0.236,
+    0.321,
+    0.403,
+    0.481,
+    0.551,
+    0.615,
+    0.671,
+    0.721,
+    0.764,
+    0.801,
+    0.833,
+    0.86,
+    0.883,
+    0.903,
+    0.919,
+    0.933,
+    0.945,
+    0.954,
+    0.962,
+    0.969,
+    0.974,
+    0.979,
+    0.983,
+    0.986,
+    0.988,
+    0.991,
+    0.992,
+    0.994,
+    0.995,
+    0.996,
+    0.997,
+    0.997,
+    0.998,
+    0.998,
+    0.998,
+    0.999,
+    1
+  );
   --duration-effects-default: 231ms;
   /* k=800, ζ=1 (ω=28.3 rad/s) */
-  --ease-effects-slow: linear(0, 0.023, 0.079, 0.154, 0.237, 0.321, 0.404, 0.481, 0.552, 0.615, 0.672, 0.722, 0.765, 0.802, 0.834, 0.861, 0.884, 0.903, 0.92, 0.933, 0.945, 0.954, 0.962, 0.969, 0.975, 0.979, 0.983, 0.986, 0.988, 0.991, 0.992, 0.994, 0.995, 0.996, 0.997, 0.997, 0.998, 0.998, 0.999, 0.999, 1);
+  --ease-effects-slow: linear(
+    0,
+    0.023,
+    0.079,
+    0.154,
+    0.237,
+    0.321,
+    0.404,
+    0.481,
+    0.552,
+    0.615,
+    0.672,
+    0.722,
+    0.765,
+    0.802,
+    0.834,
+    0.861,
+    0.884,
+    0.903,
+    0.92,
+    0.933,
+    0.945,
+    0.954,
+    0.962,
+    0.969,
+    0.975,
+    0.979,
+    0.983,
+    0.986,
+    0.988,
+    0.991,
+    0.992,
+    0.994,
+    0.995,
+    0.996,
+    0.997,
+    0.997,
+    0.998,
+    0.998,
+    0.999,
+    0.999,
+    1
+  );
   --duration-effects-slow: 327ms;
 }
 

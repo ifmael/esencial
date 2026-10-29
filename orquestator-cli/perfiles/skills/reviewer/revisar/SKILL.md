@@ -1,4 +1,5 @@
 ---
+
 name: revisar-cambio
 description: Cómo revisar un cambio de Esencial y emitir el veredicto.
 ---

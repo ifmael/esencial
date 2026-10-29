@@ -107,11 +107,10 @@ con `DEV_AUTH=1`.
 Con Workers Builds conectado (repo `ifmael/esencial`, branch `main`) hacen falta
 **dos builds, uno por Worker**:
 
-| Worker | Root directory | Build command | Deploy command |
-| --- | --- | --- | --- |
-| `esencial` | `/` | `pnpm build` | `npx wrangler deploy` |
-| `esencial-api` | `api/` | *(vacío)* | `npx wrangler deploy` |
-
+| Worker         | Root directory | Build command | Deploy command        |
+| -------------- | -------------- | ------------- | --------------------- |
+| `esencial`     | `/`            | `pnpm build`  | `npx wrangler deploy` |
+| `esencial-api` | `api/`         | _(vacío)_     | `npx wrangler deploy` |
 - El build del frontal **no necesita variable en el panel**: el SPA se construye
   contra `https://esencial-api.nutrirutina.workers.dev` porque esa URL vive en el
   repo, en `web/.env.production` (Vite la embebe en `pnpm build`; una variable de

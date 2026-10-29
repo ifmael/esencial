@@ -9,21 +9,21 @@ App de bienestar personal (recetas + plan de fuerza) en **dos Workers** de
 Cloudflare: uno sirve el SPA y gatea el HTML, el otro expone la API.
 
 - `api/` — backend **Hono** sobre **Cloudflare Workers** (Worker `esencial-api`),
-DB **D1** (SQLite) y R2 para las fotos.
+  DB **D1** (SQLite) y R2 para las fotos.
 - `web/` — SPA **React 19** + **Vite** + **react-router 7** + **Tailwind**; el
-Worker del frontal (`esencial`) sirve los assets y gatea el HTML.
+  Worker del frontal (`esencial`) sirve los assets y gatea el HTML.
 - Monorepo **pnpm**. **Dos despliegues** (B'): el navegador habla con los dos
-Workers por separado.
+  Workers por separado.
 
 ## Convenciones del proyecto
 
 - **Conventional commits** solamente. **NUNCA** añadir `Co-Authored-By` ni
-atribución de IA a los commits.
+  atribución de IA a los commits.
 - **TDD estricto (RED→GREEN)**: cada cambio empieza con un test que falla y
-termina con el test verde
+  termina con el test verde
 - **Verifica antes de afirmar**: si no estás seguro de un dato técnico. No confirmes sin verificar.
 - **Respuestas concisas por defecto**: mínimo útil; expande solo si se pide o la
-tarea lo requiere.
+  tarea lo requiere.
 - **Propón alternativas con tradeoffs** cuando haya un cruce real de diseño.
 - La UI y los datos van en **español**; nombres de ejercicios/recetas en español.
 
@@ -63,7 +63,7 @@ aplican tal cual estas utilidades: `.section-label`, `.list-row`,
 `.card-interactive`, `.skeleton`, `.state` (capa de estado M3 de cualquier
 pulsable propio, junto con `onPointerDown={ripple}`), `.stagger` (entrada
 escalonada; cada hijo con `--i`), `.type-move`, `.tabular` (cifras), `.text-e`
-(variante *emphasized*) y `motion-*`.
+(variante _emphasized_) y `motion-*`.
 
 **Al añadir algo nuevo:** reutiliza una primitiva. Si no encaja, añade primero el
 token (`:root` + `@theme inline`) y después la primitiva. `pnpm lint` rechaza
@@ -79,16 +79,15 @@ Se aceptan los derivados (`var()`, `calc()`, `env()`).
 
 Escala vigente — todo lo demás sale de aquí:
 
-| Familia | Tokens |
-| --- | --- |
-| Tipografía (roles M3) | `display-l` 57 · `display-m` 45 · `display-s` 36 · `headline-l` 32 · `headline-m` 28 · `headline-s` 24 · `title-l` 22 · `title-m` 16 · `title-s` 14 · `body-l` 16 · `body-m` 14 · `body-s` 12 · `label-l` 14 · `label-m` 12 · `label-s` 11; `+ text-e` = *emphasized* (peso 720, anchura 112 %, ROND 100) |
-| Fuente | Google Sans Flex auto-alojada (`web/src/fonts/`, OFL), subset latino, ejes `wght` 400–800 · `wdth` 100–125 · `opsz` 12–60 · `ROND` 0–100 |
-| Color | roles M3 (`primary`, `on-primary`, `primary-container`… `surface-container-lowest…highest`, `outline(-variant)`, `inverse-*`, `scrim`) + `accent*` = color de la sección |
-| Espaciado | `stack` 12 · `gutter` 16 · `card` 20 · `section` 32 |
-| Forma | `none` 0 · `xs` 4 · `s` 8 · `m` 12 · `l` 16 · `l-inc` 20 · `xl` 28 · `xl-inc` 32 · `xxl` 48 · `full`; `--radius-pill` 28 para lo que cambia de forma |
-| Elevación | `shadow-1/2/3`, **solo** en el FAB, los menús, los tooltips, las hojas, la barra flotante y el snackbar; el resto, jerarquía por tono |
-| Movimiento | muelles M3E: `motion-spatial-fast` (k 800, ζ 0,6) · `motion-spatial` (380, 0,8) · `motion-spatial-slow` (200, 0,8) rebotan (posición, tamaño, forma); `motion-effects-fast/-/-slow` (3800/1600/800, ζ 1) no rebotan (color, opacidad) |
-
+| Familia               | Tokens                                                                                                                                                                                                                                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tipografía (roles M3) | `display-l` 57 · `display-m` 45 · `display-s` 36 · `headline-l` 32 · `headline-m` 28 · `headline-s` 24 · `title-l` 22 · `title-m` 16 · `title-s` 14 · `body-l` 16 · `body-m` 14 · `body-s` 12 · `label-l` 14 · `label-m` 12 · `label-s` 11; `+ text-e` = _emphasized_ (peso 720, anchura 112 %, ROND 100) |
+| Fuente                | Google Sans Flex auto-alojada (`web/src/fonts/`, OFL), subset latino, ejes `wght` 400–800 · `wdth` 100–125 · `opsz` 12–60 · `ROND` 0–100                                                                                                                                                                  |
+| Color                 | roles M3 (`primary`, `on-primary`, `primary-container`… `surface-container-lowest…highest`, `outline(-variant)`, `inverse-*`, `scrim`) + `accent*` = color de la sección                                                                                                                                  |
+| Espaciado             | `stack` 12 · `gutter` 16 · `card` 20 · `section` 32                                                                                                                                                                                                                                                       |
+| Forma                 | `none` 0 · `xs` 4 · `s` 8 · `m` 12 · `l` 16 · `l-inc` 20 · `xl` 28 · `xl-inc` 32 · `xxl` 48 · `full`; `--radius-pill` 28 para lo que cambia de forma                                                                                                                                                      |
+| Elevación             | `shadow-1/2/3`, **solo** en el FAB, los menús, los tooltips, las hojas, la barra flotante y el snackbar; el resto, jerarquía por tono                                                                                                                                                                     |
+| Movimiento            | muelles M3E: `motion-spatial-fast` (k 800, ζ 0,6) · `motion-spatial` (380, 0,8) · `motion-spatial-slow` (200, 0,8) rebotan (posición, tamaño, forma); `motion-effects-fast/-/-slow` (3800/1600/800, ζ 1) no rebotan (color, opacidad)                                                                     |
 - **Color por sección**: `[data-section="deporte|nutricion|hoy"]` reescribe
   `--accent*` (primary, tertiary, secondary); el Shell lo pone según la ruta.
   Úsalo (`bg-accent`, `text-on-accent-container`…) en lo que pertenece a la
@@ -106,7 +105,7 @@ Escala vigente — todo lo demás sale de aquí:
   `useTheme()` (`useSyncExternalStore`; `applyTheme` avisa) mantiene a los dos
   al día. Lo cubre `tests/ajustes.test.tsx`. En su tarjeta «Sesión» el cierre de
   sesión —cosa de Cloudflare Access, un enlace, no del router— va como botón
-  *outlined* al lado del texto y **sin** la flecha de las filas que navegan:
+  _outlined_ al lado del texto y **sin** la flecha de las filas que navegan:
   hace, no lleva.
 - **Nombre de perfil** (`0021_users_name.sql`): la identidad la prueba Access y
   solo trae el email (el IdP de One-time PIN no aporta `name`), así que el nombre
@@ -115,7 +114,7 @@ Escala vigente — todo lo demás sale de aquí:
   por encima de 60 caracteres es 400 `{field:'name'}`; lo devuelven `GET /api/me`
   y `GET /api/users`. No se pinta en la cabecera de Hoy ni en la lista de
   familia.
-- **Campos**: estilo *outlined* en toda la app, con `Field` (etiqueta flotante;
+- **Campos**: estilo _outlined_ en toda la app, con `Field` (etiqueta flotante;
   cada superficie declara `--field-bg` para el recorte).
 - **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
   (44 px) y el quitar receta de una celda de comidas (40 px): la columna no da más.
@@ -402,13 +401,12 @@ No todos los ejercicios encajan en kilos × repeticiones, así que cada ejercici
 de fuerza declara su **unidad** en `exercises.metric` (migración aditiva
 `0025_exercise_metric.sql`):
 
-|Métrica|Qué se registra|Ejemplos|
-|---|---|---|
-|`weight_reps`|kg × repeticiones (el caso normal; también los que admiten lastre o implemento)|Press banca, dominadas con cinturón, fondos|
-|`reps`|repeticiones sin peso|Flexiones, rueda abdominal, bicho muerto|
-|`time`|segundos (isométricos y aguantes)|Plancha, bote hueco, colgarse de la barra|
-|`weight_time`|kilos + segundos|Paseo del granjero|
-
+| Métrica       | Qué se registra                                                                 | Ejemplos                                    |
+| ------------- | ------------------------------------------------------------------------------- | ------------------------------------------- |
+| `weight_reps` | kg × repeticiones (el caso normal; también los que admiten lastre o implemento) | Press banca, dominadas con cinturón, fondos |
+| `reps`        | repeticiones sin peso                                                           | Flexiones, rueda abdominal, bicho muerto    |
+| `time`        | segundos (isométricos y aguantes)                                               | Plancha, bote hueco, colgarse de la barra   |
+| `weight_time` | kilos + segundos                                                                | Paseo del granjero                          |
 - El vocabulario vive en **dos espejos que un test ata**: `METRICS`
   (`api/src/api-validation.ts`) y `METRIC_LABELS` (`web/src/lib/exercises.ts`);
   lo cubre `web/tests/exercise-metric.test.ts`. El editor de ejercicios lo elige
@@ -792,7 +790,7 @@ es la del hombro anterior (62×11); en la modal el dibujo medía 176×468.
 **Crear sigue un único patrón** (recetas, plantillas, ejercicios y el menú FAB):
 lo pulsado **crece hasta lo que abre** (transformación de contenedor con View
 Transitions). El FAB es el único elevado; el botón de cabecera es un `Button`
-*filled* de tamaño por defecto, sin sombra. El mecanismo vive en
+_filled_ de tamaño por defecto, sin sombra. El mecanismo vive en
 `lib/view-transition.ts`: el `onClick` llama a `morphFrom(e.currentTarget)` antes
 de navegar (o de abrir, con `runViewTransition` + `flushSync`, como «Nuevo
 ejercicio», que no tiene ruta), y el destino pone `style={useCreateMorph()}`.
@@ -943,11 +941,10 @@ el selector de ejercicios (mapa + fichas de grupo) y en el editor.
 
 ## Despliegue: dos Workers (B')
 
-| Worker | Config | Qué sirve | URL |
-| --- | --- | --- | --- |
-| `esencial` (frontal) | `wrangler.toml` (raíz), `main = web/worker/index.ts` | assets de `web/dist` + cabeceras de seguridad | `https://esencial.nutrirutina.workers.dev` |
-| `esencial-api` | `api/wrangler.toml` | las rutas `/api/*` (Hono), D1 y R2; sin assets | `https://esencial-api.nutrirutina.workers.dev` |
-
+| Worker               | Config                                               | Qué sirve                                      | URL                                            |
+| -------------------- | ---------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------- |
+| `esencial` (frontal) | `wrangler.toml` (raíz), `main = web/worker/index.ts` | assets de `web/dist` + cabeceras de seguridad  | `https://esencial.nutrirutina.workers.dev`     |
+| `esencial-api`       | `api/wrangler.toml`                                  | las rutas `/api/*` (Hono), D1 y R2; sin assets | `https://esencial-api.nutrirutina.workers.dev` |
 - El navegador llama a **los dos**: la SPA usa la URL absoluta de la API
   (`VITE_API_URL`, en `web/.env.production`; dev/e2e la sobreescriben) con
   `credentials: "include"`, y la API
@@ -977,42 +974,42 @@ histórico de `api/schema.sql`) y crea las tablas base. Así
 `schema.sql` a mano.
 
 - `api/schema.sql` es el **estado FINAL** del esquema (lo aplica el bootstrap de
-tests junto a los deltas `0002`/`0003`/`0005`); `0001_baseline.sql` queda
-congelado como v1 y NO se reescribe.
+  tests junto a los deltas `0002`/`0003`/`0005`); `0001_baseline.sql` queda
+  congelado como v1 y NO se reescribe.
 - Los deltas aditivos (`photo_path`, `section`, `recipe_tags`, `shopping_items`)
-viven en `0002`+; los deltas de **reestructuración** (p. ej. `0009_fuerza_v2`
-recrea `plan_sessions` con `plan_session_exercises` y `cardio_logs`) viven en
-su propio número y NO se añaden al bootstrap de tests (schema.sql ya los
-refleja).
+  viven en `0002`+; los deltas de **reestructuración** (p. ej. `0009_fuerza_v2`
+  recrea `plan_sessions` con `plan_session_exercises` y `cardio_logs`) viven en
+  su propio número y NO se añaden al bootstrap de tests (schema.sql ya los
+  refleja).
 - `0010_exercise_regions.sql` es **aditivo**: crea `exercise_regions` y siembra
-las 237 sub-regiones de los 91 ejercicios. La tabla está en `schema.sql` y en la
-lista `TABLES` del bootstrap de tests (`api/tests/helpers.ts`) — el resto del
-sembrado no va al bootstrap, igual que `0004`/`0006`.
+  las 237 sub-regiones de los 91 ejercicios. La tabla está en `schema.sql` y en la
+  lista `TABLES` del bootstrap de tests (`api/tests/helpers.ts`) — el resto del
+  sembrado no va al bootstrap, igual que `0004`/`0006`.
 - `0011_exercise_regions_semilla.sql` es la **corrección de datos** de esa
-siembra (una fila: el sóleo que faltaba en `Elevación de gemelos en prensa`).
-`0010` se queda congelada como sembrado histórico; cualquier arreglo de datos
-posterior va en su propio número. Los tests de la API **no** ven estas filas (su
-bootstrap no siembra regiones), así que lo verifica el e2e.
+  siembra (una fila: el sóleo que faltaba en `Elevación de gemelos en prensa`).
+  `0010` se queda congelada como sembrado histórico; cualquier arreglo de datos
+  posterior va en su propio número. Los tests de la API **no** ven estas filas (su
+  bootstrap no siembra regiones), así que lo verifica el e2e.
 - `0012_recetas_nutrirutina.sql` siembra el **recetario de Nutrirutina** (ver
-«Recetario sembrado» más abajo). Es generada: no se edita a mano.
+  «Recetario sembrado» más abajo). Es generada: no se edita a mano.
 - `0016_alimentos.sql` es **aditiva** (tabla `foods` + `recipe_ingredients.food_id`
-/`optional`) y va en el bootstrap de tests con `foods` en `TABLES`. Sin `;` en
-sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sql`
-es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
-cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
+  /`optional`) y va en el bootstrap de tests con `foods` en `TABLES`. Sin `;` en
+  sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sql`
+  es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
+  cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
 - `0021_users_name.sql` es **aditiva**: `users.name TEXT` (NULL = sin nombre, el
   nombre de perfil que la persona edita en Ajustes con `PATCH /api/me`). Al
   admitir vacíos sobre las filas que ya existen, se puede aplicar antes del
   merge sin romper al código desplegado (es justo lo contrario de `0020`).
 - `0022_exercise_aliases.sql` es **aditiva**: crea `exercise_aliases` (en
-`schema.sql` y en `TABLES`), renombra a español 12 ejercicios del catálogo y
-siembra los 160 alias de búsqueda de los 91. **No va al bootstrap** (es siembra,
-como 0010); la cubre `api/tests/exercise-aliases-migration.test.ts`, que la
-aplica sobre un catálogo mínimo. El renombrado va **después** de
-0006/0007/0008/0010/0011/0013/0015 (que referencian los nombres viejos) y no se
-reescriben migraciones pasadas. Sin `;` en los comentarios (el test la parte por
-ellos). Los alias se resuelven con un `JOIN`/`SELECT` por nombre, así que un
-catálogo recortado no la rompe.
+  `schema.sql` y en `TABLES`), renombra a español 12 ejercicios del catálogo y
+  siembra los 160 alias de búsqueda de los 91. **No va al bootstrap** (es siembra,
+  como 0010); la cubre `api/tests/exercise-aliases-migration.test.ts`, que la
+  aplica sobre un catálogo mínimo. El renombrado va **después** de
+  0006/0007/0008/0010/0011/0013/0015 (que referencian los nombres viejos) y no se
+  reescriben migraciones pasadas. Sin `;` en los comentarios (el test la parte por
+  ellos). Los alias se resuelven con un `JOIN`/`SELECT` por nombre, así que un
+  catálogo recortado no la rompe.
 - `0023_ejercicios_barra_libre.sql` es **sembrado**: 17 ejercicios de «Barra
   Libre» con sus tags, sub-regiones (con grado) y alias. Tampoco va al bootstrap;
   la cubre `api/tests/barra-libre-migration.test.ts`.
@@ -1044,13 +1041,13 @@ catálogo recortado no la rompe.
   encadenados — ver `DEPLOY.md` §4).
 
   **Ojo con el orden cuando el cambio no es de ida y vuelta.** Aplicar la
-migración antes del merge solo es seguro si es **aditiva** (una columna nueva
-que deja vacíos, que el código viejo ignora). Si la columna nace **obligatoria**
-sobre filas que ya existen, el código desplegado —que no la rellena— empieza a
-dar 500 en cuanto se aplica (le pasó a `0020`: planificar, plantillas, nota del
-día y semana de comidas dejaron de funcionar hasta el deploy). Para eso el patrón
-es en dos tiempos: 1) columna que admite vacíos → deploy del código que la
-rellena → 2) rellenar lo viejo y hacerla obligatoria. Tres pasos, no uno.
+  migración antes del merge solo es seguro si es **aditiva** (una columna nueva
+  que deja vacíos, que el código viejo ignora). Si la columna nace **obligatoria**
+  sobre filas que ya existen, el código desplegado —que no la rellena— empieza a
+  dar 500 en cuanto se aplica (le pasó a `0020`: planificar, plantillas, nota del
+  día y semana de comidas dejaron de funcionar hasta el deploy). Para eso el patrón
+  es en dos tiempos: 1) columna que admite vacíos → deploy del código que la
+  rellena → 2) rellenar lo viejo y hacerla obligatoria. Tres pasos, no uno.
 
 ### 2. wrangler pide confirmación y cuelga en no-TTY
 
@@ -1071,11 +1068,11 @@ Conflicto curioso: `api/src/middleware.ts` fija headers de seguridad en cada
 respuesta, y dos de ellos rompen el iframe de YouTube si se vuelven a endurecer:
 
 - `Content-Security-Policy` DEBE incluir `frame-src https://www.youtube.com`
-(sin él, `default-src 'self'` bloquea el frame → el navegador no muestra el
-vídeo).
+  (sin él, `default-src 'self'` bloquea el frame → el navegador no muestra el
+  vídeo).
 - `Referrer-Policy` DEBE ser `strict-origin-when-cross-origin` (con
-`same-origin` el iframe llega a YouTube sin `Referer`, y el player bloquea
-con "This content is blocked. Contact the site owner to fix the issue.").
+  `same-origin` el iframe llega a YouTube sin `Referer`, y el player bloquea
+  con "This content is blocked. Contact the site owner to fix the issue.").
 
 Ambos están rotos a la vez con las versiones más estrictas; con B' esas
 cabeceras las ponen los dos Workers (el frontal en el HTML, la API en el JSON),
@@ -1155,7 +1152,7 @@ termina el `pnpm dev` entero con el código de salida del hijo.
  dev -c api/wrangler.toml --port 8790 --var WEB_ORIGIN:http://127.0.0.1:8788
  --var DEV_AUTH:1 --var ADMIN_EMAIL:admin@esencial.test --persist-to e2e/.state`.
 2. Frontal en **8788**: `VITE_API_URL=http://127.0.0.1:8790 pnpm build` →
- `wrangler dev --port 8788 --var API_ORIGIN:http://127.0.0.1:8790 --persist-to
+   `wrangler dev --port 8788 --var API_ORIGIN:http://127.0.0.1:8790 --persist-to
  e2e/.state-web` (su propio dir de estado: el frontal no toca D1 y el `rm -rf
  e2e/.state` de la API no debe pisarle la caché).
 
@@ -1180,21 +1177,21 @@ transición de vista día → modal, su capa se queda con el puntero.
 Lo que hay que respetar al escribir tests:
 
 - **Añadir una migración no requiere tocar nada de `e2e/`.** La base se deriva
-de `api/migrations/`. (Ojo: el bootstrap de tests de `api/` sí necesita la
-tabla nueva en su lista `TABLES`, `api/tests/helpers.ts`.)
+  de `api/migrations/`. (Ojo: el bootstrap de tests de `api/` sí necesita la
+  tabla nueva en su lista `TABLES`, `api/tests/helpers.ts`.)
 - **Nunca `POST` de un ejercicio que ya está en la semilla**: `exercises.name`
-es UNIQUE y devuelve 400. El `id` se resuelve con `GET /api/exercises` y se
-busca por nombre. Solo se crean por API recetas, plantillas y ejercicios de
-cardio (los 91 sembrados son `kind='strength'`).
+  es UNIQUE y devuelve 400. El `id` se resuelve con `GET /api/exercises` y se
+  busca por nombre. Solo se crean por API recetas, plantillas y ejercicios de
+  cardio (los 91 sembrados son `kind='strength'`).
 - `**workers: 1**`: hay un servidor y una base por corrida, así que el
-paralelismo entre archivos es estado compartido, no aislamiento. No lo subas
-sin dar a cada worker su propia base.
+  paralelismo entre archivos es estado compartido, no aislamiento. No lo subas
+  sin dar a cada worker su propia base.
 - **Fechas reales** (hoy, el lunes de la semana actual), no offsets por corrida.
 - **La API es otro origen**: las peticiones directas de los tests usan
-`apiUrl()`/`API_BASE` de `e2e/tests/helpers.ts` (y en el navegador, `fetch` con
-`credentials: "include"`). Un `fetch("/api/...")` relativo iría al frontal.
+  `apiUrl()`/`API_BASE` de `e2e/tests/helpers.ts` (y en el navegador, `fetch` con
+  `credentials: "include"`). Un `fetch("/api/...")` relativo iría al frontal.
 - `pnpm e2e:check` corre la suite y verifica que los conteos de `.wrangler/state`
-(filas D1 y objetos R2) no cambian. No navegues la app de dev mientras corre.
+  (filas D1 y objetos R2) no cambian. No navegues la app de dev mientras corre.
 
 ## Catálogo de ejercicios (seed)
 
@@ -1249,8 +1246,8 @@ guarda como los tags/regions. Lo cubren `api/tests/exercises.test.ts`,
 faltaban (Cargada, Press jabalina, Peso muerto unilateral, Curl a una mano/
 invertido con barra, Burpee, Thruster, Swing/Arrancada con kettlebell, Remo alto,
 Cargada y press, Remo renegado/invertido, Dominada con toalla, Sit-up con barra,
-Flexiones con palmada y Sentadilla en rack con kettlebell) desde el libro *Barra
-Libre* (Fitness Revolucionario; solo traen ejercicios el cap. 2.3, pp. 60-98, las
+Flexiones con palmada y Sentadilla en rack con kettlebell) desde el libro _Barra
+Libre_ (Fitness Revolucionario; solo traen ejercicios el cap. 2.3, pp. 60-98, las
 tablas de sesiones, pp. 163-210, y el Anexo 1, pp. 221-227). Criterio de
 equivalencia: **mismo movimiento y músculo → alias** («Roll-out con barra» →
 `Rueda abdominal`, «Rodillas a pecho» → `Elevación de piernas colgado`); **otro
@@ -1271,11 +1268,11 @@ repetidos.
 ## Fotos de recetas (R2)
 
 - Upload: `POST /api/uploads` (multipart `file`, png/jpeg/webp ≤ 5 MB) → `200 {photo_path}`
-con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras el gate de identidad, `Cache-Control: immutable`.
+  con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras el gate de identidad, `Cache-Control: immutable`.
 - Binding R2 `PHOTOS` → bucket `**esencial-photos**` (`api/wrangler.toml` y `api/tests/wrangler.test.toml`);
-`photo_path` se valida fail-closed (regex + `PHOTOS.head`) en `POST/PUT /api/recipes`.
+  `photo_path` se valida fail-closed (regex + `PHOTOS.head`) en `POST/PUT /api/recipes`.
 - El render usa `photoSrc()` (`web/src/lib/api.ts`): la key pelada + prefijo
-`/api/uploads/`, y delante la URL de la API (`VITE_API_URL`).
+  `/api/uploads/`, y delante la URL de la API (`VITE_API_URL`).
 
 ## Carga de las listas (recetas y ejercicios)
 

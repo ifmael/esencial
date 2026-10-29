@@ -30,16 +30,16 @@ Convención de marcado:
 
 ## Estado de las fases
 
-| Fase | Estado | Siguiente acción |
-|---|---|---|
-| M0 — Base | Hecho (2026-10-22) | — |
-| M1 — Imagen del worker | Hecho (2026-10-22) | — |
-| M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | — |
-| M3 — Perfiles de fase | Hecho (2026-10-24) | — |
-| M4 — Piloto | Hecho (2026-10-24) | — |
-| M5a — Preview | Hecho (2026-10-25) | — |
-| M5b — Automatización | Hecho (2026-10-27) | `watch`, `guard`, spec, aprobación, token, MCPs y `migrate`; opcionales: webhook/coordinador. Fix automático real sin ejercitar |
-| M6 — Después del piloto | Pendiente | Evaluar tras M5b |
+| Fase                       | Estado             | Siguiente acción                                                                                                                |
+| -------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| M0 — Base                  | Hecho (2026-10-22) | —                                                                                                                               |
+| M1 — Imagen del worker     | Hecho (2026-10-22) | —                                                                                                                               |
+| M2 — CLI `orquestator-cli` | Hecho (2026-10-22) | —                                                                                                                               |
+| M3 — Perfiles de fase      | Hecho (2026-10-24) | —                                                                                                                               |
+| M4 — Piloto                | Hecho (2026-10-24) | —                                                                                                                               |
+| M5a — Preview              | Hecho (2026-10-25) | —                                                                                                                               |
+| M5b — Automatización       | Hecho (2026-10-27) | `watch`, `guard`, spec, aprobación, token, MCPs y `migrate`; opcionales: webhook/coordinador. Fix automático real sin ejercitar |
+| M6 — Después del piloto    | Pendiente          | Evaluar tras M5b                                                                                                                |
 
 ## Referencias y hechos verificados
 
@@ -111,56 +111,56 @@ Convención de marcado:
 
 ### Cómo se sintetizan las fuentes
 
-| Decisión del plan | Fuente principal |
-|---|---|
-| Linear como estado de producto | Artículo (ciclo de tarea) + decisión de la sesión |
-| Spec revisada por un agente escéptico, con N rondas | Artículo + vídeo (fase spec) |
-| Implementación TDD con comprobaciones | Vídeo (TDD) + artículo (comprobaciones) + repo (TDD estricto) |
-| Review en contexto limpio, distinto del implementador | Vídeo + artículo (otro agente) |
-| Contenedor efímero por fase (clon persistente) | Vídeo (imagen fresca) + artículo (runner efímero) + I2 |
-| Clon local por tarea | Repo (e2e por worktree) + fuentes (aislamiento) + C2-A |
-| Orquestador determinista | Vídeo («una skill no fuerza el proceso») + artículo (orquestador propio) |
-| PR con resumen, diagrama y preview | Artículo (entorno de prueba por PR) + decisión de la sesión |
-| El agente no toca la CI | Artículo (regla explícita) |
-| Modelos distintos por fase | Vídeo (perfiles) + suscripción de nan del usuario |
-| Hermes como agente | Decisión de la sesión; el vídeo usa Hermes; el artículo, un orquestador propio |
+| Decisión del plan                                     | Fuente principal                                                               |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Linear como estado de producto                        | Artículo (ciclo de tarea) + decisión de la sesión                              |
+| Spec revisada por un agente escéptico, con N rondas   | Artículo + vídeo (fase spec)                                                   |
+| Implementación TDD con comprobaciones                 | Vídeo (TDD) + artículo (comprobaciones) + repo (TDD estricto)                  |
+| Review en contexto limpio, distinto del implementador | Vídeo + artículo (otro agente)                                                 |
+| Contenedor efímero por fase (clon persistente)        | Vídeo (imagen fresca) + artículo (runner efímero) + I2                         |
+| Clon local por tarea                                  | Repo (e2e por worktree) + fuentes (aislamiento) + C2-A                         |
+| Orquestador determinista                              | Vídeo («una skill no fuerza el proceso») + artículo (orquestador propio)       |
+| PR con resumen, diagrama y preview                    | Artículo (entorno de prueba por PR) + decisión de la sesión                    |
+| El agente no toca la CI                               | Artículo (regla explícita)                                                     |
+| Modelos distintos por fase                            | Vídeo (perfiles) + suscripción de nan del usuario                              |
+| Hermes como agente                                    | Decisión de la sesión; el vídeo usa Hermes; el artículo, un orquestador propio |
 
 ## Decisiones cerradas
 
-| Tema | Decisión |
-|---|---|
-| Estado de las tareas | **Linear Free** (1 equipo, clave `ESN`; estados `Backlog → Spec review → Ready → In Progress → In validation → Done`, más `Blocked`; auto-archivado) |
-| Ejecución | **Local**, sin Orca. Un **clon local por tarea** (C2-A) y un **contenedor efímero por fase** que monta ese mismo clon; el clon y sus commits persisten entre fases |
-| Orquestador | **CLI determinista en el piloto** (`run`): el agente decide dentro de su fase; el CLI encadena y valida. El coordinador (Nivel 2, forma 2) se evalúa en M5b |
-| Orquestación | **Un `run` por tarea** (D1-A): `watch` despacha y `run` encadena las fases; sin coordinador en el piloto. El coordinador por tarea (forma 2) queda como opción de M5b |
-| Confianza | **C3-A**: el host solo usa git/gh con hooks y fsmonitor desactivados y `--no-verify`; nunca ejecuta `pnpm` del repo. **Nunca corre git con `cwd` en el clon**: importa la rama al checkout principal y hace los diffs ahí con `--no-ext-diff --no-textconv`. El `.git` principal nunca se monta (C2-A) |
-| Coordinador (C4) | **M5b, opcional** (no en el piloto): si se añade, A+ (toolset mínimo con plugin `orquestator` e `inspect`, sin `terminal`, `file` de escritura, `web`, `browser`, `delegation` ni `gh`) y B (token solo en el CLI). `approve`/`clean` no se exponen |
-| Red y secretos (C5) | **B**: proxy de modelo mínimo (Caddy/nginx) con la clave real; worker en red interna sin salida; store de pnpm horneado; `--cpus`, `--memory`, `--pids-limit`, no-root, `cap-drop=ALL`, `no-new-privileges`. **MCP por perfil** solo si un perfil lo necesita (M5b/M6) vía gateway/sidecar; en el piloto no hay MCPs |
-| Agente | **Hermes** (v0.19; provider custom de nan). Sin bake-off; el CLI habla con Linear por API, no por MCP |
-| Ejecutor de fases | Hermes dentro del contenedor. **Intercambiable**: omp es el plan B |
-| Modelos | nan, un modelo distinto por fase. Piloto: `implementer`, `reviewer`, `pr-reviewer` y `spec-reviewer`. Después del piloto (backlog): `test-auditor` y `security-auditor` |
-| Tests | El `implementer` escribe plan de pruebas y código (TDD); el `reviewer` audita contra la spec; negativos obligatorios; no se debilita un test existente |
-| Review | Uno previo a la PR (`reviewer`, contexto limpio) y otro sobre la PR publicada (`pr-reviewer`, contexto limpio y modelo distinto) |
-| Validación | PR con resumen + diagrama + preview de Cloudflare; el humano valida y mergea |
-| Comprobaciones | `lint`, `typecheck`, `test` (con cobertura), `e2e` + la CI existente |
-| Integridad de las comprobaciones | **C1-A**: rutas protegidas en `orquestator-cli/protected-paths.txt`; si el diff las toca → `Blocked`, aprobación humana (TTY, hash en el estado) y **commit status `gh-guard`** tras el push (no etiqueta) |
-| Retorno (F2) | `fix --from review` → implementer → **check → review** → push → pr-review; `--from check` → implementer → check → review (sin PR) o push (con PR); `--from pr-review` → implementer → check → push → pr-review; `--from conflicto` → implementer mergea `main` → check → review → push. `fix --humano` (desde `In validation`) lee **solo tus comentarios** y cuenta como **ronda humana** aparte. Siempre la misma PR |
-| Spec en el piloto (F3) | **Cambio 2026-10-26: el bucle es automático y por comentarios.** `watch` lanza el `spec-reviewer`; cada respuesta trae la definición actual y las preguntas; un comentario humano nuevo o una descripción distinta relanza la revisión. Si no hay preguntas, actualiza la descripción y pasa a `Ready`. El bloque manual `orquestator-cli:acordado` sigue valiendo |
-| Orden y controles (F4) | Comprobaciones **antes** del review; RED de los tests nuevos/modificados contra `main` (unit/integración; e2e best-effort); `.only` bloquea; `.skip`, tests borrados y `expect` eliminados son hallazgos en `.task/checks.md` |
-| Límites (F5) | Timeout por fase, máximo de peticiones al modelo por fase y tope de gasto en la clave de nan; al agotarse → `Blocked` con logs. Cuenta tiempo activo. Las rondas humanas (`fix --humano`) van aparte y no bloquean solas |
-| Contenedores (I2) | **Uno por fase**, `--rm`, con el mismo clon montado: implementer escribe `impl.md`/`pr-body.md` y ve brief/informes previos en ro; check escribe `checks.md`; reviewer escribe `review.md`; pr-review escribe `pr-review.md`. El estado y el hash de `approve` viven en el host, no en el clon |
-| Estado y aprobaciones (R1) | `~/.orquestator/ESN-123/state.json` y el hash de `approve` en el host; `run` es el dueño. Los contenedores no montan el estado; los informes se publican desde el host |
-| Upstream (R2) | Espejo bare de `main` en `~/.orquestator/upstream.git`, actualizado por el host y montado ro en `/upstream`; el worker hace `git fetch /upstream main` y el implementer mergea. `run` comprueba `gh pr view --json mergeable` antes de `In validation`; conflicto → `fix --from conflicto` |
-| Guard (R4) | Hash aprobado en el estado del host antes de `check`/`ship`; commit status `gh-guard` atado al SHA tras el push (no etiqueta). Cada push lo invalida y el CLI lo repone si el hash sigue valiendo |
-| CLI (I3) | M2 depende de **M0 y M1**; criterio: cada comando acepta `--dry-run` y la suite de transiciones pasa; estimación **3-4 días** (4-6 con `watch` y `migrate` completos) |
-| PR body (I4) | El **implementer** escribe `.task/pr-body.md`; `ship` lo publica y comenta `review.md`; `checks.md` queda local y la CI es la referencia pública |
-| Cobertura y ADR (I5) | Cobertura **sí en el piloto** para `api`/`web` (`vitest --coverage`): `coverage.thresholds` en `api/vitest.config.ts` y `web/vite.config.ts`, solo suben; objetivo 60% en M6. ADR solo cuando haya una decisión de arquitectura real; revisión final en M6 |
-| Avisos | **Linear**: la issue bloqueada se te asigna y te @menciona; vista «Necesita mi decisión». Push extra (`hermes send`/ntfy) pospuesto |
-| CI y merge | **F1**: `In validation` exige `gh pr checks` verde; `main` protegido en repo **público** (B) con `ci`, `lint` y `migracion` desde M0 (job de CI) y `guard` en M5b, sin bypass. El CLI espera la CI con timeout; si falla, `fix` o `Blocked` |
-| Disponibilidad | El CLI (`run`/`watch`) y los contenedores corren en este equipo: si se apaga, el flujo se pausa y se reanuda; no hay 24/7. VPS/Actions solo si se quiere autonomía continua (M6). La entrada de tareas es **sondeo local** a Linear (opción principal); en M5b se explora un **webhook con URL pública** (túnel o Worker) como alternativa, no como defecto |
-| Preview | **M4 sin preview** (vídeo/capturas + local). **M5a Previews por rama** (`wrangler preview`) con D1/R2 de preview propios, nombres/URLs predecibles para los dos Workers, limpieza al cerrar la PR y **Access sobre las previews** (`workers.dev` o dominio propio; dominio opcional). Límites: 100 previews/Worker en Free (se borra el más antiguo), 500 en Workers Paid ($5/mes) |
-| Migraciones | Aditivas y compatibles hacia atrás. Si el diff toca `api/migrations/**`: etiqueta `migración`, checklist en la PR, `approve --migracion` (TTY) y **job de CI `migracion`** con token read-only que comprueba que estén aplicadas en la D1 remota. El CLI aplica la D1 **después de `approve --migracion` y antes de `In validation`** con un token de edición (D1 edit + Workers scripts edit), `wrangler` fijado y nunca `wrangler login`; después re-ejecuta el job y solo con todos los checks verdes se pasa a `In validation`. `check` detecta la primera migración y bloquea si otra tarea tiene una abierta (reserva en el estado del host, R1). Si el hash de una migración aplicada cambia → `Blocked`. D1 no tiene `down`. Si el token read-only no lista `_cf_D1_MIGRATIONS`, se usa R3-B (el CLI publica el status para todas las PRs) |
-| Despliegue | Workers Builds al mergear a `main` (sin cambios) |
+| Tema                             | Decisión                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Estado de las tareas             | **Linear Free** (1 equipo, clave `ESN`; estados `Backlog → Spec review → Ready → In Progress → In validation → Done`, más `Blocked`; auto-archivado)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Ejecución                        | **Local**, sin Orca. Un **clon local por tarea** (C2-A) y un **contenedor efímero por fase** que monta ese mismo clon; el clon y sus commits persisten entre fases                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Orquestador                      | **CLI determinista en el piloto** (`run`): el agente decide dentro de su fase; el CLI encadena y valida. El coordinador (Nivel 2, forma 2) se evalúa en M5b                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Orquestación                     | **Un `run` por tarea** (D1-A): `watch` despacha y `run` encadena las fases; sin coordinador en el piloto. El coordinador por tarea (forma 2) queda como opción de M5b                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Confianza                        | **C3-A**: el host solo usa git/gh con hooks y fsmonitor desactivados y `--no-verify`; nunca ejecuta `pnpm` del repo. **Nunca corre git con `cwd` en el clon**: importa la rama al checkout principal y hace los diffs ahí con `--no-ext-diff --no-textconv`. El `.git` principal nunca se monta (C2-A)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Coordinador (C4)                 | **M5b, opcional** (no en el piloto): si se añade, A+ (toolset mínimo con plugin `orquestator` e `inspect`, sin `terminal`, `file` de escritura, `web`, `browser`, `delegation` ni `gh`) y B (token solo en el CLI). `approve`/`clean` no se exponen                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Red y secretos (C5)              | **B**: proxy de modelo mínimo (Caddy/nginx) con la clave real; worker en red interna sin salida; store de pnpm horneado; `--cpus`, `--memory`, `--pids-limit`, no-root, `cap-drop=ALL`, `no-new-privileges`. **MCP por perfil** solo si un perfil lo necesita (M5b/M6) vía gateway/sidecar; en el piloto no hay MCPs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Agente                           | **Hermes** (v0.19; provider custom de nan). Sin bake-off; el CLI habla con Linear por API, no por MCP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Ejecutor de fases                | Hermes dentro del contenedor. **Intercambiable**: omp es el plan B                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Modelos                          | nan, un modelo distinto por fase. Piloto: `implementer`, `reviewer`, `pr-reviewer` y `spec-reviewer`. Después del piloto (backlog): `test-auditor` y `security-auditor`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Tests                            | El `implementer` escribe plan de pruebas y código (TDD); el `reviewer` audita contra la spec; negativos obligatorios; no se debilita un test existente                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Review                           | Uno previo a la PR (`reviewer`, contexto limpio) y otro sobre la PR publicada (`pr-reviewer`, contexto limpio y modelo distinto)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Validación                       | PR con resumen + diagrama + preview de Cloudflare; el humano valida y mergea                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Comprobaciones                   | `lint`, `typecheck`, `test` (con cobertura), `e2e` + la CI existente                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Integridad de las comprobaciones | **C1-A**: rutas protegidas en `orquestator-cli/protected-paths.txt`; si el diff las toca → `Blocked`, aprobación humana (TTY, hash en el estado) y **commit status `gh-guard`** tras el push (no etiqueta)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Retorno (F2)                     | `fix --from review` → implementer → **check → review** → push → pr-review; `--from check` → implementer → check → review (sin PR) o push (con PR); `--from pr-review` → implementer → check → push → pr-review; `--from conflicto` → implementer mergea `main` → check → review → push. `fix --humano` (desde `In validation`) lee **solo tus comentarios** y cuenta como **ronda humana** aparte. Siempre la misma PR                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Spec en el piloto (F3)           | **Cambio 2026-10-26: el bucle es automático y por comentarios.** `watch` lanza el `spec-reviewer`; cada respuesta trae la definición actual y las preguntas; un comentario humano nuevo o una descripción distinta relanza la revisión. Si no hay preguntas, actualiza la descripción y pasa a `Ready`. El bloque manual `orquestator-cli:acordado` sigue valiendo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Orden y controles (F4)           | Comprobaciones**antes** del review; RED de los tests nuevos/modificados contra `main` (unit/integración; e2e best-effort); `.only` bloquea; `.skip`, tests borrados y `expect` eliminados son hallazgos en `.task/checks.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Límites (F5)                     | Timeout por fase, máximo de peticiones al modelo por fase y tope de gasto en la clave de nan; al agotarse → `Blocked` con logs. Cuenta tiempo activo. Las rondas humanas (`fix --humano`) van aparte y no bloquean solas                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Contenedores (I2)                | **Uno por fase**, `--rm`, con el mismo clon montado: implementer escribe `impl.md`/`pr-body.md` y ve brief/informes previos en ro; check escribe `checks.md`; reviewer escribe `review.md`; pr-review escribe `pr-review.md`. El estado y el hash de `approve` viven en el host, no en el clon                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Estado y aprobaciones (R1)       | `~/.orquestator/ESN-123/state.json` y el hash de `approve` en el host; `run` es el dueño. Los contenedores no montan el estado; los informes se publican desde el host                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Upstream (R2)                    | Espejo bare de `main` en `~/.orquestator/upstream.git`, actualizado por el host y montado ro en `/upstream`; el worker hace `git fetch /upstream main` y el implementer mergea. `run` comprueba `gh pr view --json mergeable` antes de `In validation`; conflicto → `fix --from conflicto`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Guard (R4)                       | Hash aprobado en el estado del host antes de `check`/`ship`; commit status `gh-guard` atado al SHA tras el push (no etiqueta). Cada push lo invalida y el CLI lo repone si el hash sigue valiendo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| CLI (I3)                         | M2 depende de **M0 y M1**; criterio: cada comando acepta `--dry-run` y la suite de transiciones pasa; estimación **3-4 días** (4-6 con `watch` y `migrate` completos)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| PR body (I4)                     | El **implementer** escribe `.task/pr-body.md`; `ship` lo publica y comenta `review.md`; `checks.md` queda local y la CI es la referencia pública                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Cobertura y ADR (I5)             | Cobertura **sí en el piloto** para `api`/`web` (`vitest --coverage`): `coverage.thresholds` en `api/vitest.config.ts` y `web/vite.config.ts`, solo suben; objetivo 60% en M6. ADR solo cuando haya una decisión de arquitectura real; revisión final en M6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Avisos                           | **Linear**: la issue bloqueada se te asigna y te @menciona; vista «Necesita mi decisión». Push extra (`hermes send`/ntfy) pospuesto                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| CI y merge                       | **F1**: `In validation` exige `gh pr checks` verde; `main` protegido en repo **público** (B) con `ci`, `lint` y `migracion` desde M0 (job de CI) y `guard` en M5b, sin bypass. El CLI espera la CI con timeout; si falla, `fix` o `Blocked`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Disponibilidad                   | El CLI (`run`/`watch`) y los contenedores corren en este equipo: si se apaga, el flujo se pausa y se reanuda; no hay 24/7. VPS/Actions solo si se quiere autonomía continua (M6). La entrada de tareas es **sondeo local** a Linear (opción principal); en M5b se explora un **webhook con URL pública** (túnel o Worker) como alternativa, no como defecto                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Preview                          | **M4 sin preview** (vídeo/capturas + local). **M5a Previews por rama** (`wrangler preview`) con D1/R2 de preview propios, nombres/URLs predecibles para los dos Workers, limpieza al cerrar la PR y **Access sobre las previews** (`workers.dev` o dominio propio; dominio opcional). Límites: 100 previews/Worker en Free (se borra el más antiguo), 500 en Workers Paid ($5/mes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Migraciones                      | Aditivas y compatibles hacia atrás. Si el diff toca `api/migrations/**`: etiqueta `migración`, checklist en la PR, `approve --migracion` (TTY) y **job de CI `migracion`** con token read-only que comprueba que estén aplicadas en la D1 remota. El CLI aplica la D1 **después de `approve --migracion` y antes de `In validation`** con un token de edición (D1 edit + Workers scripts edit), `wrangler` fijado y nunca `wrangler login`; después re-ejecuta el job y solo con todos los checks verdes se pasa a `In validation`. `check` detecta la primera migración y bloquea si otra tarea tiene una abierta (reserva en el estado del host, R1). Si el hash de una migración aplicada cambia → `Blocked`. D1 no tiene `down`. Si el token read-only no lista `_cf_D1_MIGRATIONS`, se usa R3-B (el CLI publica el status para todas las PRs) |
+| Despliegue                       | Workers Builds al mergear a `main` (sin cambios)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 Descartado: Orca, GitHub Issues, kanban de Hermes como tablero principal, VPS,
 bake-off (se decidió Hermes; el worker sigue intercambiable), agente orquestador libre
@@ -235,24 +235,24 @@ lo fetchea y el implementer mergea.
 1. **CLI `orquestator-cli`** (nuevo, `orquestator-cli/`): máquina de estados y operaciones deterministas.
    No llama a ningún modelo: lanza perfiles de Hermes y valida lo que producen.
 
-   | Comando | Qué hace | Quién lo lanza |
-   |---|---|---|
-   | `orquestator-cli spec ESN-123` | crea la issue en `Spec review`; `spec-review` lanza el `spec-reviewer` con red interna (solo proxy) y publica sus preguntas | tú |
-   | `orquestator-cli start ESN-123` | exige `Ready`; crea el clon, copia el brief desde la issue y lanza `implementer` | `run`/tú |
-   | `orquestator-cli run ESN-123` | encadena las fases hasta un bloqueo o `In validation`; comprueba `mergeable`; sin coordinador | `watch`/tú |
-   | `orquestator-cli review ESN-123` | lanza `reviewer` en contexto limpio → `.task/review.md` | `run` |
-   | `orquestator-cli check ESN-123` | lint, typecheck, test (con cobertura) y e2e en el contenedor | `run`/CLI |
-   | `orquestator-cli guard ESN-123` | muestra las rutas protegidas tocadas y el estado de aprobación | tú |
-   | `orquestator-cli approve ESN-123 --motivo "…"` | aprueba el diff protegido (solo TTY); guarda el hash | tú |
-   | `orquestator-cli inspect ESN-123 --what issue\|brief\|diff\|review\|check\|ci` | datos read-only para depurar o reanudar | `run`/tú |
-   | `orquestator-cli migrate ESN-123` | aplica las migraciones aprobadas a la D1 remota (token de edición, `wrangler` fijado) y re-ejecuta el job de CI `migracion`; sin commit status propio | CLI |
-   | `orquestator-cli ship ESN-123` | push y PR desde `.task/pr-body.md`; comenta review y deja checks local; Linear sigue en `In Progress` | `run` |
-   | `orquestator-cli pr-review ESN-123` | lanza `pr-reviewer` en contenedor ro con **red interna (solo proxy)** sobre `gh pr diff`; el CLI publica los comentarios; si no hay críticos: con migración, `approve --migracion` + `migrate` + espera `migracion`; luego `In validation` | `run` |
-   | `orquestator-cli fix ESN-123` | devuelve los hallazgos al `implementer` en la misma rama/PR; `--from conflicto` mergea `main` | `run`/tú |
-   | `orquestator-cli block ESN-123 --pregunta "…"` | `Blocked` + comentario con la pregunta | cualquiera |
-   | `orquestator-cli resume ESN-123` | vuelve a la fase anterior tras resolver un bloqueo | tú/`run` |
-   | `orquestator-cli clean ESN-123` | retira el contenedor y el clon tras el merge; corre las comprobaciones de `DEPLOY.md` §7 y sugiere `wrangler rollback` si fallan | CLI |
-   | `orquestator-cli status [--watch (M5b)]` | cola y estado; `--watch` es el despachador | tú/CLI |
+   | Comando                                                                        | Qué hace                                                                                                                                                                                                                                   | Quién lo lanza |
+   | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+   | `orquestator-cli spec ESN-123`                                                 | crea la issue en `Spec review`; `spec-review` lanza el `spec-reviewer` con red interna (solo proxy) y publica sus preguntas                                                                                                                | tú             |
+   | `orquestator-cli start ESN-123`                                                | exige `Ready`; crea el clon, copia el brief desde la issue y lanza `implementer`                                                                                                                                                           | `run`/tú       |
+   | `orquestator-cli run ESN-123`                                                  | encadena las fases hasta un bloqueo o `In validation`; comprueba `mergeable`; sin coordinador                                                                                                                                              | `watch`/tú     |
+   | `orquestator-cli review ESN-123`                                               | lanza `reviewer` en contexto limpio → `.task/review.md`                                                                                                                                                                                    | `run`          |
+   | `orquestator-cli check ESN-123`                                                | lint, typecheck, test (con cobertura) y e2e en el contenedor                                                                                                                                                                               | `run`/CLI      |
+   | `orquestator-cli guard ESN-123`                                                | muestra las rutas protegidas tocadas y el estado de aprobación                                                                                                                                                                             | tú             |
+   | `orquestator-cli approve ESN-123 --motivo "…"`                                 | aprueba el diff protegido (solo TTY); guarda el hash                                                                                                                                                                                       | tú             |
+   | `orquestator-cli inspect ESN-123 --what issue\|brief\|diff\|review\|check\|ci` | datos read-only para depurar o reanudar                                                                                                                                                                                                    | `run`/tú       |
+   | `orquestator-cli migrate ESN-123`                                              | aplica las migraciones aprobadas a la D1 remota (token de edición, `wrangler` fijado) y re-ejecuta el job de CI `migracion`; sin commit status propio                                                                                      | CLI            |
+   | `orquestator-cli ship ESN-123`                                                 | push y PR desde `.task/pr-body.md`; comenta review y deja checks local; Linear sigue en `In Progress`                                                                                                                                      | `run`          |
+   | `orquestator-cli pr-review ESN-123`                                            | lanza `pr-reviewer` en contenedor ro con **red interna (solo proxy)** sobre `gh pr diff`; el CLI publica los comentarios; si no hay críticos: con migración, `approve --migracion` + `migrate` + espera `migracion`; luego `In validation` | `run`          |
+   | `orquestator-cli fix ESN-123`                                                  | devuelve los hallazgos al `implementer` en la misma rama/PR; `--from conflicto` mergea `main`                                                                                                                                              | `run`/tú       |
+   | `orquestator-cli block ESN-123 --pregunta "…"`                                 | `Blocked` + comentario con la pregunta                                                                                                                                                                                                     | cualquiera     |
+   | `orquestator-cli resume ESN-123`                                               | vuelve a la fase anterior tras resolver un bloqueo                                                                                                                                                                                         | tú/`run`       |
+   | `orquestator-cli clean ESN-123`                                                | retira el contenedor y el clon tras el merge; corre las comprobaciones de `DEPLOY.md` §7 y sugiere `wrangler rollback` si fallan                                                                                                           | CLI            |
+   | `orquestator-cli status [--watch (M5b)]`                                       | cola y estado; `--watch` es el despachador                                                                                                                                                                                                 | tú/CLI         |
 
    Módulos internos (deterministas y testeables): `state` (transiciones y
    `~/.orquestator/ESN-123/state.json`), `linear` (leer issue, mover estado, comentar),
@@ -262,7 +262,7 @@ lo fetchea y el implementer mergea.
    protegidas, hash y aprobación; status `gh-guard`), `pr` (`gh`: push, PR, review; sin status
    de migración) y `artifacts` (brief/impl/review/checks; publicación desde el host).
    El CLI no redacta contenido: solo transiciones y ejecución; el brief es una copia
-determinista de la issue.
+   determinista de la issue.
 2. **Imagen `esencial-worker`** (`orquestator-cli/Dockerfile`): node 24 (el del CI), pnpm,
    chromium/playwright, wrangler y Hermes. Store de pnpm caliente (`pnpm fetch`).
    Etiquetada por contenido del Dockerfile **y del `pnpm-lock.yaml`**.
@@ -297,15 +297,15 @@ determinista de la issue.
 
 Linear (producto) e interno (`~/.orquestator/ESN-123/state.json`, en el host) se mapean así:
 
-| Linear | Fase interna | Quién mueve |
-|---|---|---|
-| Backlog | — | tú |
-| Spec review | `spec` (piloto) | `watch` lanza el `spec-reviewer`; cada comentario trae definición y preguntas; con «Sin preguntas» pasa a Ready |
-| Ready | `ready` | **watch** cuando el revisor no tiene preguntas |
-| In Progress | `implement → comprobaciones → review → ship → pr-review` | CLI (`run`, `start`, `check`, `ship`, `pr-review`) |
-| In validation | `waiting-human` | CLI, cuando `pr-review` no tiene críticos y la migración (si hay) está aplicada y con checks verdes |
-| Done | `done` | **tú** (merge); la integración GitHub puede marcarlo también |
-| Blocked | `blocked` | CLI/agente, con pregunta concreta; `orquestator-cli resume` vuelve |
+| Linear        | Fase interna                                             | Quién mueve                                                                                                     |
+| ------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Backlog       | —                                                        | tú                                                                                                              |
+| Spec review   | `spec` (piloto)                                          | `watch` lanza el `spec-reviewer`; cada comentario trae definición y preguntas; con «Sin preguntas» pasa a Ready |
+| Ready         | `ready`                                                  | **watch** cuando el revisor no tiene preguntas                                                                  |
+| In Progress   | `implement → comprobaciones → review → ship → pr-review` | CLI (`run`, `start`, `check`, `ship`, `pr-review`)                                                              |
+| In validation | `waiting-human`                                          | CLI, cuando `pr-review` no tiene críticos y la migración (si hay) está aplicada y con checks verdes             |
+| Done          | `done`                                                   | **tú** (merge); la integración GitHub puede marcarlo también                                                    |
+| Blocked       | `blocked`                                                | CLI/agente, con pregunta concreta; `orquestator-cli resume` vuelve                                              |
 
 Transiciones inválidas → el CLI falla con un mensaje claro. La integración de Linear
 con GitHub solo enlaza PRs (y `Done` al mergear, si se activa); se configura en M0
@@ -315,13 +315,12 @@ para que no pelee con el CLI.
 
 Hay **un solo clon por tarea** y **un contenedor por fase**, montando ese mismo clon:
 
-| Fase | Clon | `<clon>/.task/` (dir base `ro`) |
-|---|---|---|
-| `implementer` | rw; commitea | `brief.md`, `review.md`, `checks.md`, `human-feedback.md` ro; `impl.md` y `pr-body.md` rw |
-| `check` | rw; tests y caché | `impl.md` ro; `checks.md` rw |
-| `reviewer` | ro | `brief.md`, `impl.md`, `checks.md` ro; `review.md` rw |
-| `pr-reviewer` | ro | `brief.md`, `impl.md`, `checks.md`, `review.md`, `pr-diff.patch` ro; `pr-review.md` rw |
-
+| Fase          | Clon              | `<clon>/.task/` (dir base `ro`)                                                           |
+| ------------- | ----------------- | ----------------------------------------------------------------------------------------- |
+| `implementer` | rw; commitea      | `brief.md`, `review.md`, `checks.md`, `human-feedback.md` ro; `impl.md` y `pr-body.md` rw |
+| `check`       | rw; tests y caché | `impl.md` ro; `checks.md` rw                                                              |
+| `reviewer`    | ro                | `brief.md`, `impl.md`, `checks.md` ro; `review.md` rw                                     |
+| `pr-reviewer` | ro                | `brief.md`, `impl.md`, `checks.md`, `review.md`, `pr-diff.patch` ro; `pr-review.md` rw    |
 - El **estado** (`~/.orquestator/ESN-123/state.json`), el hash de `approve` y el
   directorio base de artefactos se llevan en el host. El CLI **pre-crea vacíos** los
   ficheros que aún no existan (Docker crearía un directorio si se monta un fichero
@@ -484,17 +483,16 @@ en contenedor.
 
 La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout principal:
 
-| Grupo | Rutas |
-|---|---|
-| Scripts y dependencias | `package.json`, `api/package.json`, `web/package.json`, `e2e/package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc` si aparece |
-| Lint, tipos y tests | `biome.json`, `api/tsconfig.json`, `web/tsconfig.json`, `e2e/tsconfig.json`, `api/vitest.config.ts`, `web/vite.config.ts`, `e2e/playwright.config.ts` |
+| Grupo                   | Rutas                                                                                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scripts y dependencias  | `package.json`, `api/package.json`, `web/package.json`, `e2e/package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc` si aparece                             |
+| Lint, tipos y tests     | `biome.json`, `api/tsconfig.json`, `web/tsconfig.json`, `e2e/tsconfig.json`, `api/vitest.config.ts`, `web/vite.config.ts`, `e2e/playwright.config.ts`                |
 | Infraestructura de test | `api/tests/helpers.ts`, `api/tests/wrangler.test.toml`, `web/tests/setup.ts`, `web/tests/audio-fake.ts`, `web/tests/view-transition-stub.ts`, `e2e/tests/helpers.ts` |
-| Guardarraíl de diseño | `web/scripts/check-design-tokens.ts`, `web/scripts/gen-tokens.ts` |
-| CI y hooks | `.github/workflows/` (**no aprobable**), `.husky/` |
-| Config de despliegue | `wrangler.toml`, `api/wrangler.toml` (bindings de D1/R2 y orígenes) |
-| El propio flujo | `orquestator-cli/` |
-| Proceso y repo | `AGENTS.md`, `DEPLOY.md`, `docs/flujo.md`, `.gitignore` |
-
+| Guardarraíl de diseño   | `web/scripts/check-design-tokens.ts`, `web/scripts/gen-tokens.ts`                                                                                                    |
+| CI y hooks              | `.github/workflows/` (**no aprobable**), `.husky/`                                                                                                                   |
+| Config de despliegue    | `wrangler.toml`, `api/wrangler.toml` (bindings de D1/R2 y orígenes)                                                                                                  |
+| El propio flujo         | `orquestator-cli/`                                                                                                                                                   |
+| Proceso y repo          | `AGENTS.md`, `DEPLOY.md`, `docs/flujo.md`, `.gitignore`                                                                                                              |
 - Antes de comprobaciones y de ship, el CLI compara el diff con `origin/main` **desde el
   checkout principal**; si toca una ruta
   protegida → `Blocked`, te asigna la issue y te @menciona en el comentario con las
@@ -570,14 +568,20 @@ Todos viven en `~/.orquestator/ESN-123/task/` (host), se montan en `<clon>/.task
 # Brief — ESN-123 <título>
 
 ## Objetivo
+
 ## Contexto y enlaces (issue, docs, PRs previas)
+
 ## Criterios de aceptación
+
 - [ ] CA1 (positivo) …
 - [ ] CA2 (negativo) …
 - [ ] CA3 (límite) …
 ## Fuera de alcance
+
 ## Restricciones (diseño, datos, migraciones, compatibilidad)
+
 ## Comandos de verificación
+
 pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 ```
 
@@ -587,10 +591,13 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 # Implementación — ESN-123
 
 ## Plan de pruebas
+
 | Criterio | Test (archivo) | Tipo | Negativo | Estado |
-|---|---|---|---|---|
+| -------- | -------------- | ---- | -------- | ------ |
 ## Decisiones y desviaciones
+
 ## Qué no se hizo y por qué
+
 ## Riesgos
 ```
 
@@ -600,26 +607,35 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 # Review — ESN-123
 
 ## Trazabilidad criterio→test
+
 ## Hallazgos críticos
+
 - [ ] archivo:línea — qué falla, por qué, cómo comprobarlo
 ## Deuda (no bloquea)
+
 ## Veredicto (aprobar / cambios)
 ```
 
 ### `.task/pr-body.md` (lo escribe el `implementer`)
 
-```md
+````md
 # ESN-123 <título>
 
 ## Qué cambia
+
 ## Criterios cubiertos
+
 ## Plan de pruebas (resumen)
+
 ## Riesgos
+
 ## Diagrama
+
 ```mermaid
 flowchart LR
   A[Antes] --> B[Después]
 ```
+````
 ```
 
 El CLI añade al publicarlo el enlace de preview y las magic words de Linear.
@@ -1133,3 +1149,4 @@ Depende de: M5b.
 
 - TDD estricto (RED→GREEN), conventional commits, sin atribución de IA, UI y datos en
   español, comprobaciones y reglas de diseño tal cual están.
+```

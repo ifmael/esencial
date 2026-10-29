@@ -41,13 +41,13 @@ superserie con series descendentes usa el eje 1 y el eje 2 a la vez.)
 
 ## Eje 1 — Agrupación: qué va pegado a qué
 
-| Tipo | Qué es | Ejemplo |
-|---|---|---|
-| **Serie recta** | lo de hoy: serie → descanso → serie | 3×10 press de banca, con 120 s entre series |
-| **Superserie** / **biserie** | 2 ejercicios seguidos sin descanso | Press de banca + Remo con barra |
-| **Triserie** | 3 ejercicios seguidos | Press militar + Elevaciones laterales + Pájaros |
-| **Serie gigante** | 4 o más seguidos, descanso al final del bloque | Sentadilla + Zancadas + Peso muerto rumano + Gemelos |
-| **Circuito** | vueltas de varios ejercicios, descanso entre vueltas | 5 estaciones × 3 vueltas |
+| Tipo                         | Qué es                                               | Ejemplo                                              |
+| ---------------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| **Serie recta**              | lo de hoy: serie → descanso → serie                  | 3×10 press de banca, con 120 s entre series          |
+| **Superserie** / **biserie** | 2 ejercicios seguidos sin descanso                   | Press de banca + Remo con barra                      |
+| **Triserie**                 | 3 ejercicios seguidos                                | Press militar + Elevaciones laterales + Pájaros      |
+| **Serie gigante**            | 4 o más seguidos, descanso al final del bloque       | Sentadilla + Zancadas + Peso muerto rumano + Gemelos |
+| **Circuito**                 | vueltas de varios ejercicios, descanso entre vueltas | 5 estaciones × 3 vueltas                             |
 
 ```mermaid
 flowchart TB
@@ -73,7 +73,7 @@ técnico vive en `AGENTS.md`).
 Cada ejercicio de la lista puede llevar una marca que significa **«voy pegado al
 siguiente»**. Un bloque son dos o más ejercicios seguidos con la marca (el último
 del bloque no la lleva, porque no tiene siguiente).
-*Ejemplo:* la lista es Banca → Remo → Sentadilla. Banca lleva la marca y Remo no
+_Ejemplo:_ la lista es Banca → Remo → Sentadilla. Banca lleva la marca y Remo no
 → el bloque es **Banca + Remo**; Sentadilla va suelta.
 No hay «número de grupo». La marca siempre mira al vecino de al lado, así que
 aunque arrastres las filas para cambiar el orden, **nunca queda un bloque partido
@@ -83,7 +83,7 @@ por el medio**.
 Se permiten distintas. El bloque funciona por **vueltas**: en cada vuelta se hace
 una serie de cada ejercicio que todavía tenga series pendientes, y cuando un
 ejercicio agota las suyas, se salta.
-*Ejemplo:* Banca 3×10 + Remo 2×10 → vuelta 1: banca y remo · vuelta 2: banca y
+_Ejemplo:_ Banca 3×10 + Remo 2×10 → vuelta 1: banca y remo · vuelta 2: banca y
 remo · vuelta 3: solo banca.
 Obligar a igualar las series sería algo más fácil de programar, pero perderías
 poder combinar un ejercicio de 3 series con uno de 2, que es lo habitual.
@@ -111,9 +111,9 @@ van pegados, sin descanso. Y hay **dos tiempos**, los dos en el último:
 - **Al acabar el bloque**: cuando ya no quedan vueltas, antes de pasar al
   siguiente ejercicio del día.
 
-*Ejemplo:* Banca + Remo, 3 vueltas →
-banca → remo → *descanso entre vueltas* → banca → remo → *descanso entre vueltas*
-→ banca → remo → *descanso al acabar el bloque*.
+_Ejemplo:_ Banca + Remo, 3 vueltas →
+banca → remo → _descanso entre vueltas_ → banca → remo → _descanso entre vueltas_
+→ banca → remo → _descanso al acabar el bloque_.
 Los ejercicios de en medio (Banca) no tienen descanso propio; sus campos de
 descanso se ocultan en el editor, así que los tiempos solo se piden una vez, en
 el ejercicio que cierra la vuelta, y no hay dos valores que puedan contradecirse.
@@ -174,8 +174,8 @@ Así quedó repartido, por si hay que volver a tocarlo:
 ### Backlog del eje 1
 
 - [ ] **Circuito**: vueltas explícitas (por ejemplo, 3) sobre un bloque de varios
-      ejercicios. Es el mismo mecanismo, con un número de vueltas fijo y un
-      descanso entre ellas.
+  ejercicios. Es el mismo mecanismo, con un número de vueltas fijo y un
+  descanso entre ellas.
 
 ---
 
@@ -183,13 +183,13 @@ Así quedó repartido, por si hay que volver a tocarlo:
 
 Qué forma tiene cada serie, al margen de con qué se agrupe.
 
-| Tipo | Qué es | Ejemplo |
-|---|---|---|
-| **Drop set** (serie descendente) | acabas y bajas ~25 % de peso sin descansar, varias veces | Press de banca 80 → 60 → 40 kg |
-| **Rest-pause** | microdescansos de 10–20 s dentro de la misma serie hasta completar las reps | Press 6+2+2 con 15 s entre tandas |
-| **Cluster set** | descansos dentro de la serie de 10–30 s para no perder potencia | Sentadilla 3×(2+2+2) |
-| **Al fallo / AMRAP** | la serie hasta que no puedas más, o «las repeticiones máximas» | Dominadas, 1 serie a muerte |
-| **Pirámide / regresiva** | el peso cambia entre series del mismo ejercicio | 12/10/8/6 subiendo peso |
+| Tipo                             | Qué es                                                                      | Ejemplo                           |
+| -------------------------------- | --------------------------------------------------------------------------- | --------------------------------- |
+| **Drop set** (serie descendente) | acabas y bajas ~25 % de peso sin descansar, varias veces                    | Press de banca 80 → 60 → 40 kg    |
+| **Rest-pause**                   | microdescansos de 10–20 s dentro de la misma serie hasta completar las reps | Press 6+2+2 con 15 s entre tandas |
+| **Cluster set**                  | descansos dentro de la serie de 10–30 s para no perder potencia             | Sentadilla 3×(2+2+2)              |
+| **Al fallo / AMRAP**             | la serie hasta que no puedas más, o «las repeticiones máximas»              | Dominadas, 1 serie a muerte       |
+| **Pirámide / regresiva**         | el peso cambia entre series del mismo ejercicio                             | 12/10/8/6 subiendo peso           |
 
 **Por qué es más costoso:** hoy el plan dice cuántas series hay y el registro
 guarda **una fila por serie**. Un drop set son 3 series donde el plan dice 1, así
@@ -199,7 +199,7 @@ que habría que cambiar cómo se guarda y se valida el registro.
 guarda con su propio peso (aunque no hay objetivos distintos por serie).
 
 - [ ] **Drop set / rest-pause / cluster** — pendiente de decidir, requiere tocar
-      el registro de series.
+  el registro de series.
 
 ---
 
@@ -207,31 +207,31 @@ guarda con su propio peso (aunque no hay objetivos distintos por serie).
 
 Aquí no son series: son tiempo y vueltas.
 
-| Tipo | Qué es | Ejemplo |
-|---|---|---|
-| **EMOM** | una vuelta al empezar cada minuto | 10 min: 5 dominadas + 10 swings cada minuto |
-| **AMRAP** | las vueltas que puedas en X minutos | AMRAP 12 min: 5 press + 10 remos |
-| **Tabata / HIIT** | intervalos fijos (20 s de trabajo / 10 de descanso × 8) | Remo Tabata |
-| **Contraste / PAP** | un ejercicio pesado y uno explosivo emparejados | Sentadilla pesada + salto al cajón |
-| **Preexhausto / postexhausto** | poner el ejercicio de aislamiento antes o después del grande | Aperturas antes de press de banca |
+| Tipo                           | Qué es                                                       | Ejemplo                                     |
+| ------------------------------ | ------------------------------------------------------------ | ------------------------------------------- |
+| **EMOM**                       | una vuelta al empezar cada minuto                            | 10 min: 5 dominadas + 10 swings cada minuto |
+| **AMRAP**                      | las vueltas que puedas en X minutos                          | AMRAP 12 min: 5 press + 10 remos            |
+| **Tabata / HIIT**              | intervalos fijos (20 s de trabajo / 10 de descanso × 8)      | Remo Tabata                                 |
+| **Contraste / PAP**            | un ejercicio pesado y uno explosivo emparejados              | Sentadilla pesada + salto al cajón          |
+| **Preexhausto / postexhausto** | poner el ejercicio de aislamiento antes o después del grande | Aperturas antes de press de banca           |
 
 **Ya cabe sin cambios:** preexhausto / postexhausto (es solo el orden del día).
 Contraste necesita antes el eje 1, porque es una superserie con dos descansos
 distintos.
 
 - [ ] **EMOM / AMRAP / Tabata** — pendiente de decidir; sería otra forma de
-      pantalla de sesión (tiempo y vueltas, no series).
+  pantalla de sesión (tiempo y vueltas, no series).
 
 ---
 
 ## Resumen: qué entra y cuándo
 
-| Necesidad | Eje | Estado |
-|---|---|---|
-| Superserie / biserie / triserie / gigante | 1 | **implementado** |
-| Circuito | 1 | backlog |
-| Pirámide / regresiva | 2 | ya cabe |
-| Drop set / rest-pause / cluster | 2 | backlog (toca el registro de series) |
-| Preexhausto / postexhausto | 3 | ya cabe (es orden) |
-| Contraste / PAP | 1 + 3 | depende del eje 1 |
-| EMOM / AMRAP / Tabata | 3 | backlog (otra forma de sesión) |
+| Necesidad                                 | Eje   | Estado                               |
+| ----------------------------------------- | ----- | ------------------------------------ |
+| Superserie / biserie / triserie / gigante | 1     | **implementado**                     |
+| Circuito                                  | 1     | backlog                              |
+| Pirámide / regresiva                      | 2     | ya cabe                              |
+| Drop set / rest-pause / cluster           | 2     | backlog (toca el registro de series) |
+| Preexhausto / postexhausto                | 3     | ya cabe (es orden)                   |
+| Contraste / PAP                           | 1 + 3 | depende del eje 1                    |
+| EMOM / AMRAP / Tabata                     | 3     | backlog (otra forma de sesión)       |
