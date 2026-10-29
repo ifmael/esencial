@@ -997,7 +997,12 @@ Depende de: M5b.
 
 - [ ] Evaluar omp como worker si Hermes no cumple la adherencia (mismo brief y comprobaciones).
 - [ ] Canales de Hermes (Telegram/ntfy) y heartbeats, si aportan.
-- [ ] ADRs para las decisiones de arquitectura reales del flujo (si las hubo).
+- [x] **ADRs de las decisiones cerradas (2026-10-29)**: `docs/adr/` recoge seis
+      decisiones reales: ejecución local sin coordinador, contenedor por fase con
+      estado en el host, integridad por rutas/CI/revisión, migraciones aditivas,
+      previews por rama con D1/R2 compartidos y Access, e identidad propia de
+      GitHub/Linear. Hermes queda como ADR provisional; `omp` y el coordinador de
+      nivel 2 siguen abiertos en M6.
 - [ ] Revisar cobertura: objetivo 60% en `api`/`web` y decidir si se suben los
       `coverage.thresholds`.
 - [ ] Revisar límites de paralelismo (cuántas tareas a la vez con 16 núcleos/30 GiB).

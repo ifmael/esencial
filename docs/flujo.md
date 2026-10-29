@@ -4,6 +4,9 @@ El plan vive en `TODO-flujo-agentes.md`. Esto es lo que hay que respetar cuando 
 tarea la lleva un agente (`orquestator-cli`, M2). Las reglas del repo no cambian:
 TDD, conventional commits, sin atribución de IA, UI y datos en español.
 
+Las decisiones de arquitectura cerradas viven en `docs/adr/`; este documento
+describe cómo se opera el flujo, no por qué se eligió cada pieza.
+
 ## Ramas y PR
 
 - Rama `ESN-123-slug` desde `main`. El CLI **nunca** empuja a `main` ni usa `--force`.
