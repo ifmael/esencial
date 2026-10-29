@@ -14,18 +14,18 @@ preguntas cerradas (dónde corre `pr-review`, qué `wrangler`, heurística SQL).
 El nombre `orquestator-cli` se mantuvo por decisión (l.171, l.806). Esta pasada
 encuentra 4 gaps de seguridad, 4 de diseño y 5 restos de texto.
 
-| Hallazgo v2 | Estado | Resto |
-|---|---|---|
-| N1-A host sin git en el clon | Adoptado | — |
-| N2 `--no-hardlinks` | Adoptado | — |
-| N3 comentarios filtrados | Adoptado | — |
+| Hallazgo v2                  | Estado   | Resto                                                 |
+| ---------------------------- | -------- | ----------------------------------------------------- |
+| N1-A host sin git en el clon | Adoptado | —                                                     |
+| N2 `--no-hardlinks`          | Adoptado | —                                                     |
+| N3 comentarios filtrados     | Adoptado | —                                                     |
 | N4 commit status `migracion` | Adoptado | Bloquea PRs ajenas al flujo; sin repost por push (R3) |
-| N5 rutas de test protegidas | Adoptado | — |
-| D1-A `run` determinista | Adoptado | — |
-| D2 sin MCP de Linear | Adoptado | — |
-| D3 tag + smoke sin red | Adoptado | — |
-| D4 rondas humanas | Adoptado | Contradicción menor en l.476 |
-| D5 M5a/M5b | Adoptado | — |
+| N5 rutas de test protegidas  | Adoptado | —                                                     |
+| D1-A `run` determinista      | Adoptado | —                                                     |
+| D2 sin MCP de Linear         | Adoptado | —                                                     |
+| D3 tag + smoke sin red       | Adoptado | —                                                     |
+| D4 rondas humanas            | Adoptado | Contradicción menor en l.476                          |
+| D5 M5a/M5b                   | Adoptado | —                                                     |
 
 ## Evidencia consultada
 
@@ -177,13 +177,13 @@ comprobaciones de `DEPLOY.md` §7 y, si fallan, recuerde `wrangler rollback`
 
 ## 3. Restos de texto (~10 min)
 
-| Línea | Problema | Corrección |
-|---|---|---|
-| 216, 386, 672 | El `pr-reviewer` corre «sin red», pero necesita el modelo (el proxy) | «Red interna, solo el proxy». `--network none` queda solo para `check` (l.615) |
-| 383 | `fix --from check → … → push` también antes de que exista la PR | «→ check → review» mientras no haya PR |
-| 476 | «Tu rechazo en `In validation` cuenta como ronda» choca con la l.454 (contador aparte) | «Cuenta como ronda humana» |
-| 206 | El `spec-reviewer` corre «en el host, solo lectura» | En contenedor, como `pr-review`; el CLI publica los comentarios. Regla general: el host no ejecuta agentes (N1) |
-| 577, 639-640 | El provider de nan en el host (M0) y la reserva en `.task/state.json` | Provider a M1 vía proxy; reserva al host con R1 y a `check` con G2 |
+| Línea         | Problema                                                                               | Corrección                                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 216, 386, 672 | El `pr-reviewer` corre «sin red», pero necesita el modelo (el proxy)                   | «Red interna, solo el proxy». `--network none` queda solo para `check` (l.615)                                  |
+| 383           | `fix --from check → … → push` también antes de que exista la PR                        | «→ check → review» mientras no haya PR                                                                          |
+| 476           | «Tu rechazo en `In validation` cuenta como ronda» choca con la l.454 (contador aparte) | «Cuenta como ronda humana»                                                                                      |
+| 206           | El `spec-reviewer` corre «en el host, solo lectura»                                    | En contenedor, como `pr-review`; el CLI publica los comentarios. Regla general: el host no ejecuta agentes (N1) |
+| 577, 639-640  | El provider de nan en el host (M0) y la reserva en `.task/state.json`                  | Provider a M1 vía proxy; reserva al host con R1 y a `check` con G2                                              |
 
 ## Prioridad
 

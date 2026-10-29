@@ -20,14 +20,14 @@ y el acabado aplicado al shell y a la pantalla Hoy.
 Antes: `text-sm`(14) / `text-lg`(18) / `text-xl`(20) / `text-2xl`(24) mezclados sin
 criterio, más `text-base`(16) por defecto. Ahora seis pasos con line-height pareja:
 
-| token | px | para qué |
-|---|---|---|
-| `text-micro` | 11 | etiquetas de sección y badges, en mayúsculas y con tracking |
-| `text-caption` | 13 | metadatos y ayudas |
-| `text-body` | 15 | texto de interfaz |
-| `text-lead` | 17 | el dato principal de una fila (nombre de receta, de sesión) |
-| `text-title` | 20 | título de bloque, y título de pantalla en móvil |
-| `text-display` | 24 | título de pantalla en escritorio |
+| token          | px  | para qué                                                    |
+| -------------- | --- | ----------------------------------------------------------- |
+| `text-micro`   | 11  | etiquetas de sección y badges, en mayúsculas y con tracking |
+| `text-caption` | 13  | metadatos y ayudas                                          |
+| `text-body`    | 15  | texto de interfaz                                           |
+| `text-lead`    | 17  | el dato principal de una fila (nombre de receta, de sesión) |
+| `text-title`   | 20  | título de bloque, y título de pantalla en móvil             |
+| `text-display` | 24  | título de pantalla en escritorio                            |
 
 Los títulos llevan `letter-spacing: -0.02em`; el título de fecha usa
 `first-letter:uppercase` en lugar de `capitalize` (antes producía «19 De
@@ -38,12 +38,12 @@ Septiembre»; ahora «19 de septiembre»).
 Base 4px de Tailwind + cuatro tokens semánticos, que es lo que se usa en la
 práctica:
 
-| token | px | para qué |
-|---|---|---|
-| `gap-stack` | 12 | entre elementos de un mismo bloque |
-| `gap-x-gutter` | 16 | entre columnas |
-| `p-card` | 20 | padding interno de tarjeta |
-| `gap-y-section` | 28 | entre secciones de la página |
+| token           | px  | para qué                           |
+| --------------- | --- | ---------------------------------- |
+| `gap-stack`     | 12  | entre elementos de un mismo bloque |
+| `gap-x-gutter`  | 16  | entre columnas                     |
+| `p-card`        | 20  | padding interno de tarjeta         |
+| `gap-y-section` | 28  | entre secciones de la página       |
 
 Escalera de 8→12→20→28: cada salto es un cambio de nivel, no un número suelto.
 
@@ -120,7 +120,7 @@ mismos `aria-expanded`/`aria-controls`/`aria-current`.
   filas de 44px con icono, activo como pastilla verde suave, submenús con raíl
   vertical y chevron que gira, y «Cerrar sesión» anclado abajo.
 - **Barra inferior**: icono + etiqueta, objetivo táctil de 44px, pastilla de
-  activo tras el icono, `padding` de *safe-area*, sombra superior para
+  activo tras el icono, `padding` de _safe-area_, sombra superior para
   despegarla del contenido y «Salir» separado por una línea.
 
 ## 5. Pantalla Hoy
@@ -150,7 +150,7 @@ Mismo número de bloques, mismo orden y misma rejilla de 3 columnas.
    eso no he tocado el reparto desigual de alturas de las 3 columnas ni el vacío
    inferior en escritorio — la maqueta de Stitch hace exactamente lo mismo.
 3. **El formato de la fecha en el `<input type="date">`.** Lo formatea el
-   navegador según *su* idioma, no el de la página: un Chrome en inglés enseña
+   navegador según _su_ idioma, no el de la página: un Chrome en inglés enseña
    `09/19/2026` mientras el título dice «19 de septiembre». Arreglarlo de verdad
    es un selector propio (Popover + calendario), y eso ya es cambiar el
    comportamiento. La página es `lang="es"`.
@@ -164,7 +164,7 @@ Mismo número de bloques, mismo orden y misma rejilla de 3 columnas.
 ### Un test de e2e tocado
 
 `e2e/tests/edge.spec.ts:98` esperaba `getByText("Guardado")`, que en Playwright
-es *subcadena*: con la etiqueta de reposo `Autoguardado` (que viene de la
+es _subcadena_: con la etiqueta de reposo `Autoguardado` (que viene de la
 maqueta) la aserción pasaba nada más cargar, antes de que el autosave guardara.
 Ahora es `{ exact: true }`, que es lo que el test quería decir desde el principio.
 
@@ -190,21 +190,31 @@ app abierta:
 > para comparar esta variante con la otra sin volver a arrancar nada.
 
 ```js
-const API = "http://127.0.0.1:8789", DATE = "2026-09-19"; // hoy, en tu fecha
-const j = (u, o) => fetch(API + u, { credentials: "include", ...o })
-  .then(async r => ({ s: r.status, b: await r.json().catch(() => null) }));
+const API = "http://127.0.0.1:8789",
+  DATE = "2026-09-19"; // hoy, en tu fecha
+const j = (u, o) =>
+  fetch(API + u, { credentials: "include", ...o }).then(async (r) => ({
+    s: r.status,
+    b: await r.json().catch(() => null),
+  }));
 const isoWeek = (await j("/api/day/" + DATE)).b.isoWeek;
 const dayIndex = (await j("/api/day/" + DATE)).b.dayIndex;
 
 // fotos de relleno (canvas -> JPEG -> POST /api/uploads)
 const photo = async (h) => {
-  const c = Object.assign(document.createElement("canvas"), { width: 512, height: 512 });
+  const c = Object.assign(document.createElement("canvas"), {
+    width: 512,
+    height: 512,
+  });
   const g = c.getContext("2d");
   const grad = g.createLinearGradient(0, 0, 512, 512);
-  grad.addColorStop(0, `hsl(${h} 55% 62%)`); grad.addColorStop(1, `hsl(${(h + 40) % 360} 45% 34%)`);
-  g.fillStyle = grad; g.fillRect(0, 0, 512, 512);
-  const blob = await new Promise(b => c.toBlob(b, "image/jpeg", 0.85));
-  const fd = new FormData(); fd.append("file", blob, "f.jpg");
+  grad.addColorStop(0, `hsl(${h} 55% 62%)`);
+  grad.addColorStop(1, `hsl(${(h + 40) % 360} 45% 34%)`);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 512, 512);
+  const blob = await new Promise((b) => c.toBlob(b, "image/jpeg", 0.85));
+  const fd = new FormData();
+  fd.append("file", blob, "f.jpg");
   return (await j("/api/uploads", { method: "POST", body: fd })).b.photo_path;
 };
 const recipes = [
@@ -214,24 +224,48 @@ const recipes = [
 ];
 const ids = [];
 for (const [name, , hue] of recipes) {
-  ids.push((await j("/api/recipes", {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, photo_path: await photo(hue), servings: 2 }),
-  })).b.id);
+  ids.push(
+    (
+      await j("/api/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name,
+          photo_path: await photo(hue),
+          servings: 2,
+        }),
+      })
+    ).b.id,
+  );
 }
 await j("/api/meal-plan/" + isoWeek, {
-  method: "PUT", headers: { "content-type": "application/json" },
-  body: JSON.stringify({ slots: recipes.map(([, meal], i) => ({ day: dayIndex, meal, recipeId: ids[i] })) }),
+  method: "PUT",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    slots: recipes.map(([, meal], i) => ({
+      day: dayIndex,
+      meal,
+      recipeId: ids[i],
+    })),
+  }),
 });
 await j("/api/plan-sessions", {
-  method: "POST", headers: { "content-type": "application/json" },
-  body: JSON.stringify({ date: DATE, name: "Empuje A", items: [
-    { exerciseId: 1, targetSets: 4 }, { exerciseId: 24, targetSets: 3 },
-    { exerciseId: 6, targetSets: 3 }, { exerciseId: 46, targetSets: 3 },
-  ]}),
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    date: DATE,
+    name: "Empuje A",
+    items: [
+      { exerciseId: 1, targetSets: 4 },
+      { exerciseId: 24, targetSets: 3 },
+      { exerciseId: 6, targetSets: 3 },
+      { exerciseId: 46, targetSets: 3 },
+    ],
+  }),
 });
 await j("/api/notes/" + DATE, {
-  method: "PUT", headers: { "content-type": "application/json" },
+  method: "PUT",
+  headers: { "content-type": "application/json" },
   body: JSON.stringify({ text: "Dormí bien. Sesión de empuje por la tarde." }),
 });
 location.reload();

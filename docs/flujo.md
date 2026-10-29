@@ -14,29 +14,29 @@ TDD, conventional commits, sin atribución de IA, UI y datos en español.
 
 ## Estados (Linear)
 
-| Estado | Quién lo mueve |
-|---|---|
-| Backlog | tú |
-| Spec review | `watch` lanza el `spec-reviewer`; cada comentario trae la definición actual y las preguntas; si no hay preguntas, la pasa a `Ready` |
-| Ready | **watch** cuando el revisor no tiene preguntas; el bloque manual sigue valiendo |
-| In Progress | el CLI (`run`, `start`, `fix`) |
-| In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable` |
-| Done | `watch` al ver la PR mergeada (o tú) |
-| Blocked | el CLI o tú, con una pregunta concreta; `resume` vuelve a la fase anterior |
+| Estado        | Quién lo mueve                                                                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Backlog       | tú                                                                                                                                  |
+| Spec review   | `watch` lanza el `spec-reviewer`; cada comentario trae la definición actual y las preguntas; si no hay preguntas, la pasa a `Ready` |
+| Ready         | **watch** cuando el revisor no tiene preguntas; el bloque manual sigue valiendo                                                     |
+| In Progress   | el CLI (`run`, `start`, `fix`)                                                                                                      |
+| In validation | el CLI, con PR revisada, `ci`/`lint`/`migracion` verdes y `mergeable`                                                               |
+| Done          | `watch` al ver la PR mergeada (o tú)                                                                                                |
+| Blocked       | el CLI o tú, con una pregunta concreta; `resume` vuelve a la fase anterior                                                          |
 
 ## Artefactos
 
 Viven en `~/.orquestator/ESN-123/task/` (host) y se montan en `<clon>/.task/`
 (ignorado por git). Cada fase escribe solo el suyo:
 
-| Fichero | Lo escribe |
-|---|---|
-| `brief.md` | `start` (copia de la issue) |
-| `impl.md` | implementer (plan de pruebas + qué se hizo) |
-| `checks.md` | `check` (lint, tipos, tests, cobertura, e2e) |
-| `review.md` | `review` |
-| `pr-review.md` | `pr-review` |
-| `pr-body.md` | implementer |
+| Fichero             | Lo escribe                                       |
+| ------------------- | ------------------------------------------------ |
+| `brief.md`          | `start` (copia de la issue)                      |
+| `impl.md`           | implementer (plan de pruebas + qué se hizo)      |
+| `checks.md`         | `check` (lint, tipos, tests, cobertura, e2e)     |
+| `review.md`         | `review`                                         |
+| `pr-review.md`      | `pr-review`                                      |
+| `pr-body.md`        | implementer                                      |
 | `human-feedback.md` | host (solo tus comentarios, filtrados por autor) |
 
 El estado interno y el hash de `approve` viven en `~/.orquestator/ESN-123/state.json`,
@@ -76,12 +76,12 @@ hermes chat --oneshot -Q --safe-mode --yolo \
   sin push (lo hace el host).
 - El implementer escribe `impl.md` (respuesta final) y `pr-body.md` (con sus tools).
 
-| Fase | Comando | Modelo | Esfuerzo | Artefacto |
-|---|---|---|---|---|
-| spec-reviewer | `spec-review` | `qwen3.8-flash` | `max` | `spec-review.md` + comentario |
-| implementer | `implement` | `deepseek-v4-flash` | `xhigh` | `impl.md`, `pr-body.md` |
-| reviewer | `review` | `qwen3.8-flash` | `max` | `review.md` |
-| pr-reviewer | `pr-review` | `deepseek-v4-flash` | `ultra` | `pr-review.md` |
+| Fase          | Comando       | Modelo              | Esfuerzo | Artefacto                     |
+| ------------- | ------------- | ------------------- | -------- | ----------------------------- |
+| spec-reviewer | `spec-review` | `qwen3.8-flash`     | `max`    | `spec-review.md` + comentario |
+| implementer   | `implement`   | `deepseek-v4-flash` | `xhigh`  | `impl.md`, `pr-body.md`       |
+| reviewer      | `review`      | `qwen3.8-flash`     | `max`    | `review.md`                   |
+| pr-reviewer   | `pr-review`   | `deepseek-v4-flash` | `ultra`  | `pr-review.md`                |
 
 Roles decididos para el piloto: los cuatro de la tabla. Después del piloto: `test-auditor`
 (tests que prueban comportamiento) y `security-auditor` (diffs de autenticación, API,
