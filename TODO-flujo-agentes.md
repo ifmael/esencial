@@ -997,12 +997,14 @@ Depende de: M5b.
 
 - [ ] Evaluar omp como worker si Hermes no cumple la adherencia (mismo brief y comprobaciones).
 - [ ] Canales de Hermes (Telegram/ntfy) y heartbeats, si aportan.
-- [x] **ADRs de las decisiones cerradas (2026-10-29)**: `docs/adr/` recoge seis
+- [x] **ADRs, primera versión (2026-10-29)**: `docs/adr/` recoge seis
       decisiones reales: ejecución local sin coordinador, contenedor por fase con
       estado en el host, integridad por rutas/CI/revisión, migraciones aditivas,
       previews por rama con D1/R2 compartidos y Access, e identidad propia de
       GitHub/Linear. Hermes queda como ADR provisional; `omp` y el coordinador de
-      nivel 2 siguen abiertos en M6.
+      nivel 2 siguen abiertos en M6. Esta versión documenta el flujo; la revisión
+      de calidad y la arquitectura completa del proyecto quedan en la última tarea
+      de M6.
 - [ ] Revisar cobertura: objetivo 60% en `api`/`web` y decidir si se suben los
       `coverage.thresholds`.
 - [ ] Revisar límites de paralelismo (cuántas tareas a la vez con 16 núcleos/30 GiB).
@@ -1059,6 +1061,16 @@ Depende de: M5b.
       `SupplementaryGroups=docker` es la vía.
       Aceptación: `run` sin permiso explica qué falta y no crea contenedores; el
       servicio arranca con permiso explícito.
+- [ ] **ADRs de calidad (cierre, al final de M6)**: revisar `docs/adr/` contra la
+      arquitectura real del proyecto y las decisiones tomadas en
+      `TODO-flujo-agentes.md`, `docs/flujo.md`, `AGENTS.md`, `DEPLOY.md` y
+      `REDESIGN.md`. Cada ADR debe explicar contexto, decisión, alternativas,
+      consecuencias y referencias al código/config; cubrir también la arquitectura
+      de la app (dos Workers B', D1/R2, Access y sistema de diseño), no solo el
+      flujo. Marcar las decisiones provisionales o sustituidas y eliminar
+      duplicados. Aceptación: una persona puede reconstruir la arquitectura y las
+      decisiones leyendo `docs/adr/` sin abrir el TODO; enlaces y fechas correctos;
+      `biome check docs/adr` verde.
 
 ## Bitácora
 
