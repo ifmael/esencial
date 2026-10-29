@@ -107,7 +107,7 @@ faltan aprobaciones, no gasta una ronda.
 antes del review. Si la rama aún no tiene `test:coverage` (main antes del merge de M2),
 cae a `pnpm test` sin ocultar fallos. La cobertura se mide en las dos partes: `api` con istanbul (v8 no
 ve el código dentro de workerd) y `web` con v8; los umbrales solo suben. Hoy:
-api 95/90/99/97 y web 86/85/86/88 (sentencias/ramas/funciones/líneas). Un test
+api 95/90/99/97 y web 87/85/86/88 (sentencias/ramas/funciones/líneas). Un test
 nuevo o modificado debe fallar contra `main` (RED).
 
 ## Preview por rama (M5a)
