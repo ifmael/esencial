@@ -7,7 +7,7 @@ píxeles, nombres de pruebas ni detalles de implementación.
 Criterio: entra lo que el usuario o el servicio pueden observar; no entra lo que solo
 describe una tabla, un archivo o una decisión interna.
 
-Estado: 58 reglas. Falta el resto de experiencia observable.
+Estado: 71 reglas; revisión pendiente.
 
 ## Identificadores
 
@@ -172,5 +172,40 @@ reutiliza.
 - **regla-experiencia-01** En modo sesión no hay desplazamiento vertical y se ve una sola serie a la
   vez.
 - **regla-experiencia-02** El aspa y Escape piden confirmación antes de salir del modo sesión.
-- **regla-experiencia-03** «Terminar» exige elegir esfuerzo; con series pendientes muestra un
-  aviso con lo que queda y permite seguir o cerrar igual.
+- **regla-experiencia-03** «Terminar» exige elegir esfuerzo; con series pendientes
+  muestra un aviso con lo que queda y permite seguir o cerrar igual.
+- **regla-experiencia-04** El tema, sistema, claro u oscuro, se elige solo en
+  Ajustes o con «Cambiar tema» de la paleta de comandos; el marco de la aplicación
+  no lleva conmutador.
+- **regla-experiencia-05** El menú lateral solo se pliega cuando la persona lo pide
+  y recuerda esa preferencia; navegar entre secciones no lo cambia.
+- **regla-experiencia-06** Las pantallas de calendario no llevan cabecera y ocupan
+  la altura de la ventana; el menú lateral sigue midiendo la ventana y no la
+  página.
+- **regla-experiencia-07** Mover la semana anima la rejilla; abrir el editor de un
+  día no deja la rejilla por encima del diálogo.
+- **regla-experiencia-08** En pantallas estrechas, la cabecera del día es una sola
+  fila de controles; el título sigue disponible para lectores de pantalla y no se
+  muestran progreso ni enlaces a los planes.
+- **regla-experiencia-09** La cabecera del detalle de ejercicio es una fila en
+  todos los anchos; un nombre largo hace crecer la cabecera en altura, no se
+  recorta.
+- **regla-experiencia-10** Hay un solo anillo de foco; el campo con error se marca
+  como inválido para el lector de pantalla y para el estilo, sin una clase
+  duplicada.
+- **regla-experiencia-11** Con reducción de movimiento activada, las transiciones
+  duran un milisegundo, la animación de creación salta directa, lo que entra usa
+  un fundido de 150 milisegundos y se apagan giros, onda y animación de cambio de
+  semana.
+- **regla-experiencia-12** Toda foto de receta se pide con credenciales entre
+  orígenes para que el color dinámico pueda leerla.
+- **regla-experiencia-13** Si no hay aceleración gráfica o el modelo tridimensional
+  no carga, se pinta el mapa vectorial de siempre.
+- **regla-experiencia-14** El visor tridimensional es una imagen sin foco; de solo
+  lectura se nombra con cada músculo y su grado, y en el selector los músculos se
+  ofrecen además como fichas para el teclado.
+- **regla-experiencia-15** En el visor, la rueda o el pellizco acercan hacia el
+  cursor y «Restablecer vista» aparece tras mover la cámara.
+- **regla-experiencia-16** El globo de una comida aparece tras 500 milisegundos
+  con el cursor encima o al enfocarla, y se cierra al salir, perder el foco, pulsar
+  Escape o desplazar.
