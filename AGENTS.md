@@ -130,6 +130,11 @@ configuración vive en `e2e/playwright.config.ts`.
 `docs/adr/` guarda las decisiones. No implementes el flujo a mano ni cambies el
 comportamiento de los comandos sin actualizar su documentación y sus pruebas.
 
+- Hay un solo `AGENTS.md` de proyecto, no uno por fase. Las diferencias de rol
+  viven en `orquestator-cli/perfiles/` (perfil, SOUL y habilidades).
+- La revisión de especificación y el revisor final leen el `AGENTS.md` de `main`;
+  el implementador lee el de su rama. El revisor de código también recibe el de
+  `main` montado en solo lectura.
 - El estado de una tarea vive en `~/.orquestator/`; no lo escribas desde el
   repositorio.
 - `approve` es humano y con terminal. No lo automatices.
