@@ -7,8 +7,7 @@ píxeles, nombres de pruebas ni detalles de implementación.
 Criterio: entra lo que el usuario o el servicio pueden observar; no entra lo que solo
 describe una tabla, un archivo o una decisión interna.
 
-Estado: 36 reglas. Faltan catálogo, recetas, plantillas, autenticación, navegación
-y el resto de experiencia observable.
+Estado: 58 reglas. Falta el resto de experiencia observable.
 
 ## Identificadores
 
@@ -105,6 +104,68 @@ reutiliza.
   de un día fuera de la página.
 - **regla-historial-06** La progresión usa kilos si hay, si no segundos, si no
   repeticiones, y en cardio kilómetros.
+
+## Catálogo y taxonomía
+
+- **regla-catalogo-01** La búsqueda de ejercicios casa nombre, alias y grupos, sin
+  distinguir mayúsculas ni tildes.
+- **regla-catalogo-02** Un ejercicio debe tener al menos un grupo muscular; una
+  sub-región solo puede pertenecer a un grupo que el ejercicio ya tenga, o el
+  servicio responde 400.
+- **regla-catalogo-03** Una sub-región repetida o sin grado es 400; los grados son
+  principal, secundario y estabilizador.
+- **regla-catalogo-04** Elegir un músculo añade su grupo si falta; quitar un grupo
+  elimina sus músculos. Cada músculo elegido nace principal y su grado se cambia
+  aparte.
+- **regla-catalogo-05** Filtrar por un grupo devuelve los ejercicios de ese grupo;
+  filtrar por un músculo no mira su grado.
+- **regla-catalogo-06** Un alias vacío o repetido es 400; el nombre del ejercicio es
+  único.
+
+## Recetas y nutrición
+
+- **regla-recetas-01** Crear y editar receta son páginas propias; cancelar, Escape
+  o atrás no llaman al servicio, y guardar hace una sola petición de creación o de
+  edición.
+- **regla-recetas-02** Descripción y comensales solo aparecen al editar; al crear
+  quedan vacíos.
+- **regla-recetas-03** Los macros se calculan por ración; los opcionales y lo que
+  va sin cantidad no cuentan, y un ingrediente sin enlace o con una unidad no
+  convertible deja el cálculo como aproximado.
+- **regla-recetas-04** Los totales del día usan una ración por comida; sin recetas
+  no hay total y los valores aproximados se marcan con «≈».
+- **regla-recetas-05** La unidad del ingrediente es texto libre; el desplegable
+  conserva una unidad existente que no sea gramos, mililitros o unidad.
+- **regla-recetas-06** Una foto nueva se sube antes de guardar; si la subida falló
+  y quedó pendiente, el guardado la reintenta.
+- **regla-recetas-07** El nombre exacto de un alimento lo enlaza; cualquier otro
+  texto suelta el enlace. Un alimento enlazado que no exista es 400.
+
+## Plantillas
+
+- **regla-plantillas-01** Crear y editar plantilla son páginas propias; cancelar,
+  Escape o atrás vuelven a la lista sin llamar al servicio.
+- **regla-plantillas-02** Guardar una plantilla envía una sola petición con las
+  posiciones en orden y vuelve a la lista con la tarjeta guardada desplegada.
+- **regla-plantillas-03** El editor permite ordenar ejercicios con ratón, tacto y
+  teclado; Escape cancela un arrastre de teclado sin abandonar la página.
+- **regla-plantillas-04** Cuando la métrica de un ejercicio es de tiempo, el editor
+  oculta las repeticiones mínimas y máximas.
+
+## Autenticación y navegación
+
+- **regla-autenticacion-01** La identidad la prueba Cloudflare Access en el borde;
+  la aplicación no tiene inicio de sesión propio ni gestiona la credencial de
+  sesión.
+- **regla-autenticacion-02** Si el servicio no responde al arrancar, la aplicación
+  pasa por el retorno de sesión y vuelve; así no confunde la falta de credencial
+  con un fallo de datos.
+- **regla-autenticacion-03** Un fallo de sesión en la aplicación se resuelve
+  recargando una vez por pestaña y sesión.
+- **regla-autenticacion-04** Salir del editor de recetas usa reemplazo, así atrás no
+  reabre el borrador; el de plantillas sí apila.
+- **regla-autenticacion-05** Crear receta, plantilla o ejercicio anima el control
+  pulsado hasta el destino; editar y la carga directa no animan.
 
 ## Experiencia observable
 
