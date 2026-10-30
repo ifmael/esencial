@@ -1,14 +1,14 @@
 # Comportamiento de la aplicación
 
-Spec de comportamiento observable de Esencial. Una regla por línea, con su
-condición y su resultado. No incluye recuentos de semilla, migraciones, píxeles,
-nombres de tests ni detalles de implementación.
+Especificación de comportamiento observable de Esencial. Una regla por viñeta,
+con su condición y su resultado. No incluye recuentos de semilla, migraciones,
+píxeles, nombres de pruebas ni detalles de implementación.
 
 Criterio: entra lo que el usuario o el servicio pueden observar; no entra lo que solo
 describe una tabla, un archivo o una decisión interna.
 
-Estado: primera entrega de 20 reglas. Faltan descansos detallados, vueltas de
-bloques, historial, catálogo, recetas, plantillas, autenticación y navegación.
+Estado: 36 reglas. Faltan catálogo, recetas, plantillas, autenticación, navegación
+y el resto de experiencia observable.
 
 ## Identificadores
 
@@ -30,8 +30,7 @@ reutiliza.
 - **regla-planificacion-05** El cardio solo admite descanso «al terminar»; no tiene descanso
   entre series.
 - **regla-planificacion-06** Un bloque encadenado solo admite fuerza y termina en su último
-  miembro: el último no se encadena con el siguiente y los descansos viven solo
-  en él.
+  miembro: el último no se encadena con el siguiente.
 
 ## Registro y sesión
 
@@ -57,8 +56,55 @@ reutiliza.
 - **regla-sesion-10** El borrador se guarda solo en sesiones planificadas, uno por fecha;
   se limpia al cerrar o al abrir un día sin sesión o ya registrado, y solo se
   restaura si el ejercicio y el número de series siguen encajando con el plan.
-- **regla-sesion-11** Marcar una serie arranca el descanso programado; la última serie
-  del último ejercicio no arranca nada y corta la pausa en curso.
+- **regla-sesion-11** La última serie del último ejercicio no arranca descanso y
+  corta la pausa en curso.
+
+## Descansos
+
+- **regla-descansos-01** Marcar una serie arranca el descanso que toca: entre
+  series o fin de ejercicio. Si el ejercicio no tiene descanso programado, no
+  aparece barra ni suena nada.
+- **regla-descansos-02** El descanso de entre series deja el cursor en la serie
+  siguiente; en un bloque, en la vuelta siguiente del primer miembro. El de fin lo
+  deja en la primera serie del ejercicio que entra, y el lanzado a mano donde
+  estaba.
+- **regla-descansos-03** «Saltar» corta el descanso sin pitido y avanza como si
+  hubiera terminado; el play/pausa lo congela y lo reanuda desde lo que quedaba.
+- **regla-descansos-04** La cuenta se basa en la hora de fin, no en tics: al volver
+  a la pestaña se resincroniza y no se descuadra.
+- **regla-descansos-05** El descanso avisa a 3 s y 2 s y suena tres tonos al
+  terminar; cada aviso suena una vez y no suena tras «Saltar» ni al cortarlo la
+  última serie de la sesión.
+
+## Bloques
+
+- **regla-bloques-01** Un bloque son dos o más ejercicios consecutivos
+  encadenados; una fila suelta no forma bloque.
+- **regla-bloques-02** El bloque avanza por vueltas: una serie de cada miembro,
+  saltando al que agotó las suyas; la vuelta la define la serie que se marca.
+- **regla-bloques-03** A mitad de vuelta, marcar una serie pasa al siguiente
+  miembro sin descanso; al cerrar la vuelta arranca el descanso del bloque.
+- **regla-bloques-04** Los descansos del bloque se programan solo en el último
+  miembro: entre vueltas y al terminar; los intermedios no admiten descanso.
+- **regla-bloques-05** Al terminar el bloque, el descanso de fin avanza al
+  ejercicio siguiente; el título muestra el tipo de bloque y el miembro encadenado
+  indica con quién va.
+
+## Historial
+
+- **regla-historial-01** El historial lista los días registrados del más reciente
+  al más antiguo, agrupados por mes; cada fila abre la sesión registrada de ese día.
+- **regla-historial-02** Solo cuentan las series y el cardio marcados como hechos;
+  un día sin ninguna marca dice «Sin marcas».
+- **regla-historial-03** El rango de fechas es inclusivo; si la fecha inicial es
+  posterior a la final, la pantalla no consulta y el servicio responde 400.
+- **regla-historial-04** La lista pagina de 20 en 20, con techo de 60; «Cargar
+  más» solo aparece si queda otra página y cambiar el rango vuelve a la primera.
+- **regla-historial-05** La ficha del ejercicio muestra la progresión de lo
+  cargado, las series o el cardio de cada día y el mejor histórico, que puede ser
+  de un día fuera de la página.
+- **regla-historial-06** La progresión usa kilos si hay, si no segundos, si no
+  repeticiones, y en cardio kilómetros.
 
 ## Experiencia observable
 
