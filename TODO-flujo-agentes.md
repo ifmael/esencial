@@ -1088,6 +1088,14 @@ Depende de: M5b.
       o hay OOM, bajar a 2 o separar `--memory` por fase. Aceptación: cuatro tareas
       terminan sin OOM y con memoria libre >4 GiB, o queda documentado el límite
       menor.
+- [ ] **Skill para escribir specs de tareas a mergear aquí**: crear una skill que,
+      a partir de una issue y del contexto del repo, redacte la spec para
+      `Spec review`: problema, alcance, fuera de alcance, criterios de aceptación
+      verificables, restricciones, migraciones/compatibilidad, comandos de
+      verificación y riesgos. Debe leer `AGENTS.md`, `docs/comportamiento.md` y
+      `docs/flujo.md`, no duplicar sus reglas y no implementar ni tocar código.
+      Aceptación: una issue de prueba produce una spec completa y el
+      `spec-reviewer` no tiene que reescribirla.
 
 ## Bitácora
 
