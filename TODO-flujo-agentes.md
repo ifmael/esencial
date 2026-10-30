@@ -1019,7 +1019,11 @@ Depende de: M5b.
       contenedor, no reservas; con 30 GiB de host, 4 contenedores pueden
       sobrepasar la memoria si coinciden varios `check`. Vigilar `docker stats` y
       bajar a 2 o separar límites por fase si aparece OOM.
-- [ ] Revisión final de `AGENTS.md` (se actualiza al cerrar cada fase).
+- [x] **Revisión final de `AGENTS.md` (2026-10-29)**: reescrito como contrato
+      operativo de 164 líneas. El comportamiento vive en
+      `docs/comportamiento.md` (71 reglas), y `AGENTS.md` solo enlaza las fuentes,
+      fija comandos, rutas protegidas, migraciones, pruebas de extremo a extremo y
+      trampas. La historia y los detalles de pantalla salieron del documento.
 - [ ] Si se añadió el coordinador en M5b, revisar si aporta algo que `run` no haga; si no,
       retirarlo.
 - [ ] **Dashboard de Hermes (nice to have)**: ver las sesiones en vivo desde
