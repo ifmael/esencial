@@ -1,1380 +1,169 @@
 # AGENTS.md — Esencial
 
-Memoria del proyecto para agentes. Lee esto antes de tocar el repo; actualízalo
-cuando descubras algo que no esté en los specs.
-
-## Qué es y stack
-
-App de bienestar personal (recetas + plan de fuerza) en **dos Workers** de
-Cloudflare: uno sirve el SPA y gatea el HTML, el otro expone la API.
-
-- `api/` — backend **Hono** sobre **Cloudflare Workers** (Worker `esencial-api`),
-  DB **D1** (SQLite) y R2 para las fotos.
-- `web/` — SPA **React 19** + **Vite** + **react-router 7** + **Tailwind**; el
-  Worker del frontal (`esencial`) sirve los assets y gatea el HTML.
-- Monorepo **pnpm**. **Dos despliegues** (B'): el navegador habla con los dos
-  Workers por separado.
-
-## Convenciones del proyecto
-
-- **Conventional commits** solamente. **NUNCA** añadir `Co-Authored-By` ni
-  atribución de IA a los commits.
-- **TDD estricto (RED→GREEN)**: cada cambio empieza con un test que falla y
-  termina con el test verde
-- **Verifica antes de afirmar**: si no estás seguro de un dato técnico. No confirmes sin verificar.
-- **Respuestas concisas por defecto**: mínimo útil; expande solo si se pide o la
-  tarea lo requiere.
-- **Propón alternativas con tradeoffs** cuando haya un cruce real de diseño.
-- La UI y los datos van en **español**; nombres de ejercicios/recetas en español.
-
-## Sistema de diseño (UI)
-
-**La fuente única es `web/src/globals.css`** (Material 3 Expressive; historia y
-decisiones en `REDESIGN.md`). Tres capas, con un solo dueño cada una:
-
-1. `:root` — valores crudos. El color M3 (32 roles, claro y oscuro) y los muelles
-   viven en **`web/src/tokens.css`, generado** por `web/scripts/gen-tokens.ts` desde
-   la semilla `#15803d` (`node web/scripts/gen-tokens.ts`); no se edita a mano,
-   está fuera de biome y `tests/tokens.test.ts` falla si se desvía del generador.
-   En `globals.css`: forma, espaciado, elevación, capa de estado y la fuente.
-2. `@theme inline` — el puente a Tailwind (`text-title-m`, `bg-surface-container-high`,
-   `rounded-xl`, `shadow-2`…). Vacía los espacios de nombres de Tailwind
-   (`--color-*`, `--text-*`, `--radius-*`, `--shadow-*`: `initial`), así que
-   `text-sm` o `rounded-lg` **no generan CSS**.
-3. `@layer components` — la piel de las piezas (`.btn-*`, `.card-*`, `.input`,
-   `.field`, `.chip`, `.fab`, `.connected`, `.checkbox`, `.switch`, `.scroll-x`,
-   `.badge-*`, `.alert-*`, `.dialog`, `.sheet`, `.menu`, `.toolbar`, `.snackbar`…).
-
-Las pantallas consumen **las primitivas**:
-- `web/src/components/ui.tsx`: `Button`, `SplitButton`, `ConnectedGroup` y
-  `ConnectedItem`, `Fab`, `Chip`, `Card` (elevated, filled, outlined, tonal),
-  `Chain` (la caja de un bloque encadenado), `Field`, `Input`,
-  `Textarea`, `Select`, `SearchBar`, `Checkbox`, `Switch`, `Badge`, `Alert`,
-  `Kbd`, `ScrollStrip`.
-- `expressive.tsx`: `Shape`, `Loader`, `WavyProgress`, `WavyRing`, `CountUp`,
-  `RewardSeal`, `EmptyState`, `Monogram`.
-- `overlay.tsx`: `Dialog`, `Sheet`, `OverlayHeader`, `useSnackbar`, `useTooltip`.
-
-Los iconos son Material Symbols Rounded en línea (`icons.tsx`, generado por
-`web/scripts/gen-icons.py`; `filled` para el destino activo).
-
-La piel del punto 3 solo la escriben esos tres ficheros; una pantalla nunca. Sí se
-aplican tal cual estas utilidades: `.section-label`, `.list-row`,
-`.card-interactive`, `.skeleton`, `.state` (capa de estado M3 de cualquier
-pulsable propio, junto con `onPointerDown={ripple}`), `.stagger` (entrada
-escalonada; cada hijo con `--i`), `.type-move`, `.tabular` (cifras), `.text-e`
-(variante _emphasized_) y `motion-*`.
-
-**Al añadir algo nuevo:** reutiliza una primitiva. Si no encaja, añade primero el
-token (`:root` + `@theme inline`) y después la primitiva. `pnpm lint` rechaza
-(`web/scripts/check-design-tokens.ts`):
-- un valor suelto (`rounded-[7px]`);
-- la piel escrita a mano (`className="card"`);
-- la escala cruda de Tailwind (`text-sm`, `rounded-lg`, `shadow-xl`,
-  `bg-black/40`, `text-white`, `bg-red-500`, `duration-150`);
-- la escala del sistema anterior (`text-caption`, `rounded-card`,
-  `text-text-secondary`).
-
-Se aceptan los derivados (`var()`, `calc()`, `env()`).
-
-Escala vigente — todo lo demás sale de aquí:
-
-| Familia               | Tokens                                                                                                                                                                                                                                                                                                    |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tipografía (roles M3) | `display-l` 57 · `display-m` 45 · `display-s` 36 · `headline-l` 32 · `headline-m` 28 · `headline-s` 24 · `title-l` 22 · `title-m` 16 · `title-s` 14 · `body-l` 16 · `body-m` 14 · `body-s` 12 · `label-l` 14 · `label-m` 12 · `label-s` 11; `+ text-e` = _emphasized_ (peso 720, anchura 112 %, ROND 100) |
-| Fuente                | Google Sans Flex auto-alojada (`web/src/fonts/`, OFL), subset latino, ejes `wght` 400–800 · `wdth` 100–125 · `opsz` 12–60 · `ROND` 0–100                                                                                                                                                                  |
-| Color                 | roles M3 (`primary`, `on-primary`, `primary-container`… `surface-container-lowest…highest`, `outline(-variant)`, `inverse-*`, `scrim`) + `accent*` = color de la sección                                                                                                                                  |
-| Espaciado             | `stack` 12 · `gutter` 16 · `card` 20 · `section` 32                                                                                                                                                                                                                                                       |
-| Forma                 | `none` 0 · `xs` 4 · `s` 8 · `m` 12 · `l` 16 · `l-inc` 20 · `xl` 28 · `xl-inc` 32 · `xxl` 48 · `full`; `--radius-pill` 28 para lo que cambia de forma                                                                                                                                                      |
-| Elevación             | `shadow-1/2/3`, **solo** en el FAB, los menús, los tooltips, las hojas, la barra flotante y el snackbar; el resto, jerarquía por tono                                                                                                                                                                     |
-| Movimiento            | muelles M3E: `motion-spatial-fast` (k 800, ζ 0,6) · `motion-spatial` (380, 0,8) · `motion-spatial-slow` (200, 0,8) rebotan (posición, tamaño, forma); `motion-effects-fast/-/-slow` (3800/1600/800, ζ 1) no rebotan (color, opacidad)                                                                     |
-- **Color por sección**: `[data-section="deporte|nutricion|hoy"]` reescribe
-  `--accent*` (primary, tertiary, secondary); el Shell lo pone según la ruta.
-  Úsalo (`bg-accent`, `text-on-accent-container`…) en lo que pertenece a la
-  sección. `accent-soft` es su contenedor claro: el subitem activo del cajón y
-  la piel tonal (`.btn-tonal`, `.btn-*[aria-pressed]`, `.chip` elegido,
-  `.alert-info`). Es `secondary-container` en Deporte y Hoy, y `tertiary-soft`
-  (tertiary tono 90/30, rol propio de `gen-tokens`, porque con fidelidad
-  `tertiary-container` sale oscuro) en Nutrición; el color de receta lo
-  reescribe también (`schemeVars`).
-- **Tema** sistema/claro/oscuro: `web/public/theme.js` pone `data-theme` antes del
-  primer pintado; `lib/theme.ts` lo cambia en vivo. Los dos comparten clave y
-  regla, y `tests/theme.test.ts` los ata. Se elige **solo en Ajustes**
-  (`/ajustes`, `routes/ajustes.tsx`, entrada en el raíl, el cajón y la barra
-  inferior) o con «Cambiar tema» de ⌘K; el Shell ya no lleva conmutador.
-  `useTheme()` (`useSyncExternalStore`; `applyTheme` avisa) mantiene a los dos
-  al día. Lo cubre `tests/ajustes.test.tsx`. En su tarjeta «Sesión» el cierre de
-  sesión —cosa de Cloudflare Access, un enlace, no del router— va como botón
-  _outlined_ al lado del texto y **sin** la flecha de las filas que navegan:
-  hace, no lleva.
-- **Nombre de perfil** (`0021_users_name.sql`): la identidad la prueba Access y
-  solo trae el email (el IdP de One-time PIN no aporta `name`), así que el nombre
-  lo teclea la persona en la tarjeta «Perfil» de Ajustes. `PATCH /api/me` lo
-  normaliza (trim y colapso de espacios internos), el vacío lo borra (`null`) y
-  por encima de 60 caracteres es 400 `{field:'name'}`; lo devuelven `GET /api/me`
-  y `GET /api/users`. No se pinta en la cabecera de Hoy ni en la lista de
-  familia.
-- **Campos**: estilo _outlined_ en toda la app, con `Field` (etiqueta flotante;
-  cada superficie declara `--field-bg` para el recorte).
-- **Objetivos táctiles de 48 px**, salvo las filas de `SessionCell` y su Sí/No
-  (44 px) y el quitar receta de una celda de comidas (40 px): la columna no da más.
-- Un único anillo de foco para toda la app (`:focus-visible`), y el error de un
-  campo se marca con `aria-invalid` — gancho de estilo y de lector de pantalla a
-  la vez, sin estado duplicado en una clase aparte. El anillo, el borde y la
-  etiqueta del campo enfocado y la selección de texto usan `--accent` (color de
-  sección); `AA_PAIRS` exige primary, secondary y tertiary ≥ 4,5 sobre
-  `surface` y `surface-container-high`.
-- **Colores fijos a propósito** (no siguen la sección): la marca (logo del raíl),
-  las insignias de estado (`Badge` `done` = primary, `pending` =
-  tertiary: significan «hecho»/«pendiente» en cualquier pantalla), la tarjeta de
-  fuerza registrada y el sello de recompensa (verde de Deporte también en Hoy),
-  la paleta de comandos y el catálogo `/ui`.
-- **Un estado de la piel nunca se pelea con una utilidad**: la capa `utilities`
-  de Tailwind gana a `@layer components`, así que un `bg-*`/`text-*` en la
-  pieza tapa su regla de `aria-pressed`. Así estuvo roto el grupo conectado
-  (la elegida no se pintaba en `--accent`): su reposo vive ahora en
-  `:where(.connected) > *`, sin especificidad para que un `.btn` dentro
-  (SplitButton) conserve su piel. Lo cubre `nav.spec.ts`.
-- Todo lo animado se neutraliza con `prefers-reduced-motion`: las transiciones
-  quedan a 1 ms, el morph salta directo, lo que entra lo hace con un fundido de
-  150 ms, y los giros, la onda y las View Transitions se apagan.
-- Fotos de receta: **todo** `<img>` de una foto lleva
-  `crossOrigin="use-credentials"`. El color dinámico lee la foto en un canvas, y
-  si otra copia de la foto se pidió sin CORS, la caché sirve esa y la lectura
-  falla.
-- Catálogo de variantes en la ruta **`/ui`** (se llega desde Ajustes y desde
-  ⌘K, y su cabecera vuelve a Ajustes con la flecha, al nivel del título): míralo
-  antes de inventar una pieza.
-- `wireframes/DESIGN.md` y `docs/architecture/diseno.html` siguen con el sistema
-  anterior; donde discrepen de `globals.css`, manda `globals.css`.
-
-### Pantallas de calendario (fuerza y comidas)
-
-`/plan-fuerza` y `/plan-recetas` van sin cabecera: el calendario es el
-protagonista y ocupa la altura de la ventana en escritorio (sin scroll de
-página), con un hueco vacío reservado abajo para acciones futuras. Las dos rutas
-están en `CALENDAR_ROUTES` (`web/src/components/shell.tsx`): añadir una ahí le da
-el mismo trato (sin título, alto completo, hueco inferior).
-
-**El menú lateral solo lo pliega el usuario** (botón «Ocultar menú», recordado en
-`localStorage` `esencial.sidebar`): navegar nunca lo cambia. Antes las rutas de
-calendario lo plegaban solas y al pulsar Deporte o Nutrición en el cajón este se
-cerraba bajo el cursor (bug; lo cubren `shell.test.tsx` y `nav.spec.ts`).
-
-**Plegado, el raíl M3E es el mismo en todas las rutas**: 96 px (`w-24`) con la
-etiqueta bajo cada sección, menú FAB, y búsqueda y Ajustes solo con icono;
-expandido mide 288 px. Antes, en el calendario, el raíl se quedaba en 80 px
-sin etiquetas y la barra cambiaba al pasar de Hoy a Deporte; se unificó a costa de
-unos 16 px de rejilla. En las rutas de calendario el raíl no lleva desplegables de
-sección: el submenú de la sección va como **grupo de botones conectados sobre el
-calendario**, en escritorio y en móvil.
-El `main` de estas rutas es `max-w-calendar` —el token `--container-calendar`,
-110rem = 1760 px— con `lg:px-6` en vez de `max-w-6xl` + `lg:px-8`. Medido a
-1280×800 con el raíl plegado: columna de día **150,84 px** (`calendar-layout.spec.ts`
-exige ≥150 y mide con la preferencia plegada), sin scroll de página ni horizontal.
-Techo del ancho: a 1280 no cabe más de ~151 px por columna con el raíl; con el cajón
-de 288 px abierto la columna encoge. Con títulos largos (>20 caracteres)
-el `truncate` de las celdas sigue recortando (decisión explícita de no tocar las
-celdas). Móvil y tablet no cambian: el raíl solo existe desde `lg`.
-
-En todas las rutas el raíl es `lg:sticky lg:top-0 lg:h-dvh`: mide la ventana, no
-la página. Sin eso, en la fila `lg:flex-row` se estira al alto del `main` y en
-una página larga (`/ejercicios`) empuja la búsqueda y el tema hasta el final (lo
-cubre `nav.spec.ts`).
-
-Ese `lg:overflow-y-auto` del raíl implica también `overflow-x`, así que cualquier
-desplegable `absolute` dentro de él se recorta a sus 96 px. El menú del FAB va
-por eso `fixed`, anclado al FAB al abrirse, y el raíl lleva `lg:z-10`: `sticky`
-abre su propio contexto de apilamiento y, sin z-index, el `main` pinta encima.
-
-Las dos pantallas comparten la **rejilla semanal** (`web/src/components/week-grid.tsx`):
-un único contenedor con la navegación de semana y las siete columnas, con la
-columna de «hoy» marcada. El componente no sabe nada del dominio: cada página
-inyecta el contenido de sus días por el render prop (`children`), que es lo
-único que difiere (sesiones en fuerza, tomas en comidas).
-
-La rejilla lleva su `view-transition-name` **solo mientras cambia la semana** (lo
-pone y lo quita `WeekGrid.shift`, al acabar la transición). Puesto siempre,
-cualquier otra transición de la página —abrir el editor del día— la convierte en
-una capa propia, y el navegador la pinta **por encima** del velo y del modal: el
-calendario se colaba sobre el modal mientras este crecía (y la rejilla deslizaba
-sin cambiar de semana). Lo cubren `tests/view-transition.test.tsx` y el e2e de
-`strength.spec.ts`.
-
-En la columna de un día de fuerza (`SessionCell`, `web/src/routes/plan-fuerza.tsx`)
-los ejercicios **se reparten la altura de la columna** en vez de quedarse
-apiñados arriba: la lista (`<ol>`) se queda con el espacio libre y cada fila
-(`flex-1`, `min-h-11`) es un bloque `bg-surface-container-high rounded-m` con el
-nombre en `text-body-m` —hasta dos líneas (`line-clamp-2`), así que cabe el nombre
-entero de casi todo el catálogo— y el objetivo (`targetSummary`, «4 series») debajo
-en `text-body-s`. **No lleva `.stagger`**: dnd-kit mide las filas al empezar a
-arrastrar, y una fila a mitad de su animación de entrada está desplazada. Con muchas filas el mínimo manda y el desborde sigue quedando
-dentro del calendario (lo cubre `calendar-layout.spec.ts`).
-
-**Un ejercicio de fuerza añadido a un día o a una plantilla nace con 3 series**
-(`DEFAULT_SETS`, `web/src/lib/workout.ts`): es el mismo recuento que la expansión
-de una plantilla (`targetSets ?? DEFAULT_SETS`), el borrador del registro
-(`defaultSetCount`) y el ➕/➖ de `/sesion/:date`, así que la celda y la tarjeta
-siempre tienen su «N series» que enseñar y el plan no guarda un recuento nulo. El
-cardio entra sin series. Antes nacía con el campo vacío y `targetSets` nulo en las
-tres entradas (día `plan-fuerza.tsx`, editor de plantillas `plantillas.tsx` y el
-«Añadir a plantilla» de la ficha `ejercicios.tsx`, cuya copia lo decía). Un
-recuento guardado, aunque sea nulo (una fila antigua o un campo «Series» vaciado
-a mano), no se reescribe al hidratar el borrador: lo cambian ese campo del día y
-el ➕/➖ del registro al guardar. Lo cubren
-`web/tests/plan-fuerza.test.tsx`, `web/tests/plantillas.test.tsx` y
-`web/tests/ejercicios.test.tsx`.
-
-Cada fila lleva su propia **✕ para desprogramar ese ejercicio** sin abrir el
-modal: la fila se convierte en su confirmación en línea (nombre truncado +
-**Sí/No**, con el nombre completo en el `aria-label`) y, al confirmar, el día se
-guarda con el mismo PUT de los items que usa el arrastre (`usePlanWeek.saveItems`,
-optimista y con recarga). Después aparece un snackbar con **Deshacer**, que vuelve
-a guardar los items de antes. Los dos botones van en **una sola línea** a propósito:
-la columna mide ~151 px y dos botones de texto largo se salían de la fila y
-quedaban tapados por el día siguiente — de ahí las etiquetas cortas y los 44 px
-(excepción táctil documentada). Quitar el **último** ejercicio deja el
-día sin items, que no es representable (la API exige ≥1): desprograma la sesión
-(DELETE) y el día vuelve a su «+ añadir», igual que con la ✕ de la sesión. Su
-Deshacer la **recrea** con POST (misma fecha, nombre e items). Solo sirve para las
-planificadas: una registrada no tiene ✕, porque recrearla perdería su registro.
-
-En la celda de una comida (`SlotCell`, `web/src/routes/plan-recetas.tsx`) el
-nombre va recortado a dos líneas; al dejar el cursor **500 ms** encima (o al
-enfocarla con el teclado) sale un **tooltip** con la foto (o el `Monogram`) y el
-nombre completo. Se cierra al salir, al perder el foco, con Escape (pila de
-capas) o al desplazar. Es `useTooltip` (`overlay.tsx`): devuelve los manejadores
-del disparador y el tooltip, que se pinta `fixed` —el `overflow-y-auto` de la
-rejilla lo recortaría— y **como hermano** del enlace, no dentro: dentro, su texto
-entraría en el nombre accesible del enlace. Lo cubren `meal-plan.test.tsx` y
-`e2e/tests/meal-tooltip.spec.ts`.
-
-### Cabecera del día (`/`)
-
-`DayHeader` (`web/src/routes/dia.tsx`). **En móvil (< `lg`) es una sola fila de
-controles** (~88 px, ~148 con el saludo a 390 px): el `h1` pasa a `sr-only`
-(sigue siendo el único título y los tests lo buscan), sin flor, sin progreso (ni
-anillo ni barra: decisión del usuario) y sin los enlaces a los planes (ya están
-en la barra inferior). «Hoy» lleva
-`aria-pressed={isToday}`: sin título, es lo que dice que el día elegido es hoy
-(también en escritorio, donde se pinta como píldora en `--accent`). La fecha lleva
-`grow-10` porque `.connected > *` hace crecer a todas las piezas por igual, y su
-`onClick` llama a `showPicker()` para abrir el calendario al pulsar en cualquier
-punto, no solo en el icono. **Saludo**: en el sitio de la etiqueta «Hoy» —arriba,
-sobre la fecha, y visible también en móvil— y en **todos los días** (no solo hoy):
-«Hola … , estos son los planes que tienes para …», con el `name` del perfil
-(`useMe`; sin nombre puesto saluda sin él). La etiqueta «Hoy» ya no se
-pinta: queda `sr-only` dentro del `h1` (el texto y el «Hoy» pulsado siguen
-diciendo qué día es). El e2e móvil mide < 200 px (medido, 148 px a 390 px sin
-nombre). Lo cubren `day-page.test.tsx` y `auth-dia.spec.ts`.
-
-### Cabecera del detalle de ejercicio (`/ejercicios/:id`)
-
-`EjercicioDetailPage` (`web/src/routes/ejercicios.tsx`): barra superior M3 en
-**una fila** en todos los anchos: volver (icono, `aria-label` «Volver al
-catálogo»), tipo + grupos en `label-m` con el icono del tipo en línea, título
-`headline-s` y editar. Con un nombre corto mide < 100 px a 390 px; si el nombre
-es largo, crece en altura (no se recorta, porque es el `h1`). Lo cubre
-`e2e/tests/exercise-detail.spec.ts`.
-
-La columna de datos lleva `min-w-0`: sin él, la fila del historial (fecha fija +
-marcas + nombre de sesión, los dos últimos con `truncate`) forzaba la pista de la
-rejilla a lo ancho de su contenido —~418 px con un nombre largo— y la página
-entera se salía 50 px por la derecha en móvil. Lo cubre
-`e2e/tests/history.spec.ts`, que mide que la tarjeta no se salga de sí misma.
-
-**Los grupos y los músculos por grado van en la cabecera de la tarjeta del
-modelo en escritorio** (`MuscleGroups`, mismo bloque que en móvil): ahí el
-dibujo, su leyenda y lo que pinta se leen de un tirón, separados por una línea
-(`border-b border-outline-variant`). En móvil se quedan con el texto del
-ejercicio, en la tarjeta de datos (el dibujo va arriba y sin hueco): el bloque
-se pinta en un sitio o en el otro, nunca dos veces (los `id` de los `ul` y sus
-`aria-labelledby` chocarían). El corte es el `lg` de Tailwind (64rem), el mismo
-que el de la rejilla de dos columnas: `useIsDesktop` (`web/src/lib/media.ts`)
-lee `matchMedia` en el primer render —la SPA no tiene SSR—, así que no hay
-salto de layout, y al estrechar la ventana el bloque vuelve sin recargar. Sin
-`matchMedia` (jsdom) dice que no, así que las pruebas unitarias ven el layout de
-móvil y las de escritorio simulan la consulta. Lo cubren
-`web/tests/ejercicios.test.tsx`, `web/tests/hooks.test.tsx` y
-`e2e/tests/exercise-detail.spec.ts` (los dos anchos, con el cambio en vivo).
-
-### Registro de una sesión (`/sesion/:date`)
-
-`web/src/routes/sesion.tsx`, con los helpers puros en `web/src/lib/workout.ts`.
-
-**La página es un resumen: aquí no se registra nada.** El registro vive solo en
-el modo sesión (ver «Modo interactivo de sesión»), así que esta pantalla pinta los
-ejercicios del día en filas inertes (`SummaryRows`: medallón con el turno, nombre
-—enlace a su ficha— y, en fuerza, «x/y» series hechas; el cardio lleva su objetivo
-del plan o sus marcas) y sus contadores —el aro de la cabecera y los de cada
-fila— salen del **borrador guardado**: marcar dentro del modo y salir los deja
-escritos. Sin sesión, con una fecha rara o si el API falla siguen sus estados de
-siempre (vacío, inválido, error). Un día **planificado** ofrece «Empezar» y un día
-**registrado** el mismo resumen con los contadores a tope, el esfuerzo y la nota,
-más «Editar»; los dos botones son tonales y a lo ancho.
-
-- **La cabecera es una fila**: flecha, nombre de la sesión (el `h1`; sin nombre,
-  «Sesión») y el aro de progreso —las series del plan, el mismo recuento que el
-  modo sesión y también `waveOnly`: sin círculo de fondo, a 0 series no pinta
-  nada y el arco crece con lo marcado— en la misma línea, y el día debajo como
-  subtítulo, con `pl-10`
-  para que caiga alineado con el nombre y no con la flecha (48 px de flecha + 4
-  de hueco − 12 del `-ml-3`). Antes eran tres bloques apilados y el encabezado
-  medía 284 px de los 844 del móvil; ahora 144 (el aro es `size-20` y el relleno
-  vertical del móvil `py-4`; `md:p-6` en escritorio, donde mide 160). El bloque
-  es el mismo en todos los anchos a propósito: la flecha no puede estar a la vez
-  junto a la fecha y junto al nombre, y duplicar la cabecera por breakpoint
-  serían dos ramas que se descompasan. Lo atan
-  `e2e/tests/session-mode.spec.ts` (mide las cajas —≤150 px de encabezado,
-  flecha antes del nombre, aro en su fila y día debajo y alineado— y el aro
-  avanzando al marcar una serie) y `web/tests/sesion.test.tsx` (el `h1` es el
-  nombre y, sin nombre, dice «Sesión»).
-- **Día registrado**: la fila de marcas cuenta **solo lo marcado** (lo hecho es lo
-  marcado, como en el historial: las series que el borrador guardó sin marcar no
-  se anuncian). El mismo criterio de siempre: el registro no guarda la cadena del
-  ejercicio, así que las cajas de un bloque encadenado salen del plan del día
-  (`view.session.exercises`), que sí la trae.
-- **Una serie se marca sola al editar sus marcas** (dentro del modo): al teclear
-  o al usar el stepper, la serie queda hecha si está completa (kilos y
-  repeticiones, o solo repeticiones si va sin peso), y se desmarca al vaciar un
-  campo. Cambiar «Sin peso» recalcula igual las series ya editadas (`touched`). La
-  precarga (`/last` o el registro al corregir) **no** marca nada.
-- **Solo una serie completa puede estar hecha** (`isSetFilled`): la casilla va
-  deshabilitada mientras falten reps (o kilos, sin «Sin peso»), vaciar un campo o
-  quitar «Sin peso» a una serie sin kilos la desmarca, y un registro antiguo
-  hecho sin marcas se precarga sin marcar. La API lo refuerza: `done: true` sin
-  `reps` → 400 `{field:'sets.N.reps'}` (los kilos no, porque «sin peso» viaja con
-  `weightKg: null`).
-- **«Sin peso» es de la sesión, por ejercicio** (un `Switch` del modo): oculta los
-  kilos, basta con las repeticiones y el ejercicio viaja con `weightKg: null`. No
-  hay columna nueva: `set_logs.weight_kg` ya admite `null`. Arranca activado si lo
-  último registrado de ese ejercicio no llevaba kilos pero sí repeticiones (o, al
-  corregir, si todas sus series registradas van así: `isNoWeight`).
-- **Añadir y quitar series** (➕/➖ en el modo; `addedSet`, `MIN_SETS` 1,
-  `MAX_SETS` 20 en `lib/workout.ts`): el ➕ añade una serie con las marcas de la
-  última y el ➖ quita la última; los botones se apagan en 1 y en 20. Al cerrar la
-  sesión, el día del plan sigue al borrador: `PUT /api/plan-sessions/:id`
-  reescribe el `targetSets` de cada item **antes** del POST/PUT del registro,
-  conservando el resto de objetivos y el id de los items que siguen (upsert: un
-  reinsert perdería las series, que cuelgan de `plan_session_exercises.id`).
-- **Marcas de la sesión anterior**: la última sesión `logged` con **el mismo
-  `name` no nulo** y fecha **anterior a la del día** (`previousSession`; una
-  sesión sin nombre nunca empareja). En la fila del resumen se ven bajo el nombre
-  («sáb, 26/09: 60×10 · 60×8»), emparejadas por `exerciseId` (lo devuelve
-  `serialize` en `/api/workout-logs`), y sustituyen a «última: X×Y». Son solo
-  informativas: la precarga sigue saliendo de `/last`.
-- **Valor de la serie homóloga, con copia**: en cada fila de serie del modo, y
-  solo ahí, se ve el valor de **esa misma serie** (por índice estricto: sin
-  homóloga no hay valor ni control) y el propio control la copia a la serie
-  actual: repeticiones siempre y kilos solo si la anterior los trae. Copiar
-  **nunca marca** la serie (`done` y `touched` quedan a `false`, así que ni el
-  conmutador «Sin peso» la re-marca después) y **nunca** conmuta «Sin peso». El
-  emparejamiento y el efecto son puros: `previousMarks` y `copiedMarks` en
-  `lib/workout.ts`. La vista registrada no lo muestra (solo las marcas de lo
-  hecho, en la línea de la fila).
-- `GET /api/exercises/:id/last?before=YYYY-MM-DD` limita el histórico a lo
-  anterior a esa fecha. El borrador siempre lo pide con la fecha del día, así que
-  registrar o corregir un día pasado no precarga marcas de días posteriores.
-- **Corregir un registro**: en el resumen registrado, «Editar» abre el modo
-  precargado con lo registrado (series, esfuerzo, nota y cardio; no con `/last`).
-  Al cerrar, «Terminar» manda `PUT /api/workout-logs/:date`, que en un solo batch
-  reemplaza esfuerzo, nota, `set_logs` y `cardio_logs` (misma validación de
-  pertenencia y de tipo que el POST, 404 si no hay registro). Salir del modo (el
-  aspa, que pregunta) vuelve a lo registrado sin llamar a la API. Los ejercicios
-  de una sesión registrada siguen sin poder cambiarse: `DELETE` de
-  `/plan-sessions` → 409 y `PUT` con otra lista también (el único `PUT` admitido
-  es el recuento de series, ver arriba).
-- **Autoguardado del borrador** (`lib/day-draft.ts`): cada cambio de una sesión
-  **planificada** —marcas de series, cardio, esfuerzo y nota— se escribe en
-  `localStorage` bajo `esencial.borrador.<fecha>`, así que un refresco accidental
-  no pierde nada al volver. Se limpia al cerrar la sesión y al abrir un día sin
-  sesión o ya registrado; al **corregir** manda el registro y no se guarda. Al
-  restaurar solo se aplica lo que sigue encajando con el plan (mismo item y mismo
-  número de series); no viaja entre dispositivos. Lo cubren
-  `web/tests/day-draft.test.ts`, `web/tests/sesion.test.tsx`,
-  `e2e/tests/session-mode.spec.ts` y `e2e/tests/session-summary.spec.ts` (el
-  resumen refleja lo marcado sin registrar nada).
-
-### Métrica de la serie (0025)
-
-No todos los ejercicios encajan en kilos × repeticiones, así que cada ejercicio
-de fuerza declara su **unidad** en `exercises.metric` (migración aditiva
-`0025_exercise_metric.sql`):
-
-| Métrica       | Qué se registra                                                                 | Ejemplos                                    |
-| ------------- | ------------------------------------------------------------------------------- | ------------------------------------------- |
-| `weight_reps` | kg × repeticiones (el caso normal; también los que admiten lastre o implemento) | Press banca, dominadas con cinturón, fondos |
-| `reps`        | repeticiones sin peso                                                           | Flexiones, rueda abdominal, bicho muerto    |
-| `time`        | segundos (isométricos y aguantes)                                               | Plancha, bote hueco, colgarse de la barra   |
-| `weight_time` | kilos + segundos                                                                | Paseo del granjero                          |
-- El vocabulario vive en **dos espejos que un test ata**: `METRICS`
-  (`api/src/api-validation.ts`) y `METRIC_LABELS` (`web/src/lib/exercises.ts`);
-  lo cubre `web/tests/exercise-metric.test.ts`. El editor de ejercicios lo elige
-  en el grupo «Métrica de la serie» (solo para fuerza) y la API lo valida
-  (una métrica desconocida → 400 `{field:'metric'}`).
-- `setFields(metric, noWeight)` (`lib/workout.ts`) dice qué pide una serie y el
-  borrador (y el modo sesión) pinta solo esos campos: kg, reps y/o segundos. El
-  conmutador **«Sin peso» solo existe en `weight_reps`** (suelta el kg ad hoc);
-  en `reps`/`time` no hay kilos y en `weight_time` la carga es parte del
-  ejercicio.
-- Una serie por tiempo viaja con `durationSecs` y sin `reps` ni `weightKg`
-  (`set_logs.duration_secs`, columna nula: `schema.sql` la refleja y el
-  bootstrap la aplica por ahí, como 0021). El payload normaliza: la métrica
-  decide qué campos salen (`weightKg`/`reps`/`durationSecs`), así que no viajan
-  kilos sembrados que nadie vio. `setLogSchema` exige **reps o segundos** en una
-  serie hecha.
-- El plan **no prescribe segundos todavía** (decisión: «N series» basta). Lo
-  que sí hace es **ocultar** «Reps mín/máx» cuando la métrica es de tiempo, en
-  el editor del día y en el de plantillas (el `metric` viaja en las filas del
-  plan y de la plantilla).
-- El histórico lo entiende: `progressMetric` añade `durationSecs` (kilos →
-  segundos → reps → km) y `/last` y `/api/exercises/:id/history` devuelven la
-  columna; el «mejor» desempata por kilos, luego segundos, luego reps. Los
-  formateadores toleran un campo ausente (`!= null`) para no pintar «undefined
-  s» contra un Worker antiguo.
-- El **autoguardado del borrador** (`lib/day-draft.ts`) lleva también los
-  segundos: el snapshot sube a **versión 2** y una `v1` se descarta al leerla
-  (como cualquier otra versión).
-- Lo cubren `api/tests/exercise-metric.test.ts` (ida y vuelta por la API real),
-  `web/tests/exercise-metric.test.ts` (espejos y `setFields`),
-  `web/tests/workout-helpers.test.ts`, `web/tests/sesion.test.tsx` (un ejercicio
-  `time` pide segundos y los manda), `web/tests/day-draft.test.ts` (los segundos
-  vuelven del snapshot) y `web/tests/ejercicios.test.tsx` (el editor).
-
-### Modo interactivo de sesión y descansos (0018)
-
-Es **la única superficie donde se registra**: la página del día solo resume (ver
-«Registro de una sesión»), así que aquí viven las marcas de las series, el cardio
-—con su distancia y su tiempo—, los ➕/➖ de series, la copia de la serie homóloga
-y el cierre con esfuerzo y nota.
-
-`/sesion/:date` tiene un botón «Empezar» (tonal, a lo ancho, bajo la cabecera)
-que abre el **modo sesión** (`components/session-mode.tsx`): una capa
-`fixed inset-0` que sustituye la página — `role="dialog"`, y el aspa (o Escape)
-piden **confirmación** antes de salir («¿Salir del modo sesión?»), sin tocar el
-borrador (salir de una corrección vuelve al registro que se estaba corrigiendo).
-**Todo el modo cabe en la ventana: no hay scroll vertical** (medido a 390×844 y
-a 1280×800 con un ejercicio de doce series y con el cierre abierto:
-`scrollHeight === clientHeight` en la sección). De ahí la disposición: tres
-filas de cabecera y **una sola serie en pantalla**, que se recorre con flechas.
-
-- **Encabezado** (una fila): a la izquierda el **aro de progreso** (`WavyRing`
-  con `waveOnly`: solo el arco que avanza, sin círculo de fondo) con «N / M»
-  dentro — **empieza en 0** y sube al registrar cada ejercicio entero —, en
-  medio el **ejercicio en curso** (al pulsarlo, el listado de la sesión para
-  saltar a cualquiera) y a la derecha el aspa. Debajo va el **nombre de la
-  sesión** (`sessionName`; sin nombre, «Sesión»).
-- **Fila del ejercicio**: `‹ nombre m/n ⊕ ›` — las flechas
-  (`aria-label` «Ejercicio anterior»/«Ejercicio siguiente») van al de delante y
-  al de detrás en el orden del día, `m/n` son la serie en curso y las totales
-  de ese ejercicio, y el botón de al lado abre un **menú flotante** (`role="menu"`,
-  la piel `.menu`) con «Añadir serie» (copia las marcas de la última) y
-  «Quitar serie» (la última; se apagan en 20 y en 1). Se cierra con Escape (el
-  foco vuelve a su botón) o con un toque fuera.
-- **Fila de la serie**: `‹ Serie m/n ›` navega por las series del ejercicio y su
-  `Checkbox` (`aria-label="{ejercicio} serie {i}"`) marca/desmarca **la que se
-  está viendo** — las mismas reglas de siempre: se marca sola al quedar
-  completa, y va deshabilitada mientras le falten marcas.
-- Debajo, los campos de esa serie: «Sin peso» (solo `weight_reps`), los
-  `Stepper` que pida la métrica (kg, reps y/o segundos) y el botón de **copiar
-  la serie homóloga**, que ahora es el de la serie en curso. El cardio va sin
-  fila de serie: su objetivo, su «Hecho» y sus dos steppers (distancia y
-  tiempo).
-
-La tira de casillas del encabezado (`ScrollStrip` + una casilla por serie) ya no
-existe: con una serie en pantalla sobran las casillas y el recuento de series
-vive en los dos `m/n`. Antes el cuerpo tenía scroll y centraba su contenido con
-márgenes automáticos (`my-auto`, nunca `justify-center`: con más series de las
-que caben, el centrado deja el desborde de arriba inaccesible); el patrón sigue
-en el bloque interno, pero ya no hay nada que desborde. Lo cubren
-`e2e/tests/session-mode.spec.ts` (las dos anchuras: cero scroll vertical,
-encabezado en una fila, la navegación de ejercicio y de serie, el menú de
-series, el play/pausa del descanso y el cierre con aviso) y
-`web/tests/sesion.test.tsx`.
-
-- **Todo lo que se registra vive aquí**: la casilla de la serie en curso, los
-  steppers de esa serie (kg, reps y/o segundos según la métrica), «Sin peso», el
-  **cardio** con sus dos steppers de distancia y tiempo (opcionales; escribir una
-  marca implica hecho, como antes en el borrador), el **menú ➕/➖ de series** (al
-  cerrar, el plan del día sigue al borrador: ver «Añadir y
-  quitar series») y la **copia de la serie homóloga** de la sesión anterior. Lo
-  cubren `web/tests/sesion.test.tsx` y `e2e/tests/strength.spec.ts`.
-- **Descansos por ejercicio, en segundos**: `rest_secs` (pausa entre series) y
-  `rest_after_secs` (al terminar el ejercicio); columnas nulables en
-  `template_exercises` y `plan_session_exercises` (migración aditiva **0018**,
-  que el bootstrap de tests aplica). Se programan en el editor del día y en el
-  editor de plantillas; al planificar, el día **copia** lo que la plantilla tenía
-  en ese momento y editar la plantilla después no toca los días ya planificados.
-  Los campos nacen con **120 s** (editable; vaciarlos es lo que deja el
-  ejercicio sin descanso; `restAt` recorta 1..3600, espejo del rango que valida
-  la API). En cardio solo se programa «al terminar». En una
-  base de dev anterior hay que aplicar la migración (`pnpm db:migrate:local`);
-  sin ella, leer o guardar ejercicios del plan responde **500** (no tal
-  columna).
-- **Pausas**: marcar una serie arranca la «entre series»; la **última** arranca
-  la «al terminar» y, al agotarse o saltarla, el siguiente ejercicio queda
-  activo. Un ejercicio sin descansos se comporta como la página normal: ni barra
-  ni pitido (el modo lo dice: «Sin descansos programados»; «Sin pausa entre
-  series» si solo falta la de entre series). La **última serie del último
-  ejercicio no arranca nada y corta la pausa que estuviera corriendo** (sin
-  pitido): la sesión ya se acabó. «Descanso» la arranca a
-  mano, «Saltar» la corta (sin pitido) y las flechas del ejercicio pasan de uno a
-  otro. La barra va en el cuerpo, bajo los campos de la serie, con el **play/pausa**
-  al principio y **los segundos que quedan al final**: el play/pausa congela el
-  reloj (y el keep-alive) y lo reanuda desde lo que quedaba. Como el modo no
-  desplaza —todo cabe en la ventana—, la pausa ya no necesita ir pegada al
-  encabezado: se ve entera sin mover nada. Lo ata `e2e/tests/session-mode.spec.ts`
-  (el bloque visible dentro del viewport y sin scroll, a 390 px y a 1280). La
-  pausa de entre series **deja el cursor en la serie siguiente** a la marcada
-  (`cursorSet`), así que el descanso no devuelve a la serie ya hecha; la de fin
-  lo deja en la primera del ejercicio que entra y la pedida a mano donde estabas. La
-  cuenta es por marca
-  de tiempo (`endsAt`), no
-  por tics: cambiar de app no la descuadra y al volver el estado es el correcto.
-- **«A continuación: …»**: bajo la serie en curso (o del «Hecho» del cardio), el
-  nombre del siguiente ejercicio **por orden** —el de al lado en el día, no el
-  siguiente pendiente— cuando al ejercicio activo solo le queda su última serie
-  (marcada la última también, que es lo que pasa mientras corre la pausa de fin
-  de ejercicio) o el cardio está hecho; si no queda ninguno detrás, dice
-  «Último ejercicio». Un ejercicio de una sola serie lo anuncia desde que se
-  abre. Es lo último del cuerpo, y la pausa —que vive ahí mismo, encima— no le
-  quita el sitio. Lo cubre `e2e/tests/session-mode.spec.ts`.
-- **El encabezado lleva el ejercicio en curso** y, al pulsarlo, un `Dialog`
-  (`mobile="sheet"`) con **todos** los ejercicios de la sesión en su orden: cada
-  fila lleva el nombre y un ✓ si está hecho —todas sus series, o el cardio
-  `done`, el mismo criterio que el aro «N / M»— o un ○, con la fila del activo
-  resaltada (`aria-pressed`, la piel tonal del sistema). Pulsar una fila cierra
-  el listado y salta a ese ejercicio. El **salto no toca la pausa** que esté
-  corriendo: sigue la misma —la pausa guarda el nombre del ejercicio con el que
-  nació, así que un salto no la renombra— y pita al agotarse, y en una de fin de
-  ejercicio avanza desde donde estés. Cualquier cambio de ejercicio (las flechas,
-  el listado) vuelve a su primera serie; dentro de un bloque se mantiene la vuelta
-  que se acaba de marcar. El nombre del encabezado se recorta: con
-  nombres largos la fila no crece. Lo cubren `web/tests/sesion.test.tsx` y
-  `e2e/tests/session-mode.spec.ts` (390 px).
-- **Pitido con Web Audio** (`lib/rest-audio.ts`, sin asset): un **aviso previo**
-  al cruzar cada marca (`WARN_LEADS_MS`: quedando 3 s y 2 s, un solo tono de
-  660 Hz, `warnAhead`) y **tres tonos** al terminar; mientras corre una pausa
-  suena un keep-alive casi inaudible (60 Hz, gain 0.0008) que mantiene la
-  pestaña «sonando» para que el navegador no la congele en segundo plano. Cada
-  marca suena una vez por pausa y solo si la pausa dura más que la marca (una de
-  2 s se las trae pasadas: avisaría al arrancar, pegada al pitido de fin), las
-  dispara el reloj de la pausa (`session-mode.tsx`) y **no** suenan tras
-  «Saltar» ni al cortarla la última serie de la sesión; si el reloj cruza las dos
-  de golpe (el regreso a la pestaña), suenan como una, no en ráfaga. Best effort:
-  si el navegador suspende o ralentiza la pestaña, el pitido suena tarde o al
-  volver (resincronización por `endsAt`), nunca dos veces.
-- **Wake Lock** (`lib/wake-lock.ts`): pantalla encendida mientras el modo está
-  visible; el navegador la suelta al ocultar la pestaña y se re-pide al volver.
-- **Cerrar la sesión**: «Terminar» abre el cierre en el pie —el selector de
-  esfuerzo y la nota de la sesión (`finishControl`, que pinta `sesion.tsx`)— y, con
-  el esfuerzo elegido, **vuelve a «Terminar»** para guardar (POST, o PUT al
-  corregir). Con algo pendiente, antes **avisa**: un `Dialog` («Series sin
-  completar») lista, ejercicio a ejercicio, lo que queda —sus series sin marcar
-  (`pendingItems`/`pendingLabel`, en `lib/workout.ts`; el cardio sin hacer sale
-  como «Sin hacer»)— y se puede seguir entrenando o cerrar igual. El pie se queda
-  ligero mientras se entrena: el cierre **se pide, no se impone** (y «Seguir» lo
-  esconde sin
-  perder la nota). Como el esfuerzo es lo único que la API exige, así también se
-  cierra una sesión **a medias** (la página ya no tiene barra de acciones: era el
-  único sitio donde se cerraba). Salir sin terminar deja el borrador intacto.
-
-Lo cubren `api/tests/templates.test.ts` y `plan-sessions.test.ts` (ida y vuelta
-de los descansos; en una sesión registrada no cambian → 409),
-`web/tests/template-draft.test.ts`, `plantillas.test.tsx` y
-`plan-fuerza.test.tsx` (campos y copia al planificar), `web/tests/sesion.test.tsx`
-(el modo entero, con el doble de Web Audio de `web/tests/audio-fake.ts`),
-`web/tests/rest-audio.test.ts` y `e2e/tests/session-mode.spec.ts` (móvil, 390 px).
-
-### Bloques de ejercicios (superseries, 0026)
-
-El **mapa de los tipos de sesión** (los tres ejes: agrupación, estructura de la
-serie y formatos por tiempo) y las decisiones cerradas de este bloque viven en
-`TODO-sesion-exercises.md`, con lo que ya cabe y lo que queda en backlog.
-
-Un día (o una plantilla) puede **encadenar un ejercicio con el siguiente**: la
-biserie, la triserie y la serie gigante del gimnasio. La marca vive en
-`plan_session_exercises.superset` / `template_exercises.superset` (migración
-aditiva **0026**, defecto 0) y significa «va pegado al de al lado»: un bloque son
-**dos o más filas seguidas marcadas** y el último va sin marca. No hay número de
-grupo (una marca que solo mira al vecino no puede dejar un bloque partido al
-reordenar).
-
-- **Solo fuerza**: el cardio no encadena —no tiene una «serie 1» que repetir en
-  una vuelta— y un bloque con cardio es 400 en `items`/`exercises`, igual que la
-  marca en la última fila. El cliente apaga las que no valen al borrar, reordenar
-  o cambiar de tipo (`normalizeSupersets`).
-- **Vueltas**: el bloque avanza por vueltas (una serie de cada miembro, saltando
-  al que ya agotó las suyas) y la vuelta la define **la serie que se marca**, no
-  lo que quede pendiente: con series desiguales (A 3 + B 2) la vuelta 3 es solo
-  de A.
-- **Descansos**: los lleva **solo el último miembro** —`rest_secs` es «entre
-  vueltas» y `rest_after_secs` «al acabar el bloque»—; los de en medio van
-  pegados y **sin descanso propio** (400 si llegan con descansos). El editor les
-  oculta los campos y renombra los del que cierra el bloque.
-- Las reglas puras (`blockRange`, `blocks`, `normalizeSupersets`, `blockLabel`,
-  `nextAfterSet`) viven en `web/src/lib/workout.ts`; la validación de la API es
-  `blockError` (`api/src/blocks.ts`).
-- **La caja**: cada lista de ejercicios se pinta **por bloques** (`blocks()`) y
-  cada bloque va en un `Chain` (piel `.chain`): fondo `accent-soft` y la
-  etiqueta del bloque arriba
-  (`blockLabel`: «Superserie», «Triserie», «Serie gigante»); el bloque de un
-  solo miembro es una fila suelta y no pinta caja. Así se ve de un tirón qué se
-  hace de un tirón, y el contenedor está en todas las superficies donde se
-  listan los ejercicios: el editor del día, la celda de la rejilla (donde cada
-  hueco se lleva el alto de sus miembros con `flexGrow`), el editor de
-  plantillas, la tarjeta desplegada de `/plantillas`, el resumen de la sesión
-  (planificado y registrado) y el listado del modo sesión. La estructura es la
-  **misma** con y sin caja a propósito: encadenar y desencadenar no remonta las
-  filas, así que el chip que acabas de pulsar conserva el foco (y la lista no
-  pierde el suyo tras un arrastre con teclado). El registro no guarda la cadena
-  —`GET /api/workout-logs/:date` solo trae `session: {id, name}`—, así que ahí
-  los bloques salen del plan del día (`view.session.exercises`, que sí la trae).
-  Los cubren `web/tests/ui-primitives.test.tsx`, `plan-fuerza.test.tsx`,
-  `plantillas.test.tsx`, `sesion.test.tsx` y `e2e/tests/supersets.spec.ts` (la
-  caja en la celda y en el editor a 390 px, el tono, el borde y el arrastre).
-  **La tarjeta de la sesión de «Hoy» no la lleva**: su lista numerada sale de
-  `GET /api/day`, que no selecciona `superset` (añadirlo es una línea en
-  `api/src/routes/day.ts` + la caja en `dia.tsx`).
-- **Modo sesión**: a mitad de vuelta salta al siguiente miembro **sin pausa**; al
-  cerrarla arranca el descanso del bloque y vuelve al primero; al terminar el
-  bloque, el de fin y sigue. El título lleva el nombre del bloque («Superserie»,
-  «Triserie», «Serie gigante`) y el miembro encadenado avisa («Encadenado con
-  «X»»).
-- **Celda del calendario**: el bloque va en su caja tonal y la fila suelta,
-  sin ella (antes cada miembro llevaba una barra de acento; el tono de la caja
-  la sustituye).
-
-Lo cubren `api/tests/supersets.test.ts`, `web/tests/workout-blocks.test.ts`,
-`web/tests/plan-fuerza.test.tsx`, `web/tests/plantillas.test.tsx`,
-`web/tests/sesion.test.tsx` y `e2e/tests/supersets.spec.ts`.
-
-### Historial (`/historial` y la ficha del ejercicio)
-
-`HistorialPage` (`web/src/routes/historial.tsx`) es hija de **Deporte** en el
-raíl (`{ href: "/historial", label: "Historial" }`; `sectionOf` ya lo resuelve a
-Deporte, así que no hay token de color nuevo) y también está en ⌘K, porque la
-barra inferior de móvil solo lleva las tres secciones.
-
-Lista los **días registrados**, del más reciente al más antiguo, agrupados por
-mes (`groupByMonth`), con lo hecho ese día, el esfuerzo y la nota. Cada fila es
-un `Link` a `/sesion/:date` (la vista registrada, que ya existía): la pantalla
-no tiene detalle propio.
-
-**La fila es iconográfica**: el volumen va con icono + cifra (`DumbbellIcon`
-ejercicios, `ListIcon` series, `RunIcon` cardio) y cada dato lleva su nombre
-(«3 ejercicios», `volumeLabel`) en el `aria-label` **y** en el `title`: el icono
-solo se leería como un número suelto. El **esfuerzo percibido** va con
-`EffortScale` (`expressive.tsx`), las mismas formas que el selector de la sesión
-—`EFFORT_LABELS`/`EFFORT_SHAPES` viven en `lib/workout.ts`, compartidas por los
-dos—, y se anuncia como una imagen («Esfuerzo 4 de 5»).
-
-**Lo hecho es lo marcado**: los recuentos salen de `set_logs.done = 1` y
-`cardio_logs.done = 1`, no de las filas guardadas — el borrador guarda una fila
-por serie del plan con las reps precargadas, así que contarlas daría por hecho
-lo que el usuario no marcó. Un día sin ninguna marca dice «Sin marcas». (El
-resumen de `/api/day` y la celda del calendario sí cuentan filas del log: no dan
-el mismo número que el historial.)
-
-**Rango de fechas** (`RangePicker`): preselecciones `Todo` / `Último mes` /
-`Últimos 3 meses` / `Últimos 6 meses` (`monthsBack`) y las dos fechas nativas
-(`Desde`/`Hasta`, con `min`/`max` cruzados), que se mandan como `?from=&to=`
-—extremos incluidos—. Cambiar el rango vuelve a la primera página; el «Cargar
-más» sigue paginando dentro del rango. Si las fechas se cruzan, el hook **no
-pide nada** (`rangeIsBackwards`), deja la lista que ya había y la pantalla avisa;
-la API devuelve 400 `{field:'to'}` por si alguien la llama directamente. Sin
-días en el rango, el estado vacío ofrece quitar el filtro.
-
-Pagina con cursor (`?before=&limit=`: 20 por página, 60 de techo) y un «Cargar
-más»; `next` solo viene cuando queda página (se piden `limit + 1` filas y la de
-más se descarta). El hook es `useHistoryPage` (`web/src/lib/history.ts`), que
-comparte con la ficha del ejercicio: la URL sale de `pageUrl` (`limit` primero,
-`before` después y el rango al final — lo atan los tests) y cada lista lleva una
-**generación**: una página que llega después de una recarga se descarta, así que
-no pega items viejos encima ni pisa el cursor nuevo (ni deja el «Ver más»
-deshabilitado).
-
-En la ficha, `ExerciseHistory` (`web/src/routes/ejercicios.tsx`) es una tarjeta
-bajo los datos del ejercicio: la **progresión** en barras, las series marcadas de
-cada día (o el cardio hecho, con su distancia y su tiempo), del más reciente al
-más antiguo, el **mejor del histórico entero** y un `Link` al día registrado.
-«Ver más» pagina igual. Es de solo lectura: el histórico se escribe cerrando
-sesiones.
-
-- La gráfica es `ProgressChart` (`expressive.tsx`): una barra por día con el
-  valor más alto (`progressPoints`), del más antiguo al más nuevo, y la altura es
-  relativa al mínimo y al máximo **de lo cargado** — si no, 57,5 y 60 kg se
-  verían iguales. Qué mide lo elige `progressMetric`: **kilos** si alguna serie
-  los trae, si no **repeticiones**, y en cardio **kilómetros**. Dibuja lo cargado
-  (crece con «Ver más»), no el histórico entero; el resumen va en su nombre
-  accesible y cada barra dice su valor al pasar el ratón.
-- El «mejor» **no** se calcula en el cliente: lo manda el API en `best`
-  (una consulta más, con el mismo rango pedido), así que puede ser un día que no
-  esté en la página cargada. Se enseña con su fecha.
-
-Los dos endpoints:
-
-- `GET /api/workout-logs?before=&from=&to=&limit=` → `{ days, next }`, con
-  `{ date, sessionName, effort, note, exercises, sets, cardio }` por día; el
-  detalle del día sigue en `GET /api/workout-logs/:date`.
-- `GET /api/exercises/:id/history?before=&from=&to=&limit=` → `{ exerciseId, kind,
-  best, sessions, next }`; cada sesión lleva `sets` (fuerza) o `cardio`
-  (distancia/tiempo), y `null` en el que no aplica. Sirve también para los
-  ejercicios de cardio. `best` es la mejor marca del histórico (o del rango
-  pedido): la serie más pesada —y a igualdad, la que más repite— o la distancia
-  más larga, con la forma de una sesión para que la pinte el mismo código.
-- Los dos leen el cursor y el rango con `readCursor`/`dateFilter`
-  (`api/src/http.ts`, que responden 400 `{field:'before'|'from'|'to'|'limit'}`,
-  y el rango invertido es 400 `{field:'to'}`) y resuelven la página con un número **fijo** de
-  consultas: subconsultas correlacionadas y un `IN` con las fechas de la página
-  (≤ 61 parámetros, muy por debajo de los 100 de D1). Lo ata
-  `api/tests/workout-history.test.ts`.
-
-Lo cubren `api/tests/workout-history.test.ts` (los dos endpoints y las
-consultas), `web/tests/historial.test.tsx` y
-`web/tests/ejercicio-historial.test.tsx` (las dos superficies, con la
-paginación y el vacío) y `e2e/tests/history.spec.ts` (el índice, la ficha y el
-ancho en móvil).
-
-### Editor de recetas (crear y editar)
-
-`app.tsx` registra **`/recetario/nueva`** y **`/recetario/:id/editar`** con la
-misma página (`RecetaEditorPage`, `web/src/routes/receta-editor.tsx`): al entrar,
-la lista o la ficha se desmontan y no quedan detrás. Antes editar abría la modal
-`recipe-editor` sobre la ficha; ahora el lápiz de `/recetario/:id` es un `Link`
-sin transición (editar no anima, solo crear). Las dos rutas funcionan al recargar
-(deep-link); Cancelar, Escape (pila de capas) o «atrás» no llaman a la API, y
-Guardar manda un único POST (crear) o PUT (editar) para volver a `/recetario` o a
-la ficha, que al ser otro montaje del hook relee la receta. Salir del editor
-(Cancelar, Escape o Guardar) navega con **`replace: true`**, así que su URL no se
-apila: «atrás» desde la ficha no reabre el borrador que se acaba de cerrar (el
-editor de plantillas sí lo apila).
-
-La piel es la suya (nació aquí): cabecera de sección (`bg-accent-container`) con
-Cancelar y Guardar, y cinco tarjetas en columnas desde `lg` —foto, nombre con
-categorías, ingredientes, materiales y pasos (`components/steps-editor.tsx`)—.
-**Descripción y comensales solo aparecen al editar**: al crear salen `null` (E8) y
-el PUT reemplaza el registro entero, así que el borrador de edición
-(`fromRecipe`) arrastra la receta hidratada completa. La subida de foto es la
-misma que al crear: `POST /api/uploads` y, si falló y quedó pendiente, reintento
-al guardar. La **unidad** del ingrediente es texto libre en la API (`z.string()`),
-así que el desplegable (`UNITS`) añade una `<option>` propia para una unidad que
-no sea `gr/ml/ud` («g», «pechuga»): si no, una receta existente se vería como «—».
-Lo cubren `web/tests/recetario-editor.test.tsx` y el e2e de `recipes.spec.ts`.
-
-### Editor de plantillas (crear y editar)
-
-`app.tsx` registra **`/plantillas`**, **`/plantillas/nueva`** y
-**`/plantillas/:id/editar`** como rutas propias: al abrir el editor la lista se
-desmonta y no queda detrás (ya no hay modal). Las dos rutas del editor funcionan
-al recargar (deep-link); «atrás», Escape o Cancelar vuelven a `/plantillas` sin
-llamadas a la API. Escape va por la pila de capas (`lib/escape-stack.ts`), que
-ignora el Escape con el que dnd-kit cancela un arrastre de teclado, así que la
-página no se abandona a media operación.
-
-La piel es la de «Nueva receta»: cabecera de sección (`bg-accent-container`) con
-Cancelar y Guardar, y dos tarjetas en columnas desde `lg` — el nombre y el
-borrador (ejercicios ordenables por asa, `web/src/components/sortable.tsx`,
-ratón, táctil y teclado) en una, y el selector **embebido** (búsqueda, mapa
-muscular y grupos plegables) en la otra. Guardar manda un solo POST (crear) o
-PUT (editar) con las posiciones 0..n-1 y vuelve a la lista con el id en el
-`state` de la navegación, así que la tarjeta guardada llega desplegada.
-
-El mapa del selector va en un recuadro dentro de su tarjeta, a alto fijo
-(`h-96`, `w-auto`: su alto manda en el tamaño de los músculos), y debajo siguen
-la búsqueda, el conmutador de vista, las fichas de grupo y la lista, que crece
-sin scroll propio: la página se desplaza como cualquier otra. Medido a
-1280×800: el dibujo frontal mide 145×384 px y la caja más pequeña de un músculo
-es la del hombro anterior (62×11); en la modal el dibujo medía 176×468.
-
-**Crear sigue un único patrón** (recetas, plantillas, ejercicios y el menú FAB):
-lo pulsado **crece hasta lo que abre** (transformación de contenedor con View
-Transitions). El FAB es el único elevado; el botón de cabecera es un `Button`
-_filled_ de tamaño por defecto, sin sombra. El mecanismo vive en
-`lib/view-transition.ts`: el `onClick` llama a `morphFrom(e.currentTarget)` antes
-de navegar (o de abrir, con `runViewTransition` + `flushSync`, como «Nuevo
-ejercicio», que no tiene ruta), y el destino pone `style={useCreateMorph()}`.
-Así el nombre `create` está solo en lo pulsado en la foto «antes» y solo en el
-destino en la foto «después» (dos iguales anulan la transición). Carga directa
-y editar no animan. El destino apaga su animación de entrada propia (la hace la
-transición). Los tests usan `tests/view-transition-stub.ts`.
-
-El **día → modal** del calendario de fuerza (`day-sheet`) recibe el mismo trato
-en `globals.css`: el contenido llena el contenedor que crece y la columna de
-origen se despide en `--duration-effects-fast`. Sin eso la columna (alta y
-estrecha) se quedaba **estirada encima del modal** todo lo que dura la expansión.
-Mientras se carga el detalle de la sesión (`GET /api/plan-sessions/:id`, antes
-de abrir), el `Loader` va **superpuesto** a la rejilla (`absolute inset-0`), no
-debajo en la columna: en el flujo le quitaba ~112 px de alto y la rejilla volvía
-a crecer justo mientras la modal se expandía (lo cubre `strength.spec.ts`).
-
-El **menú FAB** sigue el M3E: velo (`Scrim`) que tapa la página y la cierra al
-pulsarlo, y acciones planas sin sombra, cada una con el `accent-container` de la
-sección a la que lleva (`data-section={sectionOf(to)}`: Sesión y Plantilla en
-verde de Deporte, Receta en el de Nutrición).
-
-El **mapa muscular** se ve en 3D (`web/src/components/body-3d/`) y el dibujo SVG
-(`web/src/components/body-map/`) queda de respaldo: sin WebGL o si el modelo no
-carga, cada pantalla pinta el SVG de siempre. El SVG tiene 87 regiones
-anatómicas entre las dos vistas (frontal y trasera), cada una con su nombre en
-español y su grupo de la taxonomía (`hombro`, `pecho`, `core`, `bíceps`,
-`antebrazo`, `espalda`, `tríceps`, `glúteo`, `pierna`, `gemelo`) o marcada sin
-grupo, que es anatomía de relleno (cabeza, manos, pies, articulaciones).
-
-Los `path` no son nuestros: proceden de `body-muscles` (Ivan Vulović,
-**Apache-2.0**) y se conservan tal cual; los `LICENSE` y `NOTICE` de esa licencia
-viven junto a ellos, en la misma carpeta, y **hay que mantenerlos**. Lo que sí es
-nuestro es el mapeo músculo→grupo, las etiquetas en español y los colores (los
-tokens `--color-muscle` / `--color-muscle-strong` de `globals.css`, más
-`--color-primary` para el grupo elegido); el fichero
-`web/src/components/body-map/data.ts` es generado a partir del original y lo dice
-en su cabecera.
-
-### Modelo 3D de los músculos
-
-- **El modelo** es `web/public/models/muscles.glb.gz` (≈1,2 MB, 36 mallas: una por
-  sub-región, el relleno muscular visible y la piel de cabeza, manos y pies). Sale
-  de **BodyParts3D 4.0 (CC BY 4.0)** tal como lo empaqueta human-atlas y lo genera
-  `node web/scripts/gen-muscle-model.ts <human-atlas>/public/models` (≈1 min); el
-  resultado se versiona con su `ATTRIBUTION.md` al lado, **que hay que mantener**.
-  `tests/muscle-model.test.ts` falla si sus mallas no son exactamente el
-  vocabulario de la API, si alguna posición no es finita o si falta la atribución.
-- **Lo que el atlas no trae se fabrica con su geometría**: el recto abdominal es la
-  aponeurosis del oblicuo externo junto a la línea media (partida por el ombligo)
-  y el dorsal ancho es una lámina calcada de la piel y ceñida por rayos a lo que
-  tiene debajo, partida en tres abanicos que convergen en la axila. El trapecio
-  conserva la división anatómica del atlas (transversa = medio, ascendente =
-  inferior), que **no** es la del dibujo SVG.
-- Va **sin normales** (el visor las calcula: las mallas van soldadas) y en **gzip**,
-  que el visor abre con `DecompressionStream`: sin WebAssembly, así que la CSP no
-  cambia.
-- **El visor** (`Body3D`) carga three con `import()` desde `body-3d/scene.ts`: solo
-  se descarga donde hay visor. Pinta bajo demanda, no en bucle; sin paneo, con la
-  vista frontal/trasera de partida, y los colores salen de los tokens leídos sobre
-  el propio visor (siguen el tema). Lo no marcado va en gris (`--color-body`)
-  también en el selector: solo destaca lo elegido y, bajo el ratón,
-  `--color-muscle-strong`. La rueda o el pellizco acercan **hacia el cursor**
-  (`zoomToCursor`, hasta 0,6 m); tras girar o acercar aparece «Restablecer
-  vista», que vuelve a la de partida (cambiar de vista también). Con `onSelect`
-  filtra: un toque elige, un arrastre gira. En los dos modos un tooltip
-  (`Tooltip` de `overlay.tsx`, sobre el cursor y fuera del `role="img"`) nombra
-  el músculo bajo el ratón; de él tira el e2e para encontrar dónde pulsar.
-  El lienzo mide `100 %` por CSS y `setSize(w, h, false)` solo toca el búfer: con
-  el ancho en px que pone `setSize` por defecto, al estrechar la ventana el lienzo
-  sostenía su columna y la página se salía por la derecha (lo cubre
-  `exercise-detail.spec.ts`). «Restablecer vista» sale solo si la cámara se movió
-  (OrbitControls emite `start` también con un toque) y es solo icono: con texto
-  tapaba medio modelo en móvil. Con `legend` va a la izquierda de la leyenda,
-  fuera del modelo; sin ella, abajo a la izquierda sobre el visor.
-- **Accesibilidad**: el lienzo es un `role="img"` sin foco. De solo lectura se
-  nombra con cada músculo y su grado; en el selector, con WebGL, los músculos del
-  grupo elegido (o del músculo elegido) se ofrecen además como fichas («Músculo:»),
-  que es el camino por teclado. Sin WebGL no hacen falta: los botones son los del
-  SVG. jsdom no tiene WebGL, así que los tests unitarios ven el SVG salvo que
-  sustituyan `body-3d/scene`.
-- **Sin GPU no hay 3D**: `hasWebGL()` descarta los renderizadores por software
-  (SwiftShader, llvmpipe, Microsoft Basic Render: `lib/webgl.ts`) y pinta el SVG,
-  porque así el visor bloquea el hilo principal (~0,9 s por pintado en un M4 Pro,
-  mucho más en el runner) y congelaba el CI. Chromium headless usa SwiftShader:
-  la config de e2e fuerza `--use-angle=metal` en macOS para que los tests del 3D
-  corran en local, y en el CI (Linux sin GPU) se saltan (`skipWithoutGPU` en
-  `muscle-regions.spec.ts`); el respaldo SVG sí se prueba allí.
-
-## Taxonomía muscular: dos niveles
-
-El músculo fino manda al filtrar; el grupo padre lo agrupa. Es lo que se usa en
-el selector de ejercicios (mapa + fichas de grupo) y en el editor.
-
-- **Nivel 1 — grupos (`exercise_tags`, 10).** Sin cambios: es lo que agrupa las
-  listas (`GroupedExercises`), lo que se edita como «tag» y lo que usan las
-  fichas de grupo del selector.
-- **Nivel 2 — sub-regiones (`exercise_regions`, 34).** El músculo concreto del
-  mapa, **sin lado** (izquierda y derecha son la misma sub-región) y sin
-  anatomía de relleno. **Toda sub-región cuelga de un grupo que el ejercicio ya
-  tiene como tag**: lo valida la API (400 `{field:'regions'}`) y lo comprueba el
-  e2e, así que filtrar por el grupo padre siempre devuelve sus sub-regiones.
-- **Cada sub-región lleva su grado** (`exercise_regions.role`, 0014): `primary`
-  (mueve el ejercicio), `secondary` (ayuda) o `stabilizer` (sostiene la postura en
-  isométrico). La API los recibe y devuelve como `regions: [{ region, role }]`,
-  ordenados por región; una región repetida o sin grado es un 400. La siembra se
-  gradúa en `0015` (134 principales, 80 secundarios, 24 estabilizadores; todo
-  ejercicio sembrado tiene al menos un principal, y lo comprueba el e2e). Los
-  grados se pintan por luminosidad del mismo verde (`--color-primary`,
-  `--color-muscle-secondary`, `--color-muscle-stabilizer`), que se distingue
-  también con daltonismo; `ROLE_LABELS` (web) y `REGION_ROLES` (API) son espejos
-  que ata `tests/muscle-regions.test.ts`. Filtrar por un músculo no mira el grado.
-- El vocabulario son **dos espejos que un test ata**:
-  `api/src/muscle-regions.ts` (lo que valida la API) y
-  `web/src/components/body-map/regions.ts` (derivado del dibujo, con las
-  etiquetas en español). `web/tests/muscle-regions.test.ts` falla si divergen.
-  La región `tibialis-anterior` no la trabaja ningún ejercicio del catálogo: se
-  dibuja y se filtra, y devuelve lista vacía. El cuadrado lumbar ya no es una
-  sub-región: es profundo y no lo trae el modelo 3D, así que su zona del dibujo
-  cuenta como Lumbares (`lower-back-erectors`; `0013_fusion_cuadrado_lumbar.sql`
-  mueve las filas que hubiera).
-- **El mapa se pulsa por músculo, no por grupo**: cada sub-región es **un solo
-  `<g role="button">`** con sus dos mitades dentro, así que la rejilla de teclado
-  tiene un botón por músculo (14 en la vista frontal, 20 en la trasera) en lugar
-  de uno por grupo. El selector anuncia el músculo elegido («Músculo: …») y cada
-  fila de ejercicio lleva sus músculos como **descripción**
-  (`aria-describedby`, no pegados al nombre accesible). Las fichas de grupo van
-  en un `role="group"` con la etiqueta «Grupo:».
-- **El ratón no roba el foco al pulsar el dibujo** (`onMouseDown` cancela el
-  evento): sin eso el navegador deja el foco en el `<g>` y pinta su anillo —un
-  **recuadro redondeado** alrededor de las piezas del músculo— que tapa la señal
-  de color («el músculo no aparece redondeado, cambia de color»). La selección se
-  ve entonces solo por color (`--color-primary` sobre el verde en reposo
-  `--color-muscle`), y el teclado conserva su anillo de foco (2 px
-  `--color-primary`) al tabular y pulsar Enter o espacio.
-- En el editor de ejercicios los músculos se eligen por grupo y solo aparecen los
-  de los grupos ya elegidos como tag (el invariante de arriba): elegir un músculo
-  añade su grupo si falta, quitar un grupo se lleva sus músculos, y guardar exige
-  al menos uno. Cada músculo elegido nace principal y su grado se cambia en un
-  grupo conectado («Grado: …») debajo de sus fichas; la ficha del ejercicio lista
-  los músculos por grado.
-- El editor de ejercicios (crear y editar) tiene **la piel de «Nueva receta»**:
-  página propia que sustituye a la lista o al detalle, cabecera de sección con
-  Cancelar/Guardar y tarjetas en dos columnas desde `lg` (dibujo de los músculos
-  elegidos, nombre + tipo en botones conectados + los diez grupos como fichas,
-  músculos por grupo, preparación y técnica, pasos). Los pasos numerados son
-  `web/src/components/steps-editor.tsx`, compartido con la receta.
-
-## Despliegue: dos Workers (B')
-
-| Worker               | Config                                               | Qué sirve                                      | URL                                            |
-| -------------------- | ---------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------- |
-| `esencial` (frontal) | `wrangler.toml` (raíz), `main = web/worker/index.ts` | assets de `web/dist` + cabeceras de seguridad  | `https://esencial.nutrirutina.workers.dev`     |
-| `esencial-api`       | `api/wrangler.toml`                                  | las rutas `/api/*` (Hono), D1 y R2; sin assets | `https://esencial-api.nutrirutina.workers.dev` |
-- El navegador llama a **los dos**: la SPA usa la URL absoluta de la API
-  (`VITE_API_URL`, en `web/.env.production`; dev/e2e la sobreescriben) con
-  `credentials: "include"`, y la API
-  autoriza ese origen con CORS (`WEB_ORIGIN`). El frontal autoriza el origen de
-  la API en su CSP (`API_ORIGIN`): los dos valores tienen que cuadrar.
-- La identidad la prueba **Cloudflare Access** en el borde: la API solo lee el
-  email ya autenticado (`ctx.access`). En dev lo simula `[access.dev]` de
-  `api/wrangler.toml` y en e2e/vitest la cabecera `X-Dev-Email` con `DEV_AUTH=1`.
-  No hay login propio ni cookie de sesión; un fallo de sesión en el SPA se
-  resuelve recargando (`web/src/lib/api.ts`, una vez por pestaña y sesión).
-- Access pone la cookie **por host**. Antes de montar la app,
-  `web/src/lib/session-bridge.ts` prueba `/api/health`; si la API no responde,
-  navega a `/api/session/return?to=<web>` (la API solo acepta un origen de
-  `WEB_ORIGIN`), Access autentica ese host y vuelve a la web. Así la primera
-  visita no confunde la falta de cookie con un fallo de base de datos.
-- En dev/e2e esos dos orígenes se sobreescriben con `--var` (ver los scripts
-  `dev:api` / `dev:web` y `e2e/playwright.config.ts`).
-- Publicación: **un build de Workers Builds por Worker** (ver `DEPLOY.md` §6).
-
-## Problemas conocidos
-
-### 1. Migraciones locales — bootstrapeo (RESUELTO)
-
-`api/migrations/0001_baseline.sql` ya no es un no-op: es el baseline (v1, espejo
-histórico de `api/schema.sql`) y crea las tablas base. Así
-`pnpm db:migrate:local` bootstrapea una base local vacía sin aplicar
-`schema.sql` a mano.
-
-- `api/schema.sql` es el **estado FINAL** del esquema (lo aplica el bootstrap de
-  tests junto a los deltas `0002`/`0003`/`0005`); `0001_baseline.sql` queda
-  congelado como v1 y NO se reescribe.
-- Los deltas aditivos (`photo_path`, `section`, `recipe_tags`, `shopping_items`)
-  viven en `0002`+; los deltas de **reestructuración** (p. ej. `0009_fuerza_v2`
-  recrea `plan_sessions` con `plan_session_exercises` y `cardio_logs`) viven en
-  su propio número y NO se añaden al bootstrap de tests (schema.sql ya los
-  refleja).
-- `0010_exercise_regions.sql` es **aditivo**: crea `exercise_regions` y siembra
-  las 237 sub-regiones de los 91 ejercicios. La tabla está en `schema.sql` y en la
-  lista `TABLES` del bootstrap de tests (`api/tests/helpers.ts`) — el resto del
-  sembrado no va al bootstrap, igual que `0004`/`0006`.
-- `0011_exercise_regions_semilla.sql` es la **corrección de datos** de esa
-  siembra (una fila: el sóleo que faltaba en `Elevación de gemelos en prensa`).
-  `0010` se queda congelada como sembrado histórico; cualquier arreglo de datos
-  posterior va en su propio número. Los tests de la API **no** ven estas filas (su
-  bootstrap no siembra regiones), así que lo verifica el e2e.
-- `0012_recetas_nutrirutina.sql` siembra el **recetario de Nutrirutina** (ver
-  «Recetario sembrado» más abajo). Es generada: no se edita a mano.
-- `0016_alimentos.sql` es **aditiva** (tabla `foods` + `recipe_ingredients.food_id`
-  /`optional`) y va en el bootstrap de tests con `foods` en `TABLES`. Sin `;` en
-  sus comentarios: el bootstrap parte el fichero por ellos. `0017_recetas_libro.sql`
-  es **sembrado** (catálogo + ingredientes del libro) y no va al bootstrap; la
-  cubre `api/tests/recetas-libro.test.ts` aplicando 0012 + 0017.
-- `0021_users_name.sql` es **aditiva**: `users.name TEXT` (NULL = sin nombre, el
-  nombre de perfil que la persona edita en Ajustes con `PATCH /api/me`). Al
-  admitir vacíos sobre las filas que ya existen, se puede aplicar antes del
-  merge sin romper al código desplegado (es justo lo contrario de `0020`).
-- `0022_exercise_aliases.sql` es **aditiva**: crea `exercise_aliases` (en
-  `schema.sql` y en `TABLES`), renombra a español 12 ejercicios del catálogo y
-  siembra los 160 alias de búsqueda de los 91. **No va al bootstrap** (es siembra,
-  como 0010); la cubre `api/tests/exercise-aliases-migration.test.ts`, que la
-  aplica sobre un catálogo mínimo. El renombrado va **después** de
-  0006/0007/0008/0010/0011/0013/0015 (que referencian los nombres viejos) y no se
-  reescriben migraciones pasadas. Sin `;` en los comentarios (el test la parte por
-  ellos). Los alias se resuelven con un `JOIN`/`SELECT` por nombre, así que un
-  catálogo recortado no la rompe.
-- `0023_ejercicios_barra_libre.sql` es **sembrado**: 17 ejercicios de «Barra
-  Libre» con sus tags, sub-regiones (con grado) y alias. Tampoco va al bootstrap;
-  la cubre `api/tests/barra-libre-migration.test.ts`.
-- `0024_videos_barra_libre.sql` es **sembrado** y aditivo: el `technique_url`
-  (YouTube, en español) de esos 17, que eran los únicos del catálogo sin vídeo.
-  Resuelve por nombre (un catálogo recortado no la rompe), va **después** de
-  0023 y tampoco va al bootstrap. Sin `;` en los comentarios (el test la parte
-  por ellos); la cubre `api/tests/barra-libre-videos-migration.test.ts`.
-- `0025_exercise_metric.sql` es **aditiva**: `exercises.metric` (la unidad de la
-  serie: `weight_reps` | `reps` | `time` | `weight_time`) y
-  `set_logs.duration_secs` (los segundos de una serie por tiempo). Siembra la
-  métrica de los ejercicios que no encajan en kilos × repeticiones (isométricos
-  y aguantes → `time`, peso corporal → `reps`, paseo del granjero →
-  `weight_time`); el resto queda en `weight_reps`. Las dos columnas nacen con
-  valor por defecto o nulas, así que se puede aplicar antes del merge; va al
-  bootstrap por `schema.sql` (como 0021), no necesita lista propia. Sin `;` en
-  los comentarios. La documenta «Métrica de la serie» y la cubre
-  `api/tests/exercise-metric.test.ts`.
-- `0026_supersets.sql` es **aditiva**: `superset` (0/1) en
-  `plan_session_exercises` y `template_exercises` (los bloques de ejercicios:
-  biserie, triserie, serie gigante). Sí va al bootstrap de tests. Como nace con
-  defecto 0, se puede aplicar antes del merge sin romper el código desplegado.
-- En remoto el baseline ya está aplicado en la D1 de producción; cada delta
-  nuevo hay que aplicarlo con `pnpm db:migrate:remote` (0009 destruye el
-  histórico de planificación, justo después del deploy; **0013–0015, 0018 y
-  0022–0026 van antes del merge a `main`**, porque el merge publica la API que ya
-  lee `exercise_regions.role`, los descansos, `exercise_aliases`, los vídeos de
-  los ejercicios nuevos, la métrica de la serie y la marca de los bloques
-  encadenados — ver `DEPLOY.md` §4).
-
-  **Ojo con el orden cuando el cambio no es de ida y vuelta.** Aplicar la
-  migración antes del merge solo es seguro si es **aditiva** (una columna nueva
-  que deja vacíos, que el código viejo ignora). Si la columna nace **obligatoria**
-  sobre filas que ya existen, el código desplegado —que no la rellena— empieza a
-  dar 500 en cuanto se aplica (le pasó a `0020`: planificar, plantillas, nota del
-  día y semana de comidas dejaron de funcionar hasta el deploy). Para eso el patrón
-  es en dos tiempos: 1) columna que admite vacíos → deploy del código que la
-  rellena → 2) rellenar lo viejo y hacerla obligatoria. Tres pasos, no uno.
-
-### 2. wrangler pide confirmación y cuelga en no-TTY
-
-`wrangler d1 migrations apply` muestra un prompt `(Y/n)` cuando corre en un
-terminal interactivo (TTY) y se queda esperando si nadie responde.
-
-**Solución:** invocarlo con stdin no-TTY (omite la confirmación y usa `yes`):
-
-```bash
-npx wrangler d1 migrations apply esencial --local < /dev/null
-```
-
-O ejecutar desde un entorno CI/script no-interactivo.
-
-### 3. Embutir YouTube requiere que el Worker NO rompa el embed
-
-Conflicto curioso: `api/src/middleware.ts` fija headers de seguridad en cada
-respuesta, y dos de ellos rompen el iframe de YouTube si se vuelven a endurecer:
-
-- `Content-Security-Policy` DEBE incluir `frame-src https://www.youtube.com`
-  (sin él, `default-src 'self'` bloquea el frame → el navegador no muestra el
-  vídeo).
-- `Referrer-Policy` DEBE ser `strict-origin-when-cross-origin` (con
-  `same-origin` el iframe llega a YouTube sin `Referer`, y el player bloquea
-  con "This content is blocked. Contact the site owner to fix the issue.").
-
-Ambos están rotos a la vez con las versiones más estrictas; con B' esas
-cabeceras las ponen los dos Workers (el frontal en el HTML, la API en el JSON),
-y las comprueba cada lado: `web/tests/worker.test.ts` (frontal) y
-`api/tests/auth-gate.test.ts` (API). Son los únicos tests que protegen esto, así
-que no se borran a la ligera.
-
-### 4. Se arrancan DOS servidores en local
-
-`pnpm dev` levanta los dos Workers (script `api/scripts/dev.ts`): frontal en
-**8787** y API en **8789**; la SPA se construye contra `http://127.0.0.1:8789`.
-Por separado: `pnpm dev:api` y `pnpm dev:web`. `pnpm deploy` publica los dos
-Workers (primero el SPA con la URL de producción de la API).
-
-La API lleva `--persist-to .wrangler/state` porque su config vive en `api/` y,
-sin esa bandera, wrangler usaría `api/.wrangler/state` (base de dev nueva y
-vacía). Igual en `pnpm db:migrate:local`: la base de desarrollo sigue siendo la
-de siempre, `.wrangler/state` en la raíz.
-
-El origen de dev es **`http://127.0.0.1:8787` y nada más**: el Worker del frontal
-redirige `localhost:8787` a `127.0.0.1:8787` conservando ruta y query. Se fija un
-origen canónico en vez de duplicar `WEB_ORIGIN` (CORS) y `API_ORIGIN` (CSP) para
-los dos nombres.
-
-Para probar desde el móvil (misma Wi‑Fi), `ESENCIAL_HOST=<ip> pnpm dev` (p. ej.
-`ESENCIAL_HOST=192.168.1.100 pnpm dev`): `api/scripts/dev.ts` pasa esa IP a los
-dos servidores —`--ip` (bind) y los orígenes de la corrida, es decir
-`WEB_ORIGIN`, `API_ORIGIN` y `VITE_API_URL`—, así que se entra (móvil y
-escritorio) por `http://<ip>:8787`, el origen canónico de esa corrida. Sin
-`ESENCIAL_HOST` todo sigue en `127.0.0.1`, y no conviene mezclar los dos hosts
-en la misma corrida (los orígenes de CORS/CSP son por host). El cortafuegos de
-macOS pedirá permitir conexiones entrantes la primera vez. Con Tailscale, `ESENCIAL_HOST=<ip-tailscale>` hace lo
-mismo fuera de casa.
-
-### 5. `pnpm deploy` no ejecuta el script de deploy
-
-`pnpm deploy` es un comando **interno** de pnpm (despliegue de paquetes en un
-monorepo) y tiene prioridad sobre el script del `package.json`, así que falla con
-`ERR_PNPM_CANNOT_DEPLOY_MANY` en vez de construir y desplegar.
-
-**Solución:** `pnpm run deploy` (equivale a `pnpm build && wrangler deploy`).
-
-Ojo: cualquier push a `main` ya dispara Workers Builds, que construye y despliega
-solo. El comando manual solo hace falta para publicar sin push, y deja una
-versión más en el historial de Deployments de Cloudflare.
-
-### 6. `pnpm e2e` reescribe `web/dist`, que es lo que sirve el frontal en dev
-
-El `webServer` de Playwright construye el SPA con
-`VITE_API_URL=http://127.0.0.1:8790` y escribe en el **mismo** `web/dist` que el
-Worker del frontal sirve en dev (`[assets] directory = "./web/dist"`). Si dejas
-`pnpm dev` levantado mientras corre la suite, el frontal de dev pasa a servir un
-build que apunta a la API de e2e; al acabar la suite esa API ya no está, así que
-**la app de dev se queda sin backend** aunque el servidor siga vivo.
-
-**Solución:** vuelve a arrancar `pnpm dev` después de la suite: al arrancar
-reconstruye `web/dist` con la URL buena (8789). Para saber a qué API apunta lo
-que se está sirviendo:
-
-```bash
-node -e "const fs=require('fs');for(const f of fs.readdirSync('web/dist/assets').filter(f=>f.endsWith('.js')))console.log(f,[...new Set([...fs.readFileSync('web/dist/assets/'+f,'utf8').matchAll(/127\.0\.0\.1:(\d+)/g)].map(x=>x[1]))])"
-```
-
-Nota relacionada: `api/scripts/dev.ts` arranca y para los dos servidores juntos,
-así que matar a mano cualquiera de los dos (por ejemplo el que ocupa 8787)
-termina el `pnpm dev` entero con el código de salida del hijo.
-
-## Tests e2e — base de datos propia
-
-`pnpm e2e` **NUNCA** toca la base de desarrollo (`.wrangler/state`). El
-`webServer` de Playwright arranca **sus dos servidores** con cadenas explícitas
-(`e2e/playwright.config.ts`), con `reuseExistingServer: false` (así un
-`pnpm dev` en marcha no se adopta):
-
-1. API en **8790**: `rm -rf e2e/.state` → `wrangler d1 migrations apply esencial
- --local -c api/wrangler.toml --persist-to e2e/.state < /dev/null` → `wrangler
- dev -c api/wrangler.toml --port 8790 --var WEB_ORIGIN:http://127.0.0.1:8788
- --var DEV_AUTH:1 --var ADMIN_EMAIL:admin@esencial.test --persist-to e2e/.state`.
-2. Frontal en **8788**: `VITE_API_URL=http://127.0.0.1:8790 pnpm build` →
-   `wrangler dev --port 8788 --var API_ORIGIN:http://127.0.0.1:8790 --persist-to
- e2e/.state-web` (su propio dir de estado: el frontal no toca D1 y el `rm -rf
- e2e/.state` de la API no debe pisarle la caché).
-
-La identidad de dev va en `use.extraHTTPHeaders` (`X-Dev-Email` con
-`admin@esencial.test`): todas las peticiones del navegador y del contexto
-`request` van como el admin, y los specs que actúan como otro usuario abren su
-propio contexto con su cabecera. No hay proyecto `setup` ni `storageState`.
-
-Los `--var` son imprescindibles: sin ellos los Workers usarían los orígenes de
-**producción** (los del `wrangler.toml`) y el navegador cruzaría a la API
-equivocada (CORS/CSP fallan).
-
-Los dos puertos se cambian por entorno para correr la suite junto a otros
-worktrees: `E2E_WEB_PORT=8863 E2E_API_PORT=8864 pnpm e2e` (por defecto 8788 y
-8790). La config deriva de ahí las URLs, los `--var` y `VITE_API_URL`, y
-`e2e/tests/helpers.ts` (`API_BASE`) lee el mismo `E2E_API_PORT`.
-
-Si un test arrastra o pulsa justo después de abrir un diálogo, espera antes a que
-acaben las animaciones (`settle` en `strength.spec.ts`): mientras dura la
-transición de vista día → modal, su capa se queda con el puntero.
-
-Lo que hay que respetar al escribir tests:
-
-- **Añadir una migración no requiere tocar nada de `e2e/`.** La base se deriva
-  de `api/migrations/`. (Ojo: el bootstrap de tests de `api/` sí necesita la
-  tabla nueva en su lista `TABLES`, `api/tests/helpers.ts`.)
-- **Nunca `POST` de un ejercicio que ya está en la semilla**: `exercises.name`
-  es UNIQUE y devuelve 400. El `id` se resuelve con `GET /api/exercises` y se
-  busca por nombre. Solo se crean por API recetas, plantillas y ejercicios de
-  cardio (los 91 sembrados son `kind='strength'`).
-- `**workers: 1**`: hay un servidor y una base por corrida, así que el
-  paralelismo entre archivos es estado compartido, no aislamiento. No lo subas
-  sin dar a cada worker su propia base.
-- **Fechas reales** (hoy, el lunes de la semana actual), no offsets por corrida.
-- **La API es otro origen**: las peticiones directas de los tests usan
-  `apiUrl()`/`API_BASE` de `e2e/tests/helpers.ts` (y en el navegador, `fetch` con
-  `credentials: "include"`). Un `fetch("/api/...")` relativo iría al frontal.
-- `pnpm e2e:check` corre la suite y verifica que los conteos de `.wrangler/state`
-  (filas D1 y objetos R2) no cambian. No navegues la app de dev mientras corre.
-
-## Catálogo de ejercicios (seed)
-
-`api/migrations/0004_seed_exercises.sql` siembra **91 ejercicios** / **145 tags**
-con taxonomía general de grupo muscular: `pecho`, `espalda`, `hombro`, `bíceps`,
-`tríceps`, `pierna`, `glúteo`, `core`, `antebrazo`, `gemelo`.
-`technique_url` (vídeos de YouTube) y `steps` (arreglo JSON de pasos, columna
-añadida en 0005) se ingestan por nombre en `0006_exercise_steps_data.sql`.
-Todos los vídeos del catálogo son en **español** (auditado con yt-dlp en e8;
-faltantes/reemplazos viven en `0007`, `0008` y, para los 17 de «Barra Libre»,
-`0024`).
-Los pasos faltan en los ejercicios creados a mano **y en los 17 de "Barra
-Libre"** — rellenarlos desde el editor (textarea "Pasos de ejecución", un paso
-por línea).
-
-Las **sub-regiones** de esos 91 ejercicios vienen en
-`0010_exercise_regions.sql`: 237 filas, 33 de las 35 regiones que tenía entonces
-el vocabulario, 0 ejercicios sembrados sin sub-región y 0 regiones que no
-cuelguen de un grupo ya presente en sus tags (las dos sin uso eran
-`tibialis-anterior` y `lower-back-ql`, fusionada después en Lumbares por `0013`). La auditoría de esos 91 ejercicios (2026-09-22, tres revisiones
-independientes + comprobación SQL) dejó **una** corrección, en
-`0011_exercise_regions_semilla.sql`: el sóleo de `Elevación de gemelos en prensa`
-—238 filas en total—. El resto de candidatos eran discusiones de grado de
-participación (cabeza larga del tríceps en los presses por encima de la cabeza,
-isquios en el hip thrust, `traps-mid` en los encogimientos), no errores de
-participación: no se tocan.
-
-### Nombres, alias y búsqueda (0022–0023)
-
-El nombre canónico es **español**. Se conservan los términos ya universales en un
-gimnasio español («curl», «press», «pullover», «crunch», «crossover»), los
-nombres propios («Press Arnold», «Curl en banco Scott», «Remo con barra
-Pendlay») y **`Hip thrust`**, que se conoce por ese nombre (su alias es la
-traducción, «empuje de cadera»). `0022_exercise_aliases.sql` renombra los 12 que
-estaban en inglés (Face pull → Tirón a la cara, Pistol squat → Sentadilla a una
-pierna, Farmer carry → Paseo del granjero…) y siembra `exercise_aliases` —el
-nombre inglés y los sinónimos, en minúsculas— para los 91.
-
-`Exercise` (web) y el payload de `/api/exercises` (lista y ficha) llevan
-`aliases: string[]`. La búsqueda casa **nombre + alias + tags**: el helper puro
-`matchesExercise(e, q, extra?)` (`web/src/lib/exercises.ts`, pliega mayúsculas y
-tildes) lo aplican el catálogo, el selector de plantilla y el del día; la paleta
-⌘K indexa `exerciseSearchTerms(e)` como `keywords` (su ranking es difuso, por eso
-no usa el booleano). El editor edita los alias como fichas y la ficha los enseña
-en «También conocido como». En la API, `aliases` se valida en `exerciseSchema`
-(vacío o repetido sin mirar mayúsculas/espacios → 400 `{field:'aliases'}`) y se
-guarda como los tags/regions. Lo cubren `api/tests/exercises.test.ts`,
-`web/tests/exercise-search.test.ts`, `web/tests/ejercicios.test.tsx` y
-`web/tests/command-palette-ui.test.tsx`.
-
-`0023_ejercicios_barra_libre.sql` añade los **17 ejercicios de «Barra Libre»** que
-faltaban (Cargada, Press jabalina, Peso muerto unilateral, Curl a una mano/
-invertido con barra, Burpee, Thruster, Swing/Arrancada con kettlebell, Remo alto,
-Cargada y press, Remo renegado/invertido, Dominada con toalla, Sit-up con barra,
-Flexiones con palmada y Sentadilla en rack con kettlebell) desde el libro _Barra
-Libre_ (Fitness Revolucionario; solo traen ejercicios el cap. 2.3, pp. 60-98, las
-tablas de sesiones, pp. 163-210, y el Anexo 1, pp. 221-227). Criterio de
-equivalencia: **mismo movimiento y músculo → alias** («Roll-out con barra» →
-`Rueda abdominal`, «Rodillas a pecho» → `Elevación de piernas colgado`); **otro
-movimiento** (implemento, posición de carga o unilateralidad) **→ fila nueva** —
-por eso «Squat en rack con kettlebell» es fila propia y no la sentadilla goblet—.
-Fuera de alcance: «Saltos de cuerda», que es cardio (`kind` no lo admite). Lo
-cubre `e2e/tests/catalog.spec.ts` (el alias busca, el nuevo aparece, filtra por
-músculo y se añade a un día del plan).
-
-Los 17 entraron **sin vídeo de técnica** (los 91 originales lo traen desde
-`0006`): `0024_videos_barra_libre.sql` les pone el suyo, en español y con el
-canal hispanohablante, elegido a mano y verificado con yt-dlp (existe y es
-embebible). Lo cubre `api/tests/barra-libre-videos-migration.test.ts`, que
-comprueba que las 17 filas resuelven por nombre, que la URL es la forma
-`watch?v=` de 11 caracteres que reconoce `ytEmbedId` y que no hay clips
-repetidos.
-
-## Fotos de recetas (R2)
-
-- Upload: `POST /api/uploads` (multipart `file`, png/jpeg/webp ≤ 5 MB) → `200 {photo_path}`
-  con key `recipe-<uuid>.<ext>`; servir `GET /api/uploads/:key` tras el gate de identidad, `Cache-Control: immutable`.
-- Binding R2 `PHOTOS` → bucket `**esencial-photos**` (`api/wrangler.toml` y `api/tests/wrangler.test.toml`);
-  `photo_path` se valida fail-closed (regex + `PHOTOS.head`) en `POST/PUT /api/recipes`.
-- El render usa `photoSrc()` (`web/src/lib/api.ts`): la key pelada + prefijo
-  `/api/uploads/`, y delante la URL de la API (`VITE_API_URL`).
-
-## Carga de las listas (recetas y ejercicios)
-
-- **Sin N+1**: `GET /api/recipes` y `GET /api/exercises` hidratan con **una
-  consulta por tabla** en un solo `db.batch` (`queryRecipes`/`queryExercises` en
-  `api/src/repo.ts`; la ficha usa el mismo código con `WHERE r.id = ?`). Antes
-  eran 5 consultas por receta (501 en total) y 3 por ejercicio (274). En local:
-  recetas de ~180 ms a ~12 ms y ejercicios de ~90 ms a ~5 ms, con JSON idéntico
-  byte a byte. `api/tests/lists.test.ts` exige que el número de consultas no
-  crezca con las filas. `queryExercises` hidrata un hijo fijo más desde `0022`:
-  tags, sub-regiones y **alias**.
-- **La lista no liga un parámetro por fila**: D1 admite como máximo 100 por
-  consulta, así que un `IN (?,…)` con cada id rompería desde la receta 101 (y la
-  D1 local podría no avisar). Los hijos se filtran con una subconsulta
-  (`recipe_id IN (SELECT r.id FROM recipes r …)`).
-- **Caché del cliente**: `apiGetCached` (`web/src/lib/api.ts`) guarda la
-  respuesta de un GET **5 minutos** en memoria (la promesa: dos pantallas a la
-  vez comparten una petición; un fallo no se guarda). **Toda escritura** que
-  pase por `apiFetchRaw` la vacía al terminar. La usan las listas de recetas y
-  ejercicios (hooks, selector del plan y ⌘K). Un cambio hecho desde otro
-  dispositivo tarda hasta 5 minutos en verse (o recargando). `tests/setup.ts`
-  la vacía entre casos.
-- Las fotos de las listas (recetario salvo la destacada, selector del plan) van
-  con `loading="lazy"`: son ~120 KB cada una (1200×900) y 83 en total.
-
-## Recetario sembrado (Nutrirutina)
-
-`0012_recetas_nutrirutina.sql` trae las **100 recetas de sistema** de
-`~/projects/nutrirutina` (volcado `db/data/backup-prod-full.sql`): 787
-ingredientes, pasos y utensilios (→ materiales). La genera
-`api/scripts/import-nutrirutina.ts sql <dir>` con la transformación pura de
-`api/scripts/nutrirutina.ts` (la cubre `api/tests/nutrirutina-import.test.ts`).
-
-- Unidad `g` → `gr` (el desplegable del editor); cantidad ≤ 0 («al gusto», -1 en
-  Nutrirutina) → sin cantidad ni unidad. Sin categorías. La nutrición guardada en
-  Nutrirutina **no se importa**: tiene proteínas y carbohidratos intercambiados y
-  le faltaban ingredientes (ver «Macros» abajo).
-- Una receta con un nombre que ya exista **se salta entera** (tabla auxiliar
-  `_nutrirutina_skip`, que la migración borra al final): nunca pisa ni añade
-  hijos a una receta propia.
-- **`GET /api/recipes` completo pesa**: ~337 KB. Antes también era lento: ~5
-  consultas por receta, 516 con 103 recetas, ~3 s en producción. Hoy son 5
-  consultas en un batch (ver «Carga de las listas»). Quien solo necesite el
-  nombre usa `GET /api/recipes?summary=1` (`[{id, name}]`, una consulta, unos
-  KB): así lo pide la búsqueda ⌘K, con `apiGetCached` como las demás listas.
-- **Las fotos no van en la migración.** 83 recetas tienen `photo_path` con una
-  key estable (`photoKey`, SHA-1 del id de Nutrirutina) y hay que subirlas a R2:
-  `node api/scripts/import-nutrirutina.ts photos ~/projects/nutrirutina` (R2 de
-  dev, `.wrangler/state`) o con `--remote` (producción). Las otras 17 no tenían
-  foto generada y salen con monograma. `pnpm db:migrate:local` carga las recetas
-  pero **no** sube las fotos (`pnpm dev` no migra): sin el modo `photos` la foto
-  da 404 (así pasa siempre en e2e). Editarla sigue funcionando: el `PUT` no
-  revalida en R2 la key que ya tenía guardada la receta, solo una foto nueva o
-  cambiada (lo cubre `recipes.test.ts`). En producción, las fotos se suben
-  **antes** de migrar (`DEPLOY.md` §4).
-
-## Macros por ración (catálogo `foods`)
-
-- `foods`: 309 alimentos (los 288 de Nutrirutina + los que faltaban), con kcal,
-  proteínas, grasas y carbohidratos **por 100 g/ml** y `grams_per_unit` para la
-  unidad `ud` (huevo 55, diente de ajo 5, zumo de limón 40…).
-- Los macros **no se guardan**: `loadRecipe` los calcula al leer
-  (`nutritionPerServing` en `api/src/repo.ts`) y la respuesta lleva
-  `nutrition {kcal, protein, fat, carbs, approximate}` **por ración** (sin
-  raciones, la receta es una). No cuentan lo opcional ni lo que va sin cantidad;
-  un ingrediente con cantidad sin `foodId` o en una unidad sin conversión deja
-  `approximate: true`, y también una receta en la que **no se pudo contar nada**
-  («0 kcal» no es un dato). Unidades directas: `gr`/`g`/`ml`/`kg`/`l`; `ud` usa
-  `grams_per_unit`. La ficha lo pinta en «Por ración».
-- `foodId` se valida contra el catálogo en POST/PUT (400
-  `{field:'ingredients.N.foodId'}`).
-- **Editor** (`receta-editor.tsx`): el campo del alimento lleva un `<datalist>`
-  con el catálogo (`useFoods`, `GET /api/foods` entero; por eso su rol es
-  `combobox`, no `textbox`). El **nombre exacto** de un alimento lo enlaza;
-  cualquier otro texto suelta el enlace. Cada fila dice si cuenta («Cuenta como
-  «Arroz»») o no, con **Crear alimento** (`NewFoodDialog`, `POST /api/foods`:
-  valores por 100 g + peso de una unidad opcional; nombre repetido → 400
-  `field:'name'`) y la casilla **Opcional** (no cuenta en los macros).
-- **Totales del día** (1 ración por comida, lo decidido: en casa se cocina para
-  dos y cada uno come una ración): `GET /api/day/:date` devuelve `nutrition`
-  (null sin recetas) y `GET /api/meal-plan/:week` `totals[7]` (0 = lunes, null
-  en los días sin recetas), los dos con `nutritionByRecipe` + `sumNutrition`
-  (`api/src/repo.ts`). «Hoy» lo pinta bajo el carrusel de comidas («Total del
-  día») y el plan al pie de cada columna (kcal y `P · G · C`, con el texto
-  completo en `sr-only`; «≈» si es aproximado).
-- `0017_recetas_libro.sql` sustituye los ingredientes de 96 recetas por los del
-  libro de cocina del usuario (extraídos con Gemini), enlazados a `foods`. Solo
-  toca una receta si sus ingredientes siguen **exactamente** como los dejó 0012
-  (mismo número, nombres y suma de cantidades): una receta editada a mano no se
-  toca. Al final enlaza cualquier ingrediente cuyo texto sea un alimento exacto
-  del catálogo (las 4 recetas que no están en el libro). Rangos del libro
-  («4-5») → el mínimo; «<1 g» → sin cantidad; `kg`/`l` → `gr`/`ml`; lonchas,
-  ramitas y trozos → `ud`. Las raciones de cada receta **no cambian**. Agua,
-  hielo y sal van enlazados a alimentos de 0 kcal (si no, casi todas las recetas
-  saldrían aproximadas). Son **opcionales** (no cuentan): lo que no se come (la
-  costra de sal y su huevo en «Pescado a la sal», la corteza de piña), las
-  ralladuras y pieles, las variantes (hummus) y los batidos 2-4 de «4 smoothies
-  4U» (la receta tiene 1 ración). «Limón/Naranja (… zumo …)» cuenta como su zumo.
-- 22 alimentos del catálogo no venían de Nutrirutina (apio, corvina, salsa de
-  soja, uvas pasas…): sus valores por 100 g y los pesos por unidad son
-  **estimaciones estándar** (tipo BEDCA/USDA) hechas al generar 0017, no datos de
-  etiqueta.
-- Las fuentes de 0017 (respuestas de Gemini y el mapeo) no viven en el repo: la
-  migración es una **foto congelada**, no regenerable. Un arreglo posterior va en
-  su propio número.
+Contrato operativo para agentes. No documenta el producto ni repite el sistema de
+diseño: dice qué leer, cómo trabajar, qué no tocar y dónde está cada verdad.
+
+Si una regla de este documento choca con el código o con una prueba, mandan el
+código y la prueba; actualiza el documento en el mismo cambio.
+
+## Leer primero
+
+- Comportamiento y reglas de producto: [`docs/comportamiento.md`](docs/comportamiento.md).
+- Diseño y piezas visuales: [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) y
+  [`web/src/globals.css`](web/src/globals.css).
+- Despliegue, migraciones y secretos: [`DEPLOY.md`](DEPLOY.md).
+- Flujo de agentes, ramas y aprobaciones: [`docs/flujo.md`](docs/flujo.md),
+  [`docs/adr/`](docs/adr/) y [`TODO-flujo-agentes.md`](TODO-flujo-agentes.md).
+
+## Stack y mapa
+
+- `api/`: Hono sobre Cloudflare Workers, base de datos D1 y almacenamiento R2.
+- `web/`: React 19, Vite, react-router 7 y Tailwind; lo sirve el Worker del
+  frontal, que también gatea el documento.
+- Dos Workers: `esencial` sirve los assets y `esencial-api` expone las rutas
+  `/api/*`. El navegador habla con los dos por separado, así que los orígenes
+  permitidos por el servicio y por la política de seguridad tienen que cuadrar.
+- La identidad la prueba Cloudflare Access en el borde; no hay inicio de sesión
+  propio.
+- Monorepo pnpm. La interfaz y los datos van en español.
+
+## Comandos
+
+| Comando                  | Para qué                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `pnpm dev`               | Arranca frontal en 8787 y servicio en 8789. Para el móvil: `ESENCIAL_HOST=<ip> pnpm dev`. |
+| `pnpm typecheck`         | Tipos de todos los paquetes.                                                              |
+| `pnpm test`              | Pruebas unitarias del servicio y de la web.                                               |
+| `pnpm test:coverage`     | Unitarias con umbrales; es lo que exige la integración continua.                          |
+| `pnpm lint`              | Biome y comprobación de tokens del sistema de diseño.                                     |
+| `pnpm e2e`               | Playwright con su propia base de datos y su propio servidor.                              |
+| `pnpm e2e:check`         | Comprueba que la suite no cambia la base de desarrollo.                                   |
+| `pnpm db:migrate:local`  | Aplica migraciones a `.wrangler/state`.                                                   |
+| `pnpm db:migrate:remote` | Aplica migraciones a la base remota.                                                      |
+| `pnpm run deploy`        | Construye y publica los dos Workers.                                                      |
+| `pnpm orquestator`       | Entra en la herramienta de agentes; ver `docs/flujo.md`.                                  |
+
+No uses `pnpm deploy` a secas: es un comando interno de pnpm y falla.
+
+## Cómo trabajar
+
+- **Pruebas primero**: primero una prueba que falle, después el cambio, después la
+  prueba en verde. Si no se puede, dilo y explica qué comprobación manual hiciste.
+- **Conventional commits** y sin `Co-Authored-By` ni atribución de IA.
+- **Verifica antes de afirmar**: no des por hecho un comportamiento sin leer el
+  código, la prueba o ejecutarlo.
+- **No inventes alcance**: si una decisión de diseño tiene alternativas reales,
+  expón el cruce y sus consecuencias antes de elegir.
+- **Nada de secretos** en el repositorio, en un commit o en el chat.
+- **No toques** archivos generados a mano: `web/src/tokens.css`,
+  `web/src/components/icons.tsx` y `web/src/components/body-map/data.ts` se
+  regeneran con sus scripts.
+
+Antes de dar algo por terminado:
+
+1. `pnpm typecheck` y `pnpm lint`.
+2. `pnpm test` de los paquetes tocados; `pnpm test:coverage` si el cambio es
+   grande.
+3. `pnpm e2e` si toca interfaz, sesión, calendario o autenticación.
+4. Actualiza `docs/comportamiento.md` si cambia una regla observable.
+5. Actualiza `DEPLOY.md` si cambia el despliegue, una migración o una variable.
+
+## Interfaz
+
+- La fuente única es `web/src/globals.css`; los tokens viven en
+  `web/src/tokens.css`, generado con `node web/scripts/gen-tokens.ts`. No edites
+  `tokens.css` a mano.
+- Reutiliza las primitivas de `web/src/components/ui.tsx`,
+  `expressive.tsx` y `overlay.tsx`. Una pantalla no escribe piel ni usa la escala
+  cruda de Tailwind; `pnpm lint` lo rechaza.
+- El catálogo de piezas está en `/ui`. Para una pieza nueva, primero el token y
+  después la primitiva.
+- Las fotos de receta se piden con credenciales entre orígenes; sin eso el color
+  dinámico no puede leerlas.
+- Respeta el foco visible, la reducción de movimiento y los tamaños táctiles
+  documentados en `DESIGN-SYSTEM.md`.
+
+## Rutas protegidas y migraciones
+
+La lista exacta está en
+[`orquestator-cli/protected-paths.txt`](orquestator-cli/protected-paths.txt). Se
+lee de `main`, no de la rama. Incluye, entre otras: `AGENTS.md`, `DEPLOY.md`,
+`docs/flujo.md`, los archivos de configuración de pnpm, Biome, Vitest, Vite y
+Playwright, los ayudantes de pruebas, los `wrangler.toml`, `orquestator-cli/` y
+los flujos de integración.
+
+- `.github/workflows/` **no es aprobable**: un cambio de integración continua va
+  en una PR humana aparte.
+- Un cambio en una ruta protegida necesita `approve` con terminal y motivo; el
+  hash caduca si el diff cambia después.
+- Las migraciones son **aditivas y compatibles hacia atrás**. Una migración ya
+  aplicada es inmutable: cualquier corrección va en un número nuevo.
+- Si una columna nace obligatoria sobre filas existentes, usa el patrón de tres
+  pasos: columna que admite vacíos, despliegue del código que la rellena,
+  rellenar y hacerla obligatoria.
+- Una tabla nueva en el bootstrap de pruebas se añade a `TABLES` en
+  `api/tests/helpers.ts`. La base de las pruebas de extremo a extremo se deriva
+  de `api/migrations/`.
+- Una migración aplicada en remoto no se toca. Para el orden y los casos
+  destructivos, lee `DEPLOY.md` §4.
+
+## Pruebas de extremo a extremo
+
+`pnpm e2e` **nunca** toca `.wrangler/state`: arranca su propio servicio y su
+propio frontal, con base de datos y almacenamiento en `e2e/.state`. La
+configuración vive en `e2e/playwright.config.ts`.
+
+- Un solo trabajador: la base y el servidor son estado compartido. No subas el
+  paralelismo sin dar a cada trabajador su propia base.
+- Fechas reales, no desplazamientos inventados.
+- Las peticiones directas usan `apiUrl()` o `API_BASE` de
+  `e2e/tests/helpers.ts`; un `fetch("/api/...")` relativo iría al frontal.
+- No crees con una petición un ejercicio que ya esté sembrado: el nombre es
+  único y responde 400. Resuelve el identificador con una consulta a
+  `/api/exercises`.
+- Si un test pulsa justo después de abrir un diálogo, espera a que acabe la
+  animación (`settle`).
+
+## Agentes y ramas
+
+`orquestator-cli/` es la herramienta; `docs/flujo.md` es el contrato y
+`docs/adr/` guarda las decisiones. No implementes el flujo a mano ni cambies el
+comportamiento de los comandos sin actualizar su documentación y sus pruebas.
+
+- Hay un solo `AGENTS.md` de proyecto, no uno por fase. Las diferencias de rol
+  viven en `orquestator-cli/perfiles/` (perfil, SOUL y habilidades).
+- La revisión de especificación y el revisor final leen el `AGENTS.md` de `main`;
+  el implementador lee el de su rama. El revisor de código también recibe el de
+  `main` montado en solo lectura.
+- El estado de una tarea vive en `~/.orquestator/`; no lo escribas desde el
+  repositorio.
+- `approve` es humano y con terminal. No lo automatices.
+- No toques `.github/workflows/` ni `orquestator-cli/` en una tarea normal.
+- Si cambias una regla de comportamiento, actualiza la regla con su identificador
+  en `docs/comportamiento.md`; no renumeres las existentes.
+
+## Dónde está cada cosa
+
+| Tema                          | Fuente                                                    |
+| ----------------------------- | --------------------------------------------------------- |
+| Comportamiento de producto    | `docs/comportamiento.md`                                  |
+| Diseño, tokens y primitivas   | `DESIGN-SYSTEM.md`, `web/src/globals.css`, catálogo `/ui` |
+| Despliegue y migraciones      | `DEPLOY.md`                                               |
+| Esquema final y deltas        | `api/schema.sql`, `api/migrations/`                       |
+| Flujo de agentes y decisiones | `docs/flujo.md`, `docs/adr/`, `TODO-flujo-agentes.md`     |
+| Pruebas de extremo a extremo  | `e2e/playwright.config.ts`, `e2e/tests/helpers.ts`        |
+
+## Trampas conocidas
+
+- `pnpm e2e` reescribe `web/dist` con la dirección del servicio de pruebas. Si
+  tienes `pnpm dev` abierto, reinícialo después de la suite.
+- `wrangler d1 migrations apply` se queda esperando si hay terminal interactivo.
+  En scripts, añade `< /dev/null`.
+- No endurezcas las cabeceras de seguridad del Worker: el vídeo de YouTube
+  necesita `frame-src https://www.youtube.com` y
+  `Referrer-Policy: strict-origin-when-cross-origin`. Hay pruebas que lo atan.
+- Un cambio en `api/migrations/` puede exigir aprobación de migración además de
+  la de rutas protegidas; son dos aprobaciones distintas.
+- El servidor de desarrollo es un solo proceso con dos Workers: si matas uno,
+  termina el otro. Usa `pnpm dev` y no mezcles hosts en la misma corrida.
+- La caché de listas del navegador dura cinco minutos; toda escritura la vacía.

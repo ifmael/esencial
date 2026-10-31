@@ -3,7 +3,7 @@ import { runAgent, verdictOf } from "./agents.mjs";
 import { git } from "./checkout.mjs";
 import { checkTask } from "./checks.mjs";
 import { clean } from "./clean.mjs";
-import { linearKey, linearTeam } from "./config.mjs";
+import { linearKey, linearTeam, linearUserId } from "./config.mjs";
 import { fixTask } from "./fix.mjs";
 import { approveState, guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
@@ -77,7 +77,13 @@ function line(stream, text = "") {
 async function notifyBlock(state, question, out) {
   if (!state.issueId) return;
   try {
-    await notifyBlocked(linearKey(), { id: state.issueId }, question);
+    await notifyBlocked(
+      linearKey(),
+      { id: state.issueId },
+      question,
+      undefined,
+      linearUserId(),
+    );
     out("Linear: issue asignada y mención enviada.");
   } catch (error) {
     out(`Linear: no se pudo avisar (${error.message})`);
@@ -374,6 +380,7 @@ export async function main(argv, io = {}) {
         });
         if (result.ok || result.dryRun) return 0;
         if (result.hint) line(stdout, result.hint);
+        else if (result.error) line(stderr, result.error);
         return 1;
       }
       case "watch": {

@@ -154,7 +154,7 @@ Convención de marcado:
 | Guard (R4)                       | Hash aprobado en el estado del host antes de `check`/`ship`; commit status `gh-guard` atado al SHA tras el push (no etiqueta). Cada push lo invalida y el CLI lo repone si el hash sigue valiendo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | CLI (I3)                         | M2 depende de **M0 y M1**; criterio: cada comando acepta `--dry-run` y la suite de transiciones pasa; estimación **3-4 días** (4-6 con `watch` y `migrate` completos)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | PR body (I4)                     | El **implementer** escribe `.task/pr-body.md`; `ship` lo publica y comenta `review.md`; `checks.md` queda local y la CI es la referencia pública                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Cobertura y ADR (I5)             | Cobertura **sí en el piloto** para `api`/`web` (`vitest --coverage`): `coverage.thresholds` en `api/vitest.config.ts` y `web/vite.config.ts`, solo suben; objetivo 60% en M6. ADR solo cuando haya una decisión de arquitectura real; revisión final en M6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Cobertura y ADR (I5)             | Cobertura **sí en el piloto** para `api`/`web` (`vitest --coverage`): `coverage.thresholds` en `api/vitest.config.ts` y `web/vite.config.ts`, solo suben; revisión M6 (2026-10-29): el 60% está superado y se sube web sentencias a 87 (api 95/90/99/97; web 87/85/86/88). ADR solo cuando haya una decisión de arquitectura real; revisión final en M6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Avisos                           | **Linear**: la issue bloqueada se te asigna y te @menciona; vista «Necesita mi decisión». Push extra (`hermes send`/ntfy) pospuesto                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | CI y merge                       | **F1**: `In validation` exige `gh pr checks` verde; `main` protegido en repo **público** (B) con `ci`, `lint` y `migracion` desde M0 (job de CI) y `guard` en M5b, sin bypass. El CLI espera la CI con timeout; si falla, `fix` o `Blocked`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Disponibilidad                   | El CLI (`run`/`watch`) y los contenedores corren en este equipo: si se apaga, el flujo se pausa y se reanuda; no hay 24/7. VPS/Actions solo si se quiere autonomía continua (M6). La entrada de tareas es **sondeo local** a Linear (opción principal); en M5b se explora un **webhook con URL pública** (túnel o Worker) como alternativa, no como defecto                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -473,8 +473,10 @@ en contenedor.
 - El implementer corre tests en su bucle; las comprobaciones del CLI y la CI son la
   autoridad.
 - **Cobertura (I5)**: `api` y `web` con `vitest --coverage` y `coverage.thresholds` en
-  `api/vitest.config.ts` y `web/vite.config.ts`; los umbrales solo suben, objetivo 60% en
-  M6. El CLI `check` y la CI la ejecutan; el reporte va a `checks.md`.
+  `api/vitest.config.ts` y `web/vite.config.ts`; los umbrales solo suben. Revisión M6
+  (2026-10-29): el 60% está superado y se sube web sentencias a 87 (api
+  95/90/99/97; web 87/85/86/88). El CLI `check` y la CI la ejecutan; el reporte va a
+  `checks.md`.
 - **RED por import**: un test nuevo que importa un módulo que no existe en `main` falla
   por la razón equivocada; se anota así en `checks.md` (limitación aceptada del piloto).
 - Para features grandes se puede añadir un `test-designer`; no es el caso del piloto.
@@ -997,11 +999,31 @@ Depende de: M5b.
 
 - [ ] Evaluar omp como worker si Hermes no cumple la adherencia (mismo brief y comprobaciones).
 - [ ] Canales de Hermes (Telegram/ntfy) y heartbeats, si aportan.
-- [ ] ADRs para las decisiones de arquitectura reales del flujo (si las hubo).
-- [ ] Revisar cobertura: objetivo 60% en `api`/`web` y decidir si se suben los
-      `coverage.thresholds`.
-- [ ] Revisar límites de paralelismo (cuántas tareas a la vez con 16 núcleos/30 GiB).
-- [ ] Revisión final de `AGENTS.md` (se actualiza al cerrar cada fase).
+- [x] **ADRs, primera versión (2026-10-29)**: `docs/adr/` recoge seis
+      decisiones reales: ejecución local sin coordinador, contenedor por fase con
+      estado en el host, integridad por rutas/CI/revisión, migraciones aditivas,
+      previews por rama con D1/R2 compartidos y Access, e identidad propia de
+      GitHub/Linear. Hermes queda como ADR provisional; `omp` y el coordinador de
+      nivel 2 siguen abiertos en M6. Esta versión documenta el flujo; la revisión
+      de calidad y la arquitectura completa del proyecto quedan en la última tarea
+      de M6.
+- [x] **Cobertura revisada (2026-10-29)**: `pnpm test:coverage` verde (API 382
+      tests, web 690). Real: API 95,48/90,31/99,22/97,91; web
+      87,29/85,55/86,84/88,53 (sentencias/ramas/funciones/líneas). Los thresholds
+      actuales (API 95/90/99/97; web 87/85/86/88) ya superan el 60%; la cobertura
+      real deja márgenes de 0,22–0,91 pp. **Decisión: se sube solo web sentencias
+      86→87**; el resto se mantiene para no dejar el CI frágil sin ganancia de
+      calidad. El 60% queda corregido en el plan.
+- [x] **Límite de paralelismo (2026-10-29)**: el servicio queda en
+      `--max-parallel 4` (el CLI mantiene 1 por defecto). Son techos de 8 GiB por
+      contenedor, no reservas; con 30 GiB de host, 4 contenedores pueden
+      sobrepasar la memoria si coinciden varios `check`. Vigilar `docker stats` y
+      bajar a 2 o separar límites por fase si aparece OOM.
+- [x] **Revisión final de `AGENTS.md` (2026-10-29)**: reescrito como contrato
+      operativo de 164 líneas. El comportamiento vive en
+      `docs/comportamiento.md` (71 reglas), y `AGENTS.md` solo enlaza las fuentes,
+      fija comandos, rutas protegidas, migraciones, pruebas de extremo a extremo y
+      trampas. La historia y los detalles de pantalla salieron del documento.
 - [ ] Si se añadió el coordinador en M5b, revisar si aporta algo que `run` no haga; si no,
       retirarlo.
 - [ ] **Dashboard de Hermes (nice to have)**: ver las sesiones en vivo desde
@@ -1018,30 +1040,66 @@ Depende de: M5b.
         exponer en `0.0.0.0`, autenticar, no guardar secretos y limpiar al cerrar.
       - Aceptación: ver una fase en curso, `watch` termina igual y el puerto queda
         solo en loopback o túnel. Si no aporta, no se implementa.
-- [ ] **Identidad propia en los comentarios (M6)**: los comentarios de la IA salen
-      con la cuenta de `ifmael` aunque lleven `Orquestator (IA)`. Para que el
-      **autor** sea distinto hacen falta credenciales de bot: GitHub App o usuario
-      máquina con token de escritura, y app OAuth de Linear (`createAsUser`/
-      `displayIconUrl`) o un usuario dedicado. Los marcadores actuales permiten
-      distinguirlos sin cambiar de cuenta.
-- [ ] **Preview útil para validar (M6)**: la D1 de preview responde y tiene
-      catálogo (100 recetas, 108 ejercicios, 1 usuario), pero **0 sesiones de plan**;
-      la rejilla sale vacía. Revisar el fallo real con la cookie de Access por host
-      (abrir la API primero), sembrar fixtures de sesiones para probar copiar y
-      añadir un smoke autenticado, no solo el 302 del borde.
-- [ ] **Permisos de Docker para autonomía (M6)**: hoy `ifmael` no está en el grupo
-      `docker` y la unidad usa `newgrp docker`; los comandos manuales fallan con
-      `permission denied`. No depender de ese parche cuando el flujo corra solo:
-      - preflight de `docker info` en `run` y en cada comando que use contenedores,
-        con error claro y sin dejar estado a medias;
-      - decidir grupo explícito (`SupplementaryGroups=docker`), usuario dedicado o
-        Docker sin root; no asumir que el grupo no pide contraseña;
-      - `run` debe imprimir el error real (hoy solo devuelve exit 1) y `watch` debe
-        avisar/bloquear si Docker desaparece, no reintentar en silencio;
-      - tests con Docker no disponible.
+- [x] **Identidad GitHub (M6)**: GitHub App `esencial-orquestator` (App ID
+      `5512872`, Installation ID `176284310`). El CLI firma un JWT RS256 con la
+      private key, pide el token de instalación y lo cachea; `GH_TOKEN` queda como
+      fallback. Comentario real verificado como `esencial-orquestator[bot]`.
+      Variables: `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`,
+      `GITHUB_APP_PRIVATE_KEY` (ruta del PEM). El Client ID no se usa.
+- [x] **Identidad Linear (M6)**: OAuth app `esencial-orquestator` con
+      `client_credentials` (30 días, sin refresh). El CLI pide el token de app al
+      empezar y lo cachea; ESN es público, así que la app lo ve sin darle acceso
+      manual. Los comentarios salen con `botActor.name = esencial-orquestator` y
+      `createAsUser = Orquestator`. `LINEAR_API_KEY` queda como fallback;
+      `LINEAR_USER_ID` conserva la asignación/mención al humano en los avisos de
+      bloqueo. Comentario real verificado y borrado.
+- [x] **Preview útil para validar (M6)**: la D1 de preview responde y tiene
+      catálogo (100 recetas, 108 ejercicios, 1 usuario). `previewTask` siembra
+      ahora dos semanas de sesiones de ejemplo (la anterior y la actual) de forma
+      idempotente, sin borrar lo que ya haya; la rejilla y «Copiar» tienen datos.
+      El smoke autenticado es opcional con `CF_ACCESS_COOKIE` (cookie
+      `CF_Authorization` del host de la API): sin ella se omite y sigue el 302
+      del borde; con ella, el preview falla si la API no devuelve las fixtures.
+      El puente `/api/session/return` cubre la cookie por host (abrir la API
+      primero sigue siendo el plan B).
+- [ ] Ejecutar una vez el smoke autenticado con una cookie real y validar la
+      rejilla/copiar en el móvil; no bloquea el resto de M6.
+- [x] **Permisos de Docker para autonomía (M6)**: `ifmael` ya está en el grupo
+      `docker`, pero la sesión abierta no lo carga; la unidad de usuario no puede
+      usar `SupplementaryGroups=docker` (falla con `216/GROUP`), así que conserva
+      `newgrp docker` como grupo primario explícito. `dockerProblem` comprueba
+      `docker info` en `run` y en cada `runPhase` antes de crear contenedores;
+      `watch` lo comprueba al arrancar y propaga el error real; la CLI imprime
+      `result.error` (antes solo salía exit 1). Hay tests con Docker no disponible.
+      Decisión: no se mueve a unidad de sistema ni a usuario dedicado hasta una
+      autonomía fuera de este equipo; entonces `User=ifmael` +
+      `SupplementaryGroups=docker` es la vía.
       Aceptación: `run` sin permiso explica qué falta y no crea contenedores; el
-      servicio arranca con permiso explícito. Se decide antes de una autonomía
-      fuera de este equipo.
+      servicio arranca con permiso explícito.
+- [ ] **ADRs de calidad (cierre, al final de M6)**: revisar `docs/adr/` contra la
+      arquitectura real del proyecto y las decisiones tomadas en
+      `TODO-flujo-agentes.md`, `docs/flujo.md`, `AGENTS.md`, `DEPLOY.md` y
+      `REDESIGN.md`. Cada ADR debe explicar contexto, decisión, alternativas,
+      consecuencias y referencias al código/config; cubrir también la arquitectura
+      de la app (dos Workers B', D1/R2, Access y sistema de diseño), no solo el
+      flujo. Marcar las decisiones provisionales o sustituidas y eliminar
+      duplicados. Aceptación: una persona puede reconstruir la arquitectura y las
+      decisiones leyendo `docs/adr/` sin abrir el TODO; enlaces y fechas correctos;
+      `biome check docs/adr` verde.
+- [ ] **Validar 4 tareas en paralelo (cierre)**: en la primera tanda con cuatro
+      tareas, medir con `docker stats` el pico por fase (sobre todo `check`),
+      `OOMKilled`, swap y memoria libre. Si el pico agregado se acerca a los 30 GiB
+      o hay OOM, bajar a 2 o separar `--memory` por fase. Aceptación: cuatro tareas
+      terminan sin OOM y con memoria libre >4 GiB, o queda documentado el límite
+      menor.
+- [ ] **Skill para escribir specs de tareas a mergear aquí**: crear una skill que,
+      a partir de una issue y del contexto del repo, redacte la spec para
+      `Spec review`: problema, alcance, fuera de alcance, criterios de aceptación
+      verificables, restricciones, migraciones/compatibilidad, comandos de
+      verificación y riesgos. Debe leer `AGENTS.md`, `docs/comportamiento.md` y
+      `docs/flujo.md`, no duplicar sus reglas y no implementar ni tocar código.
+      Aceptación: una issue de prueba produce una spec completa y el
+      `spec-reviewer` no tiene que reescribirla.
 
 ## Bitácora
 

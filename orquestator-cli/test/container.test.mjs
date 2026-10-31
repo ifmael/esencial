@@ -5,7 +5,12 @@ import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
 import { ensureArtifactsAt } from "../lib/artifacts.mjs";
-import { dockerArgs, PHASES, runPhase } from "../lib/container.mjs";
+import {
+  dockerArgs,
+  dockerProblem,
+  PHASES,
+  runPhase,
+} from "../lib/container.mjs";
 
 let dir;
 beforeEach(() => {
@@ -113,6 +118,42 @@ test("ensureArtifacts crea los ficheros que faltan sin pisar los llenos", () => 
   assert.equal(
     fs.readFileSync(path.join(paths().task, "checks.md"), "utf8"),
     "hola",
+  );
+});
+
+test("dockerProblem explica el permiso denegado sin asumir el grupo", () => {
+  const problem = dockerProblem({
+    spawn: () => ({
+      status: 1,
+      stdout: "",
+      stderr: "permission denied while trying to connect to the docker API",
+    }),
+  });
+  assert.match(problem, /Docker no es accesible/);
+  assert.match(problem, /permission denied/);
+  assert.match(problem, /grupo docker/);
+  assert.match(problem, /newgrp/);
+});
+
+test("dockerProblem devuelve null si Docker responde", () => {
+  assert.equal(
+    dockerProblem({
+      spawn: () => ({ status: 0, stdout: "", stderr: "" }),
+    }),
+    null,
+  );
+});
+
+test("runPhase sin Docker falla antes de lanzar el contenedor", () => {
+  assert.throws(
+    () =>
+      runPhase({
+        phase: "check",
+        ...paths(),
+        command: "pnpm lint",
+        dockerCheck: () => "Docker no es accesible: permission denied",
+      }),
+    /Docker no es accesible/,
   );
 });
 

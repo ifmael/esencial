@@ -35,6 +35,225 @@ export function previewUrls(name, subdomain = SUBDOMAIN) {
   };
 }
 
+/** Fixtures de sesiones para que el preview no salga con la rejilla vacía.
+ *
+ *  Dos semanas (la anterior y la actual) con días libres alrededor: la rejilla
+ *  enseña contenido, se puede copiar un día o una semana y el resumen tiene
+ *  ejercicios. Nada se borra: si el día ya existe (lo haya creado una persona o
+ *  otro preview), el INSERT se salta. Las fechas se recalculan en cada preview,
+ *  así que la semana actual siempre tiene datos. */
+const FIXTURES = [
+  {
+    weekOffset: -1,
+    weekday: 0,
+    name: "Empuje (ejemplo)",
+    items: [
+      {
+        exercise: "Press banca",
+        sets: 3,
+        repsMin: 8,
+        repsMax: 10,
+        superset: true,
+      },
+      {
+        exercise: "Aperturas con mancuernas",
+        sets: 3,
+        repsMin: 10,
+        repsMax: 12,
+        restSecs: 90,
+        restAfterSecs: 120,
+      },
+      {
+        exercise: "Press militar de pie",
+        sets: 3,
+        repsMin: 8,
+        repsMax: 10,
+        restSecs: 90,
+        restAfterSecs: 120,
+      },
+    ],
+  },
+  {
+    weekOffset: -1,
+    weekday: 2,
+    name: "Pierna (ejemplo)",
+    items: [
+      {
+        exercise: "Sentadilla trasera",
+        sets: 4,
+        repsMin: 6,
+        repsMax: 8,
+        restSecs: 120,
+        restAfterSecs: 120,
+      },
+      {
+        exercise: "Peso muerto rumano",
+        sets: 3,
+        repsMin: 8,
+        repsMax: 10,
+        restSecs: 90,
+        restAfterSecs: 120,
+      },
+      {
+        exercise: "Elevación de gemelos de pie",
+        sets: 3,
+        repsMin: 12,
+        repsMax: 15,
+        restSecs: 60,
+        restAfterSecs: 120,
+      },
+    ],
+  },
+  {
+    weekOffset: 0,
+    weekday: 0,
+    name: "Empuje (ejemplo)",
+    items: [
+      {
+        exercise: "Press banca",
+        sets: 3,
+        repsMin: 8,
+        repsMax: 10,
+        superset: true,
+      },
+      {
+        exercise: "Aperturas con mancuernas",
+        sets: 3,
+        repsMin: 10,
+        repsMax: 12,
+        restSecs: 90,
+        restAfterSecs: 120,
+      },
+      {
+        exercise: "Press militar de pie",
+        sets: 3,
+        repsMin: 8,
+        repsMax: 10,
+        restSecs: 90,
+        restAfterSecs: 120,
+      },
+    ],
+  },
+  {
+    weekOffset: 0,
+    weekday: 3,
+    name: "Tirón (ejemplo)",
+    items: [
+      {
+        exercise: "Dominadas",
+        sets: 3,
+        repsMin: 6,
+        repsMax: 8,
+        restSecs: 120,
+        restAfterSecs: 120,
+      },
+      {
+        exercise: "Remo con barra",
+        sets: 3,
+        repsMin: 10,
+        repsMax: 12,
+        restSecs: 90,
+        restAfterSecs: 120,
+      },
+      {
+        exercise: "Curl con barra",
+        sets: 3,
+        repsMin: 10,
+        repsMax: 12,
+        restSecs: 60,
+        restAfterSecs: 120,
+      },
+    ],
+  },
+];
+
+const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
+const dateOnly = (date) => date.toISOString().slice(0, 10);
+
+function mondayOf(date) {
+  const monday = new Date(date);
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  return monday;
+}
+
+function addDays(date, days) {
+  const out = new Date(date);
+  out.setUTCDate(out.getUTCDate() + days);
+  return out;
+}
+
+/** SQL idempotente que siembra las fixtures. Exportado para probar las fechas
+ *  y para que el preview pueda ejecutarlo con el wrangler real. */
+export function previewFixtureSql(now = new Date()) {
+  const monday = mondayOf(now);
+  const userId = "(SELECT id FROM users ORDER BY id LIMIT 1)";
+  const statements = [];
+  for (const fixture of FIXTURES) {
+    const date = dateOnly(
+      addDays(monday, fixture.weekOffset * 7 + fixture.weekday),
+    );
+    statements.push(
+      [
+        "INSERT INTO plan_sessions (user_id, date, name, status)",
+        `SELECT u.id, ${quote(date)}, ${quote(fixture.name)}, 'planned'`,
+        "FROM users u",
+        `WHERE u.id = ${userId}`,
+        `AND NOT EXISTS (SELECT 1 FROM plan_sessions p WHERE p.user_id = u.id AND p.date = ${quote(date)})`,
+      ].join(" "),
+    );
+    fixture.items.forEach((item, position) => {
+      const last = position === fixture.items.length - 1;
+      statements.push(
+        [
+          "INSERT INTO plan_session_exercises",
+          "(plan_session_id, exercise_id, position, target_sets, target_reps_min,",
+          "target_reps_max, target_distance_km, target_duration_min, rest_secs,",
+          "rest_after_secs, superset)",
+          "SELECT p.id, e.id,",
+          [
+            position,
+            item.sets,
+            item.repsMin,
+            item.repsMax,
+            "NULL",
+            "NULL",
+            item.restSecs ?? "NULL",
+            item.restAfterSecs ?? "NULL",
+            item.superset && !last ? 1 : 0,
+          ].join(", "),
+          "FROM plan_sessions p",
+          `JOIN exercises e ON e.name = ${quote(item.exercise)}`,
+          `WHERE p.user_id = ${userId} AND p.date = ${quote(date)}`,
+          `AND p.name = ${quote(fixture.name)}`,
+          "AND NOT EXISTS (SELECT 1 FROM plan_session_exercises x",
+          "WHERE x.plan_session_id = p.id AND x.exercise_id = e.id)",
+        ].join(" "),
+      );
+    });
+  }
+  return `${statements.join(";\n")};\n`;
+}
+
+function seedPreview(repo, wrangler, env, main, out, now) {
+  const command = previewFixtureSql(now);
+  wrangler(
+    [
+      "d1",
+      "execute",
+      PREVIEW_DB,
+      "--env",
+      "preview",
+      "--remote",
+      "-c",
+      "api/wrangler.toml",
+      "--command",
+      command,
+    ],
+    { cwd: repo, env, main },
+  );
+  out("Preview: fixtures de sesiones aplicadas");
+}
+
 export function buildCommand(apiUrl) {
   return `pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store && VITE_API_URL=${apiUrl} pnpm --filter @esencial/web build`;
 }
@@ -124,6 +343,36 @@ async function expectPreflight(api, web, { fetchImpl }) {
   }
 }
 
+/** Smoke con identidad real: usa la cookie de Access del dueño si está en el
+ *  entorno. Sin ella se omite (el 302 del borde sigue comprobándose); con ella,
+ *  una API que devuelve 401 o una lista sin fixtures falla el preview. */
+async function smokeAuthenticated(api, { fetchImpl, env, out }) {
+  const cookie = env.CF_ACCESS_COOKIE;
+  if (!cookie) {
+    out("Preview: smoke autenticado omitido (define CF_ACCESS_COOKIE)");
+    return;
+  }
+  const response = await fetchImpl(`${api}/api/plan-sessions`, {
+    headers: { cookie },
+    redirect: "manual",
+  });
+  if (response.status !== 200) {
+    throw new Error(
+      `El smoke autenticado de ${api} devolvió HTTP ${response.status} (¿cookie caducada?)`,
+    );
+  }
+  const sessions = await response.json();
+  if (
+    !Array.isArray(sessions) ||
+    !sessions.some((session) => /\(ejemplo\)$/.test(session?.name ?? ""))
+  ) {
+    throw new Error(
+      `El smoke autenticado de ${api} no ve las sesiones de ejemplo`,
+    );
+  }
+  out(`Preview: smoke autenticado OK (${sessions.length} sesiones)`);
+}
+
 async function expectAccess(url, { fetchImpl, sleep, waits, delay, out }) {
   let last = "";
   for (let attempt = 0; attempt < waits; attempt += 1) {
@@ -180,6 +429,7 @@ export async function previewTask(
     sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     waits = ACCESS_WAITS,
     delay = ACCESS_DELAY_MS,
+    now = new Date(),
     env = { ...readEnv(), ...process.env },
   } = {},
 ) {
@@ -227,6 +477,7 @@ export async function previewTask(
     ],
     { cwd: repo, env, main },
   );
+  seedPreview(repo, wrangler, env, main, out, now);
 
   const deploy = (config, worker, vars) => {
     const args = [
@@ -268,6 +519,7 @@ export async function previewTask(
     out,
   });
   await expectPreflight(api, web, { fetchImpl });
+  await smokeAuthenticated(api, { fetchImpl, env, out });
 
   const bodyFile = path.join(task, "pr-body.md");
   const body = fs.existsSync(bodyFile) ? fs.readFileSync(bodyFile, "utf8") : "";

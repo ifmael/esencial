@@ -5,6 +5,7 @@ import { runAgent, verdictOf } from "./agents.mjs";
 import { git } from "./checkout.mjs";
 import { checkTask } from "./checks.mjs";
 import { linearKey } from "./config.mjs";
+import { dockerProblem } from "./container.mjs";
 import { fixTask } from "./fix.mjs";
 import { guardTask } from "./guard.mjs";
 import { imageTag } from "./image.mjs";
@@ -65,6 +66,8 @@ async function moveLinear(key, base, out) {
 const defaultSteps = {
   async start({ key, base, main, out }) {
     if (load(key, base)) return {};
+    const problem = dockerProblem();
+    if (problem) throw new Error(problem);
     const source = git(["remote", "get-url", "origin"], { cwd: main });
     const state = await startTask(key, {
       apiKey: linearKey(),
@@ -76,6 +79,8 @@ const defaultSteps = {
     return {};
   },
   implement({ key, base, main, out }) {
+    const problem = dockerProblem();
+    if (problem) throw new Error(problem);
     runAgent(key, {
       phase: "implementer",
       base,

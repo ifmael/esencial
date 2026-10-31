@@ -7,8 +7,11 @@ After=network-online.target docker.service
 Type=simple
 WorkingDirectory=%h/Projects/esencial
 EnvironmentFile=-%h/.config/orquestator/env
-# mise: el node/gh del usuario están fuera del PATH mínimo de systemd.
-ExecStart=/usr/bin/newgrp docker -c "/bin/bash -lc 'exec node orquestator-cli/bin/orquestator.mjs watch --max-parallel 1'"
+# Una unidad de usuario no puede añadir grupos suplementarios (systemd falla
+# con 216/GROUP), así que se conserva newgrp. No pide contraseña si el usuario
+# ya pertenece al grupo docker; el preflight de `run`/`watch` avisa si no.
+# Cuatro tareas como máximo; --memory 8g es un techo, no una reserva.
+ExecStart=/usr/bin/newgrp docker -c "/bin/bash -lc 'exec node orquestator-cli/bin/orquestator.mjs watch --max-parallel 4'"
 Restart=on-failure
 RestartSec=30
 KillSignal=SIGTERM

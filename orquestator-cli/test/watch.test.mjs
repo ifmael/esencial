@@ -39,7 +39,7 @@ function options(overrides = {}) {
     edit: async () => {},
     run: async () => ({ ok: true }),
     review: async () => ({ artifact: "Preguntas" }),
-    dockerCheck: () => true,
+    dockerCheck: () => null,
     cleanTask: async () => {},
     sleep: async () => {},
     out: () => {},
@@ -82,8 +82,14 @@ test("watch reanuda In Progress y no repite una Ready ya empezada", async () => 
 
 test("watch se niega a arrancar sin Docker", async () => {
   await assert.rejects(
-    () => watch(options({ dockerCheck: () => false })),
-    /Docker no es accesible/,
+    () =>
+      watch(
+        options({
+          dockerCheck: () =>
+            "Docker no es accesible: permission denied. Añade el usuario al grupo docker.",
+        }),
+      ),
+    /permission denied/,
   );
 });
 

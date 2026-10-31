@@ -4,6 +4,9 @@ El plan vive en `TODO-flujo-agentes.md`. Esto es lo que hay que respetar cuando 
 tarea la lleva un agente (`orquestator-cli`, M2). Las reglas del repo no cambian:
 TDD, conventional commits, sin atribución de IA, UI y datos en español.
 
+Las decisiones de arquitectura cerradas viven en `docs/adr/`; este documento
+describe cómo se opera el flujo, no por qué se eligió cada pieza.
+
 ## Ramas y PR
 
 - Rama `ESN-123-slug` desde `main`. El CLI **nunca** empuja a `main` ni usa `--force`.
@@ -104,7 +107,7 @@ faltan aprobaciones, no gasta una ronda.
 antes del review. Si la rama aún no tiene `test:coverage` (main antes del merge de M2),
 cae a `pnpm test` sin ocultar fallos. La cobertura se mide en las dos partes: `api` con istanbul (v8 no
 ve el código dentro de workerd) y `web` con v8; los umbrales solo suben. Hoy:
-api 95/90/99/97 y web 86/85/86/88 (sentencias/ramas/funciones/líneas). Un test
+api 95/90/99/97 y web 87/85/86/88 (sentencias/ramas/funciones/líneas). Un test
 nuevo o modificado debe fallar contra `main` (RED).
 
 ## Preview por rama (M5a)
@@ -123,6 +126,14 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   cada preview (deben ser aditivas). Las **83 fotos** del recetario se copiaron
   una vez del bucket de producción al de preview; si se recrea el bucket,
   repetir la copia (`wrangler r2 object get/put`).
+- **Sesiones de ejemplo**: cada preview siembra la semana anterior y la actual
+  (empuje, pierna y tirón) con el usuario que ya exista. Es idempotente: si un
+  día ya tiene sesión, no lo toca, así que se puede copiar un día o una semana
+  sin que la rejilla salga vacía.
+- **Smoke autenticado**: con `CF_ACCESS_COOKIE` en el entorno del CLI (el valor
+  de la cookie `CF_Authorization` del host de la API) el preview pide
+  `/api/plan-sessions` y exige ver una sesión de ejemplo. Sin esa cookie se
+  omite; el smoke del borde (302 de Access) sigue siendo obligatorio.
 - Access: app `all_preview_workers` con una política que permite el email del
   dueño y **«Bypass OPTIONS requests»** (`options_preflight_bypass`, si no el
   preflight CORS da 403); el CLI **falla** si el preview responde 200 o si el
@@ -134,6 +145,19 @@ Cada tarea obtiene un preview aislado de producción con dos URLs predecibles:
   con `jose` contra el JWKS del equipo (`TEAM_DOMAIN` + `POLICY_AUD` que pasa el
   CLI, por defecto la app `Esencial previews`). En producción sigue mandando
   `ctx.access`.
+- **Identidad GitHub**: el CLI usa la GitHub App `esencial-orquestator` si
+  existen `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` y
+  `GITHUB_APP_PRIVATE_KEY` (ruta del PEM) en el entorno. Firma un JWT RS256,
+  pide el token de instalación y lo cachea; `GH_TOKEN` queda como fallback. Los
+  comentarios salen como `esencial-orquestator[bot]`. Permisos de la App:
+  Contents RW, Pull requests RW, Commit statuses RW, Checks R y Metadata R.
+  El Client ID no se usa para el token de instalación.
+- **Identidad Linear**: OAuth app `esencial-orquestator` con
+  `client_credentials`; el CLI pide un token de app de 30 días y lo cachea.
+  `LINEAR_CLIENT_ID` + `LINEAR_CLIENT_SECRET` tienen prioridad; `LINEAR_API_KEY`
+  queda como fallback. Los comentarios usan `createAsUser: Orquestator` y salen
+  con el actor de la app. `LINEAR_USER_ID` mantiene las menciones/asignaciones
+  del aviso de bloqueo en el humano.
 - Requisitos del token de `~/.config/orquestator/env`: **Workers Scripts: Edit**,
   **D1: Edit**, **R2: Edit** y **Access: Edit** (para la app de previews).
 - **Token de GitHub** (`GH_TOKEN` en `~/.config/orquestator/env`): fine-grained,
@@ -301,7 +325,10 @@ cada 60 s (equipo `ESN`; `LINEAR_TEAM` o `--team` lo cambian) y despacha:
    Linear, pasa la tarea local a `Done` y ejecuta `clean` (borra previews y tarea).
    Si Linear falla, no limpia: lo reintenta en el siguiente sondeo.
 
-`--max-parallel` (por defecto 1) limita los `run` simultáneos. Cada tarea tiene
+`--max-parallel` (por defecto 1) limita los `run` simultáneos. La unidad de
+ejemplo fija **4**; cuatro contenedores con `--memory 8g` comparten techo, no lo
+reservan, así que conviene vigilar la memoria cuando coinciden varios `check`.
+Cada tarea tiene
 un `run.lock` con el pid: dos `watch` no la arrancan a la vez, y un cerrojo de
 proceso muerto se libera solo. Una tarea que falla **no se reintenta** hasta que
 su estado cambie (`fix`, `resume` o edición); así un check rojo no quema tokens.

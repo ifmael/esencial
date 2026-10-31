@@ -32,4 +32,5 @@ orquestator-cli/
 AGENTS.md
 DEPLOY.md
 docs/flujo.md
+docs/comportamiento.md
 .gitignore
