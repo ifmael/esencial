@@ -1076,7 +1076,7 @@ Depende de: M5b.
       `SupplementaryGroups=docker` es la vía.
       Aceptación: `run` sin permiso explica qué falta y no crea contenedores; el
       servicio arranca con permiso explícito.
-- [ ] **ADRs de calidad (cierre, al final de M6)**: revisar `docs/adr/` contra la
+- [x] **ADRs de calidad (cierre, al final de M6)**: revisar `docs/adr/` contra la
       arquitectura real del proyecto y las decisiones tomadas en
       `TODO-flujo-agentes.md`, `docs/flujo.md`, `AGENTS.md`, `DEPLOY.md` y
       `REDESIGN.md`. Cada ADR debe explicar contexto, decisión, alternativas,
@@ -1086,6 +1086,9 @@ Depende de: M5b.
       duplicados. Aceptación: una persona puede reconstruir la arquitectura y las
       decisiones leyendo `docs/adr/` sin abrir el TODO; enlaces y fechas correctos;
       `biome check docs/adr` verde.
+      Hecho (2026-10-31): 11 ADR (0008 dos Workers, 0009 D1/R2, 0010 Access,
+      0011 sistema de diseño); 0007 sigue provisional; README e índice
+      actualizados; `biome check docs/adr` verde.
 - [ ] **Validar 4 tareas en paralelo (cierre)**: en la primera tanda con cuatro
       tareas, medir con `docker stats` el pico por fase (sobre todo `check`),
       `OOMKilled`, swap y memoria libre. Si el pico agregado se acerca a los 30 GiB
