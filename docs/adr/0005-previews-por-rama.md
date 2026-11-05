@@ -23,7 +23,9 @@ Access cubre las previews con la app `all_preview_workers`. Como `ctx.access`
 llega `undefined` en las Preview URLs, la API valida el `Cf-Access-Jwt-Assertion`
 contra el JWKS del equipo (`TEAM_DOMAIN` + `POLICY_AUD`). La cookie es por host;
 el puente `/api/session/return` autentica primero el host de la API y vuelve a la
-web. El smoke del borde (302 de Access) es obligatorio; el smoke autenticado con
+web. La app de previews necesita **«Bypass OPTIONS requests»**
+(`options_preflight_bypass`); sin eso, el preflight CORS de la API responde 403.
+El smoke del borde (302 de Access) es obligatorio; el smoke autenticado con
 `CF_ACCESS_COOKIE` es opcional para no bloquear previews sin cookie.
 
 ## Alternativas
@@ -42,8 +44,8 @@ web. El smoke del borde (302 de Access) es obligatorio; el smoke autenticado con
 - Las previews comparten datos: una sesión de ejemplo puede aparecer en otra PR y
   no se pueden probar migraciones destructivas.
 - El aislamiento real queda en las URLs y los Workers, no en la base.
-- Access y la cookie por host añaden complejidad; el puente y el smoke reducen el
-  riesgo de una preview que parece vacía.
+- Access y la cookie por host añaden complejidad; el puente, el preflight sin
+  autenticación y el smoke reducen el riesgo de una preview que parece vacía.
 - `clean` borra los dos previews; si se recrea el R2 de preview hay que volver a
   copiar las fotos.
 

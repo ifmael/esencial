@@ -18,8 +18,9 @@ La integridad se apoya en tres barreras:
    Si el diff las toca, hace falta `approve` por TTY con motivo; el hash aprobado
    caduca si el diff cambia y se publica el commit status `gh-guard`.
 2. **Comprobaciones antes del review:** `lint`, tipos, tests con cobertura y e2e;
-   los tests nuevos o modificados deben fallar contra `main` (RED). Un `.only`,
-   un test borrado o un `expect` eliminado es un hallazgo.
+   los tests unitarios y de integración nuevos o modificados deben fallar contra
+   `main` (RED); el e2e es best-effort. Un `.only`, un test borrado o un
+   `expect` eliminado es un hallazgo.
 3. **Revisión por otro agente y merge humano:** `review` y `pr-review` revisan el
    resultado; `In validation` exige la CI verde y la PR mergeable. El merge lo
    hace una persona.

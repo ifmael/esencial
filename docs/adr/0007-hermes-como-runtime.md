@@ -47,4 +47,5 @@ Hermes si este falla de forma demostrable.
 
 - `TODO-flujo-agentes.md`, M1, M3 y M6.
 - `docs/flujo.md`, «Fases de agente (M3)».
-- `orquestator-cli/perfiles/` y `orquestator-cli/lib/hermes.mjs`.
+- `orquestator-cli/perfiles/`, `orquestator-cli/lib/hermes.mjs` y
+  `orquestator-cli/Dockerfile` (versión y commit fijados).

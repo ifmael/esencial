@@ -1,4 +1,4 @@
-# ADR-0001 — Ejecución local secuencial, sin coordinador de nivel 2
+# ADR-0001 — Ejecución local con fases secuenciales, sin coordinador de nivel 2
 
 - **Estado:** Aceptada
 - **Fecha:** 2026-10-21
@@ -16,9 +16,11 @@ equipo; la prioridad es validar el bucle completo y poder depurarlo.
 `orquestator-cli` corre en el host y `run` es el camino por defecto. Encadena las
 fases en orden (`start → implement → check → review → pr → preview → ship →
 pr-review`) y cada fase termina antes de empezar la siguiente. `watch` es un
-servicio local que sondea Linear para lanzar `spec-review` y detectar PRs
-mergeadas; no hay webhook ni servicio 24/7. No se añade un coordinador de nivel
-2 mientras `run` cubra el flujo.
+servicio local que sondea Linear para lanzar `spec-review`, despachar tareas
+`Ready` y detectar PRs mergeadas; puede llevar hasta `--max-parallel` tareas a la
+vez (la unidad instalada usa 4), pero cada tarea mantiene sus fases en secuencia.
+No hay webhook ni servicio 24/7. No se añade un coordinador de nivel 2 mientras
+`run` cubra el flujo.
 
 GitHub Actions sigue siendo la CI, pero no ejecuta agentes ni workers del flujo.
 El estado de la tarea vive en el host, no en un servicio remoto.
@@ -39,7 +41,8 @@ El estado de la tarea vive en el host, no en un servicio remoto.
 - Si el equipo se apaga, el flujo se pausa; al volver se reanuda con `run` o
   `watch`.
 - El estado no se comparte entre máquinas y la concurrencia queda limitada por el
-  host. Es aceptable para un piloto de un operador.
+  host; las tareas en paralelo comparten la memoria y el swap del equipo. Es
+  aceptable para un piloto de un operador, pero hay que vigilar el pico.
 - La latencia de `watch` depende del intervalo de sondeo; no es un sistema de
   eventos en tiempo real.
 
@@ -47,4 +50,5 @@ El estado de la tarea vive en el host, no en un servicio remoto.
 
 - `TODO-flujo-agentes.md`, decisión D1-A y sección M5b.
 - `docs/flujo.md`, «Ramas y PR» y «Estados».
-- `orquestator-cli/lib/cli.mjs` (`run`, `watch`).
+- `orquestator-cli/lib/cli.mjs` (`run`, `watch`) y
+  `orquestator-cli/systemd/orquestator-watch.service` (`--max-parallel 4`).

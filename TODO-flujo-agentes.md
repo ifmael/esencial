@@ -5,7 +5,7 @@
 > continúa por el primer checkbox sin marcar. No reabras decisiones cerradas sin
 > evidencia nueva (anótala en la Bitácora).
 >
-> No sustituye a `AGENTS.md` (memoria del proyecto) ni a `DEPLOY.md`.
+> No sustituye a `AGENTS.md` (memoria del proyecto) ni a `docs/DEPLOY.md`.
 
 Creado: 2026-10-19. Última actualización: 2026-10-21 (M0 en curso).
 
@@ -251,7 +251,7 @@ lo fetchea y el implementer mergea.
    | `orquestator-cli fix ESN-123`                                                  | devuelve los hallazgos al `implementer` en la misma rama/PR; `--from conflicto` mergea `main`                                                                                                                                              | `run`/tú       |
    | `orquestator-cli block ESN-123 --pregunta "…"`                                 | `Blocked` + comentario con la pregunta                                                                                                                                                                                                     | cualquiera     |
    | `orquestator-cli resume ESN-123`                                               | vuelve a la fase anterior tras resolver un bloqueo                                                                                                                                                                                         | tú/`run`       |
-   | `orquestator-cli clean ESN-123`                                                | retira el contenedor y el clon tras el merge; corre las comprobaciones de `DEPLOY.md` §7 y sugiere `wrangler rollback` si fallan                                                                                                           | CLI            |
+   | `orquestator-cli clean ESN-123`                                                | retira el contenedor y el clon tras el merge; corre las comprobaciones de `docs/DEPLOY.md` §7 y sugiere `wrangler rollback` si fallan                                                                                                      | CLI            |
    | `orquestator-cli status [--watch (M5b)]`                                       | cola y estado; `--watch` es el despachador                                                                                                                                                                                                 | tú/CLI         |
 
    Módulos internos (deterministas y testeables): `state` (transiciones y
@@ -494,7 +494,7 @@ La lista vive en `orquestator-cli/protected-paths.txt` y se lee del checkout pri
 | CI y hooks              | `.github/workflows/` (**no aprobable**), `.husky/`                                                                                                                   |
 | Config de despliegue    | `wrangler.toml`, `api/wrangler.toml` (bindings de D1/R2 y orígenes)                                                                                                  |
 | El propio flujo         | `orquestator-cli/`                                                                                                                                                   |
-| Proceso y repo          | `AGENTS.md`, `DEPLOY.md`, `docs/flujo.md`, `.gitignore`                                                                                                              |
+| Proceso y repo          | `AGENTS.md`, `docs/DEPLOY.md`, `docs/flujo.md`, `.gitignore`                                                                                                         |
 - Antes de comprobaciones y de ship, el CLI compara el diff con `origin/main` **desde el
   checkout principal**; si toca una ruta
   protegida → `Blocked`, te asigna la issue y te @menciona en el comentario con las
@@ -829,7 +829,7 @@ Objetivo: máquina de estados y operaciones deterministas. Depende de: M0 y M1.
       con `diff.external`, `pre-push` y `uploadpack.packObjectsHook` maliciosos
       (2026-10-22).
 - [x] `clean`: tras el merge (o `--force`) borra la tarea y libera la migración; corre
-      las dos comprobaciones fiables del §7 de `DEPLOY.md` y sugiere `wrangler rollback`
+      las dos comprobaciones fiables del §7 de `docs/DEPLOY.md` y sugiere `wrangler rollback`
       si fallan (2026-10-22).
 - [x] Scripts en `package.json`: `pnpm orquestator …` y el atajo
       `pnpm aprobar --pr N --motivo "…"` (2026-10-26).
@@ -1076,9 +1076,9 @@ Depende de: M5b.
       `SupplementaryGroups=docker` es la vía.
       Aceptación: `run` sin permiso explica qué falta y no crea contenedores; el
       servicio arranca con permiso explícito.
-- [ ] **ADRs de calidad (cierre, al final de M6)**: revisar `docs/adr/` contra la
+- [x] **ADRs de calidad (cierre, al final de M6)**: revisar `docs/adr/` contra la
       arquitectura real del proyecto y las decisiones tomadas en
-      `TODO-flujo-agentes.md`, `docs/flujo.md`, `AGENTS.md`, `DEPLOY.md` y
+      `TODO-flujo-agentes.md`, `docs/flujo.md`, `AGENTS.md`, `docs/DEPLOY.md` y
       `REDESIGN.md`. Cada ADR debe explicar contexto, decisión, alternativas,
       consecuencias y referencias al código/config; cubrir también la arquitectura
       de la app (dos Workers B', D1/R2, Access y sistema de diseño), no solo el
@@ -1086,6 +1086,9 @@ Depende de: M5b.
       duplicados. Aceptación: una persona puede reconstruir la arquitectura y las
       decisiones leyendo `docs/adr/` sin abrir el TODO; enlaces y fechas correctos;
       `biome check docs/adr` verde.
+      Hecho (2026-10-31): 11 ADR (0008 dos Workers, 0009 D1/R2, 0010 Access,
+      0011 sistema de diseño); 0007 sigue provisional; README e índice
+      actualizados; `biome check docs/adr` verde.
 - [ ] **Validar 4 tareas en paralelo (cierre)**: en la primera tanda con cuatro
       tareas, medir con `docker stats` el pico por fase (sobre todo `check`),
       `OOMKilled`, swap y memoria libre. Si el pico agregado se acerca a los 30 GiB
