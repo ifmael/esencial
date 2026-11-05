@@ -54,6 +54,6 @@ de producción.
 ## Referencias
 
 - `api/wrangler.toml` (bindings `DB` y `PHOTOS`, previews).
-- `api/schema.sql`, `api/migrations/` y `DEPLOY.md` §2–4.
+- `api/schema.sql`, `api/migrations/` y `docs/DEPLOY.md` §2–4.
 - `api/src/routes/uploads.ts` (subida y lectura de R2).
 - `AGENTS.md`, «Fotos de recetas (R2)» y «Migraciones».

@@ -55,4 +55,4 @@ Workers y Access cubre las dos URLs.
 - `wrangler.toml` y `api/wrangler.toml` (assets, bindings y variables).
 - `web/worker/index.ts` (CSP y 404 de `/api/*`).
 - `api/src/middleware.ts` (CORS y cabeceras).
-- `DEPLOY.md`, «Deploy»; `docs/flujo.md`, «Preview por rama (M5a)».
+- `docs/DEPLOY.md`, «Deploy»; `docs/flujo.md`, «Preview por rama (M5a)».

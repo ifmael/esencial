@@ -30,7 +30,7 @@ wrangler.toml
 api/wrangler.toml
 orquestator-cli/
 AGENTS.md
-DEPLOY.md
+docs/DEPLOY.md
 docs/flujo.md
 docs/comportamiento.md
 .gitignore

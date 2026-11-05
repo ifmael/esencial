@@ -924,7 +924,7 @@ compartidas, animaciones de entrada, keyframes, View Transitions y
 
 /* ==========================================================================
    Esencial — Material 3 Expressive
-   Tres capas, un dueño cada una (AGENTS.md § Sistema de diseño):
+   Tres capas, un dueño cada una (AGENTS.md, «Interfaz»):
    1. :root / tokens.css  — valores crudos.
    2. @theme inline       — el puente a utilidades de Tailwind.
    3. @layer components   — la piel de las primitivas de components/ui.tsx.

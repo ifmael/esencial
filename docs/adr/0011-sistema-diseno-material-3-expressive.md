@@ -57,7 +57,7 @@ impediría el color por sección y los muelles propios.
 ## Referencias
 
 - `REDESIGN.md` (decisiones y desvíos del Rediseño G).
-- `DESIGN-SYSTEM.md` y `web/src/globals.css`.
+- `docs/DESIGN-SYSTEM.md` y `web/src/globals.css`.
 - `web/src/tokens.css` y `web/scripts/gen-tokens.ts`.
 - `web/scripts/check-design-tokens.ts` y `web/src/routes/ui.tsx`.
 - `AGENTS.md`, «Interfaz».

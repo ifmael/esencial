@@ -55,5 +55,5 @@ cabecera se ignora.
 
 - `api/src/identity.ts` y `api/src/middleware.ts`.
 - `web/src/lib/session-bridge.ts` y `api/src/index.ts` (`/session/return`).
-- `DEPLOY.md` §5; `docs/flujo.md`, «Preview por rama (M5a)».
+- `docs/DEPLOY.md` §5; `docs/flujo.md`, «Preview por rama (M5a)».
 - `api/wrangler.toml` (`[access.dev]`).

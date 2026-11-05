@@ -9,9 +9,9 @@ código y la prueba; actualiza el documento en el mismo cambio.
 ## Leer primero
 
 - Comportamiento y reglas de producto: [`docs/comportamiento.md`](docs/comportamiento.md).
-- Diseño y piezas visuales: [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) y
+- Diseño y piezas visuales: [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) y
   [`web/src/globals.css`](web/src/globals.css).
-- Despliegue, migraciones y secretos: [`DEPLOY.md`](DEPLOY.md).
+- Despliegue, migraciones y secretos: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 - Flujo de agentes, ramas y aprobaciones: [`docs/flujo.md`](docs/flujo.md),
   [`docs/adr/`](docs/adr/) y [`TODO-flujo-agentes.md`](TODO-flujo-agentes.md).
 
@@ -63,10 +63,11 @@ Antes de dar algo por terminado:
 
 1. `pnpm typecheck` y `pnpm lint`.
 2. `pnpm test` de los paquetes tocados; `pnpm test:coverage` si el cambio es
+
    grande.
 3. `pnpm e2e` si toca interfaz, sesión, calendario o autenticación.
 4. Actualiza `docs/comportamiento.md` si cambia una regla observable.
-5. Actualiza `DEPLOY.md` si cambia el despliegue, una migración o una variable.
+5. Actualiza `docs/DEPLOY.md` si cambia el despliegue, una migración o una variable.
 
 ## Interfaz
 
@@ -81,20 +82,20 @@ Antes de dar algo por terminado:
 - Las fotos de receta se piden con credenciales entre orígenes; sin eso el color
   dinámico no puede leerlas.
 - Respeta el foco visible, la reducción de movimiento y los tamaños táctiles
-  documentados en `DESIGN-SYSTEM.md`.
+  documentados en `docs/DESIGN-SYSTEM.md`.
 
 ## Rutas protegidas y migraciones
 
 La lista exacta está en
 [`orquestator-cli/protected-paths.txt`](orquestator-cli/protected-paths.txt). Se
-lee de `main`, no de la rama. Incluye, entre otras: `AGENTS.md`, `DEPLOY.md`,
+lee de `main`, no de la rama. Incluye, entre otras: `AGENTS.md`, `docs/DEPLOY.md`,
 `docs/flujo.md`, los archivos de configuración de pnpm, Biome, Vitest, Vite y
 Playwright, los ayudantes de pruebas, los `wrangler.toml`, `orquestator-cli/` y
 los flujos de integración.
 
 - `.github/workflows/` **no es aprobable**: un cambio de integración continua va
   en una PR humana aparte.
-- Un cambio en una ruta protegida necesita `approve` con terminal y motivo; el
+- Un cambio en una ruta protegida necesita `approve` por terminal y motivo; el
   hash caduca si el diff cambia después.
 - Las migraciones son **aditivas y compatibles hacia atrás**. Una migración ya
   aplicada es inmutable: cualquier corrección va en un número nuevo.
@@ -105,7 +106,7 @@ los flujos de integración.
   `api/tests/helpers.ts`. La base de las pruebas de extremo a extremo se deriva
   de `api/migrations/`.
 - Una migración aplicada en remoto no se toca. Para el orden y los casos
-  destructivos, lee `DEPLOY.md` §4.
+  destructivos, lee `docs/DEPLOY.md` §4.
 
 ## Pruebas de extremo a extremo
 
@@ -144,14 +145,14 @@ comportamiento de los comandos sin actualizar su documentación y sus pruebas.
 
 ## Dónde está cada cosa
 
-| Tema                          | Fuente                                                    |
-| ----------------------------- | --------------------------------------------------------- |
-| Comportamiento de producto    | `docs/comportamiento.md`                                  |
-| Diseño, tokens y primitivas   | `DESIGN-SYSTEM.md`, `web/src/globals.css`, catálogo `/ui` |
-| Despliegue y migraciones      | `DEPLOY.md`                                               |
-| Esquema final y deltas        | `api/schema.sql`, `api/migrations/`                       |
-| Flujo de agentes y decisiones | `docs/flujo.md`, `docs/adr/`, `TODO-flujo-agentes.md`     |
-| Pruebas de extremo a extremo  | `e2e/playwright.config.ts`, `e2e/tests/helpers.ts`        |
+| Tema                          | Fuente                                                         |
+| ----------------------------- | -------------------------------------------------------------- |
+| Comportamiento de producto    | `docs/comportamiento.md`                                       |
+| Diseño, tokens y primitivas   | `docs/DESIGN-SYSTEM.md`, `web/src/globals.css`, catálogo `/ui` |
+| Despliegue y migraciones      | `docs/DEPLOY.md`                                               |
+| Esquema final y deltas        | `api/schema.sql`, `api/migrations/`                            |
+| Flujo de agentes y decisiones | `docs/flujo.md`, `docs/adr/`, `TODO-flujo-agentes.md`          |
+| Pruebas de extremo a extremo  | `e2e/playwright.config.ts`, `e2e/tests/helpers.ts`             |
 
 ## Trampas conocidas
 

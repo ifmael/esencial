@@ -47,6 +47,6 @@ aplicadas.
 ## Referencias
 
 - `TODO-flujo-agentes.md`, sección de migraciones y M5b.
-- `DEPLOY.md`, orden de despliegue.
+- `docs/DEPLOY.md`, orden de despliegue.
 - `docs/flujo.md`, «Migraciones (M5b)».
 - `orquestator-cli/lib/migrate.mjs` y `.github/workflows/ci.yml` (job `migracion`).

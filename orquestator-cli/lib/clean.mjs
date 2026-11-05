@@ -16,7 +16,7 @@ function accessRedirect(response) {
   return location.startsWith(ACCESS_LOGIN);
 }
 
-/** Las dos comprobaciones fiables de DEPLOY.md §7 (sin identidad). */
+/** Las dos comprobaciones fiables de docs/DEPLOY.md §7 (sin identidad). */
 export async function postDeployChecks(fetchImpl = fetch) {
   const probes = [
     {
