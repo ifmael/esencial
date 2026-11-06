@@ -5,7 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { createIssue, specReview } from "../lib/spec.mjs";
-import { readSpecMarker } from "../lib/spec-state.mjs";
+import { readSpecMarker, specDefinition } from "../lib/spec-state.mjs";
 
 function fakeFetch({
   states = ["Backlog", "Spec review", "Ready"],
@@ -157,4 +157,58 @@ test("specReview exige Spec review, escribe spec-review y comenta en la issue", 
     /reasoning_effort: max/,
   );
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("specDefinition devuelve el bloque completo hasta el siguiente nivel 2", () => {
+  const artifact = [
+    "## Definición actual",
+    "",
+    "Párrafo uno.",
+    "",
+    "Párrafo dos con detalle.",
+    "",
+    "## Preguntas",
+    "",
+    "1. ¿En qué formato?",
+  ].join("\n");
+  assert.equal(
+    specDefinition(artifact),
+    "Párrafo uno.\n\nPárrafo dos con detalle.",
+  );
+});
+
+test("specDefinition no corta en un encabezado de nivel 3", () => {
+  const artifact = [
+    "## Definición actual",
+    "",
+    "Párrafo uno.",
+    "",
+    "### Detalle",
+    "",
+    "Párrafo dos.",
+  ].join("\n");
+  assert.equal(
+    specDefinition(artifact),
+    artifact.split("\n").slice(2).join("\n"),
+  );
+});
+
+test("specDefinition llega al final del artefacto sin bloque de preguntas", () => {
+  const artifact = "## Definición actual\n\nPárrafo uno.\n\nPárrafo dos.";
+  assert.equal(specDefinition(artifact), "Párrafo uno.\n\nPárrafo dos.");
+});
+
+test("specDefinition no incluye el aviso de que la spec está lista", () => {
+  const artifact =
+    "## Definición actual\n\nSpec final.\n\nSin preguntas: la spec está lista.";
+  assert.equal(specDefinition(artifact), "Spec final.");
+});
+
+test("specDefinition devuelve null sin el encabezado de definición", () => {
+  assert.equal(specDefinition("solo texto"), null);
+  assert.equal(
+    specDefinition("## Preguntas\n\nSin preguntas: la spec está lista."),
+    null,
+  );
+  assert.equal(specDefinition(""), null);
 });
