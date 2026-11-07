@@ -14,9 +14,29 @@ export function specInputHash(issue) {
   return createHash("sha256").update(input).digest("hex");
 }
 
+/** Texto del artefacto sin bloques de código, donde también hay prosa. */
+function withoutCode(text) {
+  let fence = false;
+  return text
+    .split("\n")
+    .filter((line) => {
+      if (/^\s*```/.test(line)) {
+        fence = !fence;
+        return false;
+      }
+      return !fence;
+    })
+    .join("\n");
+}
+
 /** El revisor usa esta frase exacta cuando no tiene preguntas. */
 export function specReady(artifact) {
-  return /Sin preguntas:\s*la spec está lista\.?/i.test(String(artifact ?? ""));
+  const text = withoutCode(String(artifact ?? ""));
+  const section =
+    /^##[ \t]+Preguntas[ \t]*$([\s\S]*?)(?=^##[ \t]|(?![\s\S]))/im.exec(text);
+  return /Sin preguntas:\s*la spec está lista\.?/i.test(
+    section ? section[1] : text,
+  );
 }
 
 /** Bloque «Definición actual» del comentario del revisor. */

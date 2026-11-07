@@ -5,7 +5,11 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { createIssue, specReview } from "../lib/spec.mjs";
-import { readSpecMarker, specDefinition } from "../lib/spec-state.mjs";
+import {
+  readSpecMarker,
+  specDefinition,
+  specReady,
+} from "../lib/spec-state.mjs";
 
 function fakeFetch({
   states = ["Backlog", "Spec review", "Ready"],
@@ -211,4 +215,25 @@ test("specDefinition devuelve null sin el encabezado de definición", () => {
     null,
   );
   assert.equal(specDefinition(""), null);
+});
+
+test("specReady ignora la frase de listo dentro de bloques de código", () => {
+  const artifact = [
+    "```js",
+    "const texto = 'Sin preguntas: la spec está lista.';",
+    "```",
+    "## Definición actual",
+    "",
+    "Arreglar la captura.",
+    "",
+    "## Preguntas",
+    "",
+    "1. ¿Se tolera el encabezado con NFD?",
+    "",
+  ].join("\n");
+  assert.equal(specReady(artifact), false);
+  assert.equal(
+    specReady("## Preguntas\n\nSin preguntas: la spec está lista."),
+    true,
+  );
 });
