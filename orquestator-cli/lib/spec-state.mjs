@@ -21,10 +21,19 @@ export function specReady(artifact) {
 
 /** Bloque «Definición actual» del comentario del revisor. */
 export function specDefinition(artifact) {
-  const match = /^##\s+Definición actual\s*\n([\s\S]*?)(?=^##\s+|$)/im.exec(
-    String(artifact ?? ""),
-  );
-  return match?.[1]?.trim() || null;
+  const text = String(artifact ?? "");
+  // El bloque acaba en el siguiente encabezado de nivel 2 o al final del artefacto:
+  // `(?![\s\S])` es el fin de la entrada, porque `$` con flag `m` casa en cada línea.
+  const match =
+    /^##[ \t]+Definición actual[^\n]*\n([\s\S]*?)(?=^##[ \t]|(?![\s\S]))/im.exec(
+      text,
+    );
+  if (!match) return null;
+  const atEnd = match.index + match[0].length === text.length;
+  const body = atEnd
+    ? match[1].replace(/\n*Sin preguntas:\s*la spec está lista\.?\s*$/i, "")
+    : match[1];
+  return body.trim() || null;
 }
 
 export function specMarkerPath(base, key) {
