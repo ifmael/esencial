@@ -8,7 +8,6 @@ import { linearKey } from "./config.mjs";
 import { dockerProblem } from "./container.mjs";
 import { fixTask } from "./fix.mjs";
 import { guardTask } from "./guard.mjs";
-import { imageTag } from "./image.mjs";
 import { getIssue, setState } from "./linear.mjs";
 import { publish } from "./pr.mjs";
 import { previewTask } from "./preview.mjs";
@@ -78,19 +77,18 @@ const defaultSteps = {
     out(`rama: ${state.branch}`);
     return {};
   },
-  implement({ key, base, main, out }) {
+  async implement({ key, base, main, out }) {
     const problem = dockerProblem();
     if (problem) throw new Error(problem);
-    runAgent(key, {
+    await runAgent(key, {
       phase: "implementer",
       base,
       main,
-      image: imageTag(),
       out,
     });
     return {};
   },
-  check({ key, base, main, out }) {
+  async check({ key, base, main, out }) {
     const guard = guardTask(key, { base, main });
     if (guard.noApprove) {
       return {
@@ -104,11 +102,9 @@ const defaultSteps = {
         hint: `Faltan aprobaciones (${guard.touched.join(", ")}): orquestator approve ${key} --motivo "…"`,
       };
     }
-    const result = checkTask(key, {
+    const result = await checkTask(key, {
       base,
-      image: imageTag(),
       files: guard.files,
-      main,
       out,
     });
     if (!result.ok) {
@@ -120,12 +116,11 @@ const defaultSteps = {
     }
     return {};
   },
-  review({ key, base, main, out }) {
-    const result = runAgent(key, {
+  async review({ key, base, main, out }) {
+    const result = await runAgent(key, {
       phase: "reviewer",
       base,
       main,
-      image: imageTag(),
       out,
     });
     const verdict = verdictOf(result.artifact);
@@ -151,7 +146,6 @@ const defaultSteps = {
     const result = await previewTask(key, {
       base,
       main,
-      image: imageTag(),
       out,
     });
     out(`preview: ${result.web} (${result.api})`);
@@ -170,11 +164,10 @@ const defaultSteps = {
     return {};
   },
   async "pr-review"({ key, base, main, out }) {
-    const result = runAgent(key, {
+    const result = await runAgent(key, {
       phase: "pr-review",
       base,
       main,
-      image: imageTag(),
       out,
     });
     const verdict = verdictOf(result.artifact);
@@ -233,7 +226,14 @@ export async function runFlow(
     try {
       result = await steps[name]({ key, base, main, out });
     } catch (error) {
-      return { ok: false, stop: name, error: error.message };
+      // La puerta de lockfile se avisa una sola vez: parada con pista, como
+      // «faltan aprobaciones» en check. Ni Blocked ni comentario en Linear.
+      return {
+        ok: false,
+        stop: name,
+        error: error.message,
+        ...(error.code === "LOCKFILE_DRIFT" ? { hint: error.message } : {}),
+      };
     }
     if (result?.stop) {
       if (!result.retry) {

@@ -7,7 +7,6 @@ import { markComment } from "./comments.mjs";
 import { readEnv } from "./config.mjs";
 import { runPhase } from "./container.mjs";
 import { commentBodyArgs, editArgs, runGh } from "./github.mjs";
-import { imageTag } from "./image.mjs";
 import { home, load, repoDir, save, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
 import { runWrangler } from "./wrangler.mjs";
@@ -419,7 +418,7 @@ export async function previewTask(
   {
     base = home(),
     main = process.cwd(),
-    image = imageTag(),
+    image,
     out = () => {},
     dryRun,
     runner = runPhase,
@@ -452,13 +451,14 @@ export async function previewTask(
   const phase = {
     phase: "preview",
     image,
+    base,
     repo,
     task,
     upstream: mirrorPath(base),
     command: buildCommand(urls.api),
     out,
   };
-  const built = runner(phase);
+  const built = await runner(phase);
   if (built && built.status !== 0) {
     throw new Error(`La build del preview falló (exit ${built.status})`);
   }

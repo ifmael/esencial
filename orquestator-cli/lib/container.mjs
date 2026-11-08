@@ -3,6 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { ensureArtifactsAt } from "./artifacts.mjs";
+import { imageTag } from "./image.mjs";
+import { ensureReadyImage } from "./image-build.mjs";
+import { lockfileGate } from "./lockfile.mjs";
+import { home } from "./state.mjs";
 
 export const NETWORK = "esencial-workers";
 
@@ -140,25 +144,66 @@ export function dockerArgs({
   return args;
 }
 
-export function runPhase({
+/**
+ * Preflight de una fase: puerta de lockfile (salvo spec-review, que no instala
+ * desde el clon) y garantía de la imagen. Con `ORQUESTATOR_IMAGE` la puerta se
+ * desactiva y la imagen forzada no se construye.
+ */
+export async function preparePhase({
+  phase,
+  image,
+  repo,
+  upstream,
+  base = home(),
+  out = () => {},
+  env = process.env,
+  forced = Boolean(env.ORQUESTATOR_IMAGE),
+  gate = lockfileGate,
+  ensure = ensureReadyImage,
+} = {}) {
+  if (phase !== "spec-review" && !forced) gate({ repo, mirror: upstream });
+  const tag = image ?? imageTag({ base, env });
+  await ensure(tag, { base, mirror: upstream, out, forced });
+  return tag;
+}
+
+export async function runPhase({
   phase,
   image,
   repo,
   task,
   upstream,
+  base = home(),
   command,
   input,
   agentsFile,
   dryRun,
   dockerCheck = () => dockerProblem(),
   out = () => {},
+  prepare = preparePhase,
 }) {
+  let tag = image;
   if (!dryRun) {
     const problem = dockerCheck();
     if (problem) throw new Error(problem);
+    tag = await prepare({ phase, image, repo, upstream, base, out });
+  } else if (tag === undefined) {
+    // El dry-run enseña la etiqueta que usaría la fase, sin tocar Docker.
+    try {
+      tag = imageTag({ base });
+    } catch {
+      // Sin espejo no hay etiqueta derivada; queda el hueco explícito.
+    }
   }
   ensureArtifactsAt(task);
-  const args = dockerArgs({ phase, image, repo, task, upstream, agentsFile });
+  const args = dockerArgs({
+    phase,
+    image: tag ?? "(imagen del espejo)",
+    repo,
+    task,
+    upstream,
+    agentsFile,
+  });
   // Sin -i, `docker run` no conecta stdin y `--query-file -` llega vacío.
   // Las opciones van antes de la imagen: después, docker las trata como comando.
   const argv = [...args];

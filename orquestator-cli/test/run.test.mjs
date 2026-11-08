@@ -256,6 +256,27 @@ test("run real corrige pr-review y vuelve a la cadena completa", async () => {
   assert.equal(load("ESN-7", dir).rounds.prReview, 1);
 });
 
+test("la puerta de lockfile para el run con una sola pista", async () => {
+  save(
+    "ESN-7",
+    transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+  );
+  const { steps, calls } = fakeSteps();
+  steps.check = async () => {
+    calls.push("check");
+    const drift = new Error(
+      "El lockfile de la rama pide 1 par(es) que no están en la receta",
+    );
+    drift.code = "LOCKFILE_DRIFT";
+    throw drift;
+  };
+  const result = await runFlow("ESN-7", { steps, out: () => {} });
+  assert.equal(result.ok, false);
+  assert.equal(result.stop, "check");
+  assert.match(result.hint, /lockfile/);
+  assert.deepEqual(calls, ["implement", "check"]);
+});
+
 test("run real no arranca una tarea cerrada", async () => {
   save(
     "ESN-7",

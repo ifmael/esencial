@@ -389,6 +389,32 @@ test("dry-run no mueve una spec acordada", async () => {
   assert.match(lines.join("\n"), /la movería a Ready/);
 });
 
+test("el refresco de la imagen va en segundo plano y respeta los cinco minutos", async () => {
+  let refreshes = 0;
+  let ticks = 0;
+  let clock = 0;
+  const controller = new AbortController();
+  await watch(
+    options({
+      once: false,
+      intervalSecs: 60,
+      signal: controller.signal,
+      now: () => clock,
+      sleep: async () => {
+        ticks += 1;
+        clock += 60_000;
+        if (clock > 360_000) controller.abort();
+      },
+      imageRefresh: async () => {
+        refreshes += 1;
+        return {};
+      },
+    }),
+  );
+  assert.equal(ticks, 7, "los ticks no se frenan");
+  assert.equal(refreshes, 2, "uno al arrancar y otro a los cinco minutos");
+});
+
 test("watch exige max-parallel y el cerrojo no deja dos instancias", async () => {
   await assert.rejects(
     () => watch(options({ maxParallel: 0 })),

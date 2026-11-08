@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
-import { approveState, guardTask } from "../lib/guard.mjs";
+import { approveState, guardTask, importBranch } from "../lib/guard.mjs";
 import { publish, pushBranch } from "../lib/pr.mjs";
 import { createState, load, save, transition } from "../lib/state.mjs";
 
@@ -149,6 +149,19 @@ test("pushBranch empuja la ref importada a origin", () => {
   );
   const sha = pushBranch({ main, key: KEY, branch: `${KEY}-algo` });
   assert.equal(gitIn(origin, "rev-parse", `${KEY}-algo`), sha);
+});
+
+test("una rama reescrita pasa al espejo y a GitHub (los dos refspecs con +)", () => {
+  const branch = `${KEY}-algo`;
+  const mirror = path.join(base, "upstream.git");
+  importBranch({ main, mirror, repo: task, branch, key: KEY });
+  const first = pushBranch({ main, key: KEY, branch });
+  // Reescritura: mismo padre, otro commit. Sin `+` el push sería rechazado.
+  gitIn(task, "commit", "--amend", "-q", "-m", "hola cambiado (reescrito)");
+  importBranch({ main, mirror, repo: task, branch, key: KEY });
+  const second = pushBranch({ main, key: KEY, branch });
+  assert.notEqual(second, first);
+  assert.equal(gitIn(origin, "rev-parse", branch), second);
 });
 
 test("publish en dry-run no empuja ni llama a gh", () => {

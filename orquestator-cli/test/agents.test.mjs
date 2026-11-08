@@ -96,10 +96,10 @@ test("el prompt lleva el perfil, el brief y solo el contexto de la fase", () => 
   assert.doesNotMatch(implementer, /diff frente a main/);
 });
 
-test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefacto", () => {
+test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefacto", async () => {
   started();
   let seen;
-  const result = runAgent("ESN-7", {
+  const result = await runAgent("ESN-7", {
     phase: "reviewer",
     base: dir,
     diff: "diff --git a/x b/x",
@@ -152,9 +152,9 @@ test("runAgent lanza la fase con su modelo, su prompt por stdin y lee el artefac
   );
 });
 
-test("un artefacto vacío o un fallo de Hermes no pasan", () => {
+test("un artefacto vacío o un fallo de Hermes no pasan", async () => {
   started();
-  assert.throws(
+  await assert.rejects(
     () =>
       runAgent("ESN-7", {
         phase: "reviewer",
@@ -164,7 +164,7 @@ test("un artefacto vacío o un fallo de Hermes no pasan", () => {
       }),
     /vacío/,
   );
-  assert.throws(
+  await assert.rejects(
     () =>
       runAgent("ESN-7", {
         phase: "reviewer",
@@ -176,9 +176,9 @@ test("un artefacto vacío o un fallo de Hermes no pasan", () => {
   );
 });
 
-test("pr-review solo corre con la tarea en In validation", () => {
+test("pr-review solo corre con la tarea en In validation", async () => {
   started();
-  assert.throws(
+  await assert.rejects(
     () =>
       runAgent("ESN-7", {
         phase: "pr-review",
@@ -192,10 +192,10 @@ test("pr-review solo corre con la tarea en In validation", () => {
   );
 });
 
-test("dry-run enseña el comando y no crea el HERMES_HOME", () => {
+test("dry-run enseña el comando y no crea el HERMES_HOME", async () => {
   started();
   const lines = [];
-  const result = runAgent("ESN-7", {
+  const result = await runAgent("ESN-7", {
     phase: "reviewer",
     base: dir,
     dryRun: true,
@@ -232,7 +232,7 @@ test("verdictOf lee el veredicto y devuelve null si falta", () => {
   assert.equal(verdictOf("sin veredicto"), null);
 });
 
-test("reviewer y pr-review reciben el AGENTS.md de main, no el del clon", () => {
+test("reviewer y pr-review reciben el AGENTS.md de main, no el del clon", async () => {
   started();
   const main = path.join(dir, "main");
   fs.mkdirSync(main);
@@ -259,7 +259,7 @@ test("reviewer y pr-review reciben el AGENTS.md de main, no el del clon", () => 
     "HEAD",
   ]);
   let seen;
-  runAgent("ESN-7", {
+  await runAgent("ESN-7", {
     phase: "reviewer",
     base: dir,
     main,
@@ -283,10 +283,10 @@ test("reviewer y pr-review reciben el AGENTS.md de main, no el del clon", () => 
   );
 });
 
-test("implementer no lleva AGENTS.md encima: lee el del clon y puede editarlo", () => {
+test("implementer no lleva AGENTS.md encima: lee el del clon y puede editarlo", async () => {
   started();
   let seen;
-  runAgent("ESN-7", {
+  await runAgent("ESN-7", {
     phase: "implementer",
     base: dir,
     runner: (options) => {
@@ -298,7 +298,7 @@ test("implementer no lleva AGENTS.md encima: lee el del clon y puede editarlo", 
   assert.equal(seen.agentsFile, undefined);
 });
 
-test("cada fase recibe solo las skills de su rol", () => {
+test("cada fase recibe solo las skills de su rol", async () => {
   started();
   const run = (phase, artifact) =>
     runAgent("ESN-7", {
@@ -310,8 +310,8 @@ test("cada fase recibe solo las skills de su rol", () => {
         return { status: 0, stdout: "", stderr: "" };
       },
     });
-  run("reviewer", "review.md");
-  run("implementer", "impl.md");
+  await run("reviewer", "review.md");
+  await run("implementer", "impl.md");
   const reviewer = fs.readdirSync(
     path.join(dir, "ESN-7", "hermes", "reviewer", "skills"),
   );

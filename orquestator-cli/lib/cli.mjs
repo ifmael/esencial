@@ -6,7 +6,6 @@ import { clean } from "./clean.mjs";
 import { linearKey, linearTeam, linearUserId } from "./config.mjs";
 import { fixTask } from "./fix.mjs";
 import { approveState, guardTask } from "./guard.mjs";
-import { imageTag } from "./image.mjs";
 import { inspect } from "./inspect.mjs";
 import { getIssue, notifyBlocked, setState } from "./linear.mjs";
 import { approvePr } from "./manual.mjs";
@@ -205,7 +204,7 @@ export async function main(argv, io = {}) {
       case "implement": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
-        const result = runAgent(key, {
+        const result = await runAgent(key, {
           phase: "implementer",
           dryRun,
           main: process.cwd(),
@@ -218,7 +217,7 @@ export async function main(argv, io = {}) {
       case "review": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
-        const result = runAgent(key, {
+        const result = await runAgent(key, {
           phase: "reviewer",
           dryRun,
           main: process.cwd(),
@@ -237,7 +236,7 @@ export async function main(argv, io = {}) {
       case "pr-review": {
         const key = parseKey(rest[0], stderr);
         if (!key) return 2;
-        const result = runAgent(key, {
+        const result = await runAgent(key, {
           phase: "pr-review",
           dryRun,
           main: process.cwd(),
@@ -280,14 +279,17 @@ export async function main(argv, io = {}) {
         }
         let result;
         try {
-          result = checkTask(key, {
+          result = await checkTask(key, {
             dryRun,
-            image: imageTag(),
             files,
-            main: process.cwd(),
             out: (text) => line(stdout, text),
           });
         } catch (error) {
+          // Un solo aviso y la tarea no arranca: el remedio es un merge.
+          if (error.code === "LOCKFILE_DRIFT") {
+            line(stdout, error.message);
+            return 1;
+          }
           if (error.code !== "MIGRATION_LOCKED") throw error;
           let next;
           withLock(key, () => {

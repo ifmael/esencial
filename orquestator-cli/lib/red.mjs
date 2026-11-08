@@ -64,11 +64,12 @@ function commandFor(files) {
 }
 
 /**
- * Copia a un worktree de `main` los tests que toca la rama y los ejecuta: si
- * pasan, no demuestran el cambio (GREEN indebido). Los e2e no se prueban aquí.
+ * Copia a un worktree del `main` del espejo los tests que toca la rama y los
+ * ejecuta: si pasan, no demuestran el cambio (GREEN indebido). Los e2e no se
+ * prueban aquí. La fuente es el espejo, también con `ORQUESTATOR_IMAGE`.
  */
-export function redProbe({
-  main,
+export async function redProbe({
+  mirror,
   repo,
   files,
   run,
@@ -83,9 +84,19 @@ export function redProbe({
   let failedAsExpected = 0;
   let passing = 0;
   try {
-    git(["worktree", "add", "--detach", "--quiet", worktree, "origin/main"], {
-      cwd: main,
-    });
+    git(
+      [
+        "--git-dir",
+        mirror,
+        "worktree",
+        "add",
+        "--detach",
+        "--quiet",
+        worktree,
+        "refs/heads/main",
+      ],
+      { cwd: base },
+    );
     for (const file of changed) {
       const after = fs.readFileSync(path.join(repo, file), "utf8");
       fs.mkdirSync(path.dirname(path.join(worktree, file)), {
@@ -94,7 +105,9 @@ export function redProbe({
       fs.writeFileSync(path.join(worktree, file), after);
       let before = "";
       try {
-        before = git(["show", `origin/main:${file}`], { cwd: main });
+        before = git(["--git-dir", mirror, "show", `refs/heads/main:${file}`], {
+          cwd: base,
+        });
       } catch {
         // Fichero nuevo: no hay versión en main.
       }
@@ -102,7 +115,7 @@ export function redProbe({
         notes.push(`${file}: ${signal}`);
     }
 
-    const result = run({
+    const result = await run({
       phase: "check",
       repo: worktree,
       files: changed,
@@ -121,8 +134,14 @@ export function redProbe({
   } catch (error) {
     notes.push(`RED no disponible: ${error.message}`);
   } finally {
-    spawnSync("git", ["worktree", "remove", "--force", worktree], {
-      cwd: main,
+    spawnSync(
+      "git",
+      ["--git-dir", mirror, "worktree", "remove", "--force", worktree],
+      { cwd: base, stdio: "ignore" },
+    );
+    // Si el proceso murió entre `add` y `remove`, el registro queda huérfano.
+    spawnSync("git", ["--git-dir", mirror, "worktree", "prune"], {
+      cwd: base,
       stdio: "ignore",
     });
     fs.rmSync(worktree, { recursive: true, force: true });

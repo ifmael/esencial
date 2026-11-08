@@ -5,6 +5,7 @@ import { clean } from "./clean.mjs";
 import { linearKey, linearTeam } from "./config.mjs";
 import { dockerProblem } from "./container.mjs";
 import { runGh, viewArgs } from "./github.mjs";
+import { REFRESH_MS, refreshImage } from "./image-refresh.mjs";
 import {
   getIssue,
   readyIssues,
@@ -126,6 +127,9 @@ export async function watch({
   review = specReview,
   dockerCheck = dockerUnavailable,
   sleep = sleepSeconds,
+  imageRefresh = refreshImage,
+  refreshEveryMs = REFRESH_MS,
+  now = Date.now,
   signal,
 } = {}) {
   if (!Number.isInteger(maxParallel) || maxParallel < 1) {
@@ -153,6 +157,26 @@ export async function watch({
   const specRunning = new Map();
   const failures = new Map();
   const cleaning = new Set();
+  let lastRefreshAt = null;
+  let refreshing = null;
+
+  // El refresco va en segundo plano: garantiza la imagen y actualiza el espejo
+  // y el checkout, pero no frena los ticks ni se espera.
+  function scheduleRefresh() {
+    if (refreshing) return;
+    if (lastRefreshAt !== null && now() - lastRefreshAt < refreshEveryMs)
+      return;
+    lastRefreshAt = now();
+    refreshing = imageRefresh({
+      base,
+      main,
+      out: (text) => out(text),
+    })
+      .catch((error) => out(`imagen: ${error.message}`))
+      .finally(() => {
+        refreshing = null;
+      });
+  }
 
   async function close(key, state) {
     if (dryRun) {
@@ -369,6 +393,7 @@ export async function watch({
   }
 
   async function tick() {
+    if (!dryRun) scheduleRefresh();
     let states;
     try {
       states = listStates(base);

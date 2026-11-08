@@ -7,7 +7,7 @@ el contexto y las consecuencias de una decisión ya tomada; no sustituye a
 
 Formato: **Estado**, **Fecha**, **Contexto**, **Decisión**, **Alternativas** y
 **Consecuencias**. Estados posibles: `Aceptada`, `Sustituida` y `Provisional`.
-Última revisión: 2026-10-31.
+Última revisión: 2026-11-08.
 
 | ADR                                                  | Decisión                                                           | Estado      | Fecha      |
 | ---------------------------------------------------- | ------------------------------------------------------------------ | ----------- | ---------- |
@@ -22,3 +22,5 @@ Formato: **Estado**, **Fecha**, **Contexto**, **Decisión**, **Alternativas** y
 | [0009](0009-d1-r2-estado-gestionado.md)              | D1 y R2 como estado gestionado de la app                           | Aceptada    | 2026-09-06 |
 | [0010](0010-access-identidad-borde.md)               | Cloudflare Access como identidad de borde                          | Aceptada    | 2026-10-04 |
 | [0011](0011-sistema-diseno-material-3-expressive.md) | Sistema de diseño Material 3 Expressive propio                     | Aceptada    | 2026-09-28 |
+| [0012](0012-construccion-automatica-de-la-imagen.md) | Construcción automática de la imagen del worker                    | Aceptada    | 2026-11-08 |
+| [0013](0013-dependencias-antes-por-main.md)          | Las dependencias entran por main, antes de la tarea                | Aceptada    | 2026-11-08 |

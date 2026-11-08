@@ -66,7 +66,7 @@ test("weakSignals detecta skips nuevos, menos tests y menos expects", () => {
   assert.ok(signals.some((s) => s.includes("expect")));
 });
 
-test("redProbe copia el test de la rama sobre main y espera que falle", () => {
+test("redProbe copia el test de la rama sobre el main del espejo y espera que falle", async () => {
   fs.writeFileSync(
     path.join(repo, "api", "tests", "a.test.ts"),
     'test("uno", () => { expect(2).toBe(2); });\n',
@@ -81,8 +81,8 @@ test("redProbe copia el test de la rama sobre main y espera que falle", () => {
     );
     return { status: 1, stdout: "falla", stderr: "" };
   };
-  const result = redProbe({
-    main,
+  const result = await redProbe({
+    mirror: path.join(dir, "origin.git"),
     repo,
     files: ["api/tests/a.test.ts"],
     run: runner,
@@ -96,13 +96,13 @@ test("redProbe copia el test de la rama sobre main y espera que falle", () => {
   assert.match(result.notes.join("\n"), /RED/);
 });
 
-test("redProbe avisa si el test también pasa contra main", () => {
+test("redProbe avisa si el test también pasa contra main", async () => {
   fs.writeFileSync(
     path.join(repo, "api", "tests", "a.test.ts"),
     'test("uno", () => { expect(1).toBe(1); });\n',
   );
-  const result = redProbe({
-    main,
+  const result = await redProbe({
+    mirror: path.join(dir, "origin.git"),
     repo,
     files: ["api/tests/a.test.ts"],
     run: () => ({ status: 0, stdout: "ok", stderr: "" }),
@@ -110,4 +110,66 @@ test("redProbe avisa si el test también pasa contra main", () => {
   });
   assert.equal(result.passing, 1);
   assert.match(result.notes.join("\n"), /pasa contra main/);
+});
+
+test("el finally poda los registros huérfanos de worktrees del espejo", async () => {
+  fs.writeFileSync(
+    path.join(repo, "api", "tests", "a.test.ts"),
+    'test("uno", () => { expect(2).toBe(2); });\n',
+  );
+  const mirror = path.join(dir, "origin.git");
+  // Registro de un proceso que murió entre `add` y `remove`.
+  const stale = path.join(dir, "red-viejo");
+  gitIn(
+    dir,
+    "--git-dir",
+    mirror,
+    "worktree",
+    "add",
+    "--detach",
+    "-q",
+    stale,
+    "main",
+  );
+  fs.rmSync(stale, { recursive: true, force: true });
+  const result = await redProbe({
+    mirror,
+    repo,
+    files: ["api/tests/a.test.ts"],
+    base: dir,
+    run: () => ({ status: 1, stdout: "", stderr: "" }),
+  });
+  assert.equal(result.failedAsExpected, 1);
+  const list = gitIn(dir, "--git-dir", mirror, "worktree", "list");
+  assert.doesNotMatch(list, /red-viejo/);
+});
+
+test("la sonda RED usa el espejo también con ORQUESTATOR_IMAGE", async () => {
+  const previous = process.env.ORQUESTATOR_IMAGE;
+  process.env.ORQUESTATOR_IMAGE = "esencial-worker:manual";
+  try {
+    fs.writeFileSync(
+      path.join(repo, "api", "tests", "a.test.ts"),
+      'test("uno", () => { expect(2).toBe(2); });\n',
+    );
+    const result = await redProbe({
+      mirror: path.join(dir, "origin.git"),
+      repo,
+      files: ["api/tests/a.test.ts"],
+      base: dir,
+      run: (options) => {
+        const list = execFileSync(
+          "git",
+          ["--git-dir", path.join(dir, "origin.git"), "worktree", "list"],
+          { encoding: "utf8" },
+        );
+        assert.match(list, new RegExp(options.repo.replace(/\//g, "\\/")));
+        return { status: 1, stdout: "", stderr: "" };
+      },
+    });
+    assert.equal(result.failedAsExpected, 1);
+  } finally {
+    if (previous === undefined) delete process.env.ORQUESTATOR_IMAGE;
+    else process.env.ORQUESTATOR_IMAGE = previous;
+  }
 });
