@@ -238,20 +238,66 @@ Si se añade:
 ## Imagen del worker (M1)
 
 ```bash
-orquestator-cli/build.sh         # construye e imprime la etiqueta
-docker run --rm -v "$PWD:/work" -w /work --network none "<etiqueta>" pnpm test
+orquestator-cli/build.sh                 # vía manual: valida el árbol y construye
+orquestator-cli/build.sh --tag <nombre>  # diagnóstico: construye a propósito, sin validar
 ```
 
 - Base `node:24-bookworm` (el Node del CI), pnpm 12.4.2, Chromium de Playwright y
-  Hermes v0.22.4 fijado por commit (`HERMES_COMMIT` en el Dockerfile).
-- La etiqueta es el hash del Dockerfile y de `pnpm-lock.yaml`: un cambio en
-  cualquiera de los dos produce una imagen nueva.
+  Hermes v0.22.4 fijado por commit (`HERMES_COMMIT` en el Dockerfile). Ninguna
+  construcción pasa `--build-arg`: el Dockerfile es el único origen de la fijación.
+- La etiqueta es el hash de `orquestator-cli/Dockerfile` y de `pnpm-lock.yaml` del
+  **main del espejo** (`~/.orquestator/upstream.git`), no del árbol de trabajo.
+  Es la prueba de que una fase corre con la receta correcta; el algoritmo está
+  atado por `orquestator-cli/test/image.test.mjs`. Sin espejo, el error manda a
+  ejecutar `start`.
+- **La imagen no hace falta construirla a mano.** `ensureImage(etiqueta)` es la
+  única función que la garantiza, y la llaman el refresco del servicio (cada cinco
+  minutos, en segundo plano y sin esperar), la fase (de forma síncrona) y el CLI
+  manual (`run`/`check` sin `watch`):
+  - la imagen existe → vuelve;
+  - hay un build vivo (cerrojo con pid comprobado) → espera, con una anotación
+    por minuto en el diario de la fase; un cerrojo con el pid muerto se toma;
+  - no hay build vivo → toma el cerrojo y construye con un contexto exportado
+    del commit del main del espejo.
+- El proceso hijo de `docker build` lleva un tope propio de 60 minutos. Al
+  agotarlo se mata, se libera el cerrojo, se anota el fallo y la fase para con el
+  mensaje. Ninguna espera es infinita.
+- Freno por etiqueta: `~/.orquestator/image-fail.json` guarda etiqueta, hora y
+  último error, y sobrevive al reinicio del servicio. Un build fallido no se
+  reintenta antes de diez minutos: cualquier llamada devuelve el error guardado
+  sin tocar Docker. A los diez minutos se reintenta una vez. Un build correcto
+  limpia la anotación. `build.sh` se salta el freno: es su razón de ser.
+- El fallo queda en el diario con la etiqueta, el comando exacto y el final del
+  error. Una fase no se aparca por falta de imagen; solo se para si el build
+  falla. Un éxito posterior del refresco no reanima sola la tarea parada: la
+  reanudación es un toque humano (`resume`).
+- `ORQUESTATOR_IMAGE` manda: se comprueba que la imagen existe y, si no, el
+  preflight se para ofreciendo solo las tres salidas reales (quitar la variable,
+  poner la etiqueta derivada del espejo que se imprime en ese momento, o
+  `build.sh --tag <nombre>`). Con la variable definida, el refresco mantiene los
+  dos fetches (espejo y checkout) y solo se salta el cálculo de la etiqueta y la
+  construcción; la puerta de lockfile se desactiva y nadie garantiza el store de
+  esa imagen.
+- Puerta de lockfile: antes de lanzar cualquier instalación se comparan los pares
+  paquete+versión de `packages:` entre el lockfile del clon y el del main del
+  espejo. Añadir en main no cierra la puerta; cambiar una versión o pedir algo
+  ausente sí. El remedio es alinear la rama con un merge (`docs/adr/0013`); el
+  aviso es uno solo, sin estado `Blocked` ni comentario en Linear.
+- Retención: tras un build correcto quedan las tres etiquetas más recientes por
+  fecha de creación, con la esperada siempre protegida. Un `rm` fallido (imagen en
+  uso) se registra y se sigue; los contenedores no se tocan.
 - El store de pnpm (`--store-dir /opt/pnpm-store`) y los navegadores viven en la
   imagen; el clon de la tarea instala con
   `pnpm install --offline --frozen-lockfile --store-dir /opt/pnpm-store`.
 - Hermes queda instalado con su home preparado en `/opt/hermes/home`: **ese** es
   el `HERMES_HOME` (uno vacío obliga a descargar dependencias y sin red falla).
   Cada fase corre en un contenedor nuevo, así que el home sigue aislado.
+- El refresco del servicio hace dos fetches —espejo y checkout—; no son atómicos.
+  Si el del checkout falla, `guard`, `agents` y `migrate` ven una referencia
+  atrasada y `guard` falla cerrado (bloquea de más), nunca de menos.
+- Detalle operativo y límites: [`docs/construccion-imagen.md`](construccion-imagen.md).
+  Decisiones: [ADR 0012](adr/0012-construccion-automatica-de-la-imagen.md) y
+  [ADR 0013](adr/0013-dependencias-antes-por-main.md).
 
 ## Proxy de modelo
 
