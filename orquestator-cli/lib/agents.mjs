@@ -6,7 +6,6 @@ import { ensureArtifactsAt, readArtifact } from "./artifacts.mjs";
 import { git } from "./checkout.mjs";
 import { runPhase } from "./container.mjs";
 import { diffPatch, importBranch } from "./guard.mjs";
-import { imageTag } from "./image.mjs";
 import { home, load, repoDir, taskDir } from "./state.mjs";
 import { mirrorPath } from "./task.mjs";
 
@@ -232,13 +231,13 @@ function tail(text, size = 400) {
     .slice(-size);
 }
 
-export function runAgent(
+export async function runAgent(
   key,
   {
     phase,
     base = home(),
     main = process.cwd(),
-    image = imageTag(),
+    image,
     dryRun,
     out = () => {},
     runner = runPhase,
@@ -289,9 +288,10 @@ export function runAgent(
       }
     }
   }
-  const result = runner({
+  const result = await runner({
     phase,
     image,
+    base,
     repo: repoDir(key, base),
     task,
     upstream: mirrorPath(base),

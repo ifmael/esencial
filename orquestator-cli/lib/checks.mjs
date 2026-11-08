@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { ensureArtifactsAt } from "./artifacts.mjs";
 import { runPhase } from "./container.mjs";
-import { imageTag } from "./image.mjs";
 import { migrationsOf, reserveMigration } from "./migrations.mjs";
 import { redProbe } from "./red.mjs";
 import { home, load, repoDir, taskDir } from "./state.mjs";
@@ -44,17 +43,9 @@ function report(key, result, notes = []) {
   ].join("\n");
 }
 
-export function checkTask(
+export async function checkTask(
   key,
-  {
-    base = home(),
-    image = imageTag(),
-    runner = runPhase,
-    dryRun,
-    out,
-    files = [],
-    main,
-  } = {},
+  { base = home(), image, runner = runPhase, dryRun, out, files = [] } = {},
 ) {
   const state = load(key, base);
   if (!state) throw new Error(`La tarea ${key} no existe`);
@@ -72,13 +63,15 @@ export function checkTask(
     }
   }
   const task = taskDir(key, base);
+  const upstream = mirrorPath(base);
   ensureArtifactsAt(task);
-  const result = runner({
+  const result = await runner({
     phase: "check",
     image,
+    base,
     repo: repoDir(key, base),
     task,
-    upstream: mirrorPath(base),
+    upstream,
     command: CHECK_COMMAND,
     dryRun,
     out,
@@ -86,9 +79,9 @@ export function checkTask(
   if (dryRun || result === null) return { ok: null, status: null };
 
   let red = null;
-  if (result.status === 0 && files.length && main) {
-    red = redProbe({
-      main,
+  if (result.status === 0 && files.length) {
+    red = await redProbe({
+      mirror: upstream,
       repo: repoDir(key, base),
       files,
       out,
@@ -96,8 +89,9 @@ export function checkTask(
         runner({
           phase: "check",
           image,
+          base,
           task,
-          upstream: mirrorPath(base),
+          upstream,
           repo: options.repo,
           command: options.command,
           out,

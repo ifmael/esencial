@@ -52,7 +52,7 @@ export function importBranch({ main, mirror, repo, branch, key }) {
       "--no-verify",
       "--quiet",
       mirror,
-      `refs/heads/${branch}:refs/heads/${branch}`,
+      `+refs/heads/${branch}:refs/heads/${branch}`,
     ],
     { cwd: repo },
   );

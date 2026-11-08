@@ -22,6 +22,21 @@ export function git(args, { cwd, ...rest } = {}) {
 
 const isMirror = (mirror) => fs.existsSync(path.join(mirror, "HEAD"));
 
+/** Actualiza el espejo desde el remoto; no lo crea. */
+export function fetchMirror({
+  mirror,
+  source,
+  gitRun = git,
+  token = githubToken(),
+}) {
+  if (!isMirror(mirror))
+    throw new Error(`Falta el espejo ${mirror} (ejecuta start de una tarea)`);
+  const remote = token ? githubUrl(source) : null;
+  const auth = remote ? { env: gitAuthEnv(token) } : {};
+  if (remote) gitRun(["remote", "set-url", "origin", remote], { cwd: mirror });
+  gitRun(["fetch", "--prune", "origin"], { cwd: mirror, ...auth });
+}
+
 /** Espejo bare del repo; se crea la primera vez y se actualiza después. */
 export function ensureMirror({ mirror, source }) {
   const token = githubToken();
@@ -36,8 +51,7 @@ export function ensureMirror({ mirror, source }) {
     });
     return;
   }
-  if (remote) git(["remote", "set-url", "origin", remote], { cwd: mirror });
-  git(["fetch", "--prune", "origin"], { cwd: mirror, ...auth });
+  fetchMirror({ mirror, source, token });
 }
 
 export function cloneTask({ mirror, repo, branch }) {

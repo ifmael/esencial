@@ -30,17 +30,17 @@ function started(key = "ESN-7") {
   return state;
 }
 
-test("checkTask exige una tarea empezada", () => {
-  assert.throws(
+test("checkTask exige una tarea empezada", async () => {
+  await assert.rejects(
     () => checkTask("ESN-7", { base: dir, runner: () => ({ status: 0 }) }),
     /no existe/,
   );
 });
 
-test("checkTask corre la cadena completa en la fase check y escribe checks.md", () => {
+test("checkTask corre la cadena completa en la fase check y escribe checks.md", async () => {
   started();
   let seen;
-  const result = checkTask("ESN-7", {
+  const result = await checkTask("ESN-7", {
     base: dir,
     runner: (options) => {
       seen = options;
@@ -60,9 +60,9 @@ test("checkTask corre la cadena completa en la fase check y escribe checks.md", 
   );
 });
 
-test("un fallo deja FAIL con el código y la salida", () => {
+test("un fallo deja FAIL con el código y la salida", async () => {
   started();
-  const result = checkTask("ESN-7", {
+  const result = await checkTask("ESN-7", {
     base: dir,
     runner: () => ({ status: 2, stdout: "", stderr: "test rojo" }),
   });
@@ -72,10 +72,10 @@ test("un fallo deja FAIL con el código y la salida", () => {
   assert.match(md, /test rojo/);
 });
 
-test("checkTask no escribe en dry-run", () => {
+test("checkTask no escribe en dry-run", async () => {
   started();
   let seen;
-  const result = checkTask("ESN-7", {
+  const result = await checkTask("ESN-7", {
     base: dir,
     dryRun: true,
     out: () => {},
@@ -89,10 +89,10 @@ test("checkTask no escribe en dry-run", () => {
   assert.equal(fs.readFileSync(path.join(task, "checks.md"), "utf8"), "");
 });
 
-test("checkTask reserva la migración y choca con otra tarea", () => {
+test("checkTask reserva la migración y choca con otra tarea", async () => {
   started();
   reserveMigration({ base: dir, key: "ESN-1", files: ["0001_x.sql"] });
-  assert.throws(
+  await assert.rejects(
     () =>
       checkTask("ESN-7", {
         base: dir,
@@ -103,7 +103,7 @@ test("checkTask reserva la migración y choca con otra tarea", () => {
   );
 });
 
-test("checkTask integra la sonda RED y la escribe en checks.md", () => {
+test("checkTask integra la sonda RED y la escribe en checks.md", async () => {
   started();
   const git = (...args) =>
     execFileSync(
@@ -138,10 +138,17 @@ test("checkTask integra la sonda RED y la escribe en checks.md", () => {
   execFileSync("git", ["-C", repo, "add", "."]);
   execFileSync("git", ["-C", repo, "commit", "-q", "-m", "test"]);
 
+  execFileSync("git", [
+    "clone",
+    "-q",
+    "--bare",
+    mainRepo,
+    path.join(dir, "upstream.git"),
+  ]);
+
   const calls = [];
-  const result = checkTask("ESN-7", {
+  const result = await checkTask("ESN-7", {
     base: dir,
-    main: mainRepo,
     files: ["api/tests/a.test.ts"],
     runner: (options) => {
       calls.push(options.repo);
@@ -158,9 +165,9 @@ test("checkTask integra la sonda RED y la escribe en checks.md", () => {
   );
 });
 
-test("los artefactos de la fase existen antes de correr", () => {
+test("los artefactos de la fase existen antes de correr", async () => {
   started();
-  checkTask("ESN-7", { base: dir, runner: () => ({ status: 0 }) });
+  await checkTask("ESN-7", { base: dir, runner: () => ({ status: 0 }) });
   for (const name of ARTIFACTS)
     assert.ok(fs.existsSync(path.join(task, name)), name);
 });

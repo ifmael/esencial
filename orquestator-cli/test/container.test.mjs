@@ -9,6 +9,7 @@ import {
   dockerArgs,
   dockerProblem,
   PHASES,
+  preparePhase,
   runPhase,
 } from "../lib/container.mjs";
 
@@ -144,8 +145,8 @@ test("dockerProblem devuelve null si Docker responde", () => {
   );
 });
 
-test("runPhase sin Docker falla antes de lanzar el contenedor", () => {
-  assert.throws(
+test("runPhase sin Docker falla antes de lanzar el contenedor", async () => {
+  await assert.rejects(
     () =>
       runPhase({
         phase: "check",
@@ -157,9 +158,9 @@ test("runPhase sin Docker falla antes de lanzar el contenedor", () => {
   );
 });
 
-test("runPhase con dryRun no ejecuta docker y enseña el comando", () => {
+test("runPhase con dryRun no ejecuta docker y enseña el comando", async () => {
   const lines = [];
-  const result = runPhase({
+  const result = await runPhase({
     phase: "check",
     ...paths(),
     command: "pnpm lint",
@@ -172,8 +173,8 @@ test("runPhase con dryRun no ejecuta docker y enseña el comando", () => {
   assert.doesNotMatch(lines.join("\n"), / -i /);
 });
 
-test("runPhase exige que existan el clon, el task y el espejo", () => {
-  assert.throws(
+test("runPhase exige que existan el clon, el task y el espejo", async () => {
+  await assert.rejects(
     () =>
       runPhase({
         phase: "check",
@@ -185,9 +186,9 @@ test("runPhase exige que existan el clon, el task y el espejo", () => {
   );
 });
 
-test("runPhase pasa -i cuando hay prompt por stdin", () => {
+test("runPhase pasa -i cuando hay prompt por stdin", async () => {
   const lines = [];
-  runPhase({
+  await runPhase({
     phase: "reviewer",
     ...paths(),
     command: "hermes --query-file -",
@@ -196,4 +197,64 @@ test("runPhase pasa -i cuando hay prompt por stdin", () => {
     out: (t) => lines.push(t),
   });
   assert.match(lines.join("\n"), / --init .* -i /);
+});
+
+test("preparePhase abre la puerta de lockfile contra el espejo y garantiza la imagen", async () => {
+  const gated = [];
+  const ensured = [];
+  const tag = await preparePhase({
+    phase: "check",
+    repo: paths().repo,
+    upstream: paths().upstream,
+    base: dir,
+    image: "esencial-worker:abc",
+    env: {},
+    gate: (options) => gated.push(options),
+    ensure: async (image, options) => ensured.push({ image, options }),
+  });
+  assert.equal(tag, "esencial-worker:abc");
+  assert.deepEqual(gated, [{ repo: paths().repo, mirror: paths().upstream }]);
+  assert.equal(ensured[0].image, "esencial-worker:abc");
+  assert.equal(ensured[0].options.mirror, paths().upstream);
+  assert.equal(ensured[0].options.forced, false);
+});
+
+test("spec-review no pasa por la puerta de lockfile, pero sí por la imagen", async () => {
+  let gated = false;
+  let ensured = 0;
+  await preparePhase({
+    phase: "spec-review",
+    repo: dir,
+    base: dir,
+    image: "esencial-worker:abc",
+    env: {},
+    gate: () => {
+      gated = true;
+    },
+    ensure: async () => {
+      ensured += 1;
+    },
+  });
+  assert.equal(gated, false);
+  assert.equal(ensured, 1);
+});
+
+test("con ORQUESTATOR_IMAGE la puerta se desactiva y la imagen va forzada", async () => {
+  let gated = false;
+  const ensured = [];
+  const tag = await preparePhase({
+    phase: "check",
+    repo: paths().repo,
+    upstream: paths().upstream,
+    base: dir,
+    image: "esencial-worker:forzada",
+    env: { ORQUESTATOR_IMAGE: "esencial-worker:forzada" },
+    gate: () => {
+      gated = true;
+    },
+    ensure: async (image, options) => ensured.push({ image, options }),
+  });
+  assert.equal(tag, "esencial-worker:forzada");
+  assert.equal(gated, false);
+  assert.equal(ensured[0].options.forced, true);
 });

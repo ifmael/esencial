@@ -12,7 +12,6 @@ import {
 } from "./agents.mjs";
 import { ensureArtifactsAt, readArtifact } from "./artifacts.mjs";
 import { runPhase } from "./container.mjs";
-import { imageTag } from "./image.mjs";
 import { comment, getIssue, request } from "./linear.mjs";
 import {
   SPEC_COMMENT,
@@ -78,7 +77,7 @@ export async function specReview(
     apiKey,
     base = home(),
     main = process.cwd(),
-    image = imageTag(),
+    image,
     dryRun,
     out = () => {},
     runner = runPhase,
@@ -113,9 +112,10 @@ export async function specReview(
     installSoul("spec-review", hermes);
     fs.mkdirSync(path.join(hermes, "skills-local"), { recursive: true });
   }
-  const result = runner({
+  const result = await runner({
     phase: "spec-review",
     image,
+    base,
     repo: main,
     task,
     command,

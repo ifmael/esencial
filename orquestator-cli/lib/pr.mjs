@@ -25,7 +25,7 @@ export function pushBranch({ main, key, branch }) {
       "--no-verify",
       "--quiet",
       target ?? "origin",
-      `refs/orquestator/${key}:refs/heads/${branch}`,
+      `+refs/orquestator/${key}:refs/heads/${branch}`,
     ],
     { cwd: main, ...(target ? { env: gitAuthEnv(token) } : {}) },
   );
