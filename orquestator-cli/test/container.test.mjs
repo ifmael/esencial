@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -171,6 +172,50 @@ test("runPhase con dryRun no ejecuta docker y enseña el comando", async () => {
   assert.match(lines.join("\n"), /docker run/);
   assert.match(lines.join("\n"), /pnpm lint/);
   assert.doesNotMatch(lines.join("\n"), / -i /);
+});
+
+test("el dry-run enseña la etiqueta derivada del espejo", async () => {
+  const source = path.join(dir, "source");
+  fs.mkdirSync(path.join(source, "orquestator-cli"), { recursive: true });
+  fs.writeFileSync(
+    path.join(source, "orquestator-cli", "Dockerfile"),
+    "FROM x\n",
+  );
+  fs.writeFileSync(path.join(source, "pnpm-lock.yaml"), "lockfileVersion: 9\n");
+  const git = (...args) =>
+    execFileSync(
+      "git",
+      ["-c", "user.email=t@t", "-c", "user.name=T", ...args],
+      {
+        cwd: source,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+  git("init", "-q", "-b", "main");
+  git("add", ".");
+  git("commit", "-q", "-m", "receta");
+  execFileSync("git", [
+    "clone",
+    "-q",
+    "--bare",
+    source,
+    path.join(dir, "upstream.git"),
+  ]);
+  const lines = [];
+  const result = await runPhase({
+    phase: "check",
+    repo: paths().repo,
+    task: paths().task,
+    upstream: path.join(dir, "upstream.git"),
+    base: dir,
+    command: "pnpm lint",
+    dryRun: true,
+    out: (t) => lines.push(t),
+  });
+  assert.equal(result, null);
+  assert.match(lines.join("\n"), /esencial-worker:[0-9a-f]{12}/);
+  assert.doesNotMatch(lines.join("\n"), /imagen del espejo/);
 });
 
 test("runPhase exige que existan el clon, el task y el espejo", async () => {

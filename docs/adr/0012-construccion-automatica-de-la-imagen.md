@@ -39,7 +39,9 @@ usando, y la puerta de lockfile no existía.
 - **Freno de diez minutos por etiqueta** en `~/.orquestator/image-fail.json`, que
   guarda etiqueta, hora y último error y sobrevive al reinicio del servicio. Antes
   de diez minutos, cualquier llamada devuelve el error guardado sin invocar
-  Docker; a los diez minutos se reintenta una vez; un build correcto limpia la
+  Docker; el freno se relee en cada vuelta de la espera y al tomar el cerrojo, de
+  modo que quien hereda el relevo de un build que acaba de fallar tampoco lo
+  reintenta. A los diez minutos se reintenta una vez; un build correcto limpia la
   anotación. Los relanzamientos son baratos: lo que el freno limita son los
   builds, no los ticks.
 - **Fallo con etiqueta, comando y final del error.** La fase no se aparca por
@@ -59,10 +61,12 @@ usando, y la puerta de lockfile no existía.
   registra y se sigue; no se tocan contenedores.
 - **`build.sh` como vía manual y de diagnóstico.** Valida `Dockerfile` y
   `pnpm-lock.yaml` del árbol contra el `main` del espejo y se para si no
-  coinciden; `--tag` explícita salta esa validación. Toma la misma cerradura que
-  la vía automática (nunca dos escritores sobre la misma etiqueta), se salta el
-  freno de diez minutos con y sin `--tag` (para eso existe) y borra o escribe el
-  marcador de fallo de la etiqueta según el resultado.
+  coinciden; `--tag` explícita salta esa validación. Sin `--tag` construye con el
+  contexto exportado del espejo; con `--tag`, desde el árbol (es lo que se está
+  arreglando). Toma la misma cerradura que la vía automática (nunca dos escritores
+  sobre la misma etiqueta), se salta el freno de diez minutos con y sin `--tag`
+  (para eso existe) y borra o escribe el marcador de fallo de la etiqueta según el
+  resultado.
 - **Los dos empujes pasan a forzar con `+`**: `importBranch` (clon→espejo) y
   `pushBranch` (espejo→GitHub). Una rama reescrita llega a los dos sitios, lo que
   deja el rebase como opción real (ADR 0013).

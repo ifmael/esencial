@@ -131,23 +131,32 @@ export function clearFailure(base, tag) {
 export function runCommand(
   command,
   args,
-  { spawnImpl = spawn, timeoutMs, input } = {},
+  { spawnImpl = spawn, timeoutMs, input, captureLimit = 4 * 1024 * 1024 } = {},
 ) {
   return new Promise((resolve) => {
     const child = spawnImpl(command, args, {
       stdio: ["pipe", "pipe", "pipe"],
     });
-    const cap = 4 * 1024 * 1024;
     let stdout = "";
     let stderr = "";
+    // Ventana deslizante: si el log se pasa, interesa el final (lo accionable),
+    // no la cabecera.
+    const capture = (current, chunk) => {
+      const text = String(chunk);
+      if (text.length >= captureLimit) return text.slice(-captureLimit);
+      const room = captureLimit - text.length;
+      return current.length > room
+        ? current.slice(current.length - room) + text
+        : current + text;
+    };
     let timedOut = false;
     let settled = false;
     let killTimer;
     child.stdout?.on("data", (chunk) => {
-      if (stdout.length < cap) stdout += chunk;
+      stdout = capture(stdout, chunk);
     });
     child.stderr?.on("data", (chunk) => {
-      if (stderr.length < cap) stderr += chunk;
+      stderr = capture(stderr, chunk);
     });
     const timer = timeoutMs
       ? setTimeout(() => {
@@ -261,10 +270,23 @@ function buildCommandOf({ tag, dockerfile, context }) {
   return `docker build --tag ${tag} --file ${dockerfile} ${context}`;
 }
 
-function failureMessage({ tag, command, detail }) {
+/** Error guardado si el freno de esa etiqueta sigue vigente; null si no. */
+function cachedFailure(base, tag, { now, failWindowMs }) {
+  const failure = readFailures(base)[tag];
+  if (!failure) return null;
+  if (now() - failure.at >= failWindowMs) return null;
+  return new ImageError(failure.error, {
+    tag,
+    command: failure.command,
+    cached: true,
+  });
+}
+
+function failureMessage({ tag, command, detail, context }) {
   return [
     `imagen: el build de ${tag} falló`,
     `  comando: ${command}`,
+    `  contexto: ${context === undefined ? "exportación temporal del main del espejo" : context}`,
     `  error: ${detail || "(sin salida)"}`,
   ].join("\n");
 }
@@ -329,23 +351,25 @@ export async function ensureImage(
     keep = KEEP_IMAGES,
   } = {},
 ) {
-  if (brake) {
-    const failure = readFailures(base)[tag];
-    if (failure && now() - failure.at < failWindowMs) {
-      throw new ImageError(failure.error, {
-        tag,
-        command: failure.command,
-        cached: true,
-      });
-    }
-  }
   const started = now();
   for (;;) {
+    // El freno se relee en cada vuelta: quien esperaba un build vivo hereda su
+    // fallo y no lo reintenta dentro de la ventana.
+    if (brake) {
+      const cached = cachedFailure(base, tag, { now, failWindowMs });
+      if (cached) throw cached;
+    }
     if (!force && (await docker.exists(tag))) return { tag, built: false };
     const release = lock(base, tag);
     if (release) {
       let work;
       try {
+        // El fallo pudo anotarse entre la comprobación y el cerrojo: se mira
+        // otra vez antes de construir.
+        if (brake) {
+          const cached = cachedFailure(base, tag, { now, failWindowMs });
+          if (cached) throw cached;
+        }
         if (!force && (await docker.exists(tag))) {
           return { tag, built: false };
         }
@@ -370,6 +394,7 @@ export async function ensureImage(
           const message = failureMessage({
             tag,
             command,
+            context,
             detail: `el build superó el tope de ${minutes(buildTimeoutMs)} minutos; lo he matado`,
           });
           noteFailure(base, tag, { at: now(), error: message, command });
@@ -379,6 +404,7 @@ export async function ensureImage(
           const message = failureMessage({
             tag,
             command,
+            context,
             detail: tail(result.stderr) || tail(result.stdout),
           });
           noteFailure(base, tag, { at: now(), error: message, command });

@@ -112,6 +112,38 @@ test("redProbe avisa si el test también pasa contra main", async () => {
   assert.match(result.notes.join("\n"), /pasa contra main/);
 });
 
+test("el finally poda los registros huérfanos de worktrees del espejo", async () => {
+  fs.writeFileSync(
+    path.join(repo, "api", "tests", "a.test.ts"),
+    'test("uno", () => { expect(2).toBe(2); });\n',
+  );
+  const mirror = path.join(dir, "origin.git");
+  // Registro de un proceso que murió entre `add` y `remove`.
+  const stale = path.join(dir, "red-viejo");
+  gitIn(
+    dir,
+    "--git-dir",
+    mirror,
+    "worktree",
+    "add",
+    "--detach",
+    "-q",
+    stale,
+    "main",
+  );
+  fs.rmSync(stale, { recursive: true, force: true });
+  const result = await redProbe({
+    mirror,
+    repo,
+    files: ["api/tests/a.test.ts"],
+    base: dir,
+    run: () => ({ status: 1, stdout: "", stderr: "" }),
+  });
+  assert.equal(result.failedAsExpected, 1);
+  const list = gitIn(dir, "--git-dir", mirror, "worktree", "list");
+  assert.doesNotMatch(list, /red-viejo/);
+});
+
 test("la sonda RED usa el espejo también con ORQUESTATOR_IMAGE", async () => {
   const previous = process.env.ORQUESTATOR_IMAGE;
   process.env.ORQUESTATOR_IMAGE = "esencial-worker:manual";

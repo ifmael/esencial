@@ -11,6 +11,7 @@ import {
   ensureReadyImage,
   imageLock,
   imageLockPath,
+  noteFailure,
   readFailures,
   runCommand,
 } from "../lib/image-build.mjs";
@@ -100,6 +101,7 @@ test("un build fallido deja etiqueta, comando y final del error", async () => {
       assert.match(error.message, new RegExp(TAG));
       assert.match(error.message, /docker build --tag/);
       assert.match(error.message, /no space left/);
+      assert.match(error.message, /contexto: exportación/);
       return true;
     },
   );
@@ -176,6 +178,69 @@ test("con un build vivo espera con anotación y no construye", async () => {
   assert.equal(sleeps.length, 1);
   assert.deepEqual(docker.calls.build, []);
   assert.match(out.join("\n"), /en curso/);
+});
+
+test("un caller que esperaba hereda el fallo del build y no construye", async () => {
+  const lockFile = imageLockPath(base, TAG);
+  fs.mkdirSync(base, { recursive: true });
+  fs.writeFileSync(lockFile, String(process.pid));
+  const docker = fakeDocker();
+  const sleeps = [];
+  await assert.rejects(
+    () =>
+      ensureImage(
+        TAG,
+        options({
+          docker,
+          now: () => 1000,
+          sleep: async () => {
+            sleeps.push("espera");
+            // El build que tenía el cerrojo falla y lo suelta: marcador escrito.
+            noteFailure(base, TAG, {
+              at: 1000,
+              error: `imagen: el build de ${TAG} falló`,
+              command: `docker build --tag ${TAG}`,
+            });
+            fs.rmSync(lockFile, { force: true });
+          },
+        }),
+      ),
+    (error) => {
+      assert.equal(error.cached, true);
+      assert.match(error.message, /falló/);
+      return true;
+    },
+  );
+  assert.equal(sleeps.length, 1);
+  assert.deepEqual(docker.calls.build, []);
+  assert.deepEqual(docker.calls.exists, [TAG]);
+});
+
+test("si el fallo aparece al tomar el cerrojo, no construye", async () => {
+  const docker = fakeDocker();
+  await assert.rejects(
+    () =>
+      ensureImage(
+        TAG,
+        options({
+          docker,
+          now: () => 1000,
+          lock: () => {
+            noteFailure(base, TAG, {
+              at: 1000,
+              error: `imagen: el build de ${TAG} falló`,
+              command: `docker build --tag ${TAG}`,
+            });
+            return () => {};
+          },
+        }),
+      ),
+    (error) => {
+      assert.equal(error.cached, true);
+      return true;
+    },
+  );
+  assert.deepEqual(docker.calls.build, []);
 });
 
 test("un cerrojo huérfano (pid muerto) se toma y se construye", async () => {
@@ -346,6 +411,42 @@ test("runCommand marca tiempo agotado cuando el tope mata al hijo", async () => 
   });
   assert.equal(result.timedOut, true);
   assert.equal(result.status, null);
+});
+
+test("runCommand conserva el final de la salida cuando supera el tope", async () => {
+  const spawnImpl = () => {
+    const listeners = { stdout: [], stderr: [] };
+    const child = {
+      stdout: {
+        on(_, fn) {
+          listeners.stdout.push(fn);
+        },
+      },
+      stderr: {
+        on(_, fn) {
+          listeners.stderr.push(fn);
+        },
+      },
+      stdin: { end() {} },
+      on(event, fn) {
+        child.handlers[event] = fn;
+      },
+      handlers: {},
+      kill() {},
+    };
+    setTimeout(() => {
+      for (const fn of listeners.stderr) fn(Buffer.from("x".repeat(20)));
+      for (const fn of listeners.stderr) fn(Buffer.from("ERROR: al final"));
+      child.handlers.close?.(0, null);
+    }, 0);
+    return child;
+  };
+  const result = await runCommand("docker", ["build"], {
+    spawnImpl,
+    captureLimit: 10,
+  });
+  assert.equal(result.stderr.length, 10);
+  assert.match(result.stderr, /al final/);
 });
 
 test("el cerrojo por etiqueta no deja dos escritores", () => {

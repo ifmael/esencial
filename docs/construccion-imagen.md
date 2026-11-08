@@ -46,17 +46,23 @@ construye.
 
 ```text
 ensureImage(tag):
-  si el último build de esa etiqueta falló hace menos de diez minutos:
-      devolver el error guardado (sin tocar docker)
-  si la imagen existe: volver
   repetir:
+      si el último build de esa etiqueta falló hace menos de diez minutos:
+          devolver el error guardado (sin tocar docker)
       si la imagen existe: volver
-      si el cerrojo está libre o su pid está muerto: tomarlo y construir
-          éxito  → retención, borrar la anotación de fallo, soltar el cerrojo
-          fallo  → anotar etiqueta/hora/error, soltar el cerrojo, parar la fase
+      si el cerrojo está libre o su pid está muerto: tomarlo
+          volver a mirar el freno (pudo fallar quien tenía el cerrojo)
+          si sigue vigente: soltarlo y devolver el error guardado
+          construir con tope de 60 minutos
+              éxito  → retención, borrar la anotación de fallo, soltar el cerrojo
+              fallo  → anotar etiqueta/hora/error, soltar el cerrojo, parar la fase
       si hay un build vivo: anotar la espera y dormir un minuto
       si la espera supera el tope del build más un margen: parar con mensaje
 ```
+
+El freno se relee en cada vuelta y otra vez al tomar el cerrojo: un caller que
+estaba esperando un build vivo hereda su fallo y no lo reintenta, igual que uno
+que llega después. Solo `build.sh` (`brake: false`) se lo salta.
 
 La llaman tres sitios y no hay una vía aparte:
 
@@ -79,14 +85,17 @@ comparten esta cerradura.
 
 - **Freno**: `~/.orquestator/image-fail.json` guarda, por etiqueta, la hora y el
   último error. Dentro de los diez minutos siguientes, cualquier llamada devuelve
-  ese error sin invocar Docker: los relanzamientos son baratos y no generan
-  construcciones. A los diez minutos se reintenta una vez. Un build correcto
-  limpia la anotación. El fichero sobrevive al reinicio del servicio.
+  ese error sin invocar Docker —también la que venía esperando el cerrojo de un
+  build que acaba de fallar, porque el freno se relee en cada vuelta y al tomar el
+  cerrojo—: los relanzamientos son baratos y no generan construcciones. A los
+  diez minutos se reintenta una vez. Un build correcto limpia la anotación. El
+  fichero sobrevive al reinicio del servicio.
 - **Tope**: el proceso hijo de `docker build` se mata a los 60 minutos. Al
   agotarlo se suelta el cerrojo, se anota el fallo (entra en el freno) y la fase
   para con el mensaje.
 - **Mensaje**: etiqueta, comando exacto (`docker build --tag … --file … …`) y el
-  final de la salida del error.
+  final de la salida del error. La salida se guarda con ventana deslizante: si el
+  log supera el tope de captura, lo que se conserva es su final.
 
 Ninguna construcción pasa `--build-arg`: `HERMES_COMMIT` y `PNPM_VERSION` viven en
 el Dockerfile y son el único origen de la fijación.
@@ -104,9 +113,12 @@ orquestator-cli/build.sh --tag <nombre>  # construcción a propósito, sin valid
 
 - Sin `--tag`, compara `orquestator-cli/Dockerfile` y `pnpm-lock.yaml` del árbol
   con el `main` del espejo. Si no coinciden, se para e imprime la etiqueta
-  derivada del espejo para que se pueda copiar.
+  derivada del espejo para que se pueda copiar. La construcción usa el mismo
+  contexto exportado del espejo que la vía automática, no el árbol: la etiqueta y
+  lo que se hornea salen de la misma receta.
 - Con `--tag` explícita se omite la validación: una etiqueta elegida a mano no se
-  deriva de nada y se construye a propósito.
+  deriva de nada y se construye a propósito desde el árbol. Es la vía para
+  arreglar el Dockerfile y reconstruir ya.
 - Toma la misma cerradura que la construcción automática (si hay un build vivo,
   espera) y **se salta el freno de diez minutos**: esa es su razón de ser,
   arreglar el Dockerfile y reconstruir ya.

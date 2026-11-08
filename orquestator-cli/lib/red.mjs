@@ -139,6 +139,11 @@ export async function redProbe({
       ["--git-dir", mirror, "worktree", "remove", "--force", worktree],
       { cwd: base, stdio: "ignore" },
     );
+    // Si el proceso murió entre `add` y `remove`, el registro queda huérfano.
+    spawnSync("git", ["--git-dir", mirror, "worktree", "prune"], {
+      cwd: base,
+      stdio: "ignore",
+    });
     fs.rmSync(worktree, { recursive: true, force: true });
   }
   return { failedAsExpected, passing, notes };

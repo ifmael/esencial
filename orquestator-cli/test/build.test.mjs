@@ -85,10 +85,18 @@ test("sin --tag valida contra el espejo y usa la etiqueta derivada", async () =>
   const ensured = [];
   const code = await manualBuild(
     [],
-    options({ ensure: async (tag) => ensured.push(tag) }),
+    options({
+      ensure: async (tag, settings) => ensured.push({ tag, settings }),
+    }),
   );
   assert.equal(code, 0);
-  assert.deepEqual(ensured, [imageTag({ base, mirror })]);
+  assert.deepEqual(
+    ensured.map((one) => one.tag),
+    [imageTag({ base, mirror })],
+  );
+  // Sin `--tag` el contexto es la exportación del espejo, no el árbol.
+  assert.equal(ensured[0].settings.context, undefined);
+  assert.equal(ensured[0].settings.dockerfile, "orquestator-cli/Dockerfile");
   assert.equal(out.at(-1), imageTag({ base, mirror }));
 });
 

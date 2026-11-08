@@ -187,6 +187,13 @@ export async function runPhase({
     const problem = dockerCheck();
     if (problem) throw new Error(problem);
     tag = await prepare({ phase, image, repo, upstream, base, out });
+  } else if (tag === undefined) {
+    // El dry-run enseña la etiqueta que usaría la fase, sin tocar Docker.
+    try {
+      tag = imageTag({ base });
+    } catch {
+      // Sin espejo no hay etiqueta derivada; queda el hueco explícito.
+    }
   }
   ensureArtifactsAt(task);
   const args = dockerArgs({

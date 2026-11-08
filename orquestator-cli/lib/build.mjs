@@ -75,7 +75,10 @@ export async function manualBuild(
     out,
     brake: false,
     force: true,
-    context: cwd,
+    // Sin `--tag` manda la receta del espejo: el contexto es su exportación. Con
+    // `--tag` se construye a propósito desde el árbol (ahí está el Dockerfile que
+    // se está arreglando).
+    ...(explicit ? { context: cwd } : {}),
     dockerfile: DOCKERFILE,
     ...ensureOptions,
   });
