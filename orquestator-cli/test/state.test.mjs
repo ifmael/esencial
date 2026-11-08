@@ -9,10 +9,13 @@ import {
   createState,
   load,
   normalize,
+  PAUSE,
   resume,
   save,
   transition,
   withLock,
+  withoutPause,
+  withPause,
 } from "../lib/state.mjs";
 
 let dir;
@@ -103,6 +106,27 @@ test("guardar y cargar conserva el estado; sin fichero devuelve null", () => {
   assert.equal(back.key, "ESN-7");
 });
 
+test("el parón se guarda sin mover updatedAt ni la historia", () => {
+  const state = transition(createState("ESN-7"), "In Progress");
+  const parked = withPause(state, { step: "check", reason: PAUSE.approval });
+  assert.deepEqual(parked.paused, { step: "check", reason: "approval" });
+  assert.equal(parked.updatedAt, state.updatedAt);
+  assert.deepEqual(parked.history, state.history);
+});
+
+test("transición, block, resume y withoutPause borran el parón", () => {
+  const parked = withPause(transition(createState("ESN-7"), "In Progress"), {
+    step: "check",
+    reason: PAUSE.approval,
+  });
+  assert.equal(transition(parked, "In validation").paused, undefined);
+  const blocked = block(parked, "¿Qué hago?");
+  assert.equal(blocked.paused, undefined);
+  assert.equal(resume(blocked).paused, undefined);
+  assert.equal(withoutPause(parked).paused, undefined);
+  assert.equal(parked.paused.step, "check", "withoutPause no muta el original");
+});
+
 test("el estado rechaza claves que no son de tarea", () => {
   assert.throws(() => createState("ESN"), /Clave inválida/);
   assert.throws(() => createState("../x"), /Clave inválida/);
@@ -118,4 +142,8 @@ test("withLock no deja el cerrojo tras soltarlo y tolera un cerrojo viejo", () =
   fs.utimesSync(lock, old, old);
   withLock("ESN-7", () => {});
   assert.equal(fs.existsSync(lock), false);
+  const otra = path.join(dir, "otra-base");
+  withLock("ESN-7", () => {}, otra);
+  assert.ok(fs.existsSync(path.join(otra, "ESN-7")));
+  assert.equal(fs.existsSync(path.join(otra, "ESN-7", "state.lock")), false);
 });

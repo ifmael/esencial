@@ -210,6 +210,20 @@ test("--dry-run no escribe nada", async () => {
   assert.equal(load("ESN-9").state, "In Progress");
 });
 
+test("la ayuda dice qué aprobación despierta la tarea y dónde retoma run", async () => {
+  const r = await run(["help"]);
+  assert.equal(r.code, 0);
+  assert.match(
+    r.out,
+    /run ESN-123 \[--dry-run\] {3}retoma en el paso que paró/,
+  );
+  assert.match(
+    r.out,
+    /approve ESN-123 --motivo "…" {3}despierta el parón por rutas/,
+  );
+  assert.match(r.out, /--migracion --motivo "…" {3}no despierta: migrate/);
+});
+
 test("un comando desconocido y una clave mala salen con 2", async () => {
   assert.equal((await run(["nope"])).code, 2);
   assert.equal((await run(["status", "ESN"])).code, 2);

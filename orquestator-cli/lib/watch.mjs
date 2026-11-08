@@ -100,7 +100,9 @@ function sleepSeconds(seconds, signal) {
 
 /**
  * Cola de Linear: arranca las Ready y reanuda las In Progress. No reintenta
- * una tarea parada hasta que su estado cambie (`fix` o `resume`).
+ * una tarea parada hasta que su estado cambie (`fix`, `resume`, `approve` o
+ * edición): el mapa de fallos compara con `updatedAt` y `approve` lo mueve solo
+ * cuando el parón pedía esa aprobación. Aquí no se lee el motivo.
  */
 export async function watch({
   base = home(),

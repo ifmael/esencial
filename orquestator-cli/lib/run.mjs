@@ -12,7 +12,16 @@ import { getIssue, setState } from "./linear.mjs";
 import { publish } from "./pr.mjs";
 import { previewTask } from "./preview.mjs";
 import { publishPrReview, ship } from "./ship.mjs";
-import { home, load, repoDir } from "./state.mjs";
+import {
+  home,
+  load,
+  PAUSE,
+  repoDir,
+  save,
+  withLock,
+  withoutPause,
+  withPause,
+} from "./state.mjs";
 import { startTask } from "./task.mjs";
 
 export const CHAIN = [
@@ -26,19 +35,18 @@ export const CHAIN = [
   "pr-review",
 ];
 
+/** Pasos que ejecuta `run` desde `In Progress`. */
+const PROGRESS = CHAIN.slice(1);
+
 function stepsFor(key, state) {
   if (!state) return [...CHAIN];
   switch (state.state) {
-    case "In Progress":
-      return [
-        "implement",
-        "check",
-        "review",
-        "pr",
-        "preview",
-        "ship",
-        "pr-review",
-      ];
+    case "In Progress": {
+      // Reanuda en el paso que devolvió el `stop`. Un paso fuera de esta cadena
+      // o un estado sin `paused` (anterior al campo) empieza por `implement`.
+      const at = PROGRESS.indexOf(state.paused?.step);
+      return at === -1 ? [...PROGRESS] : PROGRESS.slice(at);
+    }
     case "In validation":
       return ["pr-review"];
     case "Blocked":
@@ -46,6 +54,25 @@ function stepsFor(key, state) {
     default:
       throw new Error(`run no continúa desde ${state.state}`);
   }
+}
+
+/** Parada de `check` por rutas protegidas; `null` si puede seguir. */
+export function checkGate(guard, key) {
+  if (guard.noApprove) {
+    return {
+      stop: "check",
+      reason: PAUSE.noApprove,
+      hint: `Rutas no aprobables: ${guard.touched.join(", ")}`,
+    };
+  }
+  if (guard.needsApproval && !guard.approval) {
+    return {
+      stop: "check",
+      reason: PAUSE.approval,
+      hint: `Faltan aprobaciones (${guard.touched.join(", ")}): orquestator approve ${key} --motivo "…"`,
+    };
+  }
+  return null;
 }
 
 async function moveLinear(key, base, out) {
@@ -90,18 +117,8 @@ const defaultSteps = {
   },
   async check({ key, base, main, out }) {
     const guard = guardTask(key, { base, main });
-    if (guard.noApprove) {
-      return {
-        stop: "check",
-        hint: `Rutas no aprobables: ${guard.touched.join(", ")}`,
-      };
-    }
-    if (guard.needsApproval && !guard.approval) {
-      return {
-        stop: "check",
-        hint: `Faltan aprobaciones (${guard.touched.join(", ")}): orquestator approve ${key} --motivo "…"`,
-      };
-    }
+    const gate = checkGate(guard, key);
+    if (gate) return gate;
     const result = await checkTask(key, {
       base,
       files: guard.files,
@@ -125,7 +142,11 @@ const defaultSteps = {
     });
     const verdict = verdictOf(result.artifact);
     if (!verdict) {
-      return { stop: "review", hint: "review.md no trae «Veredicto:»" };
+      return {
+        stop: "review",
+        reason: PAUSE.review,
+        hint: "review.md no trae «Veredicto:»",
+      };
     }
     out(`review: ${verdict}`);
     if (verdict === "CAMBIOS") {
@@ -156,6 +177,7 @@ const defaultSteps = {
     if (result.pendingMigration) {
       return {
         stop: "migrate",
+        reason: PAUSE.migration,
         hint: `Migración pendiente: approve ${key} --migracion y migrate ${key}`,
       };
     }
@@ -172,7 +194,11 @@ const defaultSteps = {
     });
     const verdict = verdictOf(result.artifact);
     if (!verdict) {
-      return { stop: "pr-review", hint: "pr-review.md no trae «Veredicto:»" };
+      return {
+        stop: "pr-review",
+        reason: PAUSE.prReview,
+        hint: "pr-review.md no trae «Veredicto:»",
+      };
     }
     const { number } = publishPrReview(key, { base, out });
     out(`pr-review: ${verdict} (comentado en la PR #${number})`);
@@ -186,6 +212,20 @@ const defaultSteps = {
     return {};
   },
 };
+
+/** Guarda el parón (`null` lo borra) sin mover `updatedAt`. */
+function rememberPause(key, base, pause) {
+  withLock(
+    key,
+    () => {
+      const state = load(key, base);
+      if (!state) return;
+      const next = pause ? withPause(state, pause) : withoutPause(state);
+      if (next !== state) save(key, next, base);
+    },
+    base,
+  );
+}
 
 export async function runFlow(
   key,
@@ -228,6 +268,11 @@ export async function runFlow(
     } catch (error) {
       // La puerta de lockfile se avisa una sola vez: parada con pista, como
       // «faltan aprobaciones» en check. Ni Blocked ni comentario en Linear.
+      rememberPause(key, base, {
+        step: name,
+        reason:
+          error.code === "LOCKFILE_DRIFT" ? PAUSE.lockfile : PAUSE.failure,
+      });
       return {
         ok: false,
         stop: name,
@@ -238,6 +283,10 @@ export async function runFlow(
     if (result?.stop) {
       if (!result.retry) {
         if (result.hint) out(result.hint);
+        rememberPause(key, base, {
+          step: result.stop,
+          reason: result.reason ?? PAUSE.failure,
+        });
         return { ok: false, stop: result.stop, hint: result.hint };
       }
       out(`↻ ${name}: ${result.hint ?? "ronda de corrección"}`);
@@ -245,6 +294,7 @@ export async function runFlow(
       try {
         fixed = fix(key, { origin: result.retry, base, out });
       } catch (error) {
+        rememberPause(key, base, { step: name, reason: PAUSE.failure });
         return { ok: false, stop: name, error: error.message };
       }
       if (fixed.blocked) {
@@ -259,5 +309,6 @@ export async function runFlow(
       index = -1;
     }
   }
+  rememberPause(key, base, null);
   return { ok: true };
 }

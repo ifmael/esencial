@@ -11,7 +11,14 @@ import {
   migratePr,
   migrateTask,
 } from "../lib/migrate.mjs";
-import { createState, load, repoDir, save, transition } from "../lib/state.mjs";
+import {
+  createState,
+  load,
+  PAUSE,
+  repoDir,
+  save,
+  transition,
+} from "../lib/state.mjs";
 
 const KEY = "ESN-7";
 const DB_CONFIG = `name = "esencial-api"
@@ -126,6 +133,24 @@ test("migrate exige aprobación y aplica solo lo aprobado", () => {
     /--remote/,
   );
   assert.equal(load(KEY, base).state, "In validation");
+});
+
+test("approve --migracion no despierta la tarea: no mueve updatedAt", () => {
+  const parked = {
+    ...load(KEY, base),
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    paused: { step: "check", reason: PAUSE.approval },
+  };
+  save(KEY, parked, base);
+  approveMigrationTask(KEY, { ...options(), isTTY: true, reason: "aditiva" });
+  const after = load(KEY, base);
+  assert.ok(after.approvals.migration, "la aprobación se guarda");
+  assert.equal(
+    after.updatedAt,
+    parked.updatedAt,
+    "solo migrate mueve la tarea",
+  );
+  assert.deepEqual(after.paused, parked.paused);
 });
 
 test("migrate --dry-run no aplica ni exige credenciales", () => {

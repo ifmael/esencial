@@ -1,6 +1,6 @@
 import { writeArtifact } from "./artifacts.mjs";
 import { runGh, viewArgs } from "./github.mjs";
-import { block, home, load, save, transition } from "./state.mjs";
+import { block, home, load, save, transition, withoutPause } from "./state.mjs";
 
 export const LIMITS = {
   checks: 2,
@@ -71,7 +71,10 @@ export function fixTask(
   if (feedback !== null)
     writeArtifact(key, "human-feedback.md", feedback, base);
 
-  const counted = { ...state, rounds: { ...rounds, [counter]: count } };
+  const counted = withoutPause({
+    ...state,
+    rounds: { ...rounds, [counter]: count },
+  });
   const next =
     state.state === "In validation"
       ? transition(counted, "In Progress")

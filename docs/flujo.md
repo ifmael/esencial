@@ -101,6 +101,16 @@ hasta agotar las rondas (checks 2, review 3, pr-review 2). La cadena real es
 `In validation`. `check` también reintenta solo si fallan las comprobaciones; si
 faltan aprobaciones, no gasta una ronda.
 
+Cada parón de la cadena queda en `state.json` como `paused: { step, reason }`:
+`step` es el paso que devolvió el `stop` y `reason` el motivo como dato
+(`approval`, `no-approve`, `migration`, `review`, `pr-review`, `lockfile` o
+`failure`), nunca deducido de la pista legible. `run` lo consume para reanudar
+**en ese paso** desde `In Progress`, así que tras aprobar no se repite el
+implementador; un `state.json` sin el campo o un paso fuera de la cadena (el
+`migrate` de `ship`, por ejemplo) arranca como antes, por `implement`. Lo borran
+`fix`, `resume`, cualquier transición (`Blocked`, `In validation`, `Done`) y un
+`run` que termina con éxito.
+
 ## Comprobaciones
 
 `pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm e2e` en el contenedor,
@@ -270,7 +280,8 @@ orquestator-cli/build.sh --tag <nombre>  # diagnóstico: construye a propósito,
 - El fallo queda en el diario con la etiqueta, el comando exacto y el final del
   error. Una fase no se aparca por falta de imagen; solo se para si el build
   falla. Un éxito posterior del refresco no reanima sola la tarea parada: la
-  reanudación es un toque humano (`resume`).
+  reanudación es un toque humano (`run`, que retoma en el paso que paró, o el
+  reinicio del servicio).
 - `ORQUESTATOR_IMAGE` manda: se comprueba que la imagen existe y, si no, el
   preflight se para ofreciendo solo las tres salidas reales (quitar la variable,
   poner la etiqueta derivada del espejo que se imprime en ese momento, o
@@ -356,7 +367,8 @@ docker restart esencial-context7
 cada 60 s (equipo `ESN`; `LINEAR_TEAM` o `--team` lo cambian) y despacha:
 
 1. Las issues en **Ready** sin estado local: llama a `run` (empieza por `start`).
-2. Las tareas locales en **In Progress**: reanuda `run` (si la máquina se apagó).
+2. Las tareas locales en **In Progress**: reanuda `run` en el paso que paró
+   (`paused.step`), también si la máquina se apagó.
 3. Las **Spec review** sin bloque de acuerdo: lanza el `spec-reviewer` al entrar o
    cuando cambia la descripción o hay un comentario humano nuevo. Cada respuesta del
    revisor incluye **la definición actual completa** y las preguntas; así se ve la
@@ -377,8 +389,23 @@ reservan, así que conviene vigilar la memoria cuando coinciden varios `check`.
 Cada tarea tiene
 un `run.lock` con el pid: dos `watch` no la arrancan a la vez, y un cerrojo de
 proceso muerto se libera solo. Una tarea que falla **no se reintenta** hasta que
-su estado cambie (`fix`, `resume` o edición); así un check rojo no quema tokens.
+su estado cambie (`fix`, `resume`, `approve` o edición); así un check rojo no
+quema tokens. La cuenta es **cero** reintentos mientras el servicio vive y
+**uno** por reinicio —si el fallo sigue, se vuelve a aparcar—, igual que con
+Docker. Un `fix` sobre `In Progress` no mueve `updatedAt` y despierta solo al
+reiniciar; desde `In validation` transiciona y despierta en la vuelta siguiente.
 `--once` hace una pasada y espera a las tareas; `--dry-run` enseña lo que haría.
+
+`approve` de rutas **despierta** la tarea que está parada pidiendo esa
+aprobación: guarda la aprobación y, solo en ese caso, mueve `updatedAt` para
+que el vigilante la despache en la vuelta siguiente. La aprobación se escribe
+como una más (sin entrada en `history`) y la tarea sube en el listado, que
+ordena por `updatedAt`. El `check` revalida el hash al arrancar: si el diff
+cambió desde la aprobación, la tarea se para otra vez pidiendo una nueva, con
+su línea de parón. El despertar es condicional: un parón por Docker, red o
+comprobaciones no recibe el empujón, y `approve --migracion` tampoco despierta
+nada (solo mueve `migrate`, que pasa la tarea a `In validation`);
+`approve --pr` no toca el estado de ninguna tarea.
 
 ### Servicio de usuario
 
@@ -396,7 +423,9 @@ journalctl --user -u orquestator-watch -f
 
 `SIGTERM` deja de despachar y espera a las tareas en curso; el `TimeoutStopSec`
 de la unidad acota la espera. Si la máquina se apaga, al volver el servicio
-reanuda desde el estado del host.
+reanuda desde el estado del host: el mapa de fallos vive en memoria, así que
+despacha **una vez** cada tarea aparcada en el paso que paró (`paused.step`) y,
+si el fallo persiste, la vuelve a aparcar.
 
 La unidad entra con `newgrp docker`: el gestor de usuario arrancó antes de que la
 cuenta estuviera en el grupo `docker`, así que el servicio no lo hereda y Docker

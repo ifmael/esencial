@@ -4,7 +4,16 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
-import { block, createState, load, save, transition } from "../lib/state.mjs";
+import { approveState } from "../lib/guard.mjs";
+import {
+  block,
+  createState,
+  load,
+  PAUSE,
+  save,
+  transition,
+  withPause,
+} from "../lib/state.mjs";
 import { watch, watchLock } from "../lib/watch.mjs";
 
 let dir;
@@ -413,6 +422,106 @@ test("el refresco de la imagen va en segundo plano y respeta los cinco minutos",
   );
   assert.equal(ticks, 7, "los ticks no se frenan");
   assert.equal(refreshes, 2, "uno al arrancar y otro a los cinco minutos");
+});
+
+test("aprobar el parón de rutas despacha la tarea en la vuelta siguiente, una vez", async () => {
+  save("ESN-1", inProgress(), dir);
+  const calls = [];
+  const lines = [];
+  let ticks = 0;
+  let approved = false;
+  const controller = new AbortController();
+  const run = async (key) => {
+    calls.push(key);
+    const state = load(key, dir);
+    if (!approved) {
+      // El run real registra el parón con su motivo (runFlow).
+      save(
+        key,
+        withPause(state, { step: "check", reason: PAUSE.approval }),
+        dir,
+      );
+      return {
+        ok: false,
+        stop: "check",
+        reason: PAUSE.approval,
+        hint: "Faltan aprobaciones",
+      };
+    }
+    save(key, withPause(state, { step: "review", reason: PAUSE.failure }), dir);
+    return { ok: false, stop: "review", hint: "review.md sin veredicto" };
+  };
+  await watch(
+    options({
+      once: false,
+      intervalSecs: 60,
+      signal: controller.signal,
+      run,
+      out: (text) => lines.push(text),
+      sleep: async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+        ticks += 1;
+        if (ticks === 1) {
+          // La persona aprueba: el approve de rutas mueve updatedAt.
+          const state = load("ESN-1", dir);
+          save(
+            "ESN-1",
+            approveState(state, { hash: "h", reason: "vale", isTTY: true }),
+            dir,
+          );
+          approved = true;
+        }
+        if (ticks >= 5) controller.abort();
+      },
+    }),
+  );
+  assert.equal(calls.length, 2, "un approve, un despacho; después, cero");
+  assert.match(lines.join("\n"), /parado en check — Faltan aprobaciones/);
+});
+
+test("un parón ajeno a la aprobación no se despierta con approve", async () => {
+  save(
+    "ESN-1",
+    withPause(
+      { ...inProgress(), updatedAt: "2026-01-01T00:00:00.000Z" },
+      { step: "implement", reason: PAUSE.failure },
+    ),
+    dir,
+  );
+  const calls = [];
+  let ticks = 0;
+  const controller = new AbortController();
+  await watch(
+    options({
+      once: false,
+      intervalSecs: 60,
+      signal: controller.signal,
+      run: async (key) => {
+        calls.push(key);
+        return {
+          ok: false,
+          stop: "implement",
+          reason: PAUSE.failure,
+          error: "Docker no responde",
+        };
+      },
+      sleep: async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+        ticks += 1;
+        if (ticks === 1) {
+          const state = load("ESN-1", dir);
+          save(
+            "ESN-1",
+            approveState(state, { hash: "h", reason: "vale", isTTY: true }),
+            dir,
+          );
+        }
+        if (ticks >= 4) controller.abort();
+      },
+    }),
+  );
+  assert.equal(calls.length, 1, "solo el despacho del arranque del servicio");
+  assert.equal(load("ESN-1", dir).updatedAt, "2026-01-01T00:00:00.000Z");
 });
 
 test("watch exige max-parallel y el cerrojo no deja dos instancias", async () => {
