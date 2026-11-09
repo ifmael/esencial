@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
 import { approvePr } from "../lib/manual.mjs";
+import { createState, load, PAUSE, save, transition } from "../lib/state.mjs";
 
 const RULES = "AGENTS.md\n!.github/workflows/\norquestator-cli/\n";
 let dir;
@@ -68,6 +69,21 @@ test("con rutas protegidas exige TTY y motivo, y guarda el hash", () => {
   );
   assert.equal(saved.hash, result.hash);
   assert.equal(saved.reason, "lo reviso");
+});
+
+test("approve --pr no toca la tarea aparcada: no la despierta", () => {
+  const parked = {
+    ...transition(createState("ESN-7"), "In Progress"),
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    paused: { step: "check", reason: PAUSE.approval },
+  };
+  save("ESN-7", parked, dir);
+  const { ghRun } = fakeGh(["AGENTS.md"], "parche");
+  const result = approve(5, { ghRun, isTTY: true, reason: "lo reviso" });
+  assert.equal(result.approved, true);
+  const after = load("ESN-7", dir);
+  assert.equal(after.updatedAt, parked.updatedAt);
+  assert.deepEqual(after.paused, parked.paused);
 });
 
 test(".github/workflows no se aprueba nunca", () => {

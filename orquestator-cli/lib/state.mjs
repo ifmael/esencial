@@ -42,6 +42,21 @@ export const TRANSITIONS = {
   Done: [],
 };
 
+/**
+ * Motivos de un parón del flujo (`paused.reason`). Solo `approval` se despierta
+ * con `approve`; el resto espera a `fix`, `resume`, edición o al reinicio del
+ * servicio. El motivo es un dato del `stop`, no se deduce de la pista legible.
+ */
+export const PAUSE = {
+  approval: "approval",
+  noApprove: "no-approve",
+  migration: "migration",
+  review: "review",
+  prReview: "pr-review",
+  lockfile: "lockfile",
+  failure: "failure",
+};
+
 const KEY = /^[A-Z][A-Z0-9]{1,5}-\d+$/;
 const LOCK_STALE_MS = 5 * 60 * 1000;
 const LOCK_WAIT_MS = 2000;
@@ -110,6 +125,21 @@ export function createState(key) {
   };
 }
 
+/**
+ * Registra en qué paso se paró el flujo y por qué. No mueve `updatedAt`: el
+ * parón no es actividad de la tarea y `approve` decide cuándo despertarla.
+ */
+export function withPause(state, { step, reason }) {
+  return { ...state, paused: { step, reason } };
+}
+
+/** Quita el parón; un estado sin `paused` se devuelve igual. */
+export function withoutPause(state) {
+  if (!state.paused) return state;
+  const { paused: _paused, ...rest } = state;
+  return rest;
+}
+
 export function transition(state, to) {
   const target = normalize(to);
   if (state.state === target) {
@@ -125,7 +155,7 @@ export function transition(state, to) {
   }
   const at = now();
   return {
-    ...state,
+    ...withoutPause(state),
     state: target,
     updatedAt: at,
     history: [...state.history, { state: target, at }],
@@ -140,7 +170,7 @@ export function block(state, question) {
   }
   const at = now();
   return {
-    ...state,
+    ...withoutPause(state),
     state: "Blocked",
     blockedFrom: state.state,
     question: text,
@@ -156,7 +186,7 @@ export function resume(state) {
   const target = normalize(state.blockedFrom ?? "In Progress");
   const at = now();
   return {
-    ...state,
+    ...withoutPause(state),
     state: target,
     blockedFrom: null,
     question: null,
@@ -209,8 +239,8 @@ function sleep(ms) {
 }
 
 /** Cerrojo del estado: dos procesos del CLI no lo escriben a la vez. */
-export function withLock(key, fn) {
-  const dir = dirFor(key);
+export function withLock(key, fn, base = home()) {
+  const dir = dirFor(key, base);
   fs.mkdirSync(dir, { recursive: true });
   const lock = path.join(dir, "state.lock");
   const deadline = Date.now() + LOCK_WAIT_MS;

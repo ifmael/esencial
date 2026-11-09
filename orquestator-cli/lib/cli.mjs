@@ -51,12 +51,12 @@ Uso:
   orquestator inspect ESN-123     estado, brief, diff, artefactos y CI
   orquestator clean ESN-123 [--force]
   orquestator fix ESN-123 [--from checks|review|pr-review|conflicto] [--humano]
-  orquestator run ESN-123 [--dry-run]
+  orquestator run ESN-123 [--dry-run]   retoma en el paso que paró
   orquestator watch [--max-parallel N] [--interval S] [--once]
   orquestator guard ESN-123       rutas protegidas y hash del diff
-  orquestator approve ESN-123 --motivo "…"
-  orquestator approve ESN-123 --migracion --motivo "…"
-  orquestator approve --pr 42 --motivo "…"   PR que no abre el CLI
+  orquestator approve ESN-123 --motivo "…"   despierta el parón por rutas
+  orquestator approve ESN-123 --migracion --motivo "…"   no despierta: migrate
+  orquestator approve --pr 42 --motivo "…"   PR que no abre el CLI; no despierta
   orquestator approve --pr 42 --migracion --motivo "…"
   orquestator migrate ESN-123 [--force]       aplica la migración aprobada en D1
   orquestator migrate --pr 42 [--force]

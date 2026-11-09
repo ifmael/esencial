@@ -5,8 +5,15 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, test } from "node:test";
 
-import { runFlow } from "../lib/run.mjs";
-import { createState, load, save, transition } from "../lib/state.mjs";
+import { checkGate, runFlow } from "../lib/run.mjs";
+import {
+  createState,
+  load,
+  PAUSE,
+  save,
+  transition,
+  withPause,
+} from "../lib/state.mjs";
 
 let dir;
 beforeEach(() => {
@@ -63,6 +70,25 @@ test("run --dry-run desde In validation solo espera pr-review", async () => {
   );
   const result = await runFlow("ESN-7", { dryRun: true, out: () => {} });
   assert.deepEqual(result.steps, ["pr-review"]);
+});
+
+test("run --dry-run con parón en check no repite implement", async () => {
+  save(
+    "ESN-7",
+    withPause(transition(createState("ESN-7"), "In Progress"), {
+      step: "check",
+      reason: PAUSE.approval,
+    }),
+  );
+  const result = await runFlow("ESN-7", { dryRun: true, out: () => {} });
+  assert.deepEqual(result.steps, [
+    "check",
+    "review",
+    "pr",
+    "preview",
+    "ship",
+    "pr-review",
+  ]);
 });
 
 test("run --dry-run no toca el clon de juguete", async () => {
@@ -256,6 +282,132 @@ test("run real corrige pr-review y vuelve a la cadena completa", async () => {
   assert.equal(load("ESN-7", dir).rounds.prReview, 1);
 });
 
+test("run real con parón en check entra directo en check, sin implementador", async () => {
+  save(
+    "ESN-7",
+    withPause(
+      transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+      { step: "check", reason: PAUSE.approval },
+    ),
+  );
+  const { steps, calls } = fakeSteps();
+  const result = await runFlow("ESN-7", { steps, out: () => {} });
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, [
+    "check",
+    "review",
+    "pr",
+    "preview",
+    "ship",
+    "pr-review",
+  ]);
+  assert.equal(
+    load("ESN-7", dir).paused,
+    undefined,
+    "el éxito limpia el parón",
+  );
+});
+
+test("un parón en el implementador o fuera de la cadena empieza por implement", async () => {
+  for (const step of ["implement", "migrate"]) {
+    save(
+      "ESN-7",
+      withPause(
+        transition(
+          { ...createState("ESN-7"), branch: "ESN-7-x" },
+          "In Progress",
+        ),
+        { step, reason: PAUSE.failure },
+      ),
+    );
+    const { steps, calls } = fakeSteps();
+    await runFlow("ESN-7", { steps, out: () => {} });
+    assert.equal(calls[0], "implement", `parón en ${step}`);
+  }
+});
+
+test("run real registra el parón con su motivo y el que no lo declara como fallo", async () => {
+  save(
+    "ESN-7",
+    transition({ ...createState("ESN-7"), branch: "ESN-7-x" }, "In Progress"),
+  );
+  const conAprobacion = fakeSteps({
+    check: {
+      stop: "check",
+      reason: PAUSE.approval,
+      hint: "Faltan aprobaciones",
+    },
+  });
+  await runFlow("ESN-7", { steps: conAprobacion.steps, out: () => {} });
+  assert.deepEqual(load("ESN-7", dir).paused, {
+    step: "check",
+    reason: "approval",
+  });
+
+  const sinMotivo = fakeSteps({
+    review: { stop: "review", hint: "review.md no trae «Veredicto:»" },
+  });
+  await runFlow("ESN-7", { steps: sinMotivo.steps, out: () => {} });
+  assert.deepEqual(load("ESN-7", dir).paused, {
+    step: "review",
+    reason: "failure",
+  });
+});
+
+test("check pide la aprobación con motivo de aprobación y sin gastar ronda", () => {
+  const faltan = checkGate(
+    {
+      noApprove: false,
+      needsApproval: true,
+      approval: null,
+      touched: ["AGENTS.md"],
+    },
+    "ESN-7",
+  );
+  assert.equal(faltan.stop, "check");
+  assert.equal(faltan.reason, PAUSE.approval);
+  assert.equal(faltan.retry, undefined);
+  assert.match(faltan.hint, /orquestator approve ESN-7/);
+
+  assert.equal(
+    checkGate(
+      {
+        noApprove: false,
+        needsApproval: true,
+        approval: { hash: "h" },
+        touched: ["AGENTS.md"],
+      },
+      "ESN-7",
+    ),
+    null,
+    "con la aprobación al día, check sigue",
+  );
+  assert.equal(
+    checkGate(
+      {
+        noApprove: true,
+        needsApproval: true,
+        approval: null,
+        touched: [".github/workflows/ci.yml"],
+      },
+      "ESN-7",
+    ).reason,
+    PAUSE.noApprove,
+  );
+  assert.equal(
+    checkGate(
+      {
+        noApprove: false,
+        needsApproval: false,
+        approval: null,
+        touched: [],
+      },
+      "ESN-7",
+    ),
+    null,
+  );
+});
+
 test("la puerta de lockfile para el run con una sola pista", async () => {
   save(
     "ESN-7",
@@ -275,6 +427,10 @@ test("la puerta de lockfile para el run con una sola pista", async () => {
   assert.equal(result.stop, "check");
   assert.match(result.hint, /lockfile/);
   assert.deepEqual(calls, ["implement", "check"]);
+  assert.deepEqual(load("ESN-7", dir).paused, {
+    step: "check",
+    reason: "lockfile",
+  });
 });
 
 test("run real no arranca una tarea cerrada", async () => {

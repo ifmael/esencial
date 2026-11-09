@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { git } from "./checkout.mjs";
-import { home, load, repoDir } from "./state.mjs";
+import { home, load, PAUSE, repoDir } from "./state.mjs";
 
 export const PROTECTED_FILE = "orquestator-cli/protected-paths.txt";
 export const BASE = "origin/main";
@@ -136,11 +136,15 @@ export function approveState(state, { hash, reason, isTTY }) {
   if (!isTTY) throw new Error("approve solo se puede usar desde una terminal");
   const text = String(reason ?? "").trim();
   if (!text) throw new Error("approve necesita un motivo (--motivo)");
+  const at = new Date().toISOString();
   return {
     ...state,
+    // Despertar condicional: solo la tarea parada pidiendo esta aprobación
+    // vuelve a la cola. El vigilante compara `updatedAt`, no lee el motivo.
+    ...(state.paused?.reason === PAUSE.approval ? { updatedAt: at } : {}),
     approvals: {
       ...state.approvals,
-      guard: { hash, reason: text, at: new Date().toISOString() },
+      guard: { hash, reason: text, at },
     },
   };
 }

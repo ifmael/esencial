@@ -6,7 +6,14 @@ import { afterEach, beforeEach, test } from "node:test";
 
 import { readArtifact } from "../lib/artifacts.mjs";
 import { fixTask } from "../lib/fix.mjs";
-import { createState, load, save, transition } from "../lib/state.mjs";
+import {
+  createState,
+  load,
+  PAUSE,
+  save,
+  transition,
+  withPause,
+} from "../lib/state.mjs";
 
 const KEY = "ESN-7";
 let dir;
@@ -78,6 +85,20 @@ test("las rondas humanas no gastan las del agente y guardan el feedback", () => 
   assert.match(feedback, /cambia el texto/);
   assert.doesNotMatch(feedback, /yo opino/);
   assert.equal(state.state, "In Progress");
+});
+
+test("fix borra el parón: la ronda vuelve a empezar por implement", () => {
+  save(
+    KEY,
+    withPause(transition(createState(KEY), "In Progress"), {
+      step: "check",
+      reason: PAUSE.approval,
+    }),
+    dir,
+  );
+  const result = fixTask(KEY, { origin: "checks" });
+  assert.equal(result.blocked, false);
+  assert.equal(load(KEY, dir).paused, undefined);
 });
 
 test("fix en dry-run no escribe nada", () => {

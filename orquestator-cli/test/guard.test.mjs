@@ -13,7 +13,14 @@ import {
   guardTask,
   parsePaths,
 } from "../lib/guard.mjs";
-import { createState, save, transition } from "../lib/state.mjs";
+import { checkGate } from "../lib/run.mjs";
+import {
+  createState,
+  PAUSE,
+  save,
+  transition,
+  withPause,
+} from "../lib/state.mjs";
 
 const KEY = "ESN-7";
 const RULES = `# prueba\nAGENTS.md\norquestator-cli/\n!.github/workflows/\npackage.json\n`;
@@ -139,6 +146,65 @@ test("approve exige TTY y motivo", () => {
     () => approveState(state, { hash: "h", reason: " ", isTTY: true }),
     /motivo/,
   );
+});
+
+test("la aprobación al día deja pasar check; un commit posterior la caduca", () => {
+  const sinAprobar = guardTask(KEY, { base, main });
+  assert.equal(checkGate(sinAprobar, KEY)?.reason, PAUSE.approval);
+
+  const approved = approveState(saveAndReload(sinAprobar.state), {
+    hash: sinAprobar.hash,
+    reason: "lo reviso yo",
+    isTTY: true,
+  });
+  save(KEY, approved, base);
+  assert.equal(
+    checkGate(guardTask(KEY, { base, main }), KEY),
+    null,
+    "la aprobación recién dada se usa",
+  );
+
+  commit(task, "AGENTS.md", "otra vez");
+  assert.equal(
+    checkGate(guardTask(KEY, { base, main }), KEY)?.reason,
+    PAUSE.approval,
+    "el diff nuevo se para pidiendo otra aprobación",
+  );
+});
+
+test("approve despierta solo el parón que pide aprobación", () => {
+  const parked = withPause(
+    {
+      ...transition(createState(KEY), "In Progress"),
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    { step: "check", reason: PAUSE.approval },
+  );
+  const woken = approveState(parked, {
+    hash: "h",
+    reason: "lo reviso yo",
+    isTTY: true,
+  });
+  assert.ok(woken.updatedAt > parked.updatedAt, "el approve mueve updatedAt");
+  assert.equal(woken.approvals.guard.hash, "h");
+  assert.deepEqual(woken.history, parked.history, "sin entrada en history");
+  assert.deepEqual(woken.paused, parked.paused, "el parón sigue para reanudar");
+
+  const porDocker = withPause(parked, {
+    step: "implement",
+    reason: PAUSE.failure,
+  });
+  const dormida = approveState(porDocker, {
+    hash: "h",
+    reason: "lo reviso yo",
+    isTTY: true,
+  });
+  assert.equal(
+    dormida.updatedAt,
+    porDocker.updatedAt,
+    "un parón ajeno a la aprobación no se despierta",
+  );
+  assert.equal(dormida.approvals.guard.reason, "lo reviso yo");
 });
 
 test("un diff.external o un pre-push malicioso del clon no se ejecutan", () => {
